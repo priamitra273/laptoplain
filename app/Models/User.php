@@ -60,4 +60,13 @@ class User extends Authenticatable implements HasMedia
     {
         $this->addMediaCollection('avatar')->singleFile();
     }
+
+    public function tasks()
+    {
+        return $this->belongsToMany(Task::class, 'task_users')
+                    ->withTimestamps()
+                    ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+                    ->using(TaskUser::class);
+    }
+
 }

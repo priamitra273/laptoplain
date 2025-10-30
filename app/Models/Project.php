@@ -4,35 +4,60 @@ namespace App\Models;
 
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\MediaLibrary\MediaCollections\Models\Concerns\HasUuid;
+use App\Models\MsProjectPriority;
 
 class Project extends Model
 {
-    use SoftDeletes, HasUuid, LogUsers;
+    use SoftDeletes, LogUsers;
+
+    protected $table = 'projects';
 
     protected $fillable = [
-        'name',
+        'status_id',
+        'priority_id',
+        'owner_id',
+        'owned_id',
+        'emoji',
+        'title',
+        'description',
         'start_date',
-        'finish_date',
-        'plan_site',
-        'plan_cctv'
+        'due_date',
+        'progress',
+        'sequence_number',
+        'created_by',
+        'updated_by',
+        'deleted_by',
     ];
 
-    public function getRouteKeyName()
+    protected $casts = [
+        'start_date' => 'date',
+        'due_date' => 'date',
+        'progress' => 'double',
+    ];
+
+    public function status()
     {
-        return 'uuid';
+        return $this->belongsTo(MsProjectStatus::class, 'status_id');
     }
 
-    public function sites(): HasMany
+    public function priority()
     {
-        return $this->hasMany(Site::class);
+        return $this->belongsTo(MsProjectPriority::class, 'priority_id');
     }
 
-    public function cctv(): HasManyThrough
+    public function owner()
     {
-        return $this->hasManyThrough(Cctv::class, Site::class);
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function owned()
+    {
+        return $this->belongsTo(User::class, 'owned_id');
+    }
+
+    public function projectMembers()
+    {
+        return $this->hasMany(ProjectMember::class, 'project_id')
     }
 }

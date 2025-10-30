@@ -29,6 +29,7 @@ class Task extends Model
         'progress',
         'sequence_number',
         'is_archived',
+        'project_id',
     ];
 
     /**
@@ -101,6 +102,14 @@ class Task extends Model
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    /**
+     * Relasi ke project
+     */
+    public function project()
+    {
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     public function users()

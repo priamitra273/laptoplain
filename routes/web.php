@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-
+use App\Http\Controllers\MenuController;
 use App\Http\Controllers\ProjectController;
-
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -22,6 +24,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('project/verify-import', [ProjectController::class, 'verify_import'])->name('project.verify-import');
     Route::post('project/import', [ProjectController::class, 'import'])->name('project.import');
     Route::get('project/export', [ProjectController::class, 'export'])->name('project.export');
+
+
+    Route::resource('menu', MenuController::class)->except($except_route)->whereUuid('menu');
+    Route::resource('user', UserController::class)->except('show');
+    Route::resource('team', TeamController::class)->except($except_route)->whereUuid('team');
+    Route::resource('role', RoleController::class);
 });
 
 

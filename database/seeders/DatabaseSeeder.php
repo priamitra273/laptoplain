@@ -28,12 +28,6 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             RoleSeeder::class,
             UserSeeder::class,
-            DepartmentSeeder::class,
-            SiteStatusSeeder::class,
-            AnalyticCategorySeeder::class,
-            AnalyticStatusSeeder::class,
-            StreamingStatusSeeder::class,
-            DeviceSeeder::class
         ]);
     }
 }

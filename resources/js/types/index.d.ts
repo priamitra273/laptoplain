@@ -275,4 +275,14 @@ export interface Statistic {
     progress: Progress;
 }
 
+export interface MsProjectStatus {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
 export type BreadcrumbItemType = BreadcrumbItem;

@@ -17,6 +17,7 @@ declare module 'vue' {
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
     Editor: typeof import('primevue/editor')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
     Galleria: typeof import('primevue/galleria')['default']

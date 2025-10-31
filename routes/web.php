@@ -6,6 +6,8 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
+use App\Models\MsProjectStatus;
+use App\Http\Controllers\MsProjectStatusController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -29,6 +31,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('role', RoleController::class);
 
     Route::resource('project', ProjectController::class)->except($except_route)->whereUuid('project');
+
+    Route::resource('ms_project_status', MsProjectStatusController::class)
+    ->except(['create', 'show', 'edit']);
+
+
 });
 
 

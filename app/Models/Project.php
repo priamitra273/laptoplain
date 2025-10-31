@@ -58,6 +58,6 @@ class Project extends Model
 
     public function projectMembers()
     {
-        return $this->hasMany(ProjectMember::class, 'project_id')
+        return $this->hasMany(ProjectMember::class, 'project_id');
     }
 }

@@ -28,9 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('team', TeamController::class)->except($except_route)->whereUuid('team');
     Route::resource('role', RoleController::class);
 
-
-    Route::resource('project', ProjectController::class)
-        ->except($except_route);
+    Route::resource('project', ProjectController::class)->except($except_route)->whereUuid('project');
 });
 
 

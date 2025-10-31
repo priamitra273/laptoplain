@@ -24,20 +24,28 @@ class ProjectController extends Controller
     public function index()
     {
         $projects = Project::select([
-            'uuid',
-            'name',
+            'id',
+            'emoji',
+            'title',
+            'description',
             'start_date',
-            'finish_date',
-            'plan_site',
-            'plan_cctv',
+            'due_date',
+            'progress',
+            'sequence_number',
+            'status_id',
+            'priority_id',
+            'owner_id',
+            'owned_id',
+            'created_by',
+            'updated_by',
             'created_at',
-            'updated_at'
+            'updated_at',
         ])
             ->orderBy('id')
             ->get();
 
         return Inertia::render('project/Project', [
-            'projects' => $projects
+            'projects' => $projects,
         ]);
     }
 
@@ -46,7 +54,7 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        //
+        return Inertia::render('project/ProjectCreate');
     }
 
     /**
@@ -60,7 +68,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Store or update resource in storage
+     * Verify and preview imported file.
      */
     public function verify_import(Request $request)
     {
@@ -73,10 +81,13 @@ class ProjectController extends Controller
 
         return Inertia::render('project/ProjectVerifyImport', [
             'projects' => $result['data'],
-            'header' => $result['header']
+            'header' => $result['header'],
         ]);
     }
 
+    /**
+     * Import validated data into the database.
+     */
     public function import(ProjectImportRequest $request)
     {
         foreach ($request->safe()->projects as $project) {
@@ -86,6 +97,9 @@ class ProjectController extends Controller
         return to_route('project.index');
     }
 
+    /**
+     * Export all projects to Excel.
+     */
     public function export(Request $request)
     {
         $datetime = date('YmdHis');
@@ -97,7 +111,9 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
-        //
+        return Inertia::render('project/ProjectShow', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -105,7 +121,9 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
-        //
+        return Inertia::render('project/ProjectEdit', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -124,6 +142,7 @@ class ProjectController extends Controller
     public function destroy(Project $project)
     {
         $project->delete();
+
         return to_route('project.index');
     }
 }

@@ -107,26 +107,21 @@ watch(visibleForm, (newValue) => {
                     <template #icon>
                         <Icon name="Upload" />
                     </template>
-                </Button>
+</Button>
 
-                <Button as="a" :href="route('project.export')" label="Export" text raised>
-                    <template #icon>
+<Button as="a" :href="route('project.export')" label="Export" text raised>
+    <template #icon>
                         <Icon name="Download" />
                     </template>
-                </Button>
+</Button>
 
-                <Button label="Add Project" raised @click="visibleForm = true">
-                    <template #icon>
+<Button label="Add Project" raised @click="visibleForm = true">
+    <template #icon>
                         <Icon name="Plus" />
                     </template>
-                </Button>
-            </div> -->
-            <SplitButton
-                class="p-button-raised"
-                :model="splitButtonItems"
-                @click="goToCreate"
-                size="small"
-            >
+</Button>
+</div> -->
+            <SplitButton class="p-button-raised" :model="splitButtonItems" @click="goToCreate" size="small">
                 <Icon name="Plus" />
                 <span>Add Project</span>
             </SplitButton>
@@ -134,17 +129,8 @@ watch(visibleForm, (newValue) => {
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable
-                :value="projects"
-                v-model:filters="filters"
-                data-key="uuid"
-                paginator
-                :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]"
-                :globalFilterFields="['name']"
-                striped-rows
-                row-hover
-            >
+            <DataTable :value="projects" v-model:filters="filters" data-key="uuid" paginator :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name']" striped-rows row-hover>
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}
@@ -188,5 +174,4 @@ watch(visibleForm, (newValue) => {
     </div>
 
     <ProjectForm v-model:visible="visibleForm" :value="selected" />
-    <UploadDialog v-model:visible="visibleImportDialog" :verify-url="route('project.verify-import')" template-url="/templates/Template Import Project.xlsx" header="Import Project" />
 </template>

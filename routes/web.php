@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\MsProjectPriorityController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ->except(['create', 'show', 'edit']);
 
 
+    Route::resource('ms_project_priority', MsProjectPriorityController::class)->except($except_route);
 });
 
 

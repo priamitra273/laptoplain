@@ -133,6 +133,16 @@ export interface Project {
     updated_at?: string;
 }
 
+export interface ProjectPriority {
+    id: number
+    name: string
+    severity: string
+    owned_id: number
+    created_by?: string
+    updated_by?: string
+    deleted_by?: string
+}
+
 export interface AnalyticServer {
     id: number;
     uuid: string;

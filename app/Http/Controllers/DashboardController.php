@@ -10,14 +10,17 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // Select fields that actually exist in the new table definition
         $projects = Project::select([
-            'uuid',
-            'title',
+            'id',
             'emoji',
+            'title',
             'description',
+            'start_date',
             'due_date',
             'progress',
+            'sequence_number',
+            'created_by',
+            'updated_by',
             'created_at',
             'updated_at'
         ])

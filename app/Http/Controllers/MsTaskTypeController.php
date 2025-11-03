@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\MsProjectPriority\MsProjectPriorityStoreRequest;
+use App\Http\Requests\MsTaskType\MsTaskTypeStoreRequest;
 use App\Models\MsTaskType;
 use Inertia\Inertia;
 
@@ -39,7 +39,7 @@ class MsTaskTypeController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(MsProjectPriorityStoreRequest $request)
+    public function store(MsTaskTypeStoreRequest $request)
     {
         MsTaskType::create($request->safe()->toArray());
 
@@ -69,7 +69,7 @@ class MsTaskTypeController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(MsProjectPriorityStoreRequest $request, MsTaskType $msTaskType)
+    public function update(MsTaskTypeStoreRequest $request, MsTaskType $msTaskType)
     {
         $msTaskType->update($request->safe()->toArray());
 

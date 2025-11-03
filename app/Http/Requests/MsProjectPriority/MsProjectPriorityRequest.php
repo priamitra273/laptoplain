@@ -5,7 +5,7 @@ namespace App\Http\Requests\MsProjectPriority;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class MsProjectPriorityStoreRequest extends FormRequest
+class MsProjectPriorityRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -36,7 +36,6 @@ class MsProjectPriorityStoreRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
-        // Jika owned_id tidak ada di request, isi dengan ID user yang sedang login
         if (!$this->has('owned_id')) {
             $this->merge([
                 'owned_id' => Auth::id()

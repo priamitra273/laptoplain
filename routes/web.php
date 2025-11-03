@@ -3,11 +3,13 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\MsProjectPriorityController;
+use App\Http\Controllers\MsProjectRoleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MsProjectStatusController;
+use App\Http\Controllers\MsTaskPriorityController;
 use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +41,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::resource('ms_project_priority', MsProjectPriorityController::class)->except($except_route);
+    Route::resource('ms_project_role', MsProjectRoleController::class)->except($except_route);
+    Route::resource('ms_task_priority', MsTaskPriorityController::class)->except($except_route);
 
     Route::resource('ms_task_status', MsTaskStatusController::class)->except($except_route);
 

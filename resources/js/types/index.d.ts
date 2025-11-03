@@ -143,6 +143,25 @@ export interface ProjectPriority {
     deleted_by?: string;
 }
 
+export interface ProjectRole {
+    id: number
+    name: string
+    owned_id: number
+    created_by?: string
+    updated_by?: string
+    deleted_by?: string
+}
+
+export interface TaskPriority {
+    id: number
+    name: string
+    severity: string
+    owned_id: number
+    created_by?: string
+    updated_by?: string
+    deleted_by?: string
+}
+
 export interface AnalyticServer {
     id: number;
     uuid: string;

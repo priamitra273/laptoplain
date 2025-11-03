@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\MsProjectPriority\MsProjectPriorityStoreRequest;
+use App\Http\Requests\MsProjectPriority\MsProjectPriorityRequest;
 use App\Models\MsProjectPriority;
 use Inertia\Inertia;
 
@@ -39,7 +39,7 @@ class MsProjectPriorityController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(MsProjectPriorityStoreRequest $request)
+    public function store(MsProjectPriorityRequest $request)
     {
         MsProjectPriority::create($request->safe()->toArray());
 
@@ -69,7 +69,7 @@ class MsProjectPriorityController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(MsProjectPriorityStoreRequest $request, MsProjectPriority $msProjectPriority)
+    public function update(MsProjectPriorityRequest $request, MsProjectPriority $msProjectPriority)
     {
         $msProjectPriority->update($request->safe()->toArray());
 

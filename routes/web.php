@@ -7,8 +7,9 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
-use App\Models\MsProjectStatus;
 use App\Http\Controllers\MsProjectStatusController;
+use App\Http\Controllers\MsTaskStatusController;
+use App\Http\Controllers\MsTaskTypeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -38,6 +39,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::resource('ms_project_priority', MsProjectPriorityController::class)->except($except_route);
+
+    Route::resource('ms_task_status', MsTaskStatusController::class)->except($except_route);
+
+    Route::resource('ms_task_type', MsTaskTypeController::class)->except($except_route);
 });
 
 

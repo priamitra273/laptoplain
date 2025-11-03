@@ -134,13 +134,13 @@ export interface Project {
 }
 
 export interface ProjectPriority {
-    id: number
-    name: string
-    severity: string
-    owned_id: number
-    created_by?: string
-    updated_by?: string
-    deleted_by?: string
+    id: number;
+    name: string;
+    severity: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
 }
 
 export interface AnalyticServer {
@@ -286,6 +286,36 @@ export interface Statistic {
 }
 
 export interface MsProjectStatus {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsProjectPriority {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsTaskStatus {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsTaskType {
     id: number;
     name: string;
     severity: string;

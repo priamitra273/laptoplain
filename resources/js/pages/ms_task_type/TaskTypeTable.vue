@@ -1,87 +1,81 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { MsProjectStatus } from '@/types';
+import { TaskType } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
+import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import FormProjectStatus from './FormProjectStatus.vue';
+import TaskTypeForm from './TaskTypeForm.vue';
 
 interface Props {
-    statuses: MsProjectStatus[];
+    task_types?: TaskType[];
 }
 
-const props = defineProps<Props>();
-
-const filters = ref({
-    global: { value: '', matchMode: FilterMatchMode.CONTAINS },
+const props = withDefaults(defineProps<Props>(), {
+    task_types: () => [],
 });
 
-const visibleForm = ref(false);
-const selected = ref<MsProjectStatus | null>(null);
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 
-const openCreate = () => {
-    selected.value = null;
-    visibleForm.value = true;
+const visibleForm = ref<boolean>(false);
+const selected = ref<TaskType>();
+
+const goToCreate = () => {
+    router.visit(route('site.create'));
 };
 
-const openEdit = (status: MsProjectStatus) => {
-    selected.value = status;
-    visibleForm.value = true;
-};
+const items: MenuItem[] = [
+    {
+        label: 'Edit',
+        command(event) {
+            selected.value = props.task_types?.find((item) => item.id === event.item.menuKey);
+            visibleForm.value = true;
+        },
+    },
+    {
+        label: 'Delete',
+        command(event) {
+            destroy(event.item.data);
+        },
+    },
+];
 
-const destroy = (status: MsProjectStatus) => {
+const destroy = (task_type: TaskType) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete "${status.name}"?`,
-        text: 'This action cannot be undone!',
+        title: `Are you sure want to delete ${task_type.name} task type?`,
+        text: 'This action cannot be undone, so please proceed with caution!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
+        cancelButtonText: `Cancel`,
         customClass: {
             confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
         },
-    }).then((result) => {
+    }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_project_status.destroy', status.id), {
-                onSuccess: () => {
-                    Swal.fire('Deleted!', 'Project status has been deleted.', 'success');
+            router.delete(route('ms_task_type.destroy', task_type.id), {
+                onSuccess() {
+                    Swal.fire('Success', 'Success delete data', 'success');
                 },
             });
         }
     });
 };
 
-// Item dropdown untuk Edit/Delete
-const items = [
-    {
-        label: 'Edit',
-        command(event: any) {
-            const data = event.item.data;
-            openEdit(data);
-        },
-    },
-    {
-        label: 'Delete',
-        command(event: any) {
-            const data = event.item.data;
-            destroy(data);
-        },
-    },
-];
-
 watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = null;
+    if (!newValue) selected.value = undefined;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- 🔹 Action bar -->
+        <!-- Action Table -->
         <div class="flex justify-between gap-2">
-            <!-- 🔍 Search -->
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
                 <InputIcon>
@@ -89,24 +83,23 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <!-- ➕ Add button -->
-            <Button label="Add Project Status" raised @click="openCreate">
+            <Button label="Add Task Type" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
             </Button>
         </div>
 
-        <!-- 🔹 Tabel Data -->
+        <!-- Datatable -->
         <div class="card overflow-hidden">
             <DataTable
-                :value="props.statuses"
+                :value="task_types"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
                 :rows="25"
                 :rowsPerPageOptions="[25, 50, 100]"
-                :globalFilterFields="['name', 'severity']"
+                :globalFilterFields="['name']"
                 striped-rows
                 row-hover
             >
@@ -116,8 +109,8 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column field="name" header="Name" sortable />
-                <Column field="severity" header="Severity" sortable />
+                <Column field="name" header="Name" sortable></Column>
+                <Column field="severity" header="Severity" sortable></Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">
@@ -125,18 +118,18 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action">
+                <Column>
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="py-4 text-center">No Data</p>
+                    <p class="text-center">No Data</p>
                 </template>
             </DataTable>
         </div>
     </div>
 
-    <FormProjectStatus v-model:visible="visibleForm" :value="selected" />
+    <TaskTypeForm v-model:visible="visibleForm" :value="selected" />
 </template>

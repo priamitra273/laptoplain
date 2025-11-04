@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { MsProjectStatus } from '@/types';
+import { TaskStatus } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import ProjectStatusTable from './ProjectStatusTable.vue';
+import TaskStatusTable from './Table.vue';
 
 interface Props {
-    statuses?: MsProjectStatus[];
+    task_statuses?: TaskStatus[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    statuses: () => [],
+    task_statuses: () => [],
 });
 </script>
 
 <template>
-    <Head title="Project Status" />
+    <Head title="Task Status" />
 
     <AppLayout>
         <div class="flex flex-col gap-6">
-            <Heading title="Project Status" description="Manage master data project status" />
+            <Heading title="Task Status" description="Manage master data task status" />
 
-            <ProjectStatusTable :statuses="props.statuses" />
+            <TaskStatusTable :task_statuses="props.task_statuses" />
         </div>
     </AppLayout>
 </template>

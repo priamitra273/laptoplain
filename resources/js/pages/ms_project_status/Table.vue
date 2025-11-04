@@ -7,7 +7,7 @@ import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import FormProjectStatus from './FormProjectStatus.vue';
+import FormProjectStatus from './Form.vue';
 
 interface Props {
     statuses: MsProjectStatus[];

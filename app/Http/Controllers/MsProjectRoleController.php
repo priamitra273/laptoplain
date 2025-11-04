@@ -8,9 +8,7 @@ use Inertia\Inertia;
 
 class MsProjectRoleController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    
     public function index()
     {
         $msProjectRoles = MsProjectRole::select([
@@ -22,7 +20,7 @@ class MsProjectRoleController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
-        return Inertia::render('ms_project_role/ProjectRole', [
+        return Inertia::render('ms_project_role/Index', [
             'project_roles' => $msProjectRoles,
         ]);
     }

@@ -22,9 +22,7 @@ class MenuController extends Controller implements HasMiddleware
         protected MenuService $service
     ){}
 
-    /**
-     * Get the middleware that should be assigned to the controller.
-     */
+    
     public static function middleware(): array
     {
         return [
@@ -32,9 +30,6 @@ class MenuController extends Controller implements HasMiddleware
         ];
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(): Response
     {
         $menu = Menu::orderByRaw('parent_id NULLS FIRST')->orderBy('sequence_number')->get();
@@ -50,17 +45,13 @@ class MenuController extends Controller implements HasMiddleware
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+  
     public function create()
     {
         // 
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+   
     public function store(MenuStoreRequest $request)
     {
         $this->service->store($request->safe());
@@ -68,25 +59,19 @@ class MenuController extends Controller implements HasMiddleware
         return redirect()->route('menu.index');
     }
 
-    /**
-     * Display the specified resource.
-     */
+  
     public function show(string $uuid)
     {
         // 
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+
     public function edit(Menu $menu)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    
     public function update(MenuUpdateRequest $request, Menu $menu)
     {
         $this->service->update($request->safe(), $menu);
@@ -94,9 +79,7 @@ class MenuController extends Controller implements HasMiddleware
         return redirect()->route('menu.index');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+
     public function destroy(Menu $menu)
     {
         $menu->delete();

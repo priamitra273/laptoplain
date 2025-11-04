@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import UploadDialog from '@/components/UploadDialog.vue';
 import { ProjectPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -9,7 +8,7 @@ import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import ProjectPriorityForm from './ProjectPriorityForm.vue';
+import ProjectPriorityForm from './Form.vue';
 
 interface Props {
     project_priorities?: ProjectPriority[];
@@ -83,7 +82,7 @@ watch(visibleForm, (newValue) => {
                     <Icon name="search" />
                 </InputIcon>
             </IconField>
-            
+
             <Button label="Add Project Priority" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
@@ -93,8 +92,17 @@ watch(visibleForm, (newValue) => {
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable :value="project_priorities" v-model:filters="filters" data-key="id" paginator :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name']" striped-rows row-hover>
+            <DataTable
+                :value="project_priorities"
+                v-model:filters="filters"
+                data-key="id"
+                paginator
+                :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]"
+                :globalFilterFields="['name']"
+                striped-rows
+                row-hover
+            >
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}

@@ -8,9 +8,7 @@ use Inertia\Inertia;
 
 class MsProjectStatusController extends Controller
 {
-    /**
-     * Tampilkan daftar semua status project.
-     */
+    
     public function index()
     {
         $statuses = MsProjectStatus::query()
@@ -18,14 +16,12 @@ class MsProjectStatusController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return Inertia::render('ms_project_status/ProjectStatus', [
+        return Inertia::render('ms_project_status/Index', [
             'statuses' => $statuses,
         ]);
     }
 
-    /**
-     * Simpan data status project baru.
-     */
+    
     public function store(MsProjectStatusStoreRequest $request)
     {
         $validated = $request->validated();
@@ -42,9 +38,7 @@ class MsProjectStatusController extends Controller
             ->with('success', 'Status project berhasil ditambahkan.');
     }
 
-    /**
-     * Perbarui status project.
-     */
+    
     public function update(MsProjectStatusStoreRequest $request, MsProjectStatus $ms_project_status)
     {
         $validated = $request->validated();
@@ -60,9 +54,7 @@ class MsProjectStatusController extends Controller
             ->with('success', 'Status project berhasil diperbarui.');
     }
 
-    /**
-     * Hapus status project.
-     */
+    
     public function destroy(MsProjectStatus $ms_project_status)
     {
         $ms_project_status->update([

@@ -3,7 +3,7 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { ProjectRole } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import ProjectRoleTable from './ProjectRoleTable.vue';
+import ProjectRoleTable from './Table.vue';
 
 interface Props {
     project_roles?: ProjectRole[];

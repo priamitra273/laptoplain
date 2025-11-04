@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import UploadDialog from '@/components/UploadDialog.vue';
-import { Project } from '@/types';
+import { TaskType } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import ProjectForm from './ProjectForm.vue';
+import TaskTypeForm from './Form.vue';
 
 interface Props {
-    projects?: Project[];
+    task_types?: TaskType[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    projects: () => [],
+    task_types: () => [],
 });
 
 const filters = ref({
@@ -24,35 +23,17 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const visibleImportDialog = ref<boolean>(false);
-const selected = ref<Project>();
+const selected = ref<TaskType>();
 
 const goToCreate = () => {
     router.visit(route('site.create'));
 };
 
-const splitButtonItems: MenuItem[] = [
-    {
-        label: 'Import',
-        icon: 'pi pi-upload',
-        command: () => {
-            visibleImportDialog.value = true;
-        },
-    },
-    {
-        label: 'Export',
-        icon: 'pi pi-download',
-        command: () => {
-            window.open(route('project.export'), '_blank');
-        },
-    },
-];
-
 const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.projects?.find((item) => item.uuid === event.item.menuKey);
+            selected.value = props.task_types?.find((item) => item.id === event.item.menuKey);
             visibleForm.value = true;
         },
     },
@@ -64,10 +45,10 @@ const items: MenuItem[] = [
     },
 ];
 
-const destroy = (project: Project) => {
+const destroy = (task_type: TaskType) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${project.name} project?`,
+        title: `Are you sure want to delete ${task_type.name} task type?`,
         text: 'This action cannot be undone, so please proceed with caution!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -77,7 +58,7 @@ const destroy = (project: Project) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('project.destroy', project.uuid), {
+            router.delete(route('ms_task_type.destroy', task_type.id), {
                 onSuccess() {
                     Swal.fire('Success', 'Success delete data', 'success');
                 },
@@ -102,35 +83,26 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <!-- <div class="flex gap-2">
-                <Button label="Import" text raised @click="visibleImportDialog = true">
-                    <template #icon>
-                        <Icon name="Upload" />
-                    </template>
-</Button>
-
-<Button as="a" :href="route('project.export')" label="Export" text raised>
-    <template #icon>
-                        <Icon name="Download" />
-                    </template>
-</Button>
-
-<Button label="Add Project" raised @click="visibleForm = true">
-    <template #icon>
-                        <Icon name="Plus" />
-                    </template>
-</Button>
-</div> -->
-            <SplitButton class="p-button-raised" :model="splitButtonItems" @click="goToCreate" size="small">
-                <Icon name="Plus" />
-                <span>Add Project</span>
-            </SplitButton>
+            <Button label="Add Task Type" raised @click="visibleForm = true">
+                <template #icon>
+                    <Icon name="Plus" />
+                </template>
+            </Button>
         </div>
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable :value="projects" v-model:filters="filters" data-key="uuid" paginator :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name']" striped-rows row-hover>
+            <DataTable
+                :value="task_types"
+                v-model:filters="filters"
+                data-key="id"
+                paginator
+                :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]"
+                :globalFilterFields="['name']"
+                striped-rows
+                row-hover
+            >
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}
@@ -138,21 +110,7 @@ watch(visibleForm, (newValue) => {
                 </Column>
 
                 <Column field="name" header="Name" sortable></Column>
-
-                <Column field="start_date" header="Start Date" sortable>
-                    <template #body="{ data }">
-                        {{ moment(data.start_date).format('YYYY-MM-DD') }}
-                    </template>
-                </Column>
-
-                <Column field="finish_date" header="Finish Date" sortable>
-                    <template #body="{ data }">
-                        {{ moment(data.finish_date).format('YYYY-MM-DD') }}
-                    </template>
-                </Column>
-
-                <Column field="plan_site" header="Plan Site" sortable></Column>
-                <Column field="plan_cctv" header="Plan CCTV" sortable></Column>
+                <Column field="severity" header="Severity" sortable></Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">
@@ -162,7 +120,7 @@ watch(visibleForm, (newValue) => {
 
                 <Column>
                     <template #body="{ data }">
-                        <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />
+                        <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
                 </Column>
 
@@ -173,5 +131,5 @@ watch(visibleForm, (newValue) => {
         </div>
     </div>
 
-    <ProjectForm v-model:visible="visibleForm" :value="selected" />
+    <TaskTypeForm v-model:visible="visibleForm" :value="selected" />
 </template>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Facades\Sqids;
 use App\Http\Requests\MsProjectPriority\MsProjectPriorityRequest;
 use App\Models\MsProjectPriority;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class MsProjectPriorityController extends Controller
@@ -24,6 +25,7 @@ class MsProjectPriorityController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
+        // Encode semua ID
         $msProjectPriorities = Sqids::rec_encode_ids_in_list($msProjectPriorities);
 
         return Inertia::render('ms_project_priority/Index', [
@@ -52,28 +54,37 @@ class MsProjectPriorityController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(MsProjectPriority $msProjectPriority)
+    public function show(string $encodedId)
     {
+        $id = Sqids::decode($encodedId);
+        $msProjectPriority = MsProjectPriority::findOrFail($id);
+
         return Inertia::render('ms_project_priority/ProjectPriorityShow', [
-            'msProjectPriority' => $msProjectPriority,
+            'msProjectPriority' => Sqids::rec_encode_ids($msProjectPriority),
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(MsProjectPriority $msProjectPriority)
+    public function edit(string $encodedId)
     {
+        $id = Sqids::decode($encodedId);
+        $msProjectPriority = MsProjectPriority::findOrFail($id);
+
         return Inertia::render('ms_project_priority/ProjectPriorityEdit', [
-            'msProjectPriority' => $msProjectPriority,
+            'msProjectPriority' => Sqids::rec_encode_ids($msProjectPriority),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(MsProjectPriorityRequest $request, MsProjectPriority $msProjectPriority)
+    public function update(MsProjectPriorityRequest $request, string $encodedId)
     {
+        $id = Sqids::decode($encodedId);
+        $msProjectPriority = MsProjectPriority::findOrFail($id);
+
         $msProjectPriority->update($request->safe()->toArray());
 
         return to_route('ms_project_priority.index');
@@ -82,8 +93,11 @@ class MsProjectPriorityController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(MsProjectPriority $msProjectPriority)
+    public function destroy(string $encodedId)
     {
+        $id = Sqids::decode($encodedId);
+        $msProjectPriority = MsProjectPriority::findOrFail($id);
+
         $msProjectPriority->delete();
 
         return to_route('ms_project_priority.index');

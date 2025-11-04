@@ -123,14 +123,42 @@ export interface Role {
 }
 
 export interface Project {
-    uuid: string;
-    name: string;
+    id: number;
+    emoji: string;
+    title: string;
+    description: string;
     start_date: string;
-    finish_date: string;
-    plan_site: number;
-    plan_cctv: number;
-    created_at?: string;
-    updated_at?: string;
+    due_date: string;
+    progress: number;
+    sequence_number: number;
+    status_id: number;
+    priority_id: number;
+    owner_id: number;
+    owned_id: number;
+    created_by: string;
+    updated_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TaskType {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskStatus {
+    id: number;
+    name: string;
+    severity: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
 }
 
 export interface ProjectPriority {
@@ -144,22 +172,22 @@ export interface ProjectPriority {
 }
 
 export interface ProjectRole {
-    id: number
-    name: string
-    owned_id: number
-    created_by?: string
-    updated_by?: string
-    deleted_by?: string
+    id: number;
+    name: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
 }
 
 export interface TaskPriority {
-    id: number
-    name: string
-    severity: string
-    owned_id: number
-    created_by?: string
-    updated_by?: string
-    deleted_by?: string
+    id: number;
+    name: string;
+    severity: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
 }
 
 export interface AnalyticServer {

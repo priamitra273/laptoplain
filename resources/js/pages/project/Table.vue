@@ -12,10 +12,16 @@ import ProjectForm from './Form.vue';
 
 interface Props {
     projects?: Project[];
+    statuses: { id: number; name: string }[];
+    priorities: { id: number; name: string }[];
+    roles: { id: number; name: string }[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     projects: () => [],
+    statuses: () => [],
+    priorities: () => [],
+    roles: () => [],
 });
 
 const filters = ref({
@@ -23,48 +29,18 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const visibleImportDialog = ref<boolean>(false);
-const selected = ref<Project>();
-
-// Mapping label & warna status / priority
-const statusLabels: Record<number, { label: string; color: string }> = {
-    1: { label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
-    2: { label: 'In Progress', color: 'bg-blue-100 text-blue-700' },
-    3: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-};
-
-const priorityLabels: Record<number, { label: string; color: string }> = {
-    1: { label: 'Low', color: 'bg-green-100 text-green-700' },
-    2: { label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-    3: { label: 'High', color: 'bg-red-100 text-red-700' },
-};
+const selected = ref<Project | undefined>(undefined);
 
 const goToCreate = () => {
+    selected.value = undefined;
     visibleForm.value = true;
 };
-
-const splitButtonItems: MenuItem[] = [
-    {
-        label: 'Import',
-        icon: 'pi pi-upload',
-        command: () => {
-            visibleImportDialog.value = true;
-        },
-    },
-    {
-        label: 'Export',
-        icon: 'pi pi-download',
-        command: () => {
-            window.open(route('project.export'), '_blank');
-        },
-    },
-];
 
 const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.projects?.find((item) => item.id === event.item.menuKey);
+            selected.value = event.item.data;
             visibleForm.value = true;
         },
     },
@@ -79,18 +55,15 @@ const items: MenuItem[] = [
 const destroy = (project: Project) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete "${project.title}"?`,
-        text: 'This action cannot be undone!',
+        title: `Delete "${project.title}"?`,
+        text: 'This action cannot be undone.',
         showCancelButton: true,
-        confirmButtonText: 'Delete',
+        confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
-        },
-    }).then(async (result) => {
+    }).then((result) => {
         if (result.isConfirmed) {
             router.delete(route('project.destroy', project.id), {
-                onSuccess() {
+                onSuccess: () => {
                     Swal.fire('Deleted!', 'Project deleted successfully.', 'success');
                 },
             });
@@ -98,14 +71,13 @@ const destroy = (project: Project) => {
     });
 };
 
-watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = undefined;
+watch(visibleForm, (val) => {
+    if (!val) selected.value = undefined;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Toolbar -->
         <div class="flex items-center justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search Project..." />
@@ -114,21 +86,17 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <SplitButton class="p-button-raised" :model="splitButtonItems" @click="goToCreate" size="small">
-                <Icon name="Plus" />
-                <span>Add Project</span>
-            </SplitButton>
+            <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
-        <!-- Data Table -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="projects"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
-                :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]"
+                :rows="10"
+                :rowsPerPageOptions="[10, 25, 50]"
                 :globalFilterFields="['title', 'description']"
                 striped-rows
                 row-hover
@@ -136,84 +104,30 @@ watch(visibleForm, (newValue) => {
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
-
-                <Column field="emoji" header="Emoji" class="w-20 text-center">
-                    <template #body="{ data }">{{ data.emoji || '-' }}</template>
-                </Column>
-
-                <Column field="title" header="Title" sortable></Column>
-
+                <Column field="title" header="Title" sortable />
                 <Column field="description" header="Description" sortable>
-                    <template #body="{ data }">
-                        {{ data.description || '-' }}
-                    </template>
+                    <template #body="{ data }">{{ data.description || '-' }}</template>
                 </Column>
-
-                <Column field="status_id" header="Status" sortable>
-                    <template #body="{ data }">
-                        <span
-                            v-if="statusLabels[data.status_id]"
-                            :class="['rounded-full px-2 py-1 text-xs font-medium', statusLabels[data.status_id].color]"
-                        >
-                            {{ statusLabels[data.status_id].label }}
-                        </span>
-                        <span v-else>-</span>
-                    </template>
-                </Column>
-
-                <Column field="priority_id" header="Priority" sortable>
-                    <template #body="{ data }">
-                        <span
-                            v-if="priorityLabels[data.priority_id]"
-                            :class="['rounded-full px-2 py-1 text-xs font-medium', priorityLabels[data.priority_id].color]"
-                        >
-                            {{ priorityLabels[data.priority_id].label }}
-                        </span>
-                        <span v-else>-</span>
-                    </template>
-                </Column>
-
-                <Column field="start_date" header="Start Date" sortable>
+                <Column field="status.name" header="Status" sortable />
+                <Column field="priority.name" header="Priority" sortable />
+                <Column field="start_date" header="Start" sortable>
                     <template #body="{ data }">
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
                 </Column>
-
-                <Column field="due_date" header="Due Date" sortable>
+                <Column field="due_date" header="Due" sortable>
                     <template #body="{ data }">
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
                 </Column>
-
-                <Column field="progress" header="Progress" sortable>
+                <Column header="Action">
                     <template #body="{ data }">
-                        <div class="flex items-center gap-2">
-                            <div class="h-2 w-full rounded bg-gray-200">
-                                <div class="h-2 rounded bg-blue-500" :style="{ width: data.progress + '%' }"></div>
-                            </div>
-                            <span class="text-xs text-gray-600">{{ data.progress }}%</span>
-                        </div>
+                        <DropdownButton :items="items" :data="data" />
                     </template>
                 </Column>
-
-                <Column field="created_at" header="Created" sortable>
-                    <template #body="{ data }">
-                        {{ moment(data.created_at).format('DD MMM YYYY, HH:mm') }}
-                    </template>
-                </Column>
-
-                <Column header="Action" class="w-16 text-center">
-                    <template #body="{ data }">
-                        <DropdownButton :items="items" :data="data" :menu-key="data.id" />
-                    </template>
-                </Column>
-
-                <template #empty>
-                    <p class="py-4 text-center text-gray-500">No Project Data</p>
-                </template>
             </DataTable>
         </div>
     </div>
 
-    <ProjectForm v-model:visible="visibleForm" :value="selected" />
+    <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" :roles="props.roles" />
 </template>

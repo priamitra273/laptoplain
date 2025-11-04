@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ProjectExport;
-use App\Http\Requests\Project\ProjectImportRequest;
 use App\Http\Requests\Project\ProjectStoreRequest;
-use App\Imports\ProjectStoreImport;
 use App\Models\Project;
+use App\Models\MsProjectStatus;
+use App\Models\MsProjectPriority;
+use App\Models\MsProjectRole;
 use App\Services\ProjectService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,131 +19,62 @@ class ProjectController extends Controller
         protected ProjectService $service
     ) {}
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $projects = Project::select([
-            'id',
-            'emoji',
-            'title',
-            'description',
-            'start_date',
-            'due_date',
-            'progress',
-            'sequence_number',
-            'status_id',
-            'priority_id',
-            'owner_id',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'created_at',
-            'updated_at',
-        ])
-            ->orderBy('id')
+        // Ambil semua project beserta relasinya
+        $projects = Project::with(['status:id,name', 'priority:id,name'])
+            ->select([
+                'id',
+                'emoji',
+                'title',
+                'description',
+                'start_date',
+                'due_date',
+                'progress',
+                'sequence_number',
+                'status_id',
+                'priority_id',
+                'owner_id',
+                'owned_id',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ])
+            ->orderBy('id', 'asc')
             ->get();
 
-        return Inertia::render('project/Project', [
+        // Ambil semua data master untuk dropdown
+        $statuses = MsProjectStatus::select('id', 'name')->orderBy('name')->get();
+        $priorities = MsProjectPriority::select('id', 'name')->orderBy('name')->get();
+        $roles = MsProjectRole::select('id', 'name')->orderBy('name')->get();
+
+        return Inertia::render('project/Index', [
             'projects' => $projects,
+            'statuses' => $statuses,
+            'priorities' => $priorities,
+            'roles' => $roles,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return Inertia::render('project/ProjectCreate');
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(ProjectStoreRequest $request)
     {
-        Project::create($request->safe()->toArray());
-
-        return to_route('project.index');
+        Project::create($request->validated());
+        return to_route('project.index')->with('success', 'Project berhasil dibuat');
     }
 
-    /**
-     * Verify and preview imported file.
-     */
-    public function verify_import(Request $request)
-    {
-        $request->validate([
-            'type' => ['required', 'string', 'in:INSERT,UPDATE'],
-            'file' => ['required', 'file', 'mimes:xls,xlsx,csv']
-        ]);
 
-        $result = $this->service->verifyImport($request->get('type'), $request->file('file'));
-
-        return Inertia::render('project/ProjectVerifyImport', [
-            'projects' => $result['data'],
-            'header' => $result['header'],
-        ]);
-    }
-
-    /**
-     * Import validated data into the database.
-     */
-    public function import(ProjectImportRequest $request)
-    {
-        foreach ($request->safe()->projects as $project) {
-            Project::create($project);
-        }
-
-        return to_route('project.index');
-    }
-
-    /**
-     * Export all projects to Excel.
-     */
-    public function export(Request $request)
-    {
-        $datetime = date('YmdHis');
-        return Excel::download(new ProjectExport, "project-$datetime.xlsx");
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Project $project)
-    {
-        return Inertia::render('project/ProjectShow', [
-            'project' => $project,
-        ]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Project $project)
-    {
-        return Inertia::render('project/ProjectEdit', [
-            'project' => $project,
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(ProjectStoreRequest $request, Project $project)
     {
-        $project->update($request->safe()->toArray());
-
-        return to_route('project.index');
+        $project->update($request->validated());
+        return to_route('project.index')->with('success', 'Project berhasil diperbarui');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+
     public function destroy(Project $project)
     {
         $project->delete();
-
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project berhasil dihapus');
     }
 }

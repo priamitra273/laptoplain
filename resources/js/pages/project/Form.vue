@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
-import { InertiaForm, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import moment from 'moment';
 import Swal from 'sweetalert2';
 import { computed, watch as vueWatch } from 'vue';
@@ -11,6 +11,7 @@ interface Props {
     visible: boolean;
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
+    roles: { id: number; name: string }[]; // ✅ Tambahan untuk Project Role
 }
 
 interface ProjectForm {
@@ -21,6 +22,7 @@ interface ProjectForm {
     emoji: string | null;
     status_id: number | null;
     priority_id: number | null;
+    role_id: number | null; // ✅ Tambahan field Project Role
     owner_id?: number | null;
     owned_id?: number | null;
 }
@@ -39,7 +41,7 @@ const visible = computed<boolean>({
 
 const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
 
-const form: InertiaForm<ProjectForm> = useForm({
+const form = useForm<ProjectForm>({
     title: '',
     start_date: null,
     due_date: null,
@@ -47,47 +49,52 @@ const form: InertiaForm<ProjectForm> = useForm({
     emoji: '',
     status_id: null,
     priority_id: null,
+    role_id: null, // ✅ inisialisasi
     owner_id: null,
     owned_id: null,
 });
 
+/**
+ * Simpan data (Create / Update)
+ */
 const save = (): void => {
     const isEdit = !!props.value?.id;
     const url = isEdit ? route('project.update', props.value.id) : route('project.store');
 
-    const payload = form.transform((data) => ({
-        ...data,
-        start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
-        due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
-    }));
+    const payload = {
+        ...form.data(),
+        start_date: form.start_date ? moment(form.start_date).format('YYYY-MM-DD') : null,
+        due_date: form.due_date ? moment(form.due_date).format('YYYY-MM-DD') : null,
+    };
 
     const successMessage = isEdit ? 'Project successfully updated!' : 'Project successfully created!';
 
     if (isEdit) {
-        payload.put(url, {
+        form.put(url, {
+            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire('Success', successMessage, 'success');
                 visible.value = false;
             },
-            onError: () => {
-                Swal.fire('Error', 'Please fix the errors below.', 'error');
-            },
+            onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
         });
     } else {
-        payload.post(url, {
+        form.post(url, {
+            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire('Success', successMessage, 'success');
                 visible.value = false;
             },
-            onError: () => {
-                Swal.fire('Error', 'Please fix the errors below.', 'error');
-            },
+            onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
         });
     }
 };
 
+/**
+ * Saat drawer dibuka → isi form dari props.value jika ada
+ */
 const show = (): void => {
     form.reset();
     form.clearErrors();
@@ -96,28 +103,32 @@ const show = (): void => {
         form.title = props.value.title ?? '';
         form.description = props.value.description ?? '';
         form.emoji = props.value.emoji ?? '';
-        form.status_id = props.value.status_id ?? null;
-        form.priority_id = props.value.priority_id ?? null;
+        form.status_id = props.value.status_id ?? props.value.status?.id ?? null;
+        form.priority_id = props.value.priority_id ?? props.value.priority?.id ?? null;
+        form.role_id = props.value.role_id ?? props.value.role?.id ?? null; // ✅ tambahkan role_id
         form.owner_id = props.value.owner_id ?? null;
         form.owned_id = props.value.owned_id ?? null;
-        form.start_date = props.value.start_date ? moment(props.value.start_date, 'YYYY-MM-DD', true).toDate() : null;
-        form.due_date = props.value.due_date ? moment(props.value.due_date, 'YYYY-MM-DD', true).toDate() : null;
+        form.start_date = props.value.start_date ? moment(props.value.start_date).toDate() : null;
+        form.due_date = props.value.due_date ? moment(props.value.due_date).toDate() : null;
     }
 };
 
+/**
+ * Saat drawer ditutup → reset form
+ */
 const hide = (): void => {
     form.reset();
     form.clearErrors();
 };
 
-// Clear errors when input changes
+/**
+ * Bersihkan error otomatis saat input berubah
+ */
 vueWatch(
     () => form,
     () => {
         Object.keys(form.errors).forEach((key) => {
-            if (form[key] !== undefined) {
-                delete form.errors[key];
-            }
+            if (form[key] !== undefined) delete form.errors[key];
         });
     },
     { deep: true },
@@ -159,15 +170,43 @@ vueWatch(
             <!-- Status -->
             <div class="flex flex-col gap-2">
                 <Label for="status_id">Status</Label>
-                <Dropdown v-model="form.status_id" :options="props.statuses" optionLabel="name" optionValue="id" placeholder="Select Status" />
+                <Dropdown
+                    v-model="form.status_id"
+                    :options="props.statuses"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Status"
+                    class="w-full"
+                />
                 <InputError :message="form.errors.status_id" />
             </div>
 
             <!-- Priority -->
             <div class="flex flex-col gap-2">
                 <Label for="priority_id">Priority</Label>
-                <Dropdown v-model="form.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" placeholder="Select Priority" />
+                <Dropdown
+                    v-model="form.priority_id"
+                    :options="props.priorities"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Priority"
+                    class="w-full"
+                />
                 <InputError :message="form.errors.priority_id" />
+            </div>
+
+            <!-- ✅ Project Role -->
+            <div class="flex flex-col gap-2">
+                <Label for="role_id">Project Role</Label>
+                <Dropdown
+                    v-model="form.role_id"
+                    :options="props.roles"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Project Role"
+                    class="w-full"
+                />
+                <InputError :message="form.errors.role_id" />
             </div>
 
             <!-- Emoji -->
@@ -183,13 +222,11 @@ vueWatch(
                 <Textarea v-model="form.description" id="description" placeholder="Enter Project Description" rows="4" />
                 <InputError :message="form.errors.description" />
             </div>
-        </form>
 
-        <template #footer>
-            <div class="flex justify-end gap-2">
+            <div class="col-span-2 flex justify-end gap-2">
                 <Button label="Cancel" severity="secondary" @click="visible = false" />
-                <Button label="Save" :loading="form.processing" :disabled="form.processing" @click="save" />
+                <Button label="Save" type="submit" :loading="form.processing" :disabled="form.processing" />
             </div>
-        </template>
+        </form>
     </Drawer>
 </template>

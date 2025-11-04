@@ -72,7 +72,6 @@ const save = (): void => {
 
     if (isEdit) {
         form.put(url, {
-            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire('Success', successMessage, 'success');
@@ -82,7 +81,6 @@ const save = (): void => {
         });
     } else {
         form.post(url, {
-            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire('Success', successMessage, 'success');

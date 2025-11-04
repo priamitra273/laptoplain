@@ -65,7 +65,7 @@ class ProjectController extends Controller
     }
 
 
-public function update(ProjectStoreRequest $request, Project $project)
+    public function update(ProjectStoreRequest $request, Project $project)
     {
         $project->update($request->validated());
         return to_route('project.index')->with('success', 'Project berhasil diperbarui');

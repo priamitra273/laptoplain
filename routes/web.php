@@ -34,19 +34,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('team', TeamController::class)->except($except_route)->whereUuid('team');
     Route::resource('role', RoleController::class);
 
-    Route::resource('project', ProjectController::class)->except($except_route)->whereUuid('project');
+    Route::resource('project', ProjectController::class)->except($except_route);
 
     Route::resource('ms_project_status', MsProjectStatusController::class)
     ->except(['create', 'show', 'edit']);
 
 
-    Route::resource('ms_project_priority', MsProjectPriorityController::class)->except($except_route);
-    Route::resource('ms_project_role', MsProjectRoleController::class)->except($except_route);
-    Route::resource('ms_task_priority', MsTaskPriorityController::class)->except($except_route);
+    Route::resource('project-priority', MsProjectPriorityController::class)->except($except_route);
+    Route::resource('project-role', MsProjectRoleController::class)->except($except_route);
+    Route::resource('task-priority', MsTaskPriorityController::class)->except($except_route);
 
-    Route::resource('ms_task_status', MsTaskStatusController::class)->except($except_route);
+    Route::resource('task-status', MsTaskStatusController::class)->except($except_route);
 
-    Route::resource('ms_task_type', MsTaskTypeController::class)->except($except_route);
+    Route::resource('task-type', MsTaskTypeController::class)->except($except_route);
 });
 
 

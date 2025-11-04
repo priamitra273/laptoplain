@@ -100,7 +100,7 @@ class MenuSeeder extends Seeder
             'label' => 'Project Role',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_project_role.index',
+            'route_name' => 'project-role.index',
             'sequence_number' => 1,
             'is_active' => true
         ]));
@@ -110,7 +110,7 @@ class MenuSeeder extends Seeder
             'label' => 'Project Status',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_project_status.index',
+            'route_name' => 'project-status.index',
             'sequence_number' => 2,
             'is_active' => true
         ]));
@@ -120,7 +120,7 @@ class MenuSeeder extends Seeder
             'label' => 'Project Priority',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_project_priority.index',
+            'route_name' => 'project-priority.index',
             'sequence_number' => 3,
             'is_active' => true
         ]));
@@ -130,7 +130,7 @@ class MenuSeeder extends Seeder
             'label' => 'Task Status',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_task_status.index',
+            'route_name' => 'taskstatus.index',
             'sequence_number' => 4,
             'is_active' => true
         ]));
@@ -140,7 +140,7 @@ class MenuSeeder extends Seeder
             'label' => 'Task Priority',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_task_priority.index',
+            'route_name' => 'task-priority.index',
             'sequence_number' => 5,
             'is_active' => true
         ]));
@@ -150,7 +150,7 @@ class MenuSeeder extends Seeder
             'label' => 'Task Type',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'ms_task_type.index',
+            'route_name' => 'task-type.index',
             'sequence_number' => 6,
             'is_active' => true
         ]));

@@ -3,7 +3,7 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { ProjectPriority } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import ProjectPriorityTable from './ProjectPriorityTable.vue';
+import ProjectPriorityTable from './Table.vue';
 
 interface Props {
     project_priorities?: ProjectPriority[];

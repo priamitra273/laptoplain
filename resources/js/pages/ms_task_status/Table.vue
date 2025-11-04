@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { TaskType } from '@/types';
+import { TaskStatus } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import TaskTypeForm from './TaskTypeForm.vue';
+import TaskStatusForm from './Form.vue';
 
 interface Props {
-    task_types?: TaskType[];
+    task_statuses?: TaskStatus[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    task_types: () => [],
+    task_statuses: () => [],
 });
 
 const filters = ref({
@@ -23,7 +23,7 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const selected = ref<TaskType>();
+const selected = ref<TaskStatus>();
 
 const goToCreate = () => {
     router.visit(route('site.create'));
@@ -33,7 +33,7 @@ const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.task_types?.find((item) => item.id === event.item.menuKey);
+            selected.value = props.task_statuses?.find((item) => item.id === event.item.menuKey);
             visibleForm.value = true;
         },
     },
@@ -45,10 +45,10 @@ const items: MenuItem[] = [
     },
 ];
 
-const destroy = (task_type: TaskType) => {
+const destroy = (task_status: TaskStatus) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${task_type.name} task type?`,
+        title: `Are you sure want to delete ${task_status.name} task status?`,
         text: 'This action cannot be undone, so please proceed with caution!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -58,7 +58,7 @@ const destroy = (task_type: TaskType) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_task_type.destroy', task_type.id), {
+            router.delete(route('ms_task_status.destroy', task_status.id), {
                 onSuccess() {
                     Swal.fire('Success', 'Success delete data', 'success');
                 },
@@ -83,7 +83,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Type" raised @click="visibleForm = true">
+            <Button label="Add Task Status" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -93,7 +93,7 @@ watch(visibleForm, (newValue) => {
         <!-- Datatable -->
         <div class="card overflow-hidden">
             <DataTable
-                :value="task_types"
+                :value="task_statuses"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -131,5 +131,5 @@ watch(visibleForm, (newValue) => {
         </div>
     </div>
 
-    <TaskTypeForm v-model:visible="visibleForm" :value="selected" />
+    <TaskStatusForm v-model:visible="visibleForm" :value="selected" />
 </template>

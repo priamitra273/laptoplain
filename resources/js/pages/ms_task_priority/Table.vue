@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { TaskStatus } from '@/types';
+import { TaskPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import TaskStatusForm from './TaskStatusForm.vue';
+import TaskPriorityForm from './Form.vue';
 
 interface Props {
-    task_statuses?: TaskStatus[];
+    task_priorities?: TaskPriority[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    task_statuses: () => [],
+    task_priorities: () => [],
 });
 
 const filters = ref({
@@ -23,7 +23,7 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const selected = ref<TaskStatus>();
+const selected = ref<TaskPriority>();
 
 const goToCreate = () => {
     router.visit(route('site.create'));
@@ -33,7 +33,7 @@ const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.task_statuses?.find((item) => item.id === event.item.menuKey);
+            selected.value = props.task_priorities?.find((item) => item.id === event.item.menuKey);
             visibleForm.value = true;
         },
     },
@@ -45,10 +45,10 @@ const items: MenuItem[] = [
     },
 ];
 
-const destroy = (task_status: TaskStatus) => {
+const destroy = (task_priority: TaskPriority) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${task_status.name} task status?`,
+        title: `Are you sure want to delete ${task_priority.name} task priority?`,
         text: 'This action cannot be undone, so please proceed with caution!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -58,7 +58,7 @@ const destroy = (task_status: TaskStatus) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_task_status.destroy', task_status.id), {
+            router.delete(route('ms_task_priority.destroy', task_priority.id), {
                 onSuccess() {
                     Swal.fire('Success', 'Success delete data', 'success');
                 },
@@ -83,7 +83,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Status" raised @click="visibleForm = true">
+            <Button label="Add Project Priority" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -93,7 +93,7 @@ watch(visibleForm, (newValue) => {
         <!-- Datatable -->
         <div class="card overflow-hidden">
             <DataTable
-                :value="task_statuses"
+                :value="task_priorities"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -131,5 +131,5 @@ watch(visibleForm, (newValue) => {
         </div>
     </div>
 
-    <TaskStatusForm v-model:visible="visibleForm" :value="selected" />
+    <TaskPriorityForm v-model:visible="visibleForm" :value="selected" />
 </template>

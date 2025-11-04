@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { TaskPriority } from '@/types';
+import { ProjectRole } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import TaskPriorityTable from './TaskPriorityTable.vue';
+import ProjectRoleTable from './Table.vue';
 
 interface Props {
-    task_priorities?: TaskPriority[];
+    project_roles?: ProjectRole[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    task_priorities: () => [],
+    project_roles: () => [],
 });
 </script>
 
 <template>
-    <Head title="Task Priority" />
+    <Head title="Project Role" />
 
     <AppLayout>
         <div class="flex flex-col gap-6">
-            <Heading title="Task Priority" description="Manage master data task priority" />
+            <Heading title="Project Role" description="Manage master data project role" />
 
-            <TaskPriorityTable :task_priorities="props.task_priorities" />
+            <ProjectRoleTable :project_roles="props.project_roles" />
         </div>
     </AppLayout>
 </template>

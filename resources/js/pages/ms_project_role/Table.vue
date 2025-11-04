@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import UploadDialog from '@/components/UploadDialog.vue';
 import { ProjectRole } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -9,7 +8,7 @@ import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import ProjectRoleForm from './ProjectRoleForm.vue';
+import ProjectRoleForm from './Form.vue';
 
 interface Props {
     project_roles?: ProjectRole[];
@@ -93,8 +92,17 @@ watch(visibleForm, (newValue) => {
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable :value="project_roles" v-model:filters="filters" data-key="id" paginator :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name']" striped-rows row-hover>
+            <DataTable
+                :value="project_roles"
+                v-model:filters="filters"
+                data-key="id"
+                paginator
+                :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]"
+                :globalFilterFields="['name']"
+                striped-rows
+                row-hover
+            >
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}

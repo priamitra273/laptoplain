@@ -8,9 +8,7 @@ use Inertia\Inertia;
 
 class MsTaskStatusController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    
 
     public function index()
     {
@@ -24,22 +22,18 @@ class MsTaskStatusController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
-        return Inertia::render('ms_task_status/TaskStatus', [
+        return Inertia::render('ms_task_status/Index', [
             'task_statuses' => $msTaskStatuses,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    
     public function create()
     {
         return Inertia::render('ms_task_status/TaskStatusCreate');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    
     public function store(MsTaskStatusStoreRequest $request)
     {
         MsTaskStatus::create($request->safe()->toArray());
@@ -47,9 +41,6 @@ class MsTaskStatusController extends Controller
         return to_route('ms_task_status.index');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(MsTaskStatus $msTaskStatus)
     {
         return Inertia::render('ms_task_status/TaskStatusShow', [
@@ -57,9 +48,7 @@ class MsTaskStatusController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    
     public function edit(MsTaskStatus $msTaskStatus)
     {
         return Inertia::render('ms_task_status/TaskStatusEdit', [
@@ -67,9 +56,6 @@ class MsTaskStatusController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(MsTaskStatusStoreRequest $request, MsTaskStatus $msTaskStatus)
     {
         $msTaskStatus->update($request->safe()->toArray());
@@ -77,9 +63,6 @@ class MsTaskStatusController extends Controller
         return to_route('ms_task_status.index');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(MsTaskStatus $msTaskStatus)
     {
         $msTaskStatus->delete();

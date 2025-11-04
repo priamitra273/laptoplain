@@ -3,7 +3,7 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { TaskStatus } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import TaskStatusTable from './TaskStatusTable.vue';
+import TaskStatusTable from './Table.vue';
 
 interface Props {
     task_statuses?: TaskStatus[];

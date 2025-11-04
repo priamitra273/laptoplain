@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import UploadDialog from '@/components/UploadDialog.vue';
-import { TaskPriority } from '@/types';
+import { TaskType } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
-import TaskPriorityForm from './TaskPriorityForm.vue';
+import TaskTypeForm from './Form.vue';
 
 interface Props {
-    task_priorities?: TaskPriority[];
+    task_types?: TaskType[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    task_priorities: () => [],
+    task_types: () => [],
 });
 
 const filters = ref({
@@ -24,7 +23,7 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const selected = ref<TaskPriority>();
+const selected = ref<TaskType>();
 
 const goToCreate = () => {
     router.visit(route('site.create'));
@@ -34,7 +33,7 @@ const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.task_priorities?.find((item) => item.id === event.item.menuKey);
+            selected.value = props.task_types?.find((item) => item.id === event.item.menuKey);
             visibleForm.value = true;
         },
     },
@@ -46,10 +45,10 @@ const items: MenuItem[] = [
     },
 ];
 
-const destroy = (task_priority: TaskPriority) => {
+const destroy = (task_type: TaskType) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${task_priority.name} task priority?`,
+        title: `Are you sure want to delete ${task_type.name} task type?`,
         text: 'This action cannot be undone, so please proceed with caution!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -59,7 +58,7 @@ const destroy = (task_priority: TaskPriority) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_task_priority.destroy', task_priority.id), {
+            router.delete(route('ms_task_type.destroy', task_type.id), {
                 onSuccess() {
                     Swal.fire('Success', 'Success delete data', 'success');
                 },
@@ -83,8 +82,8 @@ watch(visibleForm, (newValue) => {
                     <Icon name="search" />
                 </InputIcon>
             </IconField>
-            
-            <Button label="Add Project Priority" raised @click="visibleForm = true">
+
+            <Button label="Add Task Type" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -93,8 +92,17 @@ watch(visibleForm, (newValue) => {
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable :value="task_priorities" v-model:filters="filters" data-key="id" paginator :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name']" striped-rows row-hover>
+            <DataTable
+                :value="task_types"
+                v-model:filters="filters"
+                data-key="id"
+                paginator
+                :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]"
+                :globalFilterFields="['name']"
+                striped-rows
+                row-hover
+            >
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}
@@ -123,5 +131,5 @@ watch(visibleForm, (newValue) => {
         </div>
     </div>
 
-    <TaskPriorityForm v-model:visible="visibleForm" :value="selected" />
+    <TaskTypeForm v-model:visible="visibleForm" :value="selected" />
 </template>

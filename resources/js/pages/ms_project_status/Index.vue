@@ -3,7 +3,7 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { MsProjectStatus } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import ProjectStatusTable from './ProjectStatusTable.vue';
+import ProjectStatusTable from './Table.vue';
 
 interface Props {
     statuses?: MsProjectStatus[];

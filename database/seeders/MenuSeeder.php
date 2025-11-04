@@ -55,42 +55,12 @@ class MenuSeeder extends Seeder
             'is_active' => true
         ]));
 
-        // Site
-        $service->store(new ValidatedInput([
-            'label' => 'Site',
-            'parent_uuid' => $master_data->uuid,
-            'icon' => 'MapPinned',
-            'route_name' => 'site.index',
-            'sequence_number' => 2,
-            'is_active' => true
-        ]));
-
-        // dinas
-        $service->store(new ValidatedInput([
-            'label' => 'Dinas',
-            'parent_uuid' => $master_data->uuid,
-            'icon' => 'BriefcaseBusiness',
-            'route_name' => 'department.index',
-            'sequence_number' => 2,
-            'is_active' => true
-        ]));
-
         // user
         $service->store(new ValidatedInput([
             'label' => 'User',
             'parent_uuid' => $settings->uuid,
             'icon' => 'UserCog',
             'route_name' => 'user.index',
-            'sequence_number' => 1,
-            'is_active' => true
-        ]));
-
-        // hardware
-        $service->store(new ValidatedInput([
-            'label' => 'Hardware',
-            'parent_uuid' => $settings->uuid,
-            'icon' => 'Cpu',
-            'route_name' => 'hardware.index',
             'sequence_number' => 1,
             'is_active' => true
         ]));

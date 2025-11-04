@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'sqids' => [
+        'alphabet' => env('SQIDS_ALPHABET'),
+        'min_length' => env('SQIDS_MIN_LENGTH')
+    ]
 
 ];

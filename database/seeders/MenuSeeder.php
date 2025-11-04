@@ -94,5 +94,65 @@ class MenuSeeder extends Seeder
             'sequence_number' => 4,
             'is_active' => true
         ]));
+
+        // project role
+        $service->store(new ValidatedInput([
+            'label' => 'Project Role',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_project_role.index',
+            'sequence_number' => 1,
+            'is_active' => true
+        ]));
+
+        // project status
+        $service->store(new ValidatedInput([
+            'label' => 'Project Status',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_project_status.index',
+            'sequence_number' => 2,
+            'is_active' => true
+        ]));
+
+        // project priority
+        $service->store(new ValidatedInput([
+            'label' => 'Project Priority',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_project_priority.index',
+            'sequence_number' => 3,
+            'is_active' => true
+        ]));
+
+        // task status
+        $service->store(new ValidatedInput([
+            'label' => 'Task Status',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_task_status.index',
+            'sequence_number' => 4,
+            'is_active' => true
+        ]));
+
+        // task priority
+        $service->store(new ValidatedInput([
+            'label' => 'Task Priority',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_task_priority.index',
+            'sequence_number' => 5,
+            'is_active' => true
+        ]));
+
+        // task type
+        $service->store(new ValidatedInput([
+            'label' => 'Task Type',
+            'parent_uuid' => $master_data->uuid,
+            'icon' => 'BookCheck',
+            'route_name' => 'ms_task_type.index',
+            'sequence_number' => 6,
+            'is_active' => true
+        ]));
     }
 }

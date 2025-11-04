@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 class ProjectStoreRequest extends FormRequest
 {
@@ -22,11 +23,37 @@ class ProjectStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'emoji' => 'nullable|string|max:10',
             'start_date' => 'required|date',
-            'finish_date' => 'required|date|after_or_equal:start_date',
-            'plan_site' => 'required|numeric|min:1',
-            'plan_cctv' => 'required|numeric|min:1'
+            'due_date' => 'required|date|after_or_equal:start_date',
+            'status_id' => 'required|exists:ms_project_statuses,id',
+            'priority_id' => 'required|exists:ms_project_priority,id',
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     *
+     * @return void
+     */
+    protected function prepareForValidation()
+    {
+        if (!$this->has('owned_id')) {
+            $this->merge([
+                'owned_id' => Auth::id()
+            ]);
+        }
+    }
+
+    /**
+     * Get the data that should be validated.
+     *
+     * @return array
+     */
+    public function validationData()
+    {
+        return $this->all();
     }
 }

@@ -47,13 +47,13 @@ class ProjectController extends Controller
         // Ambil semua data master untuk dropdown
         $statuses = MsProjectStatus::select('id', 'name')->orderBy('name')->get();
         $priorities = MsProjectPriority::select('id', 'name')->orderBy('name')->get();
-        $roles = MsProjectRole::select('id', 'name')->orderBy('name')->get();
+        // $roles = MsProjectRole::select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('project/Index', [
             'projects' => $projects,
             'statuses' => $statuses,
             'priorities' => $priorities,
-            'roles' => $roles,
+            // 'roles' => $roles,
         ]);
     }
 
@@ -65,7 +65,7 @@ class ProjectController extends Controller
     }
 
 
-    public function update(ProjectStoreRequest $request, Project $project)
+public function update(ProjectStoreRequest $request, Project $project)
     {
         $project->update($request->validated());
         return to_route('project.index')->with('success', 'Project berhasil diperbarui');

@@ -11,7 +11,7 @@ interface Props {
     visible: boolean;
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
-    roles: { id: number; name: string }[]; // ✅ Tambahan untuk Project Role
+    // roles: { id: number; name: string }[]; // ✅ Tambahan untuk Project Role
 }
 
 interface ProjectForm {
@@ -22,9 +22,10 @@ interface ProjectForm {
     emoji: string | null;
     status_id: number | null;
     priority_id: number | null;
-    role_id: number | null; // ✅ Tambahan field Project Role
+    // role_id: number | null; // ✅ Tambahan field Project Role
     owner_id?: number | null;
     owned_id?: number | null;
+    [key: string]: any;
 }
 
 const props = defineProps<Props>();
@@ -49,7 +50,7 @@ const form = useForm<ProjectForm>({
     emoji: '',
     status_id: null,
     priority_id: null,
-    role_id: null, // ✅ inisialisasi
+    // role_id: null, // ✅ inisialisasi
     owner_id: null,
     owned_id: null,
 });
@@ -105,7 +106,7 @@ const show = (): void => {
         form.emoji = props.value.emoji ?? '';
         form.status_id = props.value.status_id ?? props.value.status?.id ?? null;
         form.priority_id = props.value.priority_id ?? props.value.priority?.id ?? null;
-        form.role_id = props.value.role_id ?? props.value.role?.id ?? null; // ✅ tambahkan role_id
+        // form.role_id = props.value.role_id ?? props.value.role?.id ?? null; // ✅ tambahkan role_id
         form.owner_id = props.value.owner_id ?? null;
         form.owned_id = props.value.owned_id ?? null;
         form.start_date = props.value.start_date ? moment(props.value.start_date).toDate() : null;
@@ -196,7 +197,7 @@ vueWatch(
             </div>
 
             <!-- ✅ Project Role -->
-            <div class="flex flex-col gap-2">
+            <!-- <div class="flex flex-col gap-2">
                 <Label for="role_id">Project Role</Label>
                 <Dropdown
                     v-model="form.role_id"
@@ -207,7 +208,7 @@ vueWatch(
                     class="w-full"
                 />
                 <InputError :message="form.errors.role_id" />
-            </div>
+            </div> -->
 
             <!-- Emoji -->
             <div class="flex flex-col gap-2">

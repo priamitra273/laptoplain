@@ -14,14 +14,14 @@ interface Props {
     projects?: Project[];
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
-    roles: { id: number; name: string }[];
+    // roles: { id: number; name: string }[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     projects: () => [],
     statuses: () => [],
     priorities: () => [],
-    roles: () => [],
+    // roles: () => [],
 });
 
 const filters = ref({
@@ -129,5 +129,5 @@ watch(visibleForm, (val) => {
         </div>
     </div>
 
-    <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" :roles="props.roles" />
+    <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" />
 </template>

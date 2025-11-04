@@ -28,6 +28,12 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             RoleSeeder::class,
             UserSeeder::class,
+            MsProjectPrioritySeeder::class,
+            MsProjectStatusSeeder::class,
+            MsProjectRoleSeeder::class,
+            MsTaskPrioritySeeder::class,
+            MsTaskStatusSeeder::class,
+            MsTaskTypeSeeder::class,
         ]);
     }
 }

@@ -15,7 +15,6 @@ class MsProjectRole extends Model
 
     protected $fillable = [
         'name',
-        'severity',
         'owned_id',
         'created_by',
         'updated_by',

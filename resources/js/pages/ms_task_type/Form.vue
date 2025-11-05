@@ -35,7 +35,7 @@ const form: InertiaForm<TaskTypeForm> = useForm({
 const formHeader = computed(() => (props.value?.id ? 'Edit Task Type' : 'Create Task Type'));
 
 const save = () => {
-    const url = props.value?.id ? route('task_type.update', props.value.id) : route('task_type.store');
+    const url = props.value?.id ? route('task-type.update', props.value.id) : route('task-type.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 

@@ -54,7 +54,7 @@ const destroy = (task_type: TaskType) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('task_type.destroy', task_type.id), {
+            router.delete(route('task-type.destroy', task_type.id), {
                 onSuccess() {
                     Swal.fire('Deleted!', 'Task type has been deleted.', 'success');
                 },

@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Facades\Sqids;
 use App\Http\Requests\MsTaskStatus\MsTaskStatusStoreRequest;
 use App\Models\MsTaskStatus;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MsTaskStatusController extends Controller
 {
     
 
-    public function index()
+    public function index(): Response
     {
         $msTaskStatuses = MsTaskStatus::select([
             'id',
@@ -22,51 +25,45 @@ class MsTaskStatusController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
+        $msTaskStatuses = Sqids::rec_encode_ids_in_list($msTaskStatuses);
+
         return Inertia::render('ms_task_status/Index', [
             'task_statuses' => $msTaskStatuses,
         ]);
     }
-
     
-    public function create()
+    public function store(MsTaskStatusStoreRequest $request): RedirectResponse
     {
-        return Inertia::render('ms_task_status/TaskStatusCreate');
+        MsTaskStatus::create($request->validated());
+
+        return redirect()
+            ->route('task-status.index')
+            ->with('success', 'Task Status berhasil ditambahkan.');
     }
 
-    
-    public function store(MsTaskStatusStoreRequest $request)
+    public function update(MsTaskStatusStoreRequest $request, string $encodedId): RedirectResponse
     {
-        MsTaskStatus::create($request->safe()->toArray());
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        return to_route('ms_task_status.index');
+        $msTaskStatuses = MsTaskStatus::findOrFail($id);
+        $msTaskStatuses->update($request->validated());
+
+        return redirect()
+            ->route('task-status.index')
+            ->with('success', 'Task Status berhasil diperbarui.');
     }
 
-    public function show(MsTaskStatus $msTaskStatus)
+    public function destroy(string $encodedId): RedirectResponse
     {
-        return Inertia::render('ms_task_status/TaskStatusShow', [
-            'msTaskStatus' => $msTaskStatus,
-        ]);
-    }
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-    
-    public function edit(MsTaskStatus $msTaskStatus)
-    {
-        return Inertia::render('ms_task_status/TaskStatusEdit', [
-            'msTaskStatus' => $msTaskStatus,
-        ]);
-    }
+        $msTaskStatuses = MsTaskStatus::findOrFail($id);
+        $msTaskStatuses->delete();
 
-    public function update(MsTaskStatusStoreRequest $request, MsTaskStatus $msTaskStatus)
-    {
-        $msTaskStatus->update($request->safe()->toArray());
-
-        return to_route('ms_task_status.index');
-    }
-
-    public function destroy(MsTaskStatus $msTaskStatus)
-    {
-        $msTaskStatus->delete();
-
-        return to_route('ms_task_status.index');
+        return redirect()
+            ->route('task-status.index')
+            ->with('success', 'Task Status berhasil dihapus.');
     }
 }

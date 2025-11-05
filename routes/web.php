@@ -36,8 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('project', ProjectController::class)->except($except_route);
 
-    Route::resource('ms_project_status', MsProjectStatusController::class)
-    ->except(['create', 'show', 'edit']);
+    Route::resource('project-status', MsProjectStatusController::class)->except($except_route);
 
 
     Route::resource('project-priority', MsProjectPriorityController::class)->except($except_route);

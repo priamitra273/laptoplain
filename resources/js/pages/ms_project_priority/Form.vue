@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import { InertiaForm, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import Swal from 'sweetalert2'
 import Label from '@/components/ui/label/Label.vue';
-import { watchDebounced } from '@vueuse/core';
 import { ProjectPriority } from '@/types';
-import moment from 'moment';
+import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
+import Swal from 'sweetalert2';
+import { computed, watch } from 'vue';
 
 interface Props {
     value?: ProjectPriority;
@@ -14,84 +13,108 @@ interface Props {
 }
 
 interface ProjectPriorityForm {
-    _method: "POST" | "PUT";
+    _method: 'POST' | 'PUT';
     name: string;
     severity: string;
     [key: string]: any;
 }
 
-const props = defineProps<Props>()
-
+const props = defineProps<Props>();
 const emits = defineEmits<{
     (event: 'update:visible', value: boolean): void;
-}>()
+}>();
 
 const visible = computed<boolean>({
     get() {
-        return props.visible
+        return props.visible;
     },
     set(newValue) {
-        emits('update:visible', newValue)
-    }
+        emits('update:visible', newValue);
+    },
 });
 
 const formHeader = computed(() => {
-    return props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority'
-})
+    return props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority';
+});
 
 const form: InertiaForm<ProjectPriorityForm> = useForm({
     _method: 'POST',
     name: '',
-    severity: ''
+    severity: '',
 });
 
-const save = (): void => {
-    const url = props.value?.id ? route('ms_project_priority.update', props.value.id) : route('ms_project_priority.store');
-
-    form._method = props.value?.id ? 'PUT' : 'POST'
-
-    form.post(url, {
-            preserveScroll: true,
-            onSuccess() {
-                Swal.fire('Success', 'Successfully save data', 'success')
-                visible.value = false
-            }
-        })
-}
-
-const hide = (): void => {
-    form._method = 'POST'
-
-}
+const page = usePage();
+watch(
+    () => page.props.flash.success,
+    (msg) => {
+        if (msg) Swal.fire('Success', msg as string, 'success');
+    },
+);
+watch(
+    () => page.props.flash.error,
+    (msg) => {
+        if (msg) Swal.fire('Error', msg as string, 'error');
+    },
+);
 
 const show = (): void => {
     form.name = props.value?.name ?? '';
     form.severity = props.value?.severity ?? '';
-}
+};
 
-// watching form changes
+const hide = (): void => {
+    form.reset();
+    form.clearErrors();
+    form._method = 'POST';
+};
+
+const save = (): void => {
+    const isEdit = !!props.value?.id;
+    const url = isEdit ? route('project-priority.update', props.value.id) : route('project-priority.store');
+
+    form._method = isEdit ? 'PUT' : 'POST';
+
+    form.post(url, {
+        preserveScroll: true,
+        onSuccess() {
+            visible.value = false;
+            form.reset();
+        },
+        onError(errors) {
+            // error dari controller langsung tampil di form.errors
+            console.error('Validation Errors:', errors);
+            Swal.fire('Validation Error', 'Please check the highlighted fields.', 'error');
+        },
+        onFinish() {
+            form.processing = false;
+        },
+    });
+};
+
 for (const key in form.data()) {
-    watchDebounced(() => form[key], () => {
-        delete form.errors[key]
-    }, { debounce: 500, maxWait: 1000 })
+    watchDebounced(
+        () => form[key],
+        () => delete form.errors[key],
+        { debounce: 500, maxWait: 1000 },
+    );
 }
-
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show"
-        @after-hide="hide">
-        <form class="grid md:grid-cols-2 gap-8" @submit.prevent="save">
+    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
+        <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
+            <!-- Name -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="name">Name</Label>
                 <InputText v-model="form.name" id="name" placeholder="Enter Project Name" />
-                <InputError :message="form.errors.name" v-if="form.errors.name" />
+                <InputError :message="form.errors.name" />
             </div>
 
+            <!-- Severity -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
                 <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />
-                <InputError :message="form.errors.severity" v-if="form.errors.severity" />
+                <InputError :message="form.errors.severity" />
             </div>
         </form>
 

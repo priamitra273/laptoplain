@@ -20,7 +20,6 @@ const props = withDefaults(defineProps<Props>(), {
     <AppLayout>
         <div class="flex flex-col gap-6">
             <Heading title="Task Status" description="Manage master data task status" />
-
             <TaskStatusTable :task_statuses="props.task_statuses" />
         </div>
     </AppLayout>

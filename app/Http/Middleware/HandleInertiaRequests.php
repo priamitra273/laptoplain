@@ -15,16 +15,12 @@ class HandleInertiaRequests extends Middleware
     /**
      * The root template that's loaded on the first page visit.
      *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
      * @var string
      */
     protected $rootView = 'app';
 
     /**
      * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
@@ -33,8 +29,6 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
      *
      * @return array<string, mixed>
      */
@@ -50,10 +44,17 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
+            'quote' => [
+                'message' => trim($message),
+                'author' => trim($author),
+            ],
             'auth' => [
                 'user' => $request->user(),
-                'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve()
+                'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
+            ],
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error'   => fn() => $request->session()->get('error'),
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

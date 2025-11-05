@@ -35,7 +35,7 @@ const openEdit = (status: MsProjectStatus) => {
 const destroy = (status: MsProjectStatus) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete "${status.name}"?`,
+        title: `Delete "${status.name}"?`,
         text: 'This action cannot be undone!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -45,43 +45,34 @@ const destroy = (status: MsProjectStatus) => {
         },
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_project_status.destroy', status.id), {
+            router.delete(route('project-status.destroy', status.id), {
                 onSuccess: () => {
-                    Swal.fire('Deleted!', 'Project status has been deleted.', 'success');
+                    Swal.fire('Deleted!', 'Project status deleted successfully.', 'success');
                 },
             });
         }
     });
 };
 
-// Item dropdown untuk Edit/Delete
 const items = [
     {
         label: 'Edit',
-        command(event: any) {
-            const data = event.item.data;
-            openEdit(data);
-        },
+        command: (event: any) => openEdit(event.item.data),
     },
     {
         label: 'Delete',
-        command(event: any) {
-            const data = event.item.data;
-            destroy(data);
-        },
+        command: (event: any) => destroy(event.item.data),
     },
 ];
 
-watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = null;
+watch(visibleForm, (val) => {
+    if (!val) selected.value = null;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- 🔹 Action bar -->
         <div class="flex justify-between gap-2">
-            <!-- 🔍 Search -->
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
                 <InputIcon>
@@ -89,7 +80,6 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <!-- ➕ Add button -->
             <Button label="Add Project Status" raised @click="openCreate">
                 <template #icon>
                     <Icon name="Plus" />
@@ -97,7 +87,6 @@ watch(visibleForm, (newValue) => {
             </Button>
         </div>
 
-        <!-- 🔹 Tabel Data -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="props.statuses"
@@ -110,7 +99,7 @@ watch(visibleForm, (newValue) => {
                 striped-rows
                 row-hover
             >
-                <Column header="No">
+                <Column header="No" style="width: 5%">
                     <template #body="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -125,7 +114,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action">
+                <Column header="Action" style="width: 10%">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

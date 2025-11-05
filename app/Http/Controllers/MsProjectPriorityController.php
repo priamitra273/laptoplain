@@ -5,17 +5,15 @@ namespace App\Http\Controllers;
 use App\Facades\Sqids;
 use App\Http\Requests\MsProjectPriority\MsProjectPriorityRequest;
 use App\Models\MsProjectPriority;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MsProjectPriorityController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(): Response
     {
-        $msProjectPriorities = MsProjectPriority::select([
+        $priorities = MsProjectPriority::select([
             'id',
             'name',
             'severity',
@@ -25,81 +23,45 @@ class MsProjectPriorityController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
-        // Encode semua ID
-        $msProjectPriorities = Sqids::rec_encode_ids_in_list($msProjectPriorities);
+        $priorities = Sqids::rec_encode_ids_in_list($priorities);
 
         return Inertia::render('ms_project_priority/Index', [
-            'project_priorities' => $msProjectPriorities,
+            'project_priorities' => $priorities,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(MsProjectPriorityRequest $request): RedirectResponse
     {
-        return Inertia::render('ms_project_priority/ProjectPriorityCreate');
+        MsProjectPriority::create($request->validated());
+
+        return redirect()
+            ->route('project-priority.index')
+            ->with('success', 'Project Priority berhasil ditambahkan.');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(MsProjectPriorityRequest $request)
-    {
-        MsProjectPriority::create($request->safe()->toArray());
-
-        return to_route('ms_project_priority.index');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $encodedId)
+    public function update(MsProjectPriorityRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        $msProjectPriority = MsProjectPriority::findOrFail($id);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        return Inertia::render('ms_project_priority/ProjectPriorityShow', [
-            'msProjectPriority' => Sqids::rec_encode_ids($msProjectPriority),
-        ]);
+        $priority = MsProjectPriority::findOrFail($id);
+        $priority->update($request->validated());
+
+        return redirect()
+            ->route('project-priority.index')
+            ->with('success', 'Project Priority berhasil diperbarui.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $encodedId)
+    public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        $msProjectPriority = MsProjectPriority::findOrFail($id);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        return Inertia::render('ms_project_priority/ProjectPriorityEdit', [
-            'msProjectPriority' => Sqids::rec_encode_ids($msProjectPriority),
-        ]);
-    }
+        $priority = MsProjectPriority::findOrFail($id);
+        $priority->delete();
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(MsProjectPriorityRequest $request, string $encodedId)
-    {
-        $id = Sqids::decode($encodedId);
-        $msProjectPriority = MsProjectPriority::findOrFail($id);
-
-        $msProjectPriority->update($request->safe()->toArray());
-
-        return to_route('ms_project_priority.index');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $encodedId)
-    {
-        $id = Sqids::decode($encodedId);
-        $msProjectPriority = MsProjectPriority::findOrFail($id);
-
-        $msProjectPriority->delete();
-
-        return to_route('ms_project_priority.index');
+        return redirect()
+            ->route('project-priority.index')
+            ->with('success', 'Project Priority berhasil dihapus.');
     }
 }

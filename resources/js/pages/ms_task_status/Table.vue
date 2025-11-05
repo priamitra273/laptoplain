@@ -22,18 +22,14 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const visibleForm = ref<boolean>(false);
-const selected = ref<TaskStatus>();
-
-const goToCreate = () => {
-    router.visit(route('site.create'));
-};
+const visibleForm = ref(false);
+const selected = ref<TaskStatus | undefined>(undefined);
 
 const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.task_statuses?.find((item) => item.id === event.item.menuKey);
+            selected.value = event.item.data;
             visibleForm.value = true;
         },
     },
@@ -48,11 +44,11 @@ const items: MenuItem[] = [
 const destroy = (task_status: TaskStatus) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${task_status.name} task status?`,
-        text: 'This action cannot be undone, so please proceed with caution!',
+        title: `Are you sure you want to delete "${task_status.name}"?`,
+        text: 'This action cannot be undone!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
-        cancelButtonText: `Cancel`,
+        cancelButtonText: 'Cancel',
         customClass: {
             confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
         },
@@ -60,21 +56,22 @@ const destroy = (task_status: TaskStatus) => {
         if (result.isConfirmed) {
             router.delete(route('ms_task_status.destroy', task_status.id), {
                 onSuccess() {
-                    Swal.fire('Success', 'Success delete data', 'success');
+                    Swal.fire('Deleted!', 'Task status has been deleted.', 'success');
                 },
             });
         }
     });
 };
 
-watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = undefined;
+// Reset form saat Drawer ditutup
+watch(visibleForm, (newVal) => {
+    if (!newVal) selected.value = undefined;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Action Table -->
+        <!-- Toolbar -->
         <div class="flex justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
@@ -90,27 +87,27 @@ watch(visibleForm, (newValue) => {
             </Button>
         </div>
 
-        <!-- Datatable -->
+        <!-- DataTable -->
         <div class="card overflow-hidden">
             <DataTable
-                :value="task_statuses"
+                :value="props.task_statuses"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
-                :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]"
-                :globalFilterFields="['name']"
+                :rows="10"
+                :rowsPerPageOptions="[10, 25, 50]"
+                :globalFilterFields="['name', 'severity']"
                 striped-rows
                 row-hover
             >
-                <Column header="No">
+                <Column header="No" :style="{ width: '50px' }">
                     <template #body="{ index }">
                         {{ index + 1 }}
                     </template>
                 </Column>
 
-                <Column field="name" header="Name" sortable></Column>
-                <Column field="severity" header="Severity" sortable></Column>
+                <Column field="name" header="Name" sortable />
+                <Column field="severity" header="Severity" sortable />
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">
@@ -118,14 +115,14 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column>
+                <Column header="Actions">
                     <template #body="{ data }">
-                        <DropdownButton :items="items" :data="data" :menu-key="data.id" />
+                        <DropdownButton :items="items" :data="data" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="text-center">No Data</p>
+                    <p class="py-4 text-center">No Data Found</p>
                 </template>
             </DataTable>
         </div>

@@ -21,7 +21,6 @@ class ProjectController extends Controller
 
     public function index()
     {
-        // Ambil semua project beserta relasinya
         $projects = Project::with(['status:id,name', 'priority:id,name'])
             ->select([
                 'id',
@@ -61,20 +60,20 @@ class ProjectController extends Controller
     public function store(ProjectStoreRequest $request)
     {
         Project::create($request->validated());
-        return to_route('project.index')->with('success', 'Project berhasil dibuat');
+        return to_route('project.index');
     }
 
 
     public function update(ProjectStoreRequest $request, Project $project)
     {
         $project->update($request->validated());
-        return to_route('project.index')->with('success', 'Project berhasil diperbarui');
+        return to_route('project.index');
     }
 
 
     public function destroy(Project $project)
     {
         $project->delete();
-        return to_route('project.index')->with('success', 'Project berhasil dihapus');
+        return to_route('project.index');
     }
 }

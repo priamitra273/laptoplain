@@ -16,26 +16,14 @@ interface TaskStatusForm {
     _method: 'POST' | 'PUT';
     name: string;
     severity: string;
-    [key: string]: any;
 }
 
 const props = defineProps<Props>();
+const emits = defineEmits<{ (event: 'update:visible', value: boolean): void }>();
 
-const emits = defineEmits<{
-    (event: 'update:visible', value: boolean): void;
-}>();
-
-const visible = computed<boolean>({
-    get() {
-        return props.visible;
-    },
-    set(newValue) {
-        emits('update:visible', newValue);
-    },
-});
-
-const formHeader = computed(() => {
-    return props.value?.id ? 'Edit Task Status' : 'Create New Task Status';
+const visible = computed({
+    get: () => props.visible,
+    set: (val) => emits('update:visible', val),
 });
 
 const form: InertiaForm<TaskStatusForm> = useForm({
@@ -44,54 +32,55 @@ const form: InertiaForm<TaskStatusForm> = useForm({
     severity: '',
 });
 
-const save = (): void => {
-    const url = props.value?.id ? route('ms_task_status.update', props.value.id) : route('ms_task_status.store');
+const formHeader = computed(() => (props.value?.id ? 'Edit Task Status' : 'Create Task Status'));
+
+const save = () => {
+    const url = props.value?.id ? route('task-status.update', props.value.id) : route('task-status.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
     form.post(url, {
         preserveScroll: true,
-        onSuccess() {
-            Swal.fire('Success', 'Successfully save data', 'success');
+        onSuccess: () => {
+            Swal.fire('Success', 'Data saved successfully!', 'success');
             visible.value = false;
         },
     });
 };
 
-const hide = (): void => {
-    form._method = 'POST';
-};
-
-const show = (): void => {
+const show = () => {
     form.name = props.value?.name ?? '';
     form.severity = props.value?.severity ?? '';
 };
 
-// watching form changes
+const hide = () => {
+    form.reset();
+    form.clearErrors();
+};
+
+// watch setiap field → hapus error otomatis
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],
-        () => {
-            delete form.errors[key];
-        },
-        { debounce: 500, maxWait: 1000 },
+        () => delete form.errors[key],
+        { debounce: 300 },
     );
 }
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
-        <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
+    <Drawer v-model:visible="visible" position="right" class="!w-full md:!w-[40vw]" :header="formHeader" @show="show" @after-hide="hide">
+        <form class="grid gap-6 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="name">Name</Label>
-                <InputText v-model="form.name" id="name" placeholder="Enter Project Name" />
-                <InputError :message="form.errors.name" v-if="form.errors.name" />
+                <InputText v-model="form.name" id="name" placeholder="Enter task status name" />
+                <InputError :message="form.errors.name" />
             </div>
 
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />
-                <InputError :message="form.errors.severity" v-if="form.errors.severity" />
+                <InputText v-model="form.severity" id="severity" placeholder="Enter severity" />
+                <InputError :message="form.errors.severity" />
             </div>
         </form>
 

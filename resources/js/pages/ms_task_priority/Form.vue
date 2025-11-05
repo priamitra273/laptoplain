@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import { InertiaForm, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import Swal from 'sweetalert2'
 import Label from '@/components/ui/label/Label.vue';
-import { watchDebounced } from '@vueuse/core';
 import { TaskPriority } from '@/types';
-import moment from 'moment';
+import { InertiaForm, useForm } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
+import Swal from 'sweetalert2';
+import { computed } from 'vue';
 
 interface Props {
     value?: TaskPriority;
@@ -14,81 +13,76 @@ interface Props {
 }
 
 interface TaskPriorityForm {
-    _method: "POST" | "PUT";
+    _method: 'POST' | 'PUT';
     name: string;
     severity: string;
     [key: string]: any;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 const emits = defineEmits<{
     (event: 'update:visible', value: boolean): void;
-}>()
+}>();
 
 const visible = computed<boolean>({
-    get() {
-        return props.visible
-    },
-    set(newValue) {
-        emits('update:visible', newValue)
-    }
+    get: () => props.visible,
+    set: (newValue) => emits('update:visible', newValue),
 });
 
-const formHeader = computed(() => {
-    return props.value?.id ? 'Edit Task Priority' : 'Create New Task Priority'
-})
+const formHeader = computed(() => (props.value?.id ? 'Edit Task Priority' : 'Create New Task Priority'));
 
 const form: InertiaForm<TaskPriorityForm> = useForm({
     _method: 'POST',
     name: '',
-    severity: ''
+    severity: '',
 });
 
 const save = (): void => {
-    const url = props.value?.id ? route('ms_task_priority.update', props.value.id) : route('ms_task_priority.store');
+    const url = props.value?.id ? route('task-priority.update', props.value.id) : route('task-priority.store');
 
-    form._method = props.value?.id ? 'PUT' : 'POST'
+    form._method = props.value?.id ? 'PUT' : 'POST';
 
     form.post(url, {
-            preserveScroll: true,
-            onSuccess() {
-                Swal.fire('Success', 'Successfully save data', 'success')
-                visible.value = false
-            }
-        })
-}
+        preserveScroll: true,
+        onSuccess: () => {
+            Swal.fire('Success', 'Successfully saved data', 'success');
+            visible.value = false;
+        },
+    });
+};
 
 const hide = (): void => {
-    form._method = 'POST'
-
-}
+    form.reset();
+    form.clearErrors();
+    form._method = 'POST';
+};
 
 const show = (): void => {
     form.name = props.value?.name ?? '';
     form.severity = props.value?.severity ?? '';
-}
+};
 
-// watching form changes
+// Clear validation error when typing
 for (const key in form.data()) {
-    watchDebounced(() => form[key], () => {
-        delete form.errors[key]
-    }, { debounce: 500, maxWait: 1000 })
+    watchDebounced(
+        () => form[key],
+        () => delete form.errors[key],
+        { debounce: 500, maxWait: 1000 },
+    );
 }
-
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show"
-        @after-hide="hide">
-        <form class="grid md:grid-cols-2 gap-8" @submit.prevent="save">
-            <div class="col-span-2 flex flex-col gap-2">
+    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
+        <form class="grid grid-cols-1 gap-6" @submit.prevent="save">
+            <div class="flex flex-col gap-2">
                 <Label for="name">Name</Label>
-                <InputText v-model="form.name" id="name" placeholder="Enter Project Name" />
+                <InputText v-model="form.name" id="name" placeholder="Enter Task Name" />
                 <InputError :message="form.errors.name" v-if="form.errors.name" />
             </div>
 
-            <div class="col-span-2 flex flex-col gap-2">
+            <div class="flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
                 <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />
                 <InputError :message="form.errors.severity" v-if="form.errors.severity" />

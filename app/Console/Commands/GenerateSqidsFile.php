@@ -8,7 +8,7 @@ use Sqids\Sqids;
 class GenerateSqidsFile extends Command
 {
     protected $signature = 'sqids:generate {--file=storage/app/sqids.txt}';
-    protected $description = 'Generate Sqids (IDs 1–100) and save to a .txt file using env config only';
+    protected $description = 'Generate Sqids (IDs 1-100) and save to a .txt file using env config only';
 
     public function handle()
     {

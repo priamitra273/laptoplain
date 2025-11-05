@@ -125,6 +125,10 @@ watch(visibleForm, (val) => {
                         <DropdownButton :items="items" :data="data" />
                     </template>
                 </Column>
+
+                <template #empty>
+                    <p class="text-center">No Data</p>
+                </template>
             </DataTable>
         </div>
     </div>

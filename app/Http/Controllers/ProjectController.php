@@ -2,60 +2,53 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\ProjectExport;
+use App\Facades\Sqids;
 use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Models\Project;
 use App\Models\MsProjectStatus;
 use App\Models\MsProjectPriority;
-use App\Models\MsProjectRole;
-use App\Services\ProjectService;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Maatwebsite\Excel\Facades\Excel;
 
 class ProjectController extends Controller
 {
-    public function __construct(
-        protected ProjectService $service
-    ) {}
-
     public function index()
     {
-        $projects = Project::with(['status:id,name', 'priority:id,name'])
-            ->select([
-                'id',
-                'emoji',
-                'title',
-                'description',
-                'start_date',
-                'due_date',
-                'progress',
-                'sequence_number',
-                'status_id',
-                'priority_id',
-                'owner_id',
-                'owned_id',
-                'created_by',
-                'updated_by',
-                'created_at',
-                'updated_at',
+        $projects = Project::with([
+                'status:id,name,severity',
+                'priority:id,name,severity'
             ])
-            ->orderBy('id', 'asc')
+            ->orderBy('id')
             ->get();
-
-        // Ambil semua data master untuk dropdown
-        $statuses = MsProjectStatus::select('id', 'name')->orderBy('name')->get();
-        $priorities = MsProjectPriority::select('id', 'name')->orderBy('name')->get();
-        // $roles = MsProjectRole::select('id', 'name')->orderBy('name')->get();
+            
+        $projects->transform(function ($p) {
+            $p->encoded = Sqids::encode($p->id);
+            return $p;
+        });
 
         return Inertia::render('project/Index', [
-            'projects' => $projects,
-            'statuses' => $statuses,
-            'priorities' => $priorities,
-            // 'roles' => $roles,
+            'projects'   => $projects,
+            'statuses'   => MsProjectStatus::select('id', 'name', 'severity')->get(),
+            'priorities' => MsProjectPriority::select('id', 'name', 'severity')->get(),
         ]);
     }
 
+    public function show(string $encoded)
+    {
+        $id = Sqids::decode($encoded);
+
+        $project = Project::with([
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'projectMembers.user:id,name,email',
+            'projectMembers.role:id,name',
+        ])->findOrFail($id);
+
+        $project->encoded = Sqids::encode($project->id);
+
+        return Inertia::render('project/Detail', [
+            'project' => $project,
+        ]);
+    }
 
     public function store(ProjectStoreRequest $request)
     {
@@ -63,17 +56,22 @@ class ProjectController extends Controller
         return to_route('project.index');
     }
 
-
-    public function update(ProjectStoreRequest $request, Project $project)
+    public function update(ProjectStoreRequest $request, string $encoded)
     {
+        $id = Sqids::decode($encoded);
+
+        $project = Project::findOrFail($id);
         $project->update($request->validated());
+
         return to_route('project.index');
     }
 
-
-    public function destroy(Project $project)
+    public function destroy(string $encoded)
     {
-        $project->delete();
+        $id = Sqids::decode($encoded);
+
+        Project::findOrFail($id)->delete();
+
         return to_route('project.index');
     }
 }

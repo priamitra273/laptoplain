@@ -6,6 +6,7 @@ import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
+import Tag from 'primevue/tag';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
@@ -14,14 +15,12 @@ interface Props {
     projects?: Project[];
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
-    // roles: { id: number; name: string }[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     projects: () => [],
     statuses: () => [],
     priorities: () => [],
-    // roles: () => [],
 });
 
 const filters = ref({
@@ -37,6 +36,12 @@ const goToCreate = () => {
 };
 
 const items: MenuItem[] = [
+    {
+        label: 'View Detail',
+        command(event) {
+            router.get(route('project.show', event.item.data.encoded)); // ✅ FIX
+        },
+    },
     {
         label: 'Edit',
         command(event) {
@@ -62,13 +67,21 @@ const destroy = (project: Project) => {
         cancelButtonText: 'Cancel',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(route('project.destroy', project.id), {
+            router.delete(route('project.destroy', project.encoded), {
+                // ✅ FIX
                 onSuccess: () => {
                     Swal.fire('Deleted!', 'Project deleted successfully.', 'success');
                 },
             });
         }
     });
+};
+
+const stripHtml = (html: string | null): string => {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
 };
 
 watch(visibleForm, (val) => {
@@ -78,6 +91,7 @@ watch(visibleForm, (val) => {
 
 <template>
     <div class="flex flex-col gap-4">
+        <!-- Search + Add -->
         <div class="flex items-center justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search Project..." />
@@ -89,6 +103,7 @@ watch(visibleForm, (val) => {
             <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
+        <!-- Table -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="projects"
@@ -104,22 +119,39 @@ watch(visibleForm, (val) => {
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
+
                 <Column field="title" header="Title" sortable />
+
                 <Column field="description" header="Description" sortable>
-                    <template #body="{ data }">{{ data.description || '-' }}</template>
+                    <template #body="{ data }">
+                        {{ stripHtml(data.description) || '-' }}
+                    </template>
                 </Column>
-                <Column field="status.name" header="Status" sortable />
-                <Column field="priority.name" header="Priority" sortable />
+
+                <Column header="Status" sortable>
+                    <template #body="{ data }">
+                        <Tag :value="data.status?.name" :severity="data.status?.severity" class="px-3 py-1 text-sm" />
+                    </template>
+                </Column>
+
+                <Column header="Priority" sortable>
+                    <template #body="{ data }">
+                        <Tag :value="data.priority?.name" :severity="data.priority?.severity" class="px-3 py-1 text-sm" />
+                    </template>
+                </Column>
+
                 <Column field="start_date" header="Start" sortable>
                     <template #body="{ data }">
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
                 </Column>
+
                 <Column field="due_date" header="Due" sortable>
                     <template #body="{ data }">
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
                 </Column>
+
                 <Column header="Action">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" />

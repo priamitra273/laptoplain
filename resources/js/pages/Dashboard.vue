@@ -1,16 +1,14 @@
 <script setup lang="ts">
+import ChartProgress from '@/components/ChartProgress.vue';
+import ChartRegency from '@/components/ChartRegency.vue';
+import Heading from '@/components/Heading.vue';
+import StatisticCard from '@/components/StatisticCard.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { type BreadcrumbItem, Project, Statistic } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
-import { onMounted, ref } from 'vue';
-import Colors from 'tailwindcss/colors';
-import Heading from '@/components/Heading.vue';
 import axios from 'axios';
-import StatisticCard from '@/components/StatisticCard.vue';
-import ChartProgress from '@/components/ChartProgress.vue';
-import * as Highchart from 'highcharts'
-import ChartRegency from '@/components/ChartRegency.vue';
+import Colors from 'tailwindcss/colors';
+import { onMounted, ref } from 'vue';
 
 interface Props {
     projects: Project[];
@@ -18,8 +16,8 @@ interface Props {
 }
 
 interface MapValue {
-    data: (string | number)[],
-    geojson: Highcharts.GeoJSON
+    data: (string | number)[];
+    geojson: Highcharts.GeoJSON;
 }
 
 const props = defineProps<Props>();
@@ -33,7 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const project = ref<Project>(props.latestProject);
 const statistic = ref<Statistic | undefined>(undefined);
-const regencyStat = ref<MapValue|undefined>()
+const regencyStat = ref<MapValue | undefined>();
 
 const loading = ref({
     statistic: false,
@@ -79,8 +77,8 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex items-center justify-between">
             <Heading title="Dashboard" />
-            <Select v-model="project" :options="projects" option-label="name" placeholder="Select a project" class="w-48" :loading="loading.statistic" @value-change="loadData">
-            </Select>
+            <!-- <Select v-model="project" :options="projects" option-label="name" placeholder="Select a project" class="w-48" :loading="loading.statistic" @value-change="loadData">
+            </Select> -->
         </div>
 
         <div class="flex flex-1 flex-col gap-4 rounded-xl p-4">
@@ -89,9 +87,20 @@ onMounted(() => {
                     <PlaceholderPattern />
                 </div> -->
 
-                <StatisticCard title="Plan CCTV" :value="statistic?.plan_cctv" :description="`Total from ${statistic?.plan_site ?? 0} sites.`" variant="text" />
+                <StatisticCard
+                    title="Plan CCTV"
+                    :value="statistic?.plan_cctv"
+                    :description="`Total from ${statistic?.plan_site ?? 0} sites.`"
+                    variant="text"
+                />
                 <StatisticCard title="Registered Site" :value="statistic?.progress.total_site" :max="statistic?.plan_site" variant="single" />
-                <StatisticCard title="Total Preconfig" :value="statistic?.progress.total_preconfig" :max="statistic?.plan_cctv" variant="single" info="Based on total CCTV"/>
+                <StatisticCard
+                    title="Total Preconfig"
+                    :value="statistic?.progress.total_preconfig"
+                    :max="statistic?.plan_cctv"
+                    variant="single"
+                    info="Based on total CCTV"
+                />
 
                 <StatisticCard
                     title="Progress Installation"
@@ -123,11 +132,11 @@ onMounted(() => {
                     info="Based on total CCTV"
                 />
 
-                <div class="col-span-3 aspect-video rounded-xl overflow-hidden shadow">
+                <div class="col-span-3 aspect-video overflow-hidden rounded-xl shadow">
                     <ChartRegency :project="project" :value="regencyStat" />
                 </div>
 
-                <div class="col-span-3 aspect-video rounded-xl overflow-hidden shadow">
+                <div class="col-span-3 aspect-video overflow-hidden rounded-xl shadow">
                     <ChartProgress :statistic="statistic" :project="project" />
                 </div>
             </div>

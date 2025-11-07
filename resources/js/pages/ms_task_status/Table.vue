@@ -54,7 +54,7 @@ const destroy = (task_status: TaskStatus) => {
         },
     }).then(async (result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_task_status.destroy', task_status.id), {
+            router.delete(route('task-status.destroy', task_status.id), {
                 onSuccess() {
                     Swal.fire('Deleted!', 'Task status has been deleted.', 'success');
                 },

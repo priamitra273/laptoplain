@@ -3,6 +3,7 @@ import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { useForm } from '@inertiajs/vue3';
 import moment from 'moment';
+import Editor from 'primevue/editor';
 import Swal from 'sweetalert2';
 import { computed, watch as vueWatch } from 'vue';
 
@@ -11,7 +12,6 @@ interface Props {
     visible: boolean;
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
-    // roles: { id: number; name: string }[]; // ✅ Tambahan untuk Project Role
 }
 
 interface ProjectForm {
@@ -22,7 +22,6 @@ interface ProjectForm {
     emoji: string | null;
     status_id: number | null;
     priority_id: number | null;
-    // role_id: number | null; // ✅ Tambahan field Project Role
     owner_id?: number | null;
     owned_id?: number | null;
     [key: string]: any;
@@ -30,6 +29,9 @@ interface ProjectForm {
 
 const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
+
+// ✅ Gunakan encoded untuk menentukan edit / create
+const formHeader = computed(() => (props.value?.encoded ? 'Edit Project' : 'Create New Project'));
 
 const visible = computed<boolean>({
     get() {
@@ -40,8 +42,6 @@ const visible = computed<boolean>({
     },
 });
 
-const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
-
 const form = useForm<ProjectForm>({
     title: '',
     start_date: null,
@@ -50,17 +50,17 @@ const form = useForm<ProjectForm>({
     emoji: '',
     status_id: null,
     priority_id: null,
-    // role_id: null, // ✅ inisialisasi
     owner_id: null,
     owned_id: null,
 });
 
-/**
- * Simpan data (Create / Update)
- */
+// ✅ FIX — gunakan encoded, bukan id asli
 const save = (): void => {
-    const isEdit = !!props.value?.id;
-    const url = isEdit ? route('project.update', props.value.id) : route('project.store');
+    const isEdit = !!props.value?.encoded;
+
+    const url = isEdit
+        ? route('project.update', props.value.encoded) // ✅ hashed id
+        : route('project.store');
 
     const payload = {
         ...form.data(),
@@ -91,9 +91,6 @@ const save = (): void => {
     }
 };
 
-/**
- * Saat drawer dibuka → isi form dari props.value jika ada
- */
 const show = (): void => {
     form.reset();
     form.clearErrors();
@@ -104,7 +101,6 @@ const show = (): void => {
         form.emoji = props.value.emoji ?? '';
         form.status_id = props.value.status_id ?? props.value.status?.id ?? null;
         form.priority_id = props.value.priority_id ?? props.value.priority?.id ?? null;
-        // form.role_id = props.value.role_id ?? props.value.role?.id ?? null; // ✅ tambahkan role_id
         form.owner_id = props.value.owner_id ?? null;
         form.owned_id = props.value.owned_id ?? null;
         form.start_date = props.value.start_date ? moment(props.value.start_date).toDate() : null;
@@ -112,17 +108,11 @@ const show = (): void => {
     }
 };
 
-/**
- * Saat drawer ditutup → reset form
- */
 const hide = (): void => {
     form.reset();
     form.clearErrors();
 };
 
-/**
- * Bersihkan error otomatis saat input berubah
- */
 vueWatch(
     () => form,
     () => {
@@ -194,20 +184,6 @@ vueWatch(
                 <InputError :message="form.errors.priority_id" />
             </div>
 
-            <!-- ✅ Project Role -->
-            <!-- <div class="flex flex-col gap-2">
-                <Label for="role_id">Project Role</Label>
-                <Dropdown
-                    v-model="form.role_id"
-                    :options="props.roles"
-                    optionLabel="name"
-                    optionValue="id"
-                    placeholder="Select Project Role"
-                    class="w-full"
-                />
-                <InputError :message="form.errors.role_id" />
-            </div> -->
-
             <!-- Emoji -->
             <div class="flex flex-col gap-2">
                 <Label for="emoji">Emoji</Label>
@@ -218,7 +194,7 @@ vueWatch(
             <!-- Description -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="description">Description</Label>
-                <Textarea v-model="form.description" id="description" placeholder="Enter Project Description" rows="4" />
+                <Editor v-model="form.description" editor-style="height: 200px" placeholder="Enter project description..." />
                 <InputError :message="form.errors.description" />
             </div>
 
@@ -229,3 +205,9 @@ vueWatch(
         </form>
     </Drawer>
 </template>
+
+<style scoped>
+.p-editor .ql-container {
+    min-height: 150px;
+}
+</style>

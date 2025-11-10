@@ -15,6 +15,7 @@ interface Props {
 interface ProjectRoleForm {
     _method: 'POST' | 'PUT';
     name: string;
+    [key: string]: any;
 }
 
 const props = defineProps<Props>();

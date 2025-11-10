@@ -16,6 +16,7 @@ interface TaskStatusForm {
     _method: 'POST' | 'PUT';
     name: string;
     severity: string;
+    [key: string]: any;
 }
 
 const props = defineProps<Props>();

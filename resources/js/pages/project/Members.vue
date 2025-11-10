@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, InertiaForm, router, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -35,6 +35,13 @@ interface Props {
     filters?: { search?: string; role_id?: number | null; active?: string | null; per_page?: number };
 }
 
+interface AddMemberForm {
+    _method: 'POST'
+    user_id:  number | null
+    project_role_id: number | null
+    [key: string]: any
+}
+
 const props = defineProps<Props>();
 
 // Filters
@@ -58,7 +65,7 @@ const debounce = (fn: Function, delay = 400) => {
 // Apply filters
 const applyQuery = (page = 1) => {
     router.get(
-        route('project.members.index', props.project.hashid),
+        route('project.members.show', props.project.hashid),
         {
             search: search.value,
             role_id: roleId.value,
@@ -75,7 +82,11 @@ watch([search, roleId, active, perPage], () => debounce(() => applyQuery(1)));
 
 // ==== Add Member ====
 const visibleAdd = ref(false);
-const formAdd = useForm({ user_id: null as number | null, project_role_id: null as number | null });
+const formAdd: InertiaForm<AddMemberForm> = useForm({ 
+    _method: 'POST',
+    user_id: null, 
+    project_role_id: null 
+});
 const openAdd = () => {
     formAdd.reset();
     formAdd.clearErrors();

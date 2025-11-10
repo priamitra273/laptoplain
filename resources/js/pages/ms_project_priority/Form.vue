@@ -103,14 +103,12 @@ for (const key in form.data()) {
 <template>
     <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
-            <!-- Name -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="name">Name</Label>
                 <InputText v-model="form.name" id="name" placeholder="Enter Project Name" />
                 <InputError :message="form.errors.name" />
             </div>
 
-            <!-- Severity -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
                 <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />

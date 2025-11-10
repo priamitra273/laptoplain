@@ -124,6 +124,7 @@ export interface Role {
 
 export interface Project {
     id: number;
+    encoded: string;
     emoji: string;
     title: string;
     description: string;
@@ -139,6 +140,28 @@ export interface Project {
     updated_by: string;
     created_at: string;
     updated_at: string;
+    status?: {
+        id: string;
+        name: string;
+        severity: string;
+    };
+    priority?: {
+        id: string;
+        name: string;
+        severity: string;
+    };
+    // owner?: User;
+    project_members: {
+        id: string
+        user_id: string
+        role_id: string
+        user: {
+            name: string
+        }
+        role: {
+            name: string
+        }
+    }[]
 }
 
 export interface TaskType {

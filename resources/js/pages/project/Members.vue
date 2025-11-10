@@ -42,6 +42,13 @@ interface AddMemberForm {
     [key: string]: any
 }
 
+interface EditMemberForm {
+    _method: 'PUT'
+    project_role_id: number | null
+    is_active: boolean
+    [key: string]: any
+}
+
 const props = defineProps<Props>();
 
 // Filters
@@ -112,7 +119,11 @@ const saveAdd = () => {
 // ==== Edit Member ====
 const visibleEdit = ref(false);
 const editing = ref<Member | null>(null);
-const formEdit = useForm({ project_role_id: null as number | null, is_active: true as boolean });
+const formEdit: InertiaForm<EditMemberForm> = useForm({ 
+    _method: 'PUT',
+    project_role_id: null, 
+    is_active: true
+});
 
 const openEdit = (m: Member) => {
     editing.value = m;

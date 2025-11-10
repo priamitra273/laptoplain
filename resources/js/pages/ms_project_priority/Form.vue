@@ -2,10 +2,10 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { ProjectPriority } from '@/types';
-import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
+import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Swal from 'sweetalert2';
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 
 interface Props {
     value?: ProjectPriority;
@@ -20,11 +20,9 @@ interface ProjectPriorityForm {
 }
 
 const props = defineProps<Props>();
-const emits = defineEmits<{
-    (event: 'update:visible', value: boolean): void;
-}>();
+const emits = defineEmits<{ (event: 'update:visible', value: boolean): void }>();
 
-const visible = computed<boolean>({
+const visible = computed({
     get() {
         return props.visible;
     },
@@ -33,9 +31,9 @@ const visible = computed<boolean>({
     },
 });
 
-const formHeader = computed(() => {
-    return props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority';
-});
+const formHeader = computed(() =>
+    props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority'
+);
 
 const form: InertiaForm<ProjectPriorityForm> = useForm({
     _method: 'POST',
@@ -43,69 +41,54 @@ const form: InertiaForm<ProjectPriorityForm> = useForm({
     severity: '',
 });
 
-const page = usePage();
-watch(
-    () => page.props.flash.success,
-    (msg) => {
-        if (msg) Swal.fire('Success', msg as string, 'success');
-    },
-);
-watch(
-    () => page.props.flash.error,
-    (msg) => {
-        if (msg) Swal.fire('Error', msg as string, 'error');
-    },
-);
+const save = () => {
+    const url = props.value?.id
+        ? route('project-priority.update', props.value.id)
+        : route('project-priority.store');
 
-const show = (): void => {
-    form.name = props.value?.name ?? '';
-    form.severity = props.value?.severity ?? '';
-};
-
-const hide = (): void => {
-    form.reset();
-    form.clearErrors();
-    form._method = 'POST';
-};
-
-const save = (): void => {
-    const isEdit = !!props.value?.id;
-    const url = isEdit ? route('project-priority.update', props.value.id) : route('project-priority.store');
-
-    form._method = isEdit ? 'PUT' : 'POST';
+    form._method = props.value?.id ? 'PUT' : 'POST';
 
     form.post(url, {
         preserveScroll: true,
-        onSuccess() {
+        onSuccess: () => {
+            Swal.fire('Success', 'Data has been saved successfully', 'success');
             visible.value = false;
-            form.reset();
-        },
-        onError(errors) {
-            // error dari controller langsung tampil di form.errors
-            console.error('Validation Errors:', errors);
-            Swal.fire('Validation Error', 'Please check the highlighted fields.', 'error');
-        },
-        onFinish() {
-            form.processing = false;
         },
     });
+};
+
+const hide = () => {
+    form.reset();
+    form.clearErrors();
+};
+
+const show = () => {
+    form.name = props.value?.name ?? '';
+    form.severity = props.value?.severity ?? '';
 };
 
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],
         () => delete form.errors[key],
-        { debounce: 500, maxWait: 1000 },
+        { debounce: 400, maxWait: 1000 },
     );
 }
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
+    <Drawer
+        v-model:visible="visible"
+        class="!w-full md:!w-[40vw]"
+        position="right"
+        :header="formHeader"
+        @show="show"
+        @after-hide="hide"
+    >
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="name">Name</Label>
-                <InputText v-model="form.name" id="name" placeholder="Enter Project Name" />
+                <InputText v-model="form.name" id="name" placeholder="Enter Priority Name" />
                 <InputError :message="form.errors.name" />
             </div>
 

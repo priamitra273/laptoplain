@@ -10,27 +10,36 @@ import { ref, watch } from 'vue';
 import FormProjectStatus from './Form.vue';
 
 interface Props {
-    statuses: MsProjectStatus[];
+    statuses?: MsProjectStatus[];
 }
 
-const props = defineProps<Props>();
-
-const filters = ref({
-    global: { value: '', matchMode: FilterMatchMode.CONTAINS },
+const props = withDefaults(defineProps<Props>(), {
+    statuses: () => [],
 });
 
-const visibleForm = ref(false);
-const selected = ref<MsProjectStatus | null>(null);
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 
-const openCreate = () => {
-    selected.value = null;
-    visibleForm.value = true;
-};
+const visibleForm = ref<boolean>(false);
+const selected = ref<MsProjectStatus | undefined>(undefined);
 
-const openEdit = (status: MsProjectStatus) => {
-    selected.value = status;
-    visibleForm.value = true;
-};
+const items = [
+    {
+        label: 'Edit',
+        command(event: any) {
+            const id = event.item.menuKey;
+            selected.value = props.statuses.find((i) => i.id === id);
+            visibleForm.value = true;
+        },
+    },
+    {
+        label: 'Delete',
+        command(event: any) {
+            destroy(event.item.data);
+        },
+    },
+];
 
 const destroy = (status: MsProjectStatus) => {
     Swal.fire({
@@ -47,26 +56,15 @@ const destroy = (status: MsProjectStatus) => {
         if (result.isConfirmed) {
             router.delete(route('project-status.destroy', status.id), {
                 onSuccess: () => {
-                    Swal.fire('Deleted!', 'Project status deleted successfully.', 'success');
+                    Swal.fire('Deleted!', 'Project status has been deleted.', 'success');
                 },
             });
         }
     });
 };
 
-const items = [
-    {
-        label: 'Edit',
-        command: (event: any) => openEdit(event.item.data),
-    },
-    {
-        label: 'Delete',
-        command: (event: any) => destroy(event.item.data),
-    },
-];
-
-watch(visibleForm, (val) => {
-    if (!val) selected.value = null;
+watch(visibleForm, (newValue) => {
+    if (!newValue) selected.value = undefined;
 });
 </script>
 
@@ -80,7 +78,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Project Status" raised @click="openCreate">
+            <Button label="Add Project Status" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -105,8 +103,8 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column field="name" header="Name" sortable />
-                <Column field="severity" header="Severity" sortable />
+                <Column field="name" header="Name" sortable></Column>
+                <Column field="severity" header="Severity" sortable></Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">
@@ -114,14 +112,14 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column header="Action" style="width: 10%">
+                <Column header="Actions" style="width: 10%">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="py-4 text-center">No Data</p>
+                    <p class="py-4 text-center">No Data Available</p>
                 </template>
             </DataTable>
         </div>

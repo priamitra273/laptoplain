@@ -2,9 +2,8 @@
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Project } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import moment from 'moment';
-
 // PrimeVue
 import Button from 'primevue/button';
 import Card from 'primevue/card';
@@ -95,12 +94,12 @@ const props = defineProps<Props>();
 
                 <template #footer>
                     <div class="flex justify-between">
-                        <Button label="Back to Projects" icon="pi pi-arrow-left" severity="secondary" @click="$inertia.get(route('project.index'))" />
+                        <Button label="Back to Projects" icon="pi pi-arrow-left" severity="secondary" @click="router.get(route('project.index'))" />
 
                         <Button
                             label="Manage Members"
                             icon="pi pi-users"
-                            @click="$inertia.get(route('project.members.index', props.project.encoded))"
+                            @click="router.get(route('project.members.show', props.project.encoded))"
                         />
                     </div>
                 </template>

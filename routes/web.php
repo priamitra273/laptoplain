@@ -70,7 +70,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('project/{encoded}')
         ->name('project.')
         ->group(function () {
-            Route::get('members', [ProjectMemberController::class, 'index'])->name('members.index');
+            Route::get('members', [ProjectMemberController::class, 'show'])->name('members.show');
             Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
             Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
             Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');

@@ -18,7 +18,7 @@ interface ProjectForm {
     title: string;
     start_date: Date | null;
     due_date: Date | null;
-    description: string | null;
+    description: string;
     emoji: string | null;
     status_id: number | null;
     priority_id: number | null;

@@ -2,7 +2,7 @@
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { ProjectPriority } from '@/types';
-import { router, usePage } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
@@ -23,25 +23,14 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const selected = ref<ProjectPriority | undefined>();
+const selected = ref<ProjectPriority | undefined>(undefined);
 
-// --- Flash message global dari Laravel ---
-const page = usePage();
-watch(
-    () => page.props.flash.success,
-    (msg) => msg && Swal.fire('Success', msg as string, 'success'),
-);
-watch(
-    () => page.props.flash.error,
-    (msg) => msg && Swal.fire('Error', msg as string, 'error'),
-);
-
-// --- Action Items untuk Dropdown ---
 const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.project_priorities?.find((item) => item.id === event.item.menuKey);
+            const id = event.item.menuKey;
+            selected.value = props.project_priorities.find((item) => item.id === id);
             visibleForm.value = true;
         },
     },
@@ -53,11 +42,10 @@ const items: MenuItem[] = [
     },
 ];
 
-// --- Hapus data ---
 const destroy = (project_priority: ProjectPriority) => {
     Swal.fire({
         icon: 'warning',
-        title: `Delete "${project_priority.name}"?`,
+        title: `Are you sure want to delete "${project_priority.name}"?`,
         text: 'This action cannot be undone!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
@@ -68,14 +56,14 @@ const destroy = (project_priority: ProjectPriority) => {
     }).then((result) => {
         if (result.isConfirmed) {
             router.delete(route('project-priority.destroy', project_priority.id), {
-                preserveScroll: true,
-                onSuccess: () => Swal.fire('Deleted!', 'Project Priority deleted.', 'success'),
+                onSuccess: () => {
+                    Swal.fire('Deleted!', 'Project priority has been deleted.', 'success');
+                },
             });
         }
     });
 };
 
-// --- Reset form ketika drawer ditutup ---
 watch(visibleForm, (newValue) => {
     if (!newValue) selected.value = undefined;
 });
@@ -83,7 +71,6 @@ watch(visibleForm, (newValue) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Action Table -->
         <div class="flex justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
@@ -99,7 +86,6 @@ watch(visibleForm, (newValue) => {
             </Button>
         </div>
 
-        <!-- DataTable -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="project_priorities"
@@ -112,8 +98,10 @@ watch(visibleForm, (newValue) => {
                 striped-rows
                 row-hover
             >
-                <Column header="No" style="width: 80px; text-align: center">
-                    <template #body="{ index }">{{ index + 1 }}</template>
+                <Column header="No" style="width: 5%">
+                    <template #body="{ index }">
+                        {{ index + 1 }}
+                    </template>
                 </Column>
 
                 <Column field="name" header="Name" sortable></Column>
@@ -125,19 +113,18 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action" style="width: 100px; text-align: center">
+                <Column header="Actions" style="width: 10%">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="py-3 text-center">No data available.</p>
+                    <p class="py-4 text-center">No Data Available</p>
                 </template>
             </DataTable>
         </div>
     </div>
 
-    <!-- Drawer Form -->
     <ProjectPriorityForm v-model:visible="visibleForm" :value="selected" />
 </template>

@@ -18,21 +18,28 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const filters = ref({
-    global: { value: '', matchMode: FilterMatchMode.CONTAINS },
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const visibleForm = ref(false);
-const selected = ref<TaskPriority | null>(null);
+const visibleForm = ref<boolean>(false);
+const selected = ref<TaskPriority | undefined>(undefined);
 
-const openCreate = () => {
-    selected.value = null;
-    visibleForm.value = true;
-};
-
-const openEdit = (taskPriority: TaskPriority) => {
-    selected.value = taskPriority;
-    visibleForm.value = true;
-};
+const items = [
+    {
+        label: 'Edit',
+        command(event: any) {
+            const id = event.item.menuKey;
+            selected.value = props.task_priorities.find((i) => i.id === id);
+            visibleForm.value = true;
+        },
+    },
+    {
+        label: 'Delete',
+        command(event: any) {
+            destroy(event.item.data);
+        },
+    },
+];
 
 const destroy = (taskPriority: TaskPriority) => {
     Swal.fire({
@@ -56,27 +63,14 @@ const destroy = (taskPriority: TaskPriority) => {
     });
 };
 
-const items = [
-    {
-        label: 'Edit',
-        command: (event: any) => openEdit(event.item.data),
-    },
-    {
-        label: 'Delete',
-        command: (event: any) => destroy(event.item.data),
-    },
-];
-
 watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = null;
+    if (!newValue) selected.value = undefined;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- 🔹 Action Bar -->
         <div class="flex justify-between gap-2">
-            <!-- Search -->
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
                 <InputIcon>
@@ -84,15 +78,13 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <!-- Add Button -->
-            <Button label="Add Task Priority" raised @click="openCreate">
+            <Button label="Add Task Priority" raised @click="visibleForm = true">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
             </Button>
         </div>
 
-        <!-- 🔹 Table -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="task_priorities"
@@ -105,8 +97,10 @@ watch(visibleForm, (newValue) => {
                 striped-rows
                 row-hover
             >
-                <Column header="No">
-                    <template #body="{ index }">{{ index + 1 }}</template>
+                <Column header="No" style="width: 5%">
+                    <template #body="{ index }">
+                        {{ index + 1 }}
+                    </template>
                 </Column>
 
                 <Column field="name" header="Name" sortable />
@@ -118,7 +112,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action">
+                <Column header="Action" style="width: 10%">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
@@ -131,6 +125,5 @@ watch(visibleForm, (newValue) => {
         </div>
     </div>
 
-    <!-- 🔹 Modal Form -->
     <TaskPriorityForm v-model:visible="visibleForm" :value="selected" />
 </template>

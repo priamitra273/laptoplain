@@ -15,7 +15,7 @@ class ProjectMemberController extends Controller
     /**
      * Tampilkan daftar member project
      */
-    public function index(Request $request, string $encoded)
+    public function show(Request $request, string $encoded)
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);

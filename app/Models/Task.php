@@ -32,6 +32,8 @@ class Task extends Model
         'project_id',
     ];
 
+    protected $appends = ['sub_task'];
+
     /**
      * Relasi ke user (owner)
      */
@@ -115,9 +117,9 @@ class Task extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'task_users')
-                    ->withTimestamps()
-                    ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
-                    ->using(TaskUser::class);
+            ->withTimestamps()
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+            ->using(TaskUser::class);
     }
 
     public function comments()
@@ -134,6 +136,16 @@ class Task extends Model
             'model_id',
             'tag_id'
         )->withTimestamps()
-         ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+    }
+
+    public function subTaskRecursive()
+    {
+        return $this->children()->with('subTaskRecursive');
+    }
+
+    public function getSubTaskAttribute()
+    {
+        return $this->subTaskRecursive;
     }
 }

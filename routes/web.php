@@ -46,7 +46,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tag', TagController::class)->except($except);
 
     Route::resource('project', ProjectController::class)
-        ->except(['create', 'edit']);
+        ->except(['create', 'edit', 'show']);
+
+    Route::get('project/{encoded}', [ProjectController::class, 'show'])
+        ->name('project.show');
+
+    Route::prefix('project/{encoded}')
+        ->name('project.')
+        ->group(function () {
+            Route::get('members', [ProjectMemberController::class, 'members'])->name('members.members');
+            Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
+            Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
+            Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
+        });
 });
 
 require __DIR__ . '/settings.php';

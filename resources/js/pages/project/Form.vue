@@ -35,6 +35,7 @@ const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
 const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
+const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
 
 const visible = computed<boolean>({
     get() {
@@ -123,7 +124,6 @@ vueWatch(
 <template>
     <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
-            <!-- Title -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
@@ -150,7 +150,6 @@ vueWatch(
                 <small v-if="form.errors.due_date" class="mt-1 text-sm text-red-500">{{ form.errors.due_date }}</small>
             </div>
 
-            <!-- Status -->
             <div class="flex flex-col gap-2">
                 <Label for="status_id">Status</Label>
                 <Dropdown
@@ -164,7 +163,6 @@ vueWatch(
                 <small v-if="form.errors.status_id" class="mt-1 text-sm text-red-500">{{ form.errors.status_id }}</small>
             </div>
 
-            <!-- Priority -->
             <div class="flex flex-col gap-2">
                 <Label for="priority_id">Priority</Label>
                 <Dropdown
@@ -178,14 +176,12 @@ vueWatch(
                 <small v-if="form.errors.priority_id" class="mt-1 text-sm text-red-500">{{ form.errors.priority_id }}</small>
             </div>
 
-            <!-- Emoji -->
             <div class="flex flex-col gap-2">
                 <Label for="emoji">Emoji</Label>
                 <InputText v-model="form.emoji" id="emoji" placeholder="e.g. 🚀" maxlength="2" />
                 <small v-if="form.errors.emoji" class="mt-1 text-sm text-red-500">{{ form.errors.emoji }}</small>
             </div>
 
-            <!-- Description -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="description">Description</Label>
                 <Editor v-model="form.description" editorStyle="height: 200px" />

@@ -6,14 +6,15 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
+import InputError from '@/components/InputError.vue';
 import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
+import AutoComplete from 'primevue/autocomplete';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
 
 interface Member {
     id: number;
-    hashid: string;
     user: { id: number; name: string; email: string };
     role: { id: number; name: string };
     is_active: boolean;
@@ -37,7 +38,7 @@ interface Props {
 
 interface AddMemberForm {
     _method: 'POST'
-    user_id:  number | null
+    user_id: number | null
     project_role_id: number | null
     [key: string]: any
 }
@@ -51,28 +52,24 @@ interface EditMemberForm {
 
 const props = defineProps<Props>();
 
-// Filters
 const filters = props.filters ?? {};
 const search = ref(filters.search ?? '');
 const roleId = ref<number | null>(filters.role_id ?? null);
 const active = ref<string | null>(filters.active ?? null);
 const perPage = ref(filters.per_page ?? 10);
 
-// Pagination
 const first = ref((props.members.current_page - 1) * props.members.per_page);
 const onPage = (e: any) => applyQuery(e.page + 1);
 
-// Debounce
 let timer: number | undefined;
 const debounce = (fn: Function, delay = 400) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(fn, delay);
 };
 
-// Apply filters
 const applyQuery = (page = 1) => {
     router.get(
-        route('project.members.show', props.project.hashid),
+        route('project.members.members', { encoded: props.project.id }),
         {
             search: search.value,
             role_id: roleId.value,
@@ -84,15 +81,15 @@ const applyQuery = (page = 1) => {
     );
 };
 
-// Watch filters
 watch([search, roleId, active, perPage], () => debounce(() => applyQuery(1)));
 
 // ==== Add Member ====
+const selectedUser = ref();
 const visibleAdd = ref(false);
-const formAdd: InertiaForm<AddMemberForm> = useForm({ 
+const formAdd: InertiaForm<AddMemberForm> = useForm({
     _method: 'POST',
-    user_id: null, 
-    project_role_id: null 
+    user_id: null,
+    project_role_id: null
 });
 const openAdd = () => {
     formAdd.reset();
@@ -100,28 +97,24 @@ const openAdd = () => {
     visibleAdd.value = true;
 };
 const saveAdd = () => {
-    if (!formAdd.user_id || !formAdd.project_role_id) {
-        Swal.fire('Error', 'User and Role must be selected', 'error');
-        return;
-    }
-
-    router.post(route('project.members.store', props.project.hashid), formAdd, {
+    formAdd.post(route('project.members.store', { encoded: props.project.id }), {
         onSuccess: () => {
             Swal.fire('Success', 'Member added', 'success');
             visibleAdd.value = false;
             applyQuery();
         },
-        onError: () => Swal.fire('Error', 'Please check the form', 'error'),
-        preserveScroll: true,
+        // onError: () => {
+        //     Swal.fire('Error', 'Please check the form', 'error');
+        // },
     });
 };
 
 // ==== Edit Member ====
 const visibleEdit = ref(false);
 const editing = ref<Member | null>(null);
-const formEdit: InertiaForm<EditMemberForm> = useForm({ 
+const formEdit: InertiaForm<EditMemberForm> = useForm({
     _method: 'PUT',
-    project_role_id: null, 
+    project_role_id: null,
     is_active: true
 });
 
@@ -134,16 +127,15 @@ const openEdit = (m: Member) => {
 };
 
 const saveEdit = () => {
-    if (!editing.value || !formEdit.project_role_id) return;
-
-    router.put(route('project.members.update', { project: props.project.hashid, member: editing.value.hashid }), formEdit, {
+    formEdit.put(route('project.members.update', { encoded: props.project.id, memberEncoded: editing.value.id }), {
         onSuccess: () => {
             Swal.fire('Success', 'Member updated', 'success');
             visibleEdit.value = false;
             applyQuery();
         },
-        onError: () => Swal.fire('Error', 'Please check the form', 'error'),
-        preserveScroll: true,
+        // onError: () => {
+        //     Swal.fire('Error', 'Please check the form', 'error');
+        // },
     });
 };
 
@@ -160,8 +152,8 @@ const remove = (m: Member) => {
         if (res.isConfirmed) {
             router.delete(
                 route('project.members.destroy', {
-                    encoded: props.project.hashid, // <--- ini harus sesuai nama parameter di route
-                    memberEncoded: m.hashid, // <--- ini juga sesuai
+                    encoded: props.project.id,
+                    memberEncoded: m.id,
                 }),
                 {
                     onSuccess: () => Swal.fire('Deleted', 'Member removed', 'success'),
@@ -180,9 +172,30 @@ const resetFilters = () => {
     perPage.value = 10;
     applyQuery();
 };
+
+watch(() => formAdd.user_id, () => delete formAdd.errors.user_id);
+watch(() => formAdd.project_role_id, () => delete formAdd.errors.project_role_id);
+
+// Autocomplete
+const filteredUser = ref();
+const searchUser = (event) => {
+    setTimeout(() => {
+        if (!event.query.trim().length) {
+            filteredUser.value = [...props.users];
+        } else {
+            filteredUser.value = props.users.filter((user) => {
+                return user.name.toLowerCase().startsWith(event.query.toLowerCase());
+            });
+        }
+    }, 250);
+}
+const onSelect = (value) => {
+    formAdd.user_id = value?.id ?? null;
+};
 </script>
 
 <template>
+
     <Head :title="`Members - ${props.project.title}`" />
     <AppLayout>
         <div class="flex flex-col gap-6">
@@ -197,22 +210,17 @@ const resetFilters = () => {
 
                 <div class="w-full md:w-56">
                     <label class="mb-1 block font-semibold">Role</label>
-                    <Dropdown v-model="roleId" :options="props.roles" optionLabel="name" optionValue="id" placeholder="All roles" class="w-full" />
+                    <Dropdown v-model="roleId" :options="props.roles" optionLabel="name" optionValue="id"
+                        placeholder="All roles" class="w-full" />
                 </div>
 
                 <div class="w-full md:w-40">
                     <label class="mb-1 block font-semibold">Status</label>
-                    <Dropdown
-                        v-model="active"
-                        :options="[
-                            { label: 'All', value: null },
-                            { label: 'Active', value: '1' },
-                            { label: 'Inactive', value: '0' },
-                        ]"
-                        optionLabel="label"
-                        optionValue="value"
-                        class="w-full"
-                    />
+                    <Dropdown v-model="active" :options="[
+                        { label: 'All', value: null },
+                        { label: 'Active', value: '1' },
+                        { label: 'Inactive', value: '0' },
+                    ]" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div class="w-full md:w-36">
@@ -228,18 +236,8 @@ const resetFilters = () => {
 
             <!-- Table -->
             <div class="card overflow-hidden">
-                <DataTable
-                    :value="props.members.data"
-                    data-key="hashid"
-                    :totalRecords="props.members.total"
-                    :rows="props.members.per_page"
-                    :first="first"
-                    paginator
-                    lazy
-                    @page="onPage"
-                    striped-rows
-                    row-hover
-                >
+                <DataTable :value="props.members.data" data-key="hashid" :totalRecords="props.members.total"
+                    :rows="props.members.per_page" :first="first" paginator lazy @page="onPage" striped-rows row-hover>
                     <Column header="#" class="w-16 text-center">
                         <template #body="{ index }">
                             {{ (props.members.current_page - 1) * props.members.per_page + index + 1 }}
@@ -263,10 +261,8 @@ const resetFilters = () => {
 
                     <Column header="Status" class="w-28">
                         <template #body="{ data }">
-                            <span
-                                class="rounded px-2 py-1 text-xs"
-                                :class="data.is_active ? 'bg-green-200 dark:bg-green-900/40' : 'bg-gray-200 dark:bg-gray-700'"
-                            >
+                            <span class="rounded px-2 py-1 text-xs"
+                                :class="data.is_active ? 'bg-green-200 dark:bg-green-900/40' : 'bg-gray-200 dark:bg-gray-700'">
                                 {{ data.is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </template>
@@ -290,14 +286,25 @@ const resetFilters = () => {
             <!-- Add Member Modal -->
             <Dialog header="Add Member" v-model:visible="visibleAdd" :modal="true" :closable="true" class="w-96">
                 <div class="flex flex-col gap-4">
-                    <Dropdown v-model="formAdd.user_id" :options="props.users" optionLabel="name" optionValue="id" placeholder="Select user" />
-                    <Dropdown
-                        v-model="formAdd.project_role_id"
-                        :options="props.roles"
+                    <AutoComplete 
+                        v-model="selectedUser"
                         optionLabel="name"
-                        optionValue="id"
-                        placeholder="Select role"
+                        :suggestions="filteredUser"
+                        @complete="searchUser"
+                        @update:modelValue="onSelect"
+                        placeholder="Select user"
+                        inputClass="w-full"
+                        dropdown
                     />
+                    <InputError :message="formAdd.errors.user_id" />
+                    <Dropdown 
+                        v-model="formAdd.project_role_id" 
+                        :options="props.roles" 
+                        optionLabel="name"
+                        optionValue="id" 
+                        placeholder="Select role" 
+                    />
+                    <InputError :message="formAdd.errors.project_role_id" />
                     <Button label="Save" icon="pi pi-check" @click="saveAdd" />
                 </div>
             </Dialog>
@@ -305,23 +312,12 @@ const resetFilters = () => {
             <!-- Edit Member Modal -->
             <Dialog header="Edit Member" v-model:visible="visibleEdit" :modal="true" :closable="true" class="w-96">
                 <div class="flex flex-col gap-4">
-                    <Dropdown
-                        v-model="formEdit.project_role_id"
-                        :options="props.roles"
-                        optionLabel="name"
-                        optionValue="id"
-                        placeholder="Select role"
-                    />
-                    <Dropdown
-                        v-model="formEdit.is_active"
-                        :options="[
-                            { label: 'Active', value: true },
-                            { label: 'Inactive', value: false },
-                        ]"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select status"
-                    />
+                    <Dropdown v-model="formEdit.project_role_id" :options="props.roles" optionLabel="name"
+                        optionValue="id" placeholder="Select role" />
+                    <Dropdown v-model="formEdit.is_active" :options="[
+                        { label: 'Active', value: true },
+                        { label: 'Inactive', value: false },
+                    ]" optionLabel="label" optionValue="value" placeholder="Select status" />
                     <Button label="Save" icon="pi pi-check" @click="saveEdit" />
                 </div>
             </Dialog>

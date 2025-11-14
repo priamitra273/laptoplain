@@ -19,17 +19,17 @@ class ProjectController extends Controller
             ])
             ->orderBy('id')
             ->get();
-            
-        $projects->transform(function ($p) {
-            $p->encoded = Sqids::encode($p->id);
-            return $p;
-        });
+        
+        $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
+        $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
+        
+        $response = [
+            'projects'   => $projects->toArray(),
+            'statuses'   => $statuses->toArray(),
+            'priorities' => $priorities->toArray(),
+        ];
 
-        return Inertia::render('project/Index', [
-            'projects'   => $projects,
-            'statuses'   => MsProjectStatus::select('id', 'name', 'severity')->get(),
-            'priorities' => MsProjectPriority::select('id', 'name', 'severity')->get(),
-        ]);
+        return Inertia::render('project/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
     public function show(string $encoded)
@@ -43,7 +43,7 @@ class ProjectController extends Controller
             'projectMembers.role:id,name',
         ])->findOrFail($id);
 
-        $project->encoded = Sqids::encode($project->id);
+        $project = Sqids::rec_encode_ids_in_list($project);
 
         return Inertia::render('project/Detail', [
             'project' => $project,

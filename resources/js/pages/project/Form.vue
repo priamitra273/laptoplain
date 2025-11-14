@@ -30,8 +30,7 @@ interface ProjectForm {
 const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 
-// ✅ Gunakan encoded untuk menentukan edit / create
-const formHeader = computed(() => (props.value?.encoded ? 'Edit Project' : 'Create New Project'));
+const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
 
 const visible = computed<boolean>({
     get() {
@@ -54,12 +53,11 @@ const form = useForm<ProjectForm>({
     owned_id: null,
 });
 
-// ✅ FIX — gunakan encoded, bukan id asli
 const save = (): void => {
-    const isEdit = !!props.value?.encoded;
+    const isEdit = !!props.value?.id;
 
     const url = isEdit
-        ? route('project.update', props.value.encoded) // ✅ hashed id
+        ? route('project.update', props.value.id)   
         : route('project.store');
 
     const payload = {
@@ -77,7 +75,7 @@ const save = (): void => {
                 Swal.fire('Success', successMessage, 'success');
                 visible.value = false;
             },
-            onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
+            // onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
         });
     } else {
         form.post(url, {
@@ -86,7 +84,7 @@ const save = (): void => {
                 Swal.fire('Success', successMessage, 'success');
                 visible.value = false;
             },
-            onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
+            // onError: () => Swal.fire('Error', 'Please fix the errors below.', 'error'),
         });
     }
 };
@@ -127,21 +125,18 @@ vueWatch(
 <template>
     <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
-            <!-- Title -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputText v-model="form.title" id="title" placeholder="Enter Project Title" />
                 <InputError :message="form.errors.title" />
             </div>
 
-            <!-- Start Date -->
             <div class="flex flex-col gap-2">
                 <Label for="start_date">Start Date</Label>
                 <DatePicker v-model="form.start_date" input-id="start_date" show-icon fluid date-format="yy-mm-dd" placeholder="Enter Start Date" />
                 <InputError :message="form.errors.start_date" />
             </div>
 
-            <!-- Due Date -->
             <div class="flex flex-col gap-2">
                 <Label for="due_date">Due Date</Label>
                 <DatePicker
@@ -156,7 +151,6 @@ vueWatch(
                 <InputError :message="form.errors.due_date" />
             </div>
 
-            <!-- Status -->
             <div class="flex flex-col gap-2">
                 <Label for="status_id">Status</Label>
                 <Dropdown
@@ -170,7 +164,6 @@ vueWatch(
                 <InputError :message="form.errors.status_id" />
             </div>
 
-            <!-- Priority -->
             <div class="flex flex-col gap-2">
                 <Label for="priority_id">Priority</Label>
                 <Dropdown
@@ -184,14 +177,12 @@ vueWatch(
                 <InputError :message="form.errors.priority_id" />
             </div>
 
-            <!-- Emoji -->
             <div class="flex flex-col gap-2">
                 <Label for="emoji">Emoji</Label>
                 <InputText v-model="form.emoji" id="emoji" placeholder="e.g. 🚀" maxlength="2" />
                 <InputError :message="form.errors.emoji" />
             </div>
 
-            <!-- Description -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="description">Description</Label>
                 <Editor v-model="form.description" editor-style="height: 200px" placeholder="Enter project description..." />

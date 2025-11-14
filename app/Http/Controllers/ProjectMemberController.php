@@ -9,20 +9,18 @@ use App\Models\MsProjectRole;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Facades\Sqids;
+use App\Http\Requests\ProjectMember\StoreProjectMemberRequest;
+use App\Http\Requests\ProjectMember\UpdateProjectMemberRequest;
 
 class ProjectMemberController extends Controller
 {
-    /**
-     * Tampilkan daftar member project
-     */
-    public function show(Request $request, string $encoded)
+    public function members(Request $request, string $encoded)
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
         $project = Project::findOrFail($projectId);
 
-        // Ambil query params untuk filter
         $search = $request->query('search', '');
         $roleId = $request->query('role_id', null);
         $active = $request->query('active', null);
@@ -35,7 +33,7 @@ class ProjectMemberController extends Controller
         if ($search) {
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%");
+                    ->orWhere('email', 'like', "%$search%");
             });
         }
 
@@ -47,22 +45,18 @@ class ProjectMemberController extends Controller
             $query->where('is_active', $active === '1');
         }
 
-        $members = $query->paginate($perPage)->appends($request->query());
+        $members = $query->paginate($perPage)->appends($request->query())->toArray();
+        $memberUserIds = collect($members['data'])
+            ->pluck('user.id')
+            ->filter()
+            ->values();
 
-        // Tambahkan hashid ke members
-        $members->getCollection()->transform(function ($m) {
-            $m->hashid = Sqids::encode($m->id);
-            return $m;
-        });
+        $roles = MsProjectRole::all(['id', 'name'])->toArray();
+        $users = User::whereNotIn('id', $memberUserIds)->get(['id', 'name'])->toArray();
 
-        // Ambil semua roles dan users
-        $roles = MsProjectRole::all(['id', 'name']);
-        $users = User::all(['id', 'name']);
-
-        return Inertia::render('project/Members', [
+        $response = [
             'project' => [
                 'id' => $project->id,
-                'hashid' => Sqids::encode($project->id),
                 'title' => $project->title,
             ],
             'members' => $members,
@@ -74,74 +68,51 @@ class ProjectMemberController extends Controller
                 'active' => $active,
                 'per_page' => $perPage,
             ],
-        ]);
+        ];
+        $responseEncoded = Sqids::rec_encode_ids_in_list($response);
+
+        return Inertia::render('project/Members', $responseEncoded);
     }
 
-    /**
-     * Tambah member ke project
-     */
-    public function store(Request $request, string $encoded)
+    public function store(StoreProjectMemberRequest $request, string $encoded)
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
+        
+        $validated = $request->validated();
+        $user_id = $validated['user_id'];
 
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'project_role_id' => 'required|exists:ms_project_roles,id',
-        ]);
-
-        // Cek apakah user sudah menjadi member
-        if (ProjectMember::where('project_id', $projectId)->where('user_id', $request->user_id)->exists()) {
+        if (ProjectMember::where('project_id', $projectId)->where('user_id', $user_id)->exists()) {
             return redirect()->back()->with('error', 'User already a member');
         }
 
-        ProjectMember::create([
-            'project_id' => $projectId,
-            'user_id' => $request->user_id,
-            'project_role_id' => $request->project_role_id,
-            'is_active' => true,
-        ]);
+        $validated['project_id'] = $projectId;
+        $validated['is_active'] = true;
 
-        return redirect()->back()->with('success', 'Member added');
+        ProjectMember::create($validated);
+
+        return to_route('project.members.members', ['encoded' => $encoded])
+            ->with('success', 'Member added successfully');
     }
 
-    /**
-     * Update member
-     */
-    public function update(Request $request, string $encodedProject, string $memberEncoded)
+    public function update(UpdateProjectMemberRequest $request, string $encoded, string $memberEncoded)
     {
-        $projectId = Sqids::decode($encodedProject);
-        $memberId = Sqids::decode($memberEncoded);
+        $id = Sqids::decode($memberEncoded);
 
-        if (!$projectId || !$memberId) abort(404);
+        $member = ProjectMember::findOrFail($id);
+        $member->update($request->validated());
 
-        $request->validate([
-            'project_role_id' => 'required|exists:ms_project_roles,id',
-            'is_active' => 'required|boolean',
-        ]);
-
-        $member = ProjectMember::where('project_id', $projectId)->findOrFail($memberId);
-        $member->update([
-            'project_role_id' => $request->project_role_id,
-            'is_active' => $request->is_active,
-        ]);
-
-        return redirect()->back()->with('success', 'Member updated');
+        return to_route('project.members.members', ['encoded' => $encoded])
+            ->with('success', 'Member updated successfully');
     }
 
-    /**
-     * Hapus member
-     */
-    public function destroy(string $encodedProject, string $memberEncoded)
+    public function destroy(string $encoded, string $memberEncoded)
     {
-        $projectId = Sqids::decode($encodedProject);
-        $memberId = Sqids::decode($memberEncoded);
+        $id = Sqids::decode($memberEncoded);
 
-        if (!$projectId || !$memberId) abort(404);
+        ProjectMember::findOrFail($id)->delete();
 
-        $member = ProjectMember::where('project_id', $projectId)->findOrFail($memberId);
-        $member->delete();
-
-        return redirect()->back()->with('success', 'Member removed');
+        return to_route('project.members.members', ['encoded' => $encoded])
+            ->with('success', 'Member deleted successfully');
     }
 }

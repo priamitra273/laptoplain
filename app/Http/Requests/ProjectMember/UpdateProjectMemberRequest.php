@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Project;
+namespace App\Http\Requests\ProjectMember;
 
 use App\Facades\Sqids;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class ProjectStoreRequest extends FormRequest
+class UpdateProjectMemberRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,13 +24,8 @@ class ProjectStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'emoji' => 'nullable|string|max:10',
-            'start_date' => 'required|date',
-            'due_date' => 'required|date|after_or_equal:start_date',
-            'status_id' => 'required|exists:ms_project_statuses,id',
-            'priority_id' => 'required|exists:ms_project_priority,id',
+            'project_role_id' => 'required|exists:ms_project_roles,id',
+            'is_active' => 'required|boolean',
         ];
     }
 
@@ -47,11 +42,8 @@ class ProjectStoreRequest extends FormRequest
             ]);
         }
         $this->merge([
-            'status_id' => $this->filled('status_id')
-                ? Sqids::decode($this->status_id)
-                : null,
-            'priority_id' => $this->filled('priority_id')
-                ? Sqids::decode($this->priority_id)
+            'project_role_id' => $this->filled('project_role_id')
+                ? Sqids::decode($this->project_role_id)
                 : null,
         ]);
     }

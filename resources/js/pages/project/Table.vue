@@ -39,7 +39,7 @@ const items: MenuItem[] = [
     {
         label: 'View Detail',
         command(event) {
-            router.get(route('project.show', event.item.data.encoded)); // ✅ FIX
+            router.get(route('project.show', event.item.data.id)); // ✅ FIX
         },
     },
     {
@@ -67,7 +67,7 @@ const destroy = (project: Project) => {
         cancelButtonText: 'Cancel',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(route('project.destroy', project.encoded), {
+            router.delete(route('project.destroy', project.id), {
                 // ✅ FIX
                 onSuccess: () => {
                     Swal.fire('Deleted!', 'Project deleted successfully.', 'success');

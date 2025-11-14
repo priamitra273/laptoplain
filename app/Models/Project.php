@@ -85,7 +85,6 @@ class Project extends Model
         return $this->owned->name ?? null;
     }
 
-    // ✅ progress selalu 0–100
     public function setProgressAttribute($value) {
         $this->attributes['progress'] = round(min(max($value, 0), 100), 2);
     }

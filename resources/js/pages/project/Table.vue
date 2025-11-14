@@ -55,13 +55,6 @@ const items: MenuItem[] = [
         },
     },
     {
-        label: 'Edit',
-        command(event) {
-            selected.value = event.item.data;
-            visibleForm.value = true;
-        },
-    },
-    {
         label: 'Delete',
         command(event) {
             confirmDelete(event.item.data);
@@ -96,7 +89,6 @@ const onCellEditComplete = ({ data, newValue, field }) => {
     });
 };
 
-// Delete confirmation
 const confirmDelete = (project: Project) => {
     confirm.require({
         message: `Are you sure you want to delete "${project.title}"?`,
@@ -127,7 +119,6 @@ watch(visibleForm, (val) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Search + Add -->
         <div class="flex items-center justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search Project..." />
@@ -139,7 +130,6 @@ watch(visibleForm, (val) => {
             <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
-        <!-- Table -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="projects"
@@ -153,19 +143,18 @@ watch(visibleForm, (val) => {
                 :globalFilterFields="['title', 'description']"
                 striped-rows
                 row-hover
+                :closeOnEscape="false"
             >
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
 
-                <!-- INLINE EDIT TITLE -->
                 <Column field="title" header="Title" sortable>
                     <template #editor="{ data, field }">
                         <InputText v-model="data[field]" class="w-full" />
                     </template>
                 </Column>
 
-                <!-- INLINE EDIT DESCRIPTION WITH QUILL -->
                 <Column field="description" header="Description">
                     <template #body="{ data }">
                         <div v-html="data.description"></div>
@@ -175,16 +164,15 @@ watch(visibleForm, (val) => {
                         <Editor v-model="data[field]" editorStyle="height: 200px">
                             <template #toolbar>
                                 <span class="ql-formats">
-                                    <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
-                                    <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
-                                    <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
                                 </span>
                             </template>
                         </Editor>
                     </template>
                 </Column>
 
-                <!-- INLINE EDIT STATUS -->
                 <Column field="status_id" header="Status">
                     <template #body="{ data }">
                         <Tag :value="data.status?.name" :severity="data.status?.severity" />
@@ -194,7 +182,6 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <!-- INLINE EDIT PRIORITY -->
                 <Column field="priority_id" header="Priority">
                     <template #body="{ data }">
                         <Tag :value="data.priority?.name" :severity="data.priority?.severity" />
@@ -204,23 +191,23 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <!-- INLINE EDIT START DATE -->
                 <Column field="start_date" header="Start">
                     <template #body="{ data }">
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
+
                     <template #editor="{ data, field }">
-                        <DatePicker v-model="data[field]" date-format="yy-mm-dd" />
+                        <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
 
-                <!-- INLINE EDIT DUE DATE -->
                 <Column field="due_date" header="Due">
                     <template #body="{ data }">
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
+
                     <template #editor="{ data, field }">
-                        <DatePicker v-model="data[field]" date-format="yy-mm-dd" />
+                        <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
 

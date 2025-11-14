@@ -34,8 +34,6 @@ const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
-const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
-
 const visible = computed<boolean>({
     get() {
         return props.visible;
@@ -58,8 +56,7 @@ const form = useForm<ProjectForm>({
 });
 
 const save = (): void => {
-    const isEdit = !!props.value?.id;
-    const url = isEdit ? route('project.update', props.value.id) : route('project.store');
+    const url = route('project.store');
 
     form.transform((data) => ({
         ...data,
@@ -67,41 +64,24 @@ const save = (): void => {
         due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
     }));
 
-    const successMessage = isEdit ? 'Project updated successfully.' : 'Project created successfully.';
-
-    const onSuccess = () => {
-        visible.value = false;
-        hide(); // ✅ pastikan form direset setelah sukses
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: successMessage,
-            life: 3000,
-        });
-    };
-
-    if (isEdit) {
-        form.put(url, { preserveScroll: true, onSuccess });
-    } else {
-        form.post(url, { preserveScroll: true, onSuccess });
-    }
+    form.post(url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            visible.value = false;
+            hide();
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Project created successfully.',
+                life: 3000,
+            });
+        },
+    });
 };
 
 const show = (): void => {
     form.reset();
     form.clearErrors();
-
-    if (props.value) {
-        form.title = props.value.title ?? '';
-        form.description = props.value.description ?? '';
-        form.emoji = props.value.emoji ?? '';
-        form.status_id = props.value.status_id ?? props.value.status?.id ?? null;
-        form.priority_id = props.value.priority_id ?? props.value.priority?.id ?? null;
-        form.owner_id = props.value.owner_id ?? null;
-        form.owned_id = props.value.owned_id ?? null;
-        form.start_date = props.value.start_date ? moment(props.value.start_date).toDate() : null;
-        form.due_date = props.value.due_date ? moment(props.value.due_date).toDate() : null;
-    }
 };
 
 const hide = (): void => {
@@ -121,7 +101,7 @@ vueWatch(
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
+    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" header="Create New Project" @show="show" @after-hide="hide">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
@@ -129,7 +109,6 @@ vueWatch(
                 <small v-if="form.errors.title" class="mt-1 text-sm text-red-500">{{ form.errors.title }}</small>
             </div>
 
-            <!-- Dates -->
             <div class="flex flex-col gap-2">
                 <Label for="start_date">Start Date</Label>
                 <DatePicker v-model="form.start_date" input-id="start_date" show-icon fluid date-format="yy-mm-dd" />
@@ -183,11 +162,19 @@ vueWatch(
 
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="description">Description</Label>
-                <Editor v-model="form.description" editorStyle="height: 200px" />
+                <Editor v-model="form.description" editorStyle="height: 200px">
+                    <template #toolbar>
+                        <span class="ql-formats">
+                            <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                            <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                            <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                        </span>
+                    </template>
+                </Editor>
+
                 <small v-if="form.errors.description" class="mt-1 text-sm text-red-500">{{ form.errors.description }}</small>
             </div>
 
-            <!-- Buttons -->
             <div class="col-span-2 flex justify-end gap-2">
                 <Button
                     label="Cancel"

@@ -51,7 +51,7 @@ const items: MenuItem[] = [
         label: 'View Detail',
         command(event) {
             const data = event.item.data;
-            router.visit(route('project.show', { project: data.encoded || data.id }));
+            router.visit(route('project.show', { encoded: data.id }));
         },
     },
     {

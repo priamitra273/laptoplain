@@ -58,6 +58,7 @@ const goBack = () => {
                         <h2 class="text-xl font-semibold">{{ props.project.title }}</h2>
                     </div>
                 </template>
+            </Card>
 
             <!-- Card Detail -->
             <Card class="shadow-sm">

@@ -38,14 +38,14 @@ class ProjectMemberController extends Controller
         }
 
         if ($roleId) {
-            $query->where('project_role_id', $roleId);
+            $query->where('project_role_id', Sqids::decode($roleId));
         }
 
         if (!is_null($active)) {
             $query->where('is_active', $active === '1');
         }
 
-        $members = $query->paginate($perPage)->appends($request->query())->toArray();
+        $members = $query->paginate($perPage)->toArray();
         $memberUserIds = collect($members['data'])
             ->pluck('user.id')
             ->filter()

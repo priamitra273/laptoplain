@@ -35,7 +35,6 @@ const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
 const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
-const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
 
 const visible = computed<boolean>({
     get() {

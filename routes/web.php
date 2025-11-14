@@ -17,6 +17,7 @@ use App\Http\Controllers\MsProjectRoleController;
 use App\Http\Controllers\MsTaskPriorityController;
 use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
+use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TagController;
 
 Route::get('/', fn() => to_route('login'))->name('home');

@@ -14,7 +14,7 @@ class Tag extends Model
 
     protected $fillable = [
         'name',
-        'severities',
+        'severity',
         'owned_id',
         'created_by',
         'updated_by',
@@ -66,6 +66,6 @@ class Tag extends Model
             'tag_id',
             'model_id'
         )->withTimestamps()
-         ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
     }
 }

@@ -11,3 +11,9 @@ export interface ProjectMembersData {
     roles: { id: string; name: string }[]
     users: { id: string; name: string }[]
 }
+
+export interface CellEditEvent<T> {
+    data: T
+    field: keyof T
+    newValue: any
+}

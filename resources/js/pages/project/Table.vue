@@ -11,6 +11,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
+import { CellEditEvent } from '.';
 
 interface TruncateOptions {
     maxLength?: number;     // panjang maksimal setelah strip HTML
@@ -81,7 +82,7 @@ const items: MenuItem[] = [
     },
 ];
 
-const onCellEditComplete = ({ data, newValue, field }) => {
+const onCellEditComplete = ({ data, newValue, field }: CellEditEvent<Project>) => {
     if (data[field] === newValue) return;
 
     let payload: any = { ...data };

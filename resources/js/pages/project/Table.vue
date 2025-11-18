@@ -12,6 +12,11 @@ import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
 
+interface TruncateOptions {
+    maxLength?: number;     // panjang maksimal setelah strip HTML
+    ellipsis?: string;      // default: "..."
+}
+
 interface Props {
     projects?: Project[];
     statuses: { id: number; name: string }[];
@@ -45,6 +50,20 @@ const stripHtml = (html: string | null): string => {
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
 };
+
+const truncateHtml = (html: string, options: TruncateOptions = {}): string => {
+    const { maxLength = 120, ellipsis = "..." } = options;
+
+    if (!html) return "";
+
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    const text = tmp.textContent || tmp.innerText || "";
+
+    return text.length > maxLength
+        ? text.substring(0, maxLength) + ellipsis
+        : text;
+}
 
 const items: MenuItem[] = [
     {
@@ -157,7 +176,7 @@ watch(visibleForm, (val) => {
 
                 <Column field="description" header="Description">
                     <template #body="{ data }">
-                        <div v-html="data.description"></div>
+                        <span>{{ truncateHtml(data.description, { maxLength: 100 }) }}</span>
                     </template>
 
                     <template #editor="{ data, field }">

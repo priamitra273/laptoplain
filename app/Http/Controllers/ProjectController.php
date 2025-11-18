@@ -7,6 +7,8 @@ use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Models\Project;
 use App\Models\MsProjectStatus;
 use App\Models\MsProjectPriority;
+use App\Models\MsProjectRole;
+use App\Models\User;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -14,15 +16,15 @@ class ProjectController extends Controller
     public function index()
     {
         $projects = Project::with([
-                'status:id,name,severity',
-                'priority:id,name,severity'
-            ])
+            'status:id,name,severity',
+            'priority:id,name,severity'
+        ])
             ->orderBy('id')
             ->get();
-        
+
         $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
         $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
-        
+
         $response = [
             'projects'   => $projects->toArray(),
             'statuses'   => $statuses->toArray(),
@@ -34,20 +36,36 @@ class ProjectController extends Controller
 
     public function show(string $encoded)
     {
-        $id = Sqids::decode($encoded);
+        $projectId = Sqids::decode($encoded);
+        if (!$projectId) abort(404);
 
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
             'projectMembers.user:id,name,email',
             'projectMembers.role:id,name',
-        ])->findOrFail($id);
+        ])->findOrFail($projectId)
+            ->toArray();
 
-        $project = Sqids::rec_encode_ids_in_list($project);
+        $memberUserIds = collect($project['project_members'])
+            ->pluck('user.id')
+            ->filter()
+            ->values();
 
-        return Inertia::render('project/Detail', [
+        $availableUsers = User::whereNotIn('id', $memberUserIds)
+            ->get(['id', 'name'])
+            ->toArray();
+
+        $roles = MsProjectRole::all(['id', 'name'])->toArray();
+
+        $data = [
             'project' => $project,
-        ]);
+            'members' => $project['project_members'],
+            'roles'   => $roles,
+            'users'   => $availableUsers,
+        ];
+
+        return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
     public function store(ProjectStoreRequest $request)

@@ -39,19 +39,33 @@ class ProjectController extends Controller
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
+        // Load project lengkap (status, priority, members, tasks)
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
             'projectMembers.user:id,name,email',
             'projectMembers.role:id,name',
-        ])->findOrFail($projectId)
-            ->toArray();
+            'tasks.status:id,name,severity',
+            'tasks.priority:id,name,severity',
+            'tasks.children.status:id,name,severity',
+            'tasks.children.priority:id,name,severity',
+        ])->findOrFail($projectId);
 
-        $memberUserIds = collect($project['project_members'])
+        // Update otomatis progress terbaru
+        $project->update([
+            'progress' => $project->calculateProgress()
+        ]);
+
+        // Convert ke array setelah update
+        $projectArr = $project->toArray();
+
+        // Ambil ID user yang sudah menjadi member
+        $memberUserIds = collect($projectArr['project_members'])
             ->pluck('user.id')
             ->filter()
             ->values();
 
+        // Ambil user yang belum menjadi member
         $availableUsers = User::whereNotIn('id', $memberUserIds)
             ->get(['id', 'name'])
             ->toArray();
@@ -59,8 +73,8 @@ class ProjectController extends Controller
         $roles = MsProjectRole::all(['id', 'name'])->toArray();
 
         $data = [
-            'project' => $project,
-            'members' => $project['project_members'],
+            'project' => $projectArr,
+            'members' => $projectArr['project_members'],
             'roles'   => $roles,
             'users'   => $availableUsers,
         ];
@@ -70,7 +84,13 @@ class ProjectController extends Controller
 
     public function store(ProjectStoreRequest $request)
     {
-        Project::create($request->validated());
+        $project = Project::create($request->validated());
+
+        // Set progress default (0)
+        $project->update([
+            'progress' => $project->calculateProgress()
+        ]);
+
         return to_route('project.index');
     }
 
@@ -80,6 +100,11 @@ class ProjectController extends Controller
 
         $project = Project::findOrFail($id);
         $project->update($request->validated());
+
+        // Update progress terbaru setelah update data project
+        $project->update([
+            'progress' => $project->calculateProgress()
+        ]);
 
         return to_route('project.index');
     }

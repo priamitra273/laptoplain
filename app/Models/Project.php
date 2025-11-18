@@ -105,4 +105,23 @@ class Project extends Model
             ->whereNull('parent_id')
             ->with('children');
     }
+
+    public function calculateProgress(): float
+    {
+        $tasks = $this->tasks()->with('children')->get();
+
+        if ($tasks->isEmpty()) {
+            return 0;
+        }
+
+        $total = 0;
+        $count = 0;
+
+        foreach ($tasks as $task) {
+            $total += $task->calculateProgress();
+            $count++;
+        }
+
+        return round($total / $count, 2);
+    }
 }

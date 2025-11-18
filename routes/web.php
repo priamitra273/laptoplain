@@ -19,6 +19,7 @@ use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TaskController;
 
 Route::get('/', fn() => to_route('login'))->name('home');
 
@@ -60,7 +61,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
             Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
         });
-});
 
+    Route::resource('task', TaskController::class)->except($except)
+        ->except(['create', 'edit', 'show']);
+});
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

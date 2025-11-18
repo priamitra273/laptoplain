@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogUsers;
 
     protected $table = 'tasks';
 
@@ -147,5 +148,23 @@ class Task extends Model
     public function getSubTaskAttribute()
     {
         return $this->subTaskRecursive;
+    }
+
+    public function calculateProgress(): float
+    {
+
+        if ($this->children->isEmpty()) {
+            return (float) $this->progress;
+        }
+
+        $total = 0;
+        $count = 0;
+
+        foreach ($this->children as $child) {
+            $total += $child->calculateProgress();
+            $count++;
+        }
+
+        return $count > 0 ? round($total / $count, 2) : (float) $this->progress;
     }
 }

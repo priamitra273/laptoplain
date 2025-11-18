@@ -11,12 +11,6 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
-import { CellEditEvent } from '.';
-
-interface TruncateOptions {
-    maxLength?: number;     // panjang maksimal setelah strip HTML
-    ellipsis?: string;      // default: "..."
-}
 
 interface Props {
     projects?: Project[];
@@ -45,27 +39,6 @@ const goToCreate = () => {
     visibleForm.value = true;
 };
 
-const stripHtml = (html: string | null): string => {
-    if (!html) return '';
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
-};
-
-const truncateHtml = (html: string, options: TruncateOptions = {}): string => {
-    const { maxLength = 120, ellipsis = "..." } = options;
-
-    if (!html) return "";
-
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    const text = tmp.textContent || tmp.innerText || "";
-
-    return text.length > maxLength
-        ? text.substring(0, maxLength) + ellipsis
-        : text;
-}
-
 const items: MenuItem[] = [
     {
         label: 'View Detail',
@@ -82,7 +55,7 @@ const items: MenuItem[] = [
     },
 ];
 
-const onCellEditComplete = ({ data, newValue, field }: CellEditEvent<Project>) => {
+const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
     if (data[field] === newValue) return;
 
     let payload: any = { ...data };
@@ -131,7 +104,45 @@ const confirmDelete = (project: Project) => {
         },
     });
 };
+const truncateHtmlPreserve = (html: string, maxLength = 20) => {
+    if (!html) return '';
 
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    let totalLength = 0;
+
+    const truncateNode = (node: Node): Node | null => {
+        if (totalLength >= maxLength) return null;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.nodeValue || '';
+            if (totalLength + text.length <= maxLength) {
+                totalLength += text.length;
+                return document.createTextNode(text);
+            } else {
+                const truncated = text.substring(0, maxLength - totalLength) + '...';
+                totalLength = maxLength;
+                return document.createTextNode(truncated);
+            }
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const clone = node.cloneNode(false);
+            for (const child of Array.from(node.childNodes)) {
+                const truncatedChild = truncateNode(child);
+                if (truncatedChild) clone.appendChild(truncatedChild);
+                if (totalLength >= maxLength) break;
+            }
+            return clone;
+        }
+
+        return null;
+    };
+
+    const result = truncateNode(div);
+    return result ? result.innerHTML : '';
+};
 watch(visibleForm, (val) => {
     if (!val) selected.value = undefined;
 });
@@ -177,7 +188,7 @@ watch(visibleForm, (val) => {
 
                 <Column field="description" header="Description">
                     <template #body="{ data }">
-                        <span>{{ truncateHtml(data.description, { maxLength: 100 }) }}</span>
+                        <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
                     </template>
 
                     <template #editor="{ data, field }">

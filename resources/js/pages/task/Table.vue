@@ -148,10 +148,13 @@ const handleEdit = (id: number) => {
 
 <template>
     <div class="mb-3 flex items-center justify-end">
-        <Button icon="pi pi-plus" label="Add Task" severity="success" @click="handleAdd" />
+        <Button icon="pi pi-plus" label="Add Task" @click="handleAdd" />
     </div>
     <div class="card">
         <TreeTable :value="treeNodes" tableStyle="min-width: 60rem" scrollable scrollHeight="flex">
+            <template #empty>
+                <div class="p-4 text-center text-gray-500">No data available</div>
+            </template>
             <Column field="title" header="Title" expander></Column>
             <Column field="project" header="Project"></Column>
             <Column field="description" header="Description">

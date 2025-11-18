@@ -6,6 +6,7 @@ import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
+import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -16,12 +17,14 @@ interface Props {
     projects?: Project[];
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
+    progresses?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     projects: () => [],
     statuses: () => [],
     priorities: () => [],
+    progresses: () => 0,
 });
 
 const toast = useToast();
@@ -239,6 +242,12 @@ watch(visibleForm, (val) => {
 
                     <template #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column field="progress" header="Progress">
+                    <template #body="{ data }">
+                        <ProgressBar :value="data.progress" :showValue="true" />
                     </template>
                 </Column>
 

@@ -107,7 +107,6 @@ vueWatch(
 <template>
     <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="props.taskId ? 'Update Task' : 'Create Task'">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
-            <!-- Project -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label>Project</Label>
                 <Dropdown v-model="form.project_id" :options="projects" optionLabel="title" optionValue="id" placeholder="Select project" fluid />
@@ -116,7 +115,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Parent Task -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label>Parent Task</Label>
                 <Dropdown
@@ -133,7 +131,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Title -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label>Title</Label>
                 <InputText v-model="form.title" placeholder="Task title" fluid />
@@ -142,7 +139,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Status -->
             <div class="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Dropdown v-model="form.status_id" :options="statuses" optionLabel="name" optionValue="id" fluid />
@@ -151,7 +147,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Priority -->
             <div class="flex flex-col gap-2">
                 <Label>Priority</Label>
                 <Dropdown v-model="form.priority_id" :options="priorities" optionLabel="name" optionValue="id" fluid />
@@ -160,7 +155,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Type -->
             <div class="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Dropdown v-model="form.type_id" :options="types" optionLabel="name" optionValue="id" fluid />
@@ -169,7 +163,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Dates -->
             <div class="flex flex-col gap-2">
                 <Label>Start Date</Label>
                 <DatePicker v-model="form.start_date" date-format="yy-mm-dd" fluid />
@@ -180,13 +173,11 @@ vueWatch(
                 <DatePicker v-model="form.due_date" date-format="yy-mm-dd" :min-date="form.start_date ?? undefined" fluid />
             </div>
 
-            <!-- Archived -->
             <div class="flex items-center gap-2">
                 <Checkbox v-model="form.is_archived" binary />
                 <Label>Archived</Label>
             </div>
 
-            <!-- Progress -->
             <div class="flex flex-col gap-2">
                 <Label>Progress (%)</Label>
                 <InputText v-model.number="form.progress" type="number" min="0" max="100" placeholder="0 - 100" fluid />
@@ -195,7 +186,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Description -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label>Description</Label>
                 <Editor v-model="form.description" editorStyle="height: 200px" />
@@ -204,7 +194,6 @@ vueWatch(
                 </small>
             </div>
 
-            <!-- Buttons -->
             <div class="col-span-2 flex justify-end gap-2">
                 <Button label="Cancel" severity="secondary" @click="visible = false" />
                 <Button label="Save" type="submit" :loading="form.processing" />

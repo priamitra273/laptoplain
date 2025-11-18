@@ -18,23 +18,19 @@ const props = withDefaults(defineProps<Props>(), {
     tasks: () => [],
 });
 
-// --- MODAL STATE ---
 const showModal = ref(false);
 const editId = ref<number | null>(null);
 
-// --- OPEN ADD ---
 const openAdd = () => {
     editId.value = null;
     showModal.value = true;
 };
 
-// --- OPEN EDIT ---
 const openEdit = (id: number) => {
     editId.value = id;
     showModal.value = true;
 };
 
-// --- CLOSE MODAL ---
 const closeModal = () => {
     showModal.value = false;
 };
@@ -46,15 +42,9 @@ const closeModal = () => {
 
         <div class="mb-4 flex items-center justify-between">
             <Heading title="My Tasks" />
-
-            <!-- manual add button (opsional) -->
-            <button class="rounded-lg bg-primary px-4 py-2 text-white" @click="openAdd">Add Task</button>
         </div>
 
-        <!-- TABLE -->
         <TaskTable :tasks="props.tasks" @add="openAdd" @edit="openEdit" />
-
-        <!-- MODAL -->
 
         <TaskForm
             :visible="showModal"

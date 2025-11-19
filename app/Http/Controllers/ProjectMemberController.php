@@ -2,12 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\ProjectMember;
-use App\Models\User;
-use App\Models\MsProjectRole;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+
 use App\Facades\Sqids;
 use App\Http\Requests\ProjectMember\StoreProjectMemberRequest;
 use App\Http\Requests\ProjectMember\UpdateProjectMemberRequest;
@@ -18,7 +14,7 @@ class ProjectMemberController extends Controller
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
-        
+
         $validated = $request->validated();
         $user_id = $validated['user_id'];
 

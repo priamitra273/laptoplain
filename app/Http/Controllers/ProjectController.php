@@ -47,8 +47,9 @@ class ProjectController extends Controller
             'projectMembers.role:id,name',
             'tasks.status:id,name,severity',
             'tasks.priority:id,name,severity',
-            'tasks.children.status:id,name,severity',
-            'tasks.children.priority:id,name,severity',
+            'tasks.type:id,name,severity',
+            'tasks.users:id,name',
+            'tasks.childrenRecursive',
         ])->findOrFail($projectId);
 
         // Update otomatis progress terbaru
@@ -77,6 +78,7 @@ class ProjectController extends Controller
             'members' => $projectArr['project_members'],
             'roles'   => $roles,
             'users'   => $availableUsers,
+            'tasks'   => $projectArr['tasks'],
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

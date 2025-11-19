@@ -8,9 +8,9 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
-import MembersTable from './member/Table.vue';
-import MemberAddForm from './member/Form.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
+import MemberAddForm from './member/Form.vue';
+import MembersTable from './member/Table.vue';
 
 interface Member {
     id: string;
@@ -18,6 +18,15 @@ interface Member {
     role: { id: string; name: string };
     project_role_id: string;
     is_active: boolean;
+}
+
+interface Task {
+    id: string;
+    title: string;
+    status?: { id: string; name: string; severity?: string };
+    priority?: { id: string; name: string; severity?: string };
+    due_date?: string;
+    parent_id?: string | null;
 }
 
 interface Props {
@@ -37,6 +46,8 @@ interface Props {
     members: Member[];
     roles: { id: string; name: string }[];
     users: { id: string; name: string }[];
+
+    tasks: Task[];
 }
 
 const props = defineProps<Props>();
@@ -153,15 +164,8 @@ const goBack = () => {
         </div>
 
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
-            <MemberAddForm
-                :projectId="props.project.id"
-                :users="props.users"
-                :roles="props.roles"
-                @close="visibleAdd = false"
-                @saved="onSaved"
-            />
+            <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
-
 
         <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
             <MemberEditForm

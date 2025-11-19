@@ -258,7 +258,7 @@ watch(visibleForm, (val) => {
                 </Column>
 
                 <template #empty>
-                    <p class="text-center">No Data</p>
+                    <p class="text-center">No Data Available</p>
                 </template>
             </DataTable>
         </div>

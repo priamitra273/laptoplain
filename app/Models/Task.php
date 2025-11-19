@@ -141,4 +141,9 @@ class Task extends Model
 
         return $count > 0 ? round($total / $count, 2) : (float) $this->progress;
     }
+
+    public function childrenRecursive()
+    {
+        return $this->children()->with('childrenRecursive', 'status', 'priority');
+    }
 }

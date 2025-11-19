@@ -101,7 +101,16 @@ vueWatch(
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" header="Create New Project" @show="show" @after-hide="hide">
+    <Drawer
+        v-model:visible="visible"
+        class="!w-full md:!w-[40vw]"
+        position="right"
+        header="Create New Project"
+        @show="show"
+        @after-hide="hide"
+        :blockScroll="true"
+        :dismissable="false"
+    >
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
@@ -172,20 +181,11 @@ vueWatch(
                     </template>
                 </Editor>
 
-                <small v-if="form.errors.description" class="mt-1 text-sm text-red-500">{{ form.errors.description }}</small>
+                <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
             </div>
 
             <div class="col-span-2 flex justify-end gap-2">
-                <Button
-                    label="Cancel"
-                    severity="secondary"
-                    @click="
-                        () => {
-                            visible = false;
-                            hide();
-                        }
-                    "
-                />
+                <Button label="Cancel" severity="secondary" @click="visible = false" />
                 <Button label="Save" type="submit" :loading="form.processing" :disabled="form.processing" />
             </div>
         </form>

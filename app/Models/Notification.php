@@ -18,25 +18,19 @@ class Notification extends Model
         'message',
     ];
 
-    /**
-     * Relasi ke Task
-     */
+
     public function task()
     {
         return $this->belongsTo(Task::class, 'task_id');
     }
 
-    /**
-     * Relasi ke Master Task Status
-     */
+
     public function status()
     {
         return $this->belongsTo(MsTaskStatus::class, 'task_status_id');
     }
 
-    /**
-     * Relasi ke Master Task Type
-     */
+
     public function type()
     {
         return $this->belongsTo(MsTaskType::class, 'task_type_id');

@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Http\Requests\Task\TaskStoreRequest;
-use App\Models\Task;
-use App\Models\MsTaskStatus;
 use App\Models\MsTaskPriority;
+use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\Project;
+use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -17,6 +17,7 @@ class TaskController extends Controller
     public function index()
     {
         $tasks = Task::with([
+            'users:id,name',
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
@@ -45,29 +46,55 @@ class TaskController extends Controller
     }
 
 
-    public function store(TaskStoreRequest $request)
+    public function store(TaskStoreRequest $request, string $encoded)
     {
-        Task::create($request->validated());
-        return to_route('task.index');
+        $projectId = Sqids::decode($encoded);
+        if (!$projectId) abort(404);
+
+        $validated = $request->validated();
+
+        // Set otomatis project ID
+        $validated['project_id'] = $projectId;
+
+        // Jika ada parent task (subtask)
+        if (!isset($validated['parent_id'])) {
+            $validated['parent_id'] = null;
+        }
+
+        // Set created_by jika diperlukan
+        $validated['created_by'] = Auth::id();
+
+        Task::create($validated);
+
+        return to_route('project.show', ['encoded' => $encoded])
+            ->with('success', 'Task created successfully');
     }
 
-
-    public function update(TaskStoreRequest $request, string $encoded)
+    public function update(TaskStoreRequest $request, string $projectEncoded, string $taskEncoded)
     {
-        $id = Sqids::decode($encoded);
+        $projectId = Sqids::decode($projectEncoded);
+        if (!$projectId) abort(404);
 
-        $task = Task::findOrFail($id);
+        $taskId = Sqids::decode($taskEncoded);
+        if (!$taskId) abort(404);
+
+        $task = Task::findOrFail($taskId);
         $task->update($request->validated());
 
-        return to_route('task.index');
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Task updated successfully');
     }
 
-    public function destroy(string $encoded)
+    public function destroy(string $projectEncoded, string $taskEncoded)
     {
-        $id = Sqids::decode($encoded);
+        $projectId = Sqids::decode($projectEncoded);
+        if (!$projectId) abort(404);
 
-        Task::findOrFail($id)->delete();
+        $taskId = Sqids::decode($taskEncoded);
+        if (!$taskId) abort(404);
 
-        return to_route('task.index');
+        Task::findOrFail($taskId)->delete();
+
+        return back()->with('success', 'Task deleted successfully');
     }
 }

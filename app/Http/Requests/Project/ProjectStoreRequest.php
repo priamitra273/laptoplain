@@ -37,22 +37,21 @@ class ProjectStoreRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'title.required' => 'Judul proyek wajib diisi.',
-            'start_date.required' => 'Tanggal mulai wajib diisi.',
-            'due_date.required' => 'Tanggal selesai wajib diisi.',
-            'due_date.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
-            'description.required' => 'Deskripsi wajib diisi.',
-            'emoji.required' => 'Emoji wajib diisi.',
-            'emoji.max' => 'Emoji maksimal 2 karakter.',
-            'status_id.required' => 'Status wajib dipilih.',
-            'status_id.exists' => 'Status yang dipilih tidak valid.',
-            'priority_id.required' => 'Prioritas wajib dipilih.',
-            'priority_id.exists' => 'Prioritas yang dipilih tidak valid.',
-            'emoji.string' => 'Emoji harus berupa teks.',
-            'emoji.required' => 'Emoji wajib diisi.',
-            'description.required' => 'Deskripsi wajib diisi.',
+            'title.required' => 'Project title is required.',
+            'start_date.required' => 'Start date is required.',
+            'due_date.required' => 'Due date is required.',
+            'due_date.after_or_equal' => 'The due date cannot be earlier than the start date.',
+            'description.required' => 'Description is required.',
+            'emoji.required' => 'Emoji is required.',
+            'emoji.max' => 'Emoji may not be greater than 2 characters.',
+            'emoji.string' => 'Emoji must be a string.',
+            'status_id.required' => 'Status is required.',
+            'status_id.exists' => 'The selected status is invalid.',
+            'priority_id.required' => 'Priority is required.',
+            'priority_id.exists' => 'The selected priority is invalid.',
         ];
     }
+
     /**
      * Prepare the data for validation.
      *

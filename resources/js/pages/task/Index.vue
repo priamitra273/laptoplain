@@ -1,62 +1,69 @@
-<script setup lang="ts">
-import Heading from '@/components/Heading.vue';
-import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
+<script setup>
+import { router, usePage } from '@inertiajs/vue3';
+import Button from 'primevue/button';
 import { ref } from 'vue';
-import TaskForm from './Form.vue';
-import TaskTable from './Table.vue';
+import Form from './Form.vue';
+import Table from './Table.vue';
 
-interface Props {
-    tasks: any[];
-    statuses: any[];
-    priorities: any[];
-    types: any[];
-    projects: any[];
-}
+const page = usePage();
 
-const props = withDefaults(defineProps<Props>(), {
-    tasks: () => [],
-});
+const tasks = page.props.tasks;
+const statuses = page.props.statuses;
+const priorities = page.props.priorities;
+const types = page.props.types;
 
-const showModal = ref(false);
-const editId = ref<number | null>(null);
+const showForm = ref(false);
+const selectedTask = ref(null);
 
-const openAdd = () => {
-    editId.value = null;
-    showModal.value = true;
+// Create new
+const createTask = () => {
+    selectedTask.value = {};
+    showForm.value = true;
 };
 
-const openEdit = (id: number) => {
-    editId.value = id;
-    showModal.value = true;
+// Edit
+const editTask = (task) => {
+    selectedTask.value = task;
+    showForm.value = true;
 };
 
-const closeModal = () => {
-    showModal.value = false;
+// Delete
+const deleteTask = (id) => {
+    if (!confirm('Delete this task?')) return;
+
+    router.delete(
+        route('task.destroy', {
+            encoded: page.props.project_id,
+            taskEncoded: id,
+        }),
+    );
+};
+
+// Submit form (create/update)
+const submitForm = (form) => {
+    const routeName = selectedTask.value?.id ? 'task.update' : 'task.store';
+
+    router.post(
+        route(routeName, {
+            encoded: page.props.project_id,
+            taskEncoded: selectedTask.value?.id,
+        }),
+        form,
+        { onSuccess: () => (showForm.value = false) },
+    );
 };
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="My Tasks" />
-
+    <div class="p-4">
         <div class="mb-4 flex items-center justify-between">
-            <Heading title="My Tasks" />
+            <h2 class="text-xl font-bold">Tasks</h2>
+
+            <Button label="Add Task" icon="pi pi-plus" @click="createTask" />
         </div>
 
-        <TaskTable :tasks="props.tasks" @add="openAdd" @edit="openEdit" />
+        <Table :tasks="tasks" :statuses="statuses" :priorities="priorities" :types="types" @edit="editTask" @delete="deleteTask" />
 
-        <TaskForm
-            :visible="showModal"
-            @update:visible="(val) => (showModal = val)"
-            :taskId="editId"
-            :statuses="props.statuses"
-            :priorities="props.priorities"
-            :types="props.types"
-            :projects="props.projects"
-            :tasks="props.tasks"
-            @saved="closeModal"
-            @cancel="closeModal"
-        />
-    </AppLayout>
+        <Form v-model="showForm" :task="selectedTask" :statuses="statuses" :priorities="priorities" :types="types" @submit="submitForm" />
+    </div>
 </template>

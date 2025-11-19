@@ -3,39 +3,30 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
-import { computed } from 'vue';
 
 const props = defineProps({
-    tasks: { type: Array, required: true },
-    statuses: Array,
-    priorities: Array,
-    types: Array,
+    tasks: Array,
 });
 
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit']);
 
-// Convert recursive tasks into treetable node format
-const formatTasks = (taskList) => {
-    return taskList.map((task) => ({
-        key: task.id,
+function formatTasks(list) {
+    return list.map((t) => ({
+        key: t.id,
         data: {
-            id: task.id,
-            title: task.title,
-            status: task.status,
-            priority: task.priority,
-            type: task.type,
-            users: task.users,
+            title: t.title,
+            status: t.status,
+            priority: t.priority,
+            type: t.type,
         },
-        children: task.children_recursive ? formatTasks(task.children_recursive) : [],
+        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
-};
-
-const nodes = computed(() => formatTasks(props.tasks));
+}
 </script>
 
 <template>
-    <TreeTable :value="nodes" tableStyle="min-width: 50rem">
-        <Column field="title" header="Title" expander></Column>
+    <TreeTable :value="formatTasks(tasks)" tableStyle="min-width: 50rem">
+        <Column field="title" header="Title" expander />
 
         <Column header="Status">
             <template #body="{ node }">
@@ -55,16 +46,9 @@ const nodes = computed(() => formatTasks(props.tasks));
             </template>
         </Column>
 
-        <Column header="Assignees">
+        <Column header="Actions">
             <template #body="{ node }">
-                <span v-for="u in node.data.users" :key="u.id" class="mr-2">{{ u.name }}</span>
-            </template>
-        </Column>
-
-        <Column header="Action">
-            <template #body="{ node }">
-                <Button icon="pi pi-pencil" rounded text @click="emit('edit', node.data)" />
-                <Button icon="pi pi-trash" severity="danger" text rounded @click="emit('delete', node.data.id)" />
+                <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
             </template>
         </Column>
     </TreeTable>

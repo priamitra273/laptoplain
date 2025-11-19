@@ -49,7 +49,11 @@ class ProjectController extends Controller
             'tasks.priority:id,name,severity',
             'tasks.type:id,name,severity',
             'tasks.users:id,name',
-            'tasks.childrenRecursive',
+            'tasks.subTaskRecursive',
+            'tasks.subTaskRecursive.status:id,name,severity',
+            'tasks.subTaskRecursive.priority:id,name,severity',
+            'tasks.subTaskRecursive.type:id,name,severity',
+            'tasks.subTaskRecursive.users:id,name',
         ])->findOrFail($projectId);
 
         // Update otomatis progress terbaru

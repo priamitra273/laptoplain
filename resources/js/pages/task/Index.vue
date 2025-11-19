@@ -1,69 +1,73 @@
-<script setup>
-import { router, usePage } from '@inertiajs/vue3';
-import Button from 'primevue/button';
+<script setup lang="ts">
+import Heading from '@/components/Heading.vue';
+import AppLayout from '@/layouts/avalon/AppLayout.vue';
+import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import Form from './Form.vue';
-import Table from './Table.vue';
 
-const page = usePage();
+import TaskForm from './Form.vue';
+import TaskTable from './Table.vue';
 
-const tasks = page.props.tasks;
-const statuses = page.props.statuses;
-const priorities = page.props.priorities;
-const types = page.props.types;
+interface Props {
+    tasks: any[];
+    statuses: { id: number; name: string; severity: string }[];
+    priorities: { id: number; name: string; severity: string }[];
+    types: { id: number; name: string; severity: string }[];
+    projects: { id: number; title: string }[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    tasks: () => [],
+    statuses: () => [],
+    priorities: () => [],
+    types: () => [],
+    projects: () => [],
+});
 
 const showForm = ref(false);
-const selectedTask = ref(null);
+const selectedTask = ref<any | null>(null);
 
-// Create new
-const createTask = () => {
-    selectedTask.value = {};
+// NOTE:
+// Task index (halaman semua task) tidak punya "projectEncoded".
+// Jadi project akan dipilih langsung di Form (dropdown) → opsional.
+const selectedProject = ref(null);
+
+function newTask() {
+    selectedTask.value = null;
     showForm.value = true;
-};
+}
 
-// Edit
-const editTask = (task) => {
+function editTask(task: any) {
     selectedTask.value = task;
     showForm.value = true;
-};
-
-// Delete
-const deleteTask = (id) => {
-    if (!confirm('Delete this task?')) return;
-
-    router.delete(
-        route('task.destroy', {
-            encoded: page.props.project_id,
-            taskEncoded: id,
-        }),
-    );
-};
-
-// Submit form (create/update)
-const submitForm = (form) => {
-    const routeName = selectedTask.value?.id ? 'task.update' : 'task.store';
-
-    router.post(
-        route(routeName, {
-            encoded: page.props.project_id,
-            taskEncoded: selectedTask.value?.id,
-        }),
-        form,
-        { onSuccess: () => (showForm.value = false) },
-    );
-};
+}
 </script>
 
 <template>
-    <div class="p-4">
-        <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-xl font-bold">Tasks</h2>
+    <Head title="Tasks" />
 
-            <Button label="Add Task" icon="pi pi-plus" @click="createTask" />
+    <AppLayout>
+        <div class="flex flex-col gap-6">
+            <Heading title="Task List" description="Manage all your tasks" />
+
+            <!-- CARD WRAPPER -->
+            <div class="rounded-lg bg-white p-6 shadow-md dark:bg-gray-900">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-xl font-semibold">Tasks</h2>
+                    <Button label="Add Task" icon="pi pi-plus" @click="newTask" />
+                </div>
+
+                <TaskTable :tasks="props.tasks" @edit="editTask" />
+            </div>
         </div>
 
-        <Table :tasks="tasks" :statuses="statuses" :priorities="priorities" :types="types" @edit="editTask" @delete="deleteTask" />
-
-        <Form v-model="showForm" :task="selectedTask" :statuses="statuses" :priorities="priorities" :types="types" @submit="submitForm" />
-    </div>
+        <!-- FORM MODAL -->
+        <TaskForm
+            v-model="showForm"
+            :task="selectedTask"
+            :statuses="props.statuses"
+            :priorities="props.priorities"
+            :types="props.types"
+            :projects="props.projects"
+        />
+    </AppLayout>
 </template>

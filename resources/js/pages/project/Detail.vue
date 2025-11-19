@@ -8,6 +8,7 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
+import TaskTable from '../task/Table.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
@@ -101,6 +102,7 @@ const goBack = () => {
             <Card class="shadow-sm">
                 <template #content>
                     <div class="flex w-full flex-col gap-8 p-8 xl:flex-row">
+                        <!-- LEFT CONTENT -->
                         <div class="flex flex-col xl:w-2/5">
                             <div
                                 class="prose dark:prose-invert max-w-none overflow-hidden break-words"
@@ -140,6 +142,8 @@ const goBack = () => {
                                 <Tag :value="`${props.project.progress}%`" severity="success" class="px-3 py-1 text-base" />
                             </div>
                         </div>
+
+                        <!-- RIGHT CONTENT -->
                         <MembersTable
                             class="xl:w-3/5"
                             :projectId="props.project.id"
@@ -151,7 +155,13 @@ const goBack = () => {
                         />
                     </div>
 
-                    <!-- <Divider /> -->
+                    <!-- TASK TABLE: FULL WIDTH -->
+                    <div class="px-8 pb-8">
+                        <div>
+                            <h3 class="mb-4 text-lg font-semibold">Tasks</h3>
+                        </div>
+                        <TaskTable class="w-full" :projectId="props.project.id" :tasks="props.tasks" @add="openAdd" @edit="openEdit" />
+                    </div>
                 </template>
 
                 <template #footer>

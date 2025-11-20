@@ -3,10 +3,10 @@ import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Calendar from 'primevue/calendar';
 import Dropdown from 'primevue/dropdown';
-import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 
 import type { Task, TaskPriority, TaskStatus, TaskType } from '..';
 
@@ -20,27 +20,24 @@ interface Props {
 }
 
 interface Form {
-    _method: 'POST' | 'PUT'
-    title: string
-    description: string
-    project_id: string
-    type_id: string | null
-    status_id: string | null
-    priority_id: string | null
-    parent_id: string | null
-    start_date: Date | null
-    due_date: Date | null
-    is_archived: boolean
-    progress_value: number
-    [key: string]: any
+    _method: 'POST' | 'PUT';
+    title: string;
+    description: string;
+    project_id: string;
+    type_id: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    parent_id: string | null;
+    start_date: Date | null;
+    due_date: Date | null;
+    is_archived: boolean;
+    progress_value: number;
+    [key: string]: any;
 }
 
-const toDate = (value?: string | null): Date | null =>
-    value ? new Date(value) : null;
+const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
 
-const minDueDate = computed(() =>
-    form.start_date ? form.start_date : undefined
-);
+const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
@@ -66,9 +63,7 @@ const form: InertiaForm<Form> = useForm({
 
 const isEdit = computed(() => !!props.task);
 
-const routeName = computed(() =>
-    isEdit.value ? 'project.tasks.update' : 'project.tasks.store'
-);
+const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
     const param: any = { projectEncoded: props.projectId };
@@ -95,6 +90,9 @@ const submit = () => {
     }
 };
 
+const hasChild = computed(() => {
+    return props.task && Array.isArray(props.task.children) && props.task.children.length > 0;
+});
 </script>
 
 <template>
@@ -179,7 +177,7 @@ const submit = () => {
             </div>
             <div>
                 <label class="font-semibold">Progress (%)</label>
-                <InputNumber v-model="form.progress_value" class="w-full" placeholder="0 - 100" />
+                <InputNumber v-model="form.progress_value" class="w-full" placeholder="0 - 100" :disabled="hasChild" />
             </div>
         </div>
 

@@ -12,6 +12,7 @@ import TaskTable from '../task/Table.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
+import { Task } from '.';
 
 interface Member {
     id: string;
@@ -19,15 +20,6 @@ interface Member {
     role: { id: string; name: string };
     project_role_id: string;
     is_active: boolean;
-}
-
-interface Task {
-    id: string;
-    title: string;
-    status?: { id: string; name: string; severity?: string };
-    priority?: { id: string; name: string; severity?: string };
-    due_date?: string;
-    parent_id?: string | null;
 }
 
 interface Props {
@@ -55,6 +47,7 @@ const props = defineProps<Props>();
 
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
+const visibleTaskAdd = ref(false);
 const selectedMember = ref<Member | null>(null);
 
 const openAdd = () => (visibleAdd.value = true);
@@ -62,6 +55,8 @@ const openEdit = (member: Member) => {
     selectedMember.value = member;
     visibleEdit.value = true;
 };
+const openTaskAdd = () => visibleTaskAdd.value = true;
+const openTaskEdit = () => visibleTaskAdd.value = true;
 
 const onSaved = () => {
     visibleAdd.value = false;
@@ -156,12 +151,15 @@ const goBack = () => {
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->
-                    <div class="px-8 pb-8">
-                        <div>
-                            <h3 class="mb-4 text-lg font-semibold">Tasks</h3>
-                        </div>
-                        <TaskTable class="w-full" :projectId="props.project.id" :tasks="props.tasks" @add="openAdd" @edit="openEdit" />
-                    </div>
+                     <div class="p-8 mx-8 border rounded">
+                         <TaskTable 
+                            class="w-full" 
+                            :projectId="props.project.id" 
+                            :tasks="props.tasks" 
+                            @add="openTaskAdd" 
+                            @edit="openTaskEdit" 
+                        />
+                     </div>
                 </template>
 
                 <template #footer>

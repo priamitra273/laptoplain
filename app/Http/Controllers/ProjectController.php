@@ -39,7 +39,6 @@ class ProjectController extends Controller
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
-        // Load project lengkap (status, priority, members, tasks)
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
@@ -56,21 +55,17 @@ class ProjectController extends Controller
             'tasks.subTaskRecursive.users:id,name',
         ])->findOrFail($projectId);
 
-        // Update otomatis progress terbaru
         $project->update([
             'progress' => $project->calculateProgress()
         ]);
 
-        // Convert ke array setelah update
         $projectArr = $project->toArray();
 
-        // Ambil ID user yang sudah menjadi member
         $memberUserIds = collect($projectArr['project_members'])
             ->pluck('user.id')
             ->filter()
             ->values();
 
-        // Ambil user yang belum menjadi member
         $availableUsers = User::whereNotIn('id', $memberUserIds)
             ->get(['id', 'name'])
             ->toArray();

@@ -143,7 +143,7 @@ const truncateHtmlPreserve = (html: string, maxLength = 20) => {
         return null;
     };
 
-    const result = truncateNode(div);
+    const result = truncateNode(div) as HTMLDivElement;
     return result ? result.innerHTML : '';
 };
 watch(visibleForm, (val) => {

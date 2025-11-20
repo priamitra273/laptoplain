@@ -17,3 +17,93 @@ export interface CellEditEvent<T> {
     field: keyof T
     newValue: any
 }
+
+export interface Task {
+  id: string;
+  owned_id: string | null;
+  parent_id: string | null;
+  status_id: string;
+  priority_id: string;
+  type_id: string;
+  created_by: string | null;
+  updated_by: string | null;
+  deleted_by: string | null;
+
+  emoji: string | null;
+  title: string;
+  description: string;
+
+  start_date: string;
+  due_date: string;
+
+  progress: number;
+  sequence_number: number | null;
+  is_archived: boolean;
+
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+
+  project_id: string;
+
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  type?: TaskType;
+
+  users?: TaskUser[];
+
+  sub_task: Task[];
+  sub_task_recursive: Task[];
+  children: Task[];
+}
+
+export interface TaskStatus {
+  id: string;
+  name: string;
+  severity: string;
+}
+
+export interface TaskPriority {
+  id: string;
+  name: string;
+  severity: string;
+}
+
+export interface TaskType {
+  id: string;
+  name: string;
+  severity: string;
+}
+
+export interface TaskUser {
+  id: string;
+  name: string;
+  pivot: TaskPivot;
+}
+
+export interface TaskPivot {
+  task_id: string;
+  user_id: string;
+
+  created_at: string;
+  updated_at: string;
+
+  owned_id: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  deleted_by: string | null;
+}
+
+export interface TaskFormatted {
+  key: string;
+  data: TaskFormattedData;
+  children: TaskFormatted[];
+  original: Task;
+}
+
+export interface TaskFormattedData {
+  title: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  type?: TaskType;
+}

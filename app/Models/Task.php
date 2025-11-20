@@ -124,6 +124,7 @@ class Task extends Model
         return $this->subTaskRecursive;
     }
 
+
     public function calculateProgress(): float
     {
 

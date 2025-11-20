@@ -22,6 +22,7 @@ const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
 
 const form = useForm({
+    project_id: props.projectId,
     title: '',
     description: '',
     type_id: null,
@@ -32,6 +33,22 @@ const form = useForm({
     due_date: null,
     is_archived: false,
     progress: 0,
+});
+
+function formatDate(date: any) {
+    if (!date) return null;
+
+    // Jika sudah string, kirim apa adanya
+    if (typeof date === 'string') return date;
+
+    // Format ke YYYY-MM-DD
+    return date.toISOString().split('T')[0];
+}
+
+const minDueDate = computed<Date | undefined>(() => {
+    if (!form.start_date) return undefined;
+
+    return typeof form.start_date === 'string' ? new Date(form.start_date) : form.start_date;
 });
 
 // Jika edit mode → isi form otomatis
@@ -56,7 +73,11 @@ watch(
 
 // Submit ADD
 const save = () => {
-    form.post(route('project.tasks.store', { projectEncoded: props.projectId }), {
+    form.start_date = formatDate(form.start_date);
+    form.due_date = formatDate(form.due_date);
+    form.project_id = props.projectId;
+
+    form.post(route('project.tasks.store', props.projectId), {
         preserveScroll: true,
         onSuccess: () => {
             emit('saved');
@@ -69,6 +90,9 @@ const save = () => {
 // Submit EDIT
 const update = () => {
     if (!props.editTask) return;
+    form.start_date = formatDate(form.start_date);
+    form.due_date = formatDate(form.due_date);
+    form.project_id = props.projectId;
 
     form.put(
         route('project.tasks.update', {
@@ -76,7 +100,8 @@ const update = () => {
             taskEncoded: props.editTask.id,
         }),
         {
-            onSuccess() {
+            preserveScroll: true,
+            onSuccess: () => {
                 emit('saved');
                 emit('close');
             },
@@ -110,7 +135,7 @@ const isEdit = computed(() => !!props.editTask);
 
             <div>
                 <label class="font-semibold">Due Date</label>
-                <Calendar class="w-full" v-model="form.due_date" dateFormat="yy-mm-dd" showIcon :minDate="form.start_date" />
+                <Calendar class="w-full" v-model="form.due_date" dateFormat="yy-mm-dd" showIcon :minDate="minDueDate" />
             </div>
         </div>
 
@@ -155,12 +180,23 @@ const isEdit = computed(() => !!props.editTask);
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-                <label class="font-semibold">Progress (%)</label>
-                <InputText v-model="form.progress" class="w-full" placeholder="0 - 100" />
+                <label class="font-semibold">Archived</label>
+                <Dropdown
+                    class="w-full"
+                    v-model="form.is_archived"
+                    :options="[
+                        { label: 'No', value: false },
+                        { label: 'Yes', value: true },
+                    ]"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Archived Status"
+                />
             </div>
-            <div class="flex items-center gap-2">
-                <input type="checkbox" v-model="form.is_archived" class="h-4 w-4" />
-                <label class="font-semibold">Archive?</label>
+
+            <div>
+                <label class="font-semibold">Progress (%)</label>
+                <InputNumber v-model="form.progress" class="w-full" placeholder="0 - 100" />
             </div>
         </div>
 

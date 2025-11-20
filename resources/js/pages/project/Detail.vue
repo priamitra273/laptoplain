@@ -11,7 +11,6 @@ import { ref } from 'vue';
 import { Task } from '.';
 import TaskForm from '../task/Form.vue';
 import TaskTable from '../task/Table.vue';
-import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 
@@ -53,6 +52,7 @@ const visibleAdd = ref(false);
 const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
 const selectedMember = ref<Member | null>(null);
+const selectedTask = ref<Task | null>(null);
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: Member) => {
@@ -60,7 +60,10 @@ const openEdit = (member: Member) => {
     visibleEdit.value = true;
 };
 const openTaskAdd = () => (visibleTaskAdd.value = true);
-const openTaskEdit = () => (visibleTaskAdd.value = true);
+const openTaskEdit = (task: Task) => {
+    selectedTask.value = task;
+    visibleTaskAdd.value = true;
+};
 
 const onSaved = () => {
     visibleAdd.value = false;
@@ -173,25 +176,18 @@ const goBack = () => {
             <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
 
-        <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
-            <MemberEditForm
-                v-if="selectedMember"
-                :projectId="props.project.id"
-                :member="selectedMember"
-                :roles="props.roles"
-                @close="visibleEdit = false"
-                @saved="onSaved"
-            />
-        </Dialog>
-
-        <Dialog v-model:visible="visibleTaskAdd" header="Add Task" modal class="w-[600px]">
+        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Add Task'" modal class="w-[600px]">
             <TaskForm
                 :projectId="props.project.id"
                 :tasks="props.tasks"
                 :taskTypes="props.taskTypes"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"
-                @close="visibleTaskAdd = false"
+                :editTask="selectedTask"
+                @close="
+                    visibleTaskAdd = false;
+                    selectedTask = null;
+                "
                 @saved="router.reload({ only: ['tasks', 'project'] })"
             />
         </Dialog>

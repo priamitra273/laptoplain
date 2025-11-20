@@ -72,17 +72,22 @@ class TaskController extends Controller
 
     public function update(TaskStoreRequest $request, string $projectEncoded, string $taskEncoded)
     {
-        $projectId = Sqids::decode($projectEncoded);
-        if (!$projectId) abort(404);
-
         $taskId = Sqids::decode($taskEncoded);
-        if (!$taskId) abort(404);
-
         $task = Task::findOrFail($taskId);
+
         $task->update($request->validated());
 
-        return to_route('project.show', ['encoded' => $projectEncoded])
-            ->with('success', 'Task updated successfully');
+        // Update parent progres rekursif
+        $parent = $task->parent;
+        while ($parent) {
+            $parent->update([
+                'progress' => $parent->calculateProgress()
+            ]);
+
+            $parent = $parent->parent;
+        }
+
+        return redirect()->back()->with('success', 'Task updated');
     }
 
     public function destroy(string $projectEncoded, string $taskEncoded)

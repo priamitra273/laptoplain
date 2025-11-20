@@ -3,7 +3,7 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
-import { Task, TaskFormatted } from '../project';
+import { Task, TaskFormatted } from '..';
 
 interface Props {
     tasks: Task[]

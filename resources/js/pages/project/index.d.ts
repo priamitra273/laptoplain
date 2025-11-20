@@ -60,19 +60,19 @@ export interface Task {
 export interface TaskStatus {
   id: string;
   name: string;
-  severity: string;
+  severity?: string;
 }
 
 export interface TaskPriority {
   id: string;
   name: string;
-  severity: string;
+  severity?: string;
 }
 
 export interface TaskType {
   id: string;
   name: string;
-  severity: string;
+  severity?: string;
 }
 
 export interface TaskUser {

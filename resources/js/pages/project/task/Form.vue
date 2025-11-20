@@ -1,116 +1,100 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Calendar from 'primevue/calendar';
 import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import Textarea from 'primevue/textarea';
 import { computed, watch } from 'vue';
 
-import type { Task, TaskPriority, TaskStatus, TaskType } from '@/types/index';
+import type { Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
     projectId: string;
-    tasks: Task[];
+    task: Task | null;
     taskTypes?: TaskType[];
     taskStatuses?: TaskStatus[];
     taskPriorities?: TaskPriority[];
-    editTask?: Task | null; // untuk mode edit
+    editTask?: Task | null;
 }
+
+interface Form {
+    _method: 'POST' | 'PUT'
+    title: string
+    description: string
+    project_id: string
+    type_id: string | null
+    status_id: string | null
+    priority_id: string | null
+    parent_id: string | null
+    start_date: Date | null
+    due_date: Date | null
+    is_archived: boolean
+    progress_value: number
+    [key: string]: any
+}
+
+const toDate = (value?: string | null): Date | null =>
+    value ? new Date(value) : null;
+
+const minDueDate = computed(() =>
+    form.start_date ? form.start_date : undefined
+);
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
 
-const form = useForm({
+const form: InertiaForm<Form> = useForm({
+    _method: props?.task ? 'PUT' : 'POST',
+
     project_id: props.projectId,
-    title: '',
-    description: '',
-    type_id: null,
-    status_id: null,
-    priority_id: null,
-    parent_id: null,
-    start_date: null,
-    due_date: null,
-    is_archived: false,
-    progress: 0,
+    title: props?.task?.title ?? '',
+    description: props?.task?.description ?? '',
+
+    type_id: props?.task?.type?.id ?? null,
+    status_id: props?.task?.status?.id ?? null,
+    priority_id: props?.task?.priority?.id ?? null,
+    parent_id: props?.task?.parent_id ?? null,
+
+    start_date: toDate(props?.task?.start_date),
+    due_date: toDate(props?.task?.due_date),
+
+    is_archived: props?.task?.is_archived ?? false,
+    progress_value: props?.task?.progress ?? 0,
 });
 
-function formatDate(date: any) {
-    if (!date) return null;
+const isEdit = computed(() => !!props.task);
 
-    // Jika sudah string, kirim apa adanya
-    if (typeof date === 'string') return date;
-
-    // Format ke YYYY-MM-DD
-    return date.toISOString().split('T')[0];
-}
-
-const minDueDate = computed<Date | undefined>(() => {
-    if (!form.start_date) return undefined;
-
-    return typeof form.start_date === 'string' ? new Date(form.start_date) : form.start_date;
-});
-
-// Jika edit mode → isi form otomatis
-watch(
-    () => props.editTask,
-    (task) => {
-        if (task) {
-            form.title = task.title;
-            form.description = task.description ?? '';
-            form.type_id = task.type?.id ?? null;
-            form.status_id = task.status?.id ?? null;
-            form.priority_id = task.priority?.id ?? null;
-            form.parent_id = task.parent_id ?? null;
-            form.start_date = task.start_date ?? null;
-            form.due_date = task.due_date ?? null;
-            form.is_archived = task.is_archived;
-            form.progress = task.progress ?? 0;
-        }
-    },
-    { immediate: true },
+const routeName = computed(() =>
+    isEdit.value ? 'project.tasks.update' : 'project.tasks.store'
 );
 
-// Submit ADD
-const save = () => {
-    form.start_date = formatDate(form.start_date);
-    form.due_date = formatDate(form.due_date);
-    form.project_id = props.projectId;
+const submit = () => {
+    const param: any = { projectEncoded: props.projectId };
 
-    form.post(route('project.tasks.store', props.projectId), {
-        preserveScroll: true,
-        onSuccess: () => {
-            emit('saved');
-            emit('close');
-            form.reset();
-        },
-    });
-};
-
-// Submit EDIT
-const update = () => {
-    if (!props.editTask) return;
-    form.start_date = formatDate(form.start_date);
-    form.due_date = formatDate(form.due_date);
-    form.project_id = props.projectId;
-
-    form.put(
-        route('project.tasks.update', {
-            projectEncoded: props.projectId,
-            taskEncoded: props.editTask.id,
-        }),
-        {
+    if (isEdit.value) {
+        param.taskEncoded = props.task?.id;
+        form.put(route(routeName.value, param), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('saved');
                 emit('close');
+                form.reset();
             },
-        },
-    );
+        });
+    } else {
+        form.post(route(routeName.value, param), {
+            preserveScroll: true,
+            onSuccess: () => {
+                emit('saved');
+                emit('close');
+                form.reset();
+            },
+        });
+    }
 };
 
-// Mode formulir
-const isEdit = computed(() => !!props.editTask);
 </script>
 
 <template>
@@ -193,18 +177,17 @@ const isEdit = computed(() => !!props.editTask);
                     placeholder="Select Archived Status"
                 />
             </div>
-
             <div>
                 <label class="font-semibold">Progress (%)</label>
-                <InputNumber v-model="form.progress" class="w-full" placeholder="0 - 100" />
+                <InputNumber v-model="form.progress_value" class="w-full" placeholder="0 - 100" />
             </div>
         </div>
 
         <!-- ACTION BUTTONS -->
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
-            <Button v-if="!isEdit" label="Create Task" @click="save" />
-            <Button v-else label="Update Task" severity="warning" @click="update" />
+            <Button v-if="!isEdit" label="Create Task" @click="submit" />
+            <Button v-else label="Update Task" severity="warning" @click="submit" />
         </div>
     </div>
 </template>

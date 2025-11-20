@@ -8,9 +8,10 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
-import { Task } from '.';
-import TaskForm from '../task/Form.vue';
-import TaskTable from '../task/Table.vue';
+import { Task, TaskPriority, TaskStatus, TaskType } from '.';
+import TaskForm from './task/Form.vue';
+import TaskTable from './task/Table.vue';
+import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 
@@ -41,9 +42,9 @@ interface Props {
     users: { id: string; name: string }[];
 
     tasks: Task[];
-    taskTypes?: { id: string; name: string; severity?: string }[];
-    taskStatuses?: { id: string; name: string; severity?: string }[];
-    taskPriorities?: { id: string; name: string; severity?: string }[];
+    taskTypes?: TaskType[];
+    taskStatuses?: TaskStatus[];
+    taskPriorities?: TaskPriority[];
 }
 
 const props = defineProps<Props>();
@@ -69,6 +70,11 @@ const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
     router.reload({ only: ['members', 'users'] });
+};
+
+const onDialogClosed = () => {
+    visibleTaskAdd.value = false;
+    selectedTask.value = null;
 };
 
 const formatDate = (date: string | undefined) => {
@@ -159,7 +165,13 @@ const goBack = () => {
 
                     <!-- TASK TABLE: FULL WIDTH -->
                     <div class="mx-8 rounded border p-8">
-                        <TaskTable class="w-full" :projectId="props.project.id" :tasks="props.tasks" @add="openTaskAdd" @edit="openTaskEdit" />
+                        <TaskTable 
+                            class="w-full" 
+                            :projectId="props.project.id" 
+                            :tasks="props.tasks" 
+                            @add="openTaskAdd" 
+                            @edit="openTaskEdit" 
+                        />
                     </div>
                 </template>
 
@@ -173,13 +185,19 @@ const goBack = () => {
         </div>
 
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
-            <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
+            <MemberAddForm 
+                :projectId="props.project.id" 
+                :users="props.users" 
+                :roles="props.roles" 
+                @close="visibleAdd = false" 
+                @saved="onSaved" 
+            />
         </Dialog>
 
-        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Add Task'" modal class="w-[600px]">
+        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Add Task'" @hide="onDialogClosed" modal class="w-[600px]">
             <TaskForm
                 :projectId="props.project.id"
-                :tasks="props.tasks"
+                :task="selectedTask"
                 :taskTypes="props.taskTypes"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"

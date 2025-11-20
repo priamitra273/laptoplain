@@ -84,6 +84,7 @@ class TaskStoreRequest extends FormRequest
             'project_id' => is_string($projectId) ? Sqids::decode($projectId) : $projectId,
             'owned_id' => is_string($ownedId) ? Sqids::decode($ownedId) : $ownedId,
             'parent_id' => is_string($parentId) ? Sqids::decode($parentId) : $parentId,
+            'progress' => $this->progress_value,
         ]);
     }
 

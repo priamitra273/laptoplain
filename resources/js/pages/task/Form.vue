@@ -1,97 +1,174 @@
-<script setup>
-import { router } from '@inertiajs/vue3';
+<script setup lang="ts">
+import { useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
+import Calendar from 'primevue/calendar';
 import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 
-const props = defineProps({
-    modelValue: Boolean,
-    task: { type: Object, default: () => ({}) },
-    statuses: Array,
-    priorities: Array,
-    types: Array,
-    projectEncoded: String,
-});
+import type { Task, TaskPriority, TaskStatus, TaskType } from '@/types/index';
 
-const emit = defineEmits(['update:modelValue']);
+interface Props {
+    projectId: string;
+    tasks: Task[];
+    taskTypes?: TaskType[];
+    taskStatuses?: TaskStatus[];
+    taskPriorities?: TaskPriority[];
+    editTask?: Task | null; // untuk mode edit
+}
 
-const form = ref({
+const props = defineProps<Props>();
+const emit = defineEmits(['close', 'saved']);
+
+const form = useForm({
     title: '',
     description: '',
+    type_id: null,
     status_id: null,
     priority_id: null,
-    type_id: null,
     parent_id: null,
+    start_date: null,
+    due_date: null,
+    is_archived: false,
+    progress: 0,
 });
 
+// Jika edit mode → isi form otomatis
 watch(
-    () => props.task,
-    (val) => {
-        form.value = {
-            title: val?.title ?? '',
-            description: val?.description ?? '',
-            status_id: val?.status_id ?? null,
-            priority_id: val?.priority_id ?? null,
-            type_id: val?.type_id ?? null,
-            parent_id: val?.parent_id ?? null,
-        };
+    () => props.editTask,
+    (task) => {
+        if (task) {
+            form.title = task.title;
+            form.description = task.description ?? '';
+            form.type_id = task.type?.id ?? null;
+            form.status_id = task.status?.id ?? null;
+            form.priority_id = task.priority?.id ?? null;
+            form.parent_id = task.parent_id ?? null;
+            form.start_date = task.start_date ?? null;
+            form.due_date = task.due_date ?? null;
+            form.is_archived = task.is_archived;
+            form.progress = task.progress ?? 0;
+        }
     },
     { immediate: true },
 );
 
-const isEdit = computed(() => !!props.task?.id);
+// Submit ADD
+const save = () => {
+    form.post(route('project.tasks.store', { projectEncoded: props.projectId }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            emit('saved');
+            emit('close');
+            form.reset();
+        },
+    });
+};
 
-function save() {
-    if (isEdit.value) {
-        router.put(
-            route('project.tasks.update', {
-                projectEncoded: props.projectEncoded,
-                taskEncoded: props.task.encoded,
-            }),
-            form.value,
-            {
-                onSuccess: () => emit('update:modelValue', false),
+// Submit EDIT
+const update = () => {
+    if (!props.editTask) return;
+
+    form.put(
+        route('project.tasks.update', {
+            projectEncoded: props.projectId,
+            taskEncoded: props.editTask.id,
+        }),
+        {
+            onSuccess() {
+                emit('saved');
+                emit('close');
             },
-        );
-    } else {
-        router.post(route('project.tasks.store', props.projectEncoded), form.value, {
-            onSuccess: () => emit('update:modelValue', false),
-        });
-    }
-}
+        },
+    );
+};
+
+// Mode formulir
+const isEdit = computed(() => !!props.editTask);
 </script>
 
 <template>
-    <Dialog
-        :visible="modelValue"
-        @update:visible="emit('update:modelValue', $event)"
-        :header="isEdit ? 'Edit Task' : 'Create Task'"
-        modal
-        class="w-2/3"
-    >
-        <div class="flex flex-col gap-3">
-            <label>Title</label>
-            <InputText v-model="form.title" class="w-full" />
+    <div class="flex flex-col gap-4">
+        <!-- TITLE -->
+        <div>
+            <label class="font-semibold">Title</label>
+            <InputText v-model="form.title" class="w-full" placeholder="Task title" />
+        </div>
 
-            <label>Description</label>
-            <Textarea v-model="form.description" class="w-full" rows="4" />
+        <!-- DESCRIPTION -->
+        <div>
+            <label class="font-semibold">Description</label>
+            <Textarea v-model="form.description" rows="4" class="w-full" />
+        </div>
 
-            <label>Status</label>
-            <Dropdown v-model="form.status_id" :options="statuses" optionLabel="name" optionValue="id" class="w-full" />
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="font-semibold">Start Date</label>
+                <Calendar class="w-full" v-model="form.start_date" dateFormat="yy-mm-dd" showIcon />
+            </div>
 
-            <label>Priority</label>
-            <Dropdown v-model="form.priority_id" :options="priorities" optionLabel="name" optionValue="id" class="w-full" />
-
-            <label>Type</label>
-            <Dropdown v-model="form.type_id" :options="types" optionLabel="name" optionValue="id" class="w-full" />
-
-            <div class="mt-4 flex justify-end gap-2">
-                <Button label="Cancel" severity="secondary" @click="emit('update:modelValue', false)" />
-                <Button label="Save" @click="save" />
+            <div>
+                <label class="font-semibold">Due Date</label>
+                <Calendar class="w-full" v-model="form.due_date" dateFormat="yy-mm-dd" showIcon :minDate="form.start_date" />
             </div>
         </div>
-    </Dialog>
+
+        <!-- TYPE / STATUS / PRIORITY -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+                <label class="font-semibold">Type</label>
+                <Dropdown
+                    class="w-full"
+                    v-model="form.type_id"
+                    :options="props.taskTypes"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Type"
+                />
+            </div>
+
+            <div>
+                <label class="font-semibold">Status</label>
+                <Dropdown
+                    class="w-full"
+                    v-model="form.status_id"
+                    :options="props.taskStatuses"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Status"
+                />
+            </div>
+
+            <div>
+                <label class="font-semibold">Priority</label>
+                <Dropdown
+                    class="w-full"
+                    v-model="form.priority_id"
+                    :options="props.taskPriorities"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Priority"
+                />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="font-semibold">Progress (%)</label>
+                <InputText v-model="form.progress" class="w-full" placeholder="0 - 100" />
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" v-model="form.is_archived" class="h-4 w-4" />
+                <label class="font-semibold">Archive?</label>
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="mt-4 flex justify-end gap-2">
+            <Button label="Cancel" severity="secondary" @click="emit('close')" />
+            <Button v-if="!isEdit" label="Create Task" @click="save" />
+            <Button v-else label="Update Task" severity="warning" @click="update" />
+        </div>
+    </div>
 </template>

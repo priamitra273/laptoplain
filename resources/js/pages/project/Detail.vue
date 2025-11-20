@@ -8,11 +8,12 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
+import { Task } from '.';
+import TaskForm from '../task/Form.vue';
 import TaskTable from '../task/Table.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
-import { Task } from '.';
 
 interface Member {
     id: string;
@@ -41,6 +42,9 @@ interface Props {
     users: { id: string; name: string }[];
 
     tasks: Task[];
+    taskTypes?: { id: string; name: string; severity?: string }[];
+    taskStatuses?: { id: string; name: string; severity?: string }[];
+    taskPriorities?: { id: string; name: string; severity?: string }[];
 }
 
 const props = defineProps<Props>();
@@ -55,8 +59,8 @@ const openEdit = (member: Member) => {
     selectedMember.value = member;
     visibleEdit.value = true;
 };
-const openTaskAdd = () => visibleTaskAdd.value = true;
-const openTaskEdit = () => visibleTaskAdd.value = true;
+const openTaskAdd = () => (visibleTaskAdd.value = true);
+const openTaskEdit = () => (visibleTaskAdd.value = true);
 
 const onSaved = () => {
     visibleAdd.value = false;
@@ -151,15 +155,9 @@ const goBack = () => {
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->
-                     <div class="p-8 mx-8 border rounded">
-                         <TaskTable 
-                            class="w-full" 
-                            :projectId="props.project.id" 
-                            :tasks="props.tasks" 
-                            @add="openTaskAdd" 
-                            @edit="openTaskEdit" 
-                        />
-                     </div>
+                    <div class="mx-8 rounded border p-8">
+                        <TaskTable class="w-full" :projectId="props.project.id" :tasks="props.tasks" @add="openTaskAdd" @edit="openTaskEdit" />
+                    </div>
                 </template>
 
                 <template #footer>
@@ -183,6 +181,18 @@ const goBack = () => {
                 :roles="props.roles"
                 @close="visibleEdit = false"
                 @saved="onSaved"
+            />
+        </Dialog>
+
+        <Dialog v-model:visible="visibleTaskAdd" header="Add Task" modal class="w-[600px]">
+            <TaskForm
+                :projectId="props.project.id"
+                :tasks="props.tasks"
+                :taskTypes="props.taskTypes"
+                :taskStatuses="props.taskStatuses"
+                :taskPriorities="props.taskPriorities"
+                @close="visibleTaskAdd = false"
+                @saved="router.reload({ only: ['tasks', 'project'] })"
             />
         </Dialog>
     </AppLayout>

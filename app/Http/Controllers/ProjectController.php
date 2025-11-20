@@ -8,6 +8,9 @@ use App\Models\Project;
 use App\Models\MsProjectStatus;
 use App\Models\MsProjectPriority;
 use App\Models\MsProjectRole;
+use App\Models\MsTaskPriority;
+use App\Models\MsTaskStatus;
+use App\Models\MsTaskType;
 use App\Models\User;
 use Inertia\Inertia;
 
@@ -72,12 +75,19 @@ class ProjectController extends Controller
 
         $roles = MsProjectRole::all(['id', 'name'])->toArray();
 
+        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
+        $types = MsTaskType::select('id', 'name', 'severity')->get();
+
         $data = [
             'project' => $projectArr,
             'members' => $projectArr['project_members'],
             'roles'   => $roles,
             'users'   => $availableUsers,
             'tasks'   => $projectArr['tasks'],
+            'taskStatuses' => $statuses,
+            'taskPriorities' => $priorities,
+            'taskTypes' => $types,
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

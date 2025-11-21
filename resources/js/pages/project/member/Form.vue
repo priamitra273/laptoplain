@@ -44,7 +44,7 @@ const onSelect = (value: any) => {
 };
 
 const save = () => {
-    form.post(route('project.members.store', { encoded: props.projectId }), {
+    form.post(route('project.members.store', { projectEncoded: props.projectId }), {
         onSuccess: () => {
             emit('saved')
             Swal.fire('Success', 'Member added', 'success');

@@ -8,20 +8,12 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
-import { Task, TaskPriority, TaskStatus, TaskType } from '.';
+import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
-
-interface Member {
-    id: string;
-    user: { id: string; name: string; email: string };
-    role: { id: string; name: string };
-    project_role_id: string;
-    is_active: boolean;
-}
 
 interface Props {
     project: {
@@ -37,7 +29,7 @@ interface Props {
         created_at?: string;
         updated_at?: string;
     };
-    members: Member[];
+    members: ProjectMember[];
     roles: { id: string; name: string }[];
     users: { id: string; name: string }[];
 
@@ -52,15 +44,19 @@ const props = defineProps<Props>();
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
-const selectedMember = ref<Member | null>(null);
+const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
+const parentTaskId = ref<string | null>(null)
 
 const openAdd = () => (visibleAdd.value = true);
-const openEdit = (member: Member) => {
+const openEdit = (member: ProjectMember) => {
     selectedMember.value = member;
     visibleEdit.value = true;
 };
-const openTaskAdd = () => (visibleTaskAdd.value = true);
+const openTaskAdd = (parentId: string | null) => {
+    parentTaskId.value = parentId
+    visibleTaskAdd.value = true
+};
 const openTaskEdit = (task: Task) => {
     selectedTask.value = task;
     visibleTaskAdd.value = true;
@@ -75,6 +71,7 @@ const onSaved = () => {
 const onDialogClosed = () => {
     visibleTaskAdd.value = false;
     selectedTask.value = null;
+    parentTaskId.value = null;
 };
 
 const formatDate = (date: string | undefined) => {
@@ -193,10 +190,21 @@ const goBack = () => {
                 @saved="onSaved" 
             />
         </Dialog>
+        
+        <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
+            <MemberEditForm 
+                :projectId="props.project.id" 
+                :member="selectedMember as ProjectMember" 
+                :roles="props.roles" 
+                @close="visibleEdit = false" 
+                @saved="onSaved" 
+            />
+        </Dialog>
 
         <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Add Task'" @hide="onDialogClosed" modal class="w-[600px]">
             <TaskForm
                 :projectId="props.project.id"
+                :parentId="parentTaskId"
                 :task="selectedTask"
                 :taskTypes="props.taskTypes"
                 :taskStatuses="props.taskStatuses"
@@ -205,6 +213,7 @@ const goBack = () => {
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;
+                    parentTaskId = null;
                 "
                 @saved="router.reload({ only: ['tasks', 'project'] })"
             />

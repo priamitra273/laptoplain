@@ -28,7 +28,7 @@ const form: InertiaForm<Form> = useForm({
 });
 
 const save = () => {
-    form.put(route('project.members.update', { encoded: props.projectId, memberEncoded: props.member.id }), {
+    form.put(route('project.members.update', { projectEncoded: props.projectId, memberEncoded: props.member.id }), {
         onSuccess: () => {
             emit('saved')
             Swal.fire('Success', 'Member updated', 'success')

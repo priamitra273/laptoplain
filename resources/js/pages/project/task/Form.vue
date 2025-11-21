@@ -6,11 +6,13 @@ import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
+import Swal from 'sweetalert2';
 import { computed } from 'vue';
 
 import type { Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
+    parentId: string | null
     projectId: string;
     task: Task | null;
     taskTypes?: TaskType[];
@@ -52,7 +54,7 @@ const form: InertiaForm<Form> = useForm({
     type_id: props?.task?.type?.id ?? null,
     status_id: props?.task?.status?.id ?? null,
     priority_id: props?.task?.priority?.id ?? null,
-    parent_id: props?.task?.parent_id ?? null,
+    parent_id: props?.parentId ?? null,
 
     start_date: toDate(props?.task?.start_date),
     due_date: toDate(props?.task?.due_date),
@@ -76,6 +78,7 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
+                Swal.fire('Success', 'Task updated', 'success')
             },
         });
     } else {
@@ -85,13 +88,18 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
+                Swal.fire('Success', 'Task added', 'success')
             },
         });
     }
 };
 
 const hasChild = computed(() => {
-    return props.task && Array.isArray(props.task.children) && props.task.children.length > 0;
+    return Boolean(
+        props.task &&
+        Array.isArray(props.task.children) &&
+        props.task.children.length > 0
+    );
 });
 </script>
 

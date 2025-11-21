@@ -32,7 +32,7 @@ const remove = (m: ProjectMember) => {
         if (res.isConfirmed) {
             router.delete(
                 route('project.members.destroy', {
-                    encoded: props.projectId,
+                    projectEncoded: props.projectId,
                     memberEncoded: m.id,
                 }),
                 {

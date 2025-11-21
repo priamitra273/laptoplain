@@ -35,6 +35,32 @@ class Task extends Model
 
     protected $appends = ['sub_task'];
 
+    public static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (Task $task) {
+
+            if (! $task->isForceDeleting()) {
+                foreach ($task->children as $child) {
+                    $child->delete();
+                }
+            }
+
+            if ($task->isForceDeleting()) {
+                foreach ($task->children()->withTrashed()->get() as $child) {
+                    $child->forceDelete();
+                }
+            }
+        });
+
+        static::restoring(function (Task $task) {
+            foreach ($task->children()->onlyTrashed()->get() as $child) {
+                $child->restore();
+            }
+        });
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owned_id');
@@ -123,7 +149,6 @@ class Task extends Model
     {
         return $this->subTaskRecursive;
     }
-
 
     public function calculateProgress(): float
     {

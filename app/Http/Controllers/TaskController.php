@@ -53,15 +53,12 @@ class TaskController extends Controller
 
         $validated = $request->validated();
 
-        // Set otomatis project ID
         $validated['project_id'] = $projectId;
 
-        // Jika ada parent task (subtask)
         if (!isset($validated['parent_id'])) {
             $validated['parent_id'] = null;
         }
 
-        // Set created_by jika diperlukan
         $validated['created_by'] = Auth::id();
 
         Task::create($validated);
@@ -77,7 +74,6 @@ class TaskController extends Controller
 
         $task->update($request->validated());
 
-        // Update parent progres rekursif
         $parent = $task->parent;
         while ($parent) {
             $parent->update([

@@ -3,16 +3,19 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
+import Swal from 'sweetalert2';
 import { Task, TaskFormatted } from '..';
+import { router } from '@inertiajs/vue3';
 
 interface Props {
+    projectId: string
     tasks: Task[]
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
-    (e: 'add'): void;
+    (e: 'add', parentId: string | null): void;
     (e: 'edit', task: Task): void;
 }>();
 
@@ -23,10 +26,11 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     key: t.id,
     original: t,
     data: {
-      title: t.title,
-      status: t.status,
-      priority: t.priority,
-      type: t.type,
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        type: t.type,
     },
     children: t.sub_task_recursive
       ? formatTasks(t.sub_task_recursive)
@@ -34,12 +38,36 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
   }));
 };
 
+const remove = (t: Task) => {
+    const text = t.children && t.children.length > 0 ? 'This task has children. Removing it will removing it\'s children.' : 'This action cannot be undone.'
+    Swal.fire({
+        icon: 'warning',
+        title: `Remove ${t.title}?`,
+        text: text,
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove',
+        cancelButtonText: 'Cancel',
+    }).then((res) => {
+        if (res.isConfirmed) {
+            router.delete(
+                route('project.tasks.destroy', {
+                    projectEncoded: props.projectId,
+                    taskEncoded: t.id,
+                }),
+                {
+                    onSuccess: () => Swal.fire('Deleted', 'Task removed', 'success'),
+                    preserveScroll: true,
+                },
+            );
+        }
+    });
+};
 </script>
 
 <template>
     <div class="flex flex-row justify-between">
         <h3 class="mb-4 text-lg font-semibold">Tasks</h3>
-        <Button label="Add Task" icon="pi pi-plus" @click="emit('add')" />
+        <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" />
     </div>
     <TreeTable :value="formatTasks(props.tasks)" tableStyle="min-width: 50rem">
         <Column field="title" header="Title" expander />
@@ -64,7 +92,9 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
 
         <Column header="Actions">
             <template #body="{ node }">
+                <Button icon="pi pi-plus" severity="help" size="small" @click="emit('add', node.data.id)" />
                 <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
+                <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
             </template>
         </Column>
     </TreeTable>

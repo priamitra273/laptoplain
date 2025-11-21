@@ -9,11 +9,20 @@ import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
 import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '.';
-import TaskForm from './task/Form.vue';
-import TaskTable from './task/Table.vue';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
+import AssignUser from './task/Assign.vue';
+import TaskForm from './task/Form.vue';
+import TaskTable from './task/Table.vue';
+
+interface Member {
+    id: string;
+    user: { id: string; name: string; email: string };
+    role: { id: string; name: string };
+    project_role_id: string;
+    is_active: boolean;
+}
 
 interface Props {
     project: {
@@ -37,6 +46,9 @@ interface Props {
     taskTypes?: TaskType[];
     taskStatuses?: TaskStatus[];
     taskPriorities?: TaskPriority[];
+
+    assignableUsers: { id: string; name: string }[];
+    isPM: boolean;
 }
 
 const props = defineProps<Props>();
@@ -46,7 +58,15 @@ const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
 const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
-const parentTaskId = ref<string | null>(null)
+
+const visibleAssign = ref(false);
+const selectedTaskAssign = ref<Task | null>(null);
+
+const openAssignUser = (task: Task) => {
+    selectedTaskAssign.value = task;
+    visibleAssign.value = true;
+};
+const parentTaskId = ref<string | null>(null);
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: ProjectMember) => {
@@ -54,8 +74,8 @@ const openEdit = (member: ProjectMember) => {
     visibleEdit.value = true;
 };
 const openTaskAdd = (parentId: string | null) => {
-    parentTaskId.value = parentId
-    visibleTaskAdd.value = true
+    parentTaskId.value = parentId;
+    visibleTaskAdd.value = true;
 };
 const openTaskEdit = (task: Task) => {
     selectedTask.value = task;
@@ -162,12 +182,14 @@ const goBack = () => {
 
                     <!-- TASK TABLE: FULL WIDTH -->
                     <div class="mx-8 rounded border p-8">
-                        <TaskTable 
-                            class="w-full" 
-                            :projectId="props.project.id" 
-                            :tasks="props.tasks" 
-                            @add="openTaskAdd" 
-                            @edit="openTaskEdit" 
+                        <TaskTable
+                            class="w-full"
+                            :projectId="props.project.id"
+                            :tasks="props.tasks"
+                            @add="openTaskAdd"
+                            @edit="openTaskEdit"
+                            @assign="openAssignUser"
+                            :isPM="props.isPM"
                         />
                     </div>
                 </template>
@@ -182,22 +204,16 @@ const goBack = () => {
         </div>
 
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
-            <MemberAddForm 
-                :projectId="props.project.id" 
-                :users="props.users" 
-                :roles="props.roles" 
-                @close="visibleAdd = false" 
-                @saved="onSaved" 
-            />
+            <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
-        
+
         <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
-            <MemberEditForm 
-                :projectId="props.project.id" 
-                :member="selectedMember as ProjectMember" 
-                :roles="props.roles" 
-                @close="visibleEdit = false" 
-                @saved="onSaved" 
+            <MemberEditForm
+                :projectId="props.project.id"
+                :member="selectedMember as ProjectMember"
+                :roles="props.roles"
+                @close="visibleEdit = false"
+                @saved="onSaved"
             />
         </Dialog>
 
@@ -216,6 +232,29 @@ const goBack = () => {
                     parentTaskId = null;
                 "
                 @saved="router.reload({ only: ['tasks', 'project'] })"
+            />
+        </Dialog>
+        <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
+            <MemberEditForm
+                :projectId="props.project.id"
+                :member="selectedMember"
+                :roles="props.roles"
+                :users="props.users"
+                @close="visibleEdit = false"
+                @saved="onSaved"
+            />
+        </Dialog>
+
+        <Dialog v-model:visible="visibleAssign" header="Assign User to Task" modal class="w-[450px]">
+            <AssignUser
+                :projectId="props.project.id"
+                :task="selectedTaskAssign"
+                :assignableUsers="props.assignableUsers"
+                @close="visibleAssign = false"
+                @saved="
+                    visibleAssign = false;
+                    router.reload({ only: ['tasks'] });
+                "
             />
         </Dialog>
     </AppLayout>

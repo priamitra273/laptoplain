@@ -52,7 +52,7 @@ class ProjectMember extends Model
     /**
      * Relasi ke project role
      */
-    public function Role(): BelongsTo
+    public function role(): BelongsTo
     {
         return $this->belongsTo(MsProjectRole::class, 'project_role_id');
     }

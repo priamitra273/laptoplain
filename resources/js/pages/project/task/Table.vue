@@ -1,15 +1,16 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import Swal from 'sweetalert2';
 import { Task, TaskFormatted } from '..';
-import { router } from '@inertiajs/vue3';
 
 interface Props {
-    projectId: string
-    tasks: Task[]
+    projectId: string;
+    tasks: Task[];
+    isPM: boolean;
 }
 
 const props = defineProps<Props>();
@@ -20,26 +21,25 @@ const emit = defineEmits<{
 }>();
 
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
-  if (!list || !Array.isArray(list)) return [];
+    if (!list || !Array.isArray(list)) return [];
 
-  return list.map((t) => ({
-    key: t.id,
-    original: t,
-    data: {
-        id: t.id,
-        title: t.title,
-        status: t.status,
-        priority: t.priority,
-        type: t.type,
-    },
-    children: t.sub_task_recursive
-      ? formatTasks(t.sub_task_recursive)
-      : [],
-  }));
+    return list.map((t) => ({
+        key: t.id,
+        original: t,
+        data: {
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            priority: t.priority,
+            type: t.type,
+        },
+        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
+    }));
 };
 
 const remove = (t: Task) => {
-    const text = t.children && t.children.length > 0 ? 'This task has children. Removing it will removing it\'s children.' : 'This action cannot be undone.'
+    const text =
+        t.children && t.children.length > 0 ? "This task has children. Removing it will removing it's children." : 'This action cannot be undone.';
     Swal.fire({
         icon: 'warning',
         title: `Remove ${t.title}?`,
@@ -94,7 +94,8 @@ const remove = (t: Task) => {
             <template #body="{ node }">
                 <Button icon="pi pi-plus" severity="help" size="small" @click="emit('add', node.data.id)" />
                 <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
-                <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
+                <Button icon="pi pi-user-plus" class="p-button-sm p-button-info" @click="$emit('assign', node.original)" />
+                <Button icon="pi pi-trash" size="small" @click="remove(node.original)"></Button>
             </template>
         </Column>
     </TreeTable>

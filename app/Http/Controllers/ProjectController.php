@@ -12,6 +12,7 @@ use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -79,6 +80,16 @@ class ProjectController extends Controller
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
 
+        $assignableUsers = collect($projectArr['project_members'])
+            ->pluck('user')
+            ->unique('id')
+            ->values();
+
+        $isPM = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->where('role.name', 'Project Manager')
+            ->isNotEmpty();
+
         $data = [
             'project' => $projectArr,
             'members' => $projectArr['project_members'],
@@ -88,6 +99,8 @@ class ProjectController extends Controller
             'taskStatuses' => $statuses,
             'taskPriorities' => $priorities,
             'taskTypes' => $types,
+            'assignableUsers' => $assignableUsers,
+            'isPM' => $isPM
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

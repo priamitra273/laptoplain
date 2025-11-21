@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Swal from 'sweetalert2';
-import { router } from '@inertiajs/vue3';
 import type { ProjectMember } from '..';
 
 interface Props {

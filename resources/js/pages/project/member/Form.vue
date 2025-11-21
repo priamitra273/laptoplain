@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { InertiaForm, router, useForm } from '@inertiajs/vue3';
-import Dropdown from 'primevue/dropdown';
+import InputError from '@/components/InputError.vue';
+import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import InputError from '@/components/InputError.vue';
+import Dropdown from 'primevue/dropdown';
 import Swal from 'sweetalert2';
+import { ref } from 'vue';
 
 interface Props {
-    projectId: string
-    users: { id: string; name: string }[]
-    roles: { id: string; name: string }[]
+    projectId: string;
+    users: { id: string; name: string }[];
+    roles: { id: string; name: string }[];
 }
 
 interface Form {
-    _method: 'POST'
-    user_id: string | null
-    project_role_id: string | null
-    [key: string]: any
+    _method: 'POST';
+    user_id: string | null;
+    project_role_id: string | null;
+    [key: string]: any;
 }
 
 const props = defineProps<Props>();
@@ -26,7 +26,7 @@ const emit = defineEmits(['close', 'saved']);
 const filteredUsers = ref(props.users);
 const selectedUser = ref(null);
 
-const form : InertiaForm<Form> = useForm({
+const form: InertiaForm<Form> = useForm({
     _method: 'POST',
     user_id: null,
     project_role_id: null,
@@ -34,9 +34,7 @@ const form : InertiaForm<Form> = useForm({
 
 const searchUser = (event: { query: string }) => {
     const query = event.query.toLowerCase();
-    filteredUsers.value = props.users.filter(u =>
-        u.name.toLowerCase().includes(query)
-    );
+    filteredUsers.value = props.users.filter((u) => u.name.toLowerCase().includes(query));
 };
 
 const onSelect = (value: any) => {
@@ -46,7 +44,7 @@ const onSelect = (value: any) => {
 const save = () => {
     form.post(route('project.members.store', { projectEncoded: props.projectId }), {
         onSuccess: () => {
-            emit('saved')
+            emit('saved');
             Swal.fire('Success', 'Member added', 'success');
         },
     });
@@ -67,13 +65,7 @@ const save = () => {
         />
         <InputError :message="form.errors?.user_id" />
 
-        <Dropdown 
-            v-model="form.project_role_id" 
-            :options="props.roles" 
-            optionLabel="name" 
-            optionValue="id" 
-            placeholder="Select role" 
-        />
+        <Dropdown v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" placeholder="Select role" />
         <InputError :message="form.errors?.project_role_id" />
 
         <div class="mt-4 flex justify-end gap-2">

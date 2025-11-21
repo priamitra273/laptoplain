@@ -20,6 +20,7 @@ use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskUserController;
 
 Route::get('/', fn() => to_route('login'))->name('home');
 
@@ -64,6 +65,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+            Route::post('tasks/{taskEncoded}/assign', [TaskUserController::class, 'assign'])
+                ->name('tasks.assign');
+
+            Route::post('tasks/{taskEncoded}/unassign', [TaskUserController::class, 'unassign'])
+                ->name('tasks.unassign');
         });
 
     Route::resource('task', TaskController::class)->only(['index']);

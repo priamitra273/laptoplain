@@ -61,20 +61,9 @@ class TaskController extends Controller
 
         $validated['created_by'] = Auth::id();
 
-        Task::create($validated);
-
-        return to_route('project.show', ['encoded' => $encoded])
-            ->with('success', 'Task created successfully');
-    }
-
-    public function update(TaskStoreRequest $request, string $projectEncoded, string $taskEncoded)
-    {
-        $taskId = Sqids::decode($taskEncoded);
-        $task = Task::findOrFail($taskId);
-
-        $task->update($request->validated());
-
+        $task = Task::create($validated);
         $parent = $task->parent;
+
         while ($parent) {
             $parent->update([
                 'progress' => $parent->calculateProgress()
@@ -83,12 +72,51 @@ class TaskController extends Controller
             $parent = $parent->parent;
         }
 
-        return redirect()->back()->with('success', 'Task updated');
+        return to_route('project.show', ['encoded' => $encoded])
+            ->with('success', 'Task created successfully');
     }
 
-    public function destroy(string $projectEncoded, string $taskEncoded)
+    public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
     {
-        $projectId = Sqids::decode($projectEncoded);
+        $taskId = Sqids::decode($taskEncoded);
+        $task = Task::findOrFail($taskId);
+
+        $data = $request->validated();
+
+        unset($data['parent_id']);
+
+        $progressInput = $data['progress'] ?? null;
+        $hasChildren = $task->children()->exists();
+
+        if ($hasChildren) {
+            unset($data['progress']);
+        } else {
+            if ($progressInput === null || $progressInput == $task->progress) {
+                unset($data['progress']);
+            }
+        }
+
+        $task->update($data);
+
+        if (!$hasChildren && isset($data['progress'])) {
+            $parent = $task->parent;
+
+            while ($parent) {
+                $parent->update([
+                    'progress' => $parent->calculateProgress()
+                ]);
+
+                $parent = $parent->parent;
+            }
+        }
+
+        return to_route('project.show', ['encoded' => $encoded])
+            ->with('success', 'Task updated successfully');
+    }
+
+    public function destroy(string $encoded, string $taskEncoded)
+    {
+        $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
         $taskId = Sqids::decode($taskEncoded);
@@ -96,6 +124,7 @@ class TaskController extends Controller
 
         Task::findOrFail($taskId)->delete();
 
-        return back()->with('success', 'Task deleted successfully');
+        return to_route('project.show', ['encoded' => $encoded])
+            ->with('success', 'Task updated successfully');
     }
 }

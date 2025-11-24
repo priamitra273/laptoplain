@@ -48,15 +48,9 @@ class ProjectController extends Controller
             'priority:id,name,severity',
             'projectMembers.user:id,name,email',
             'projectMembers.role:id,name',
-            'tasks.status:id,name,severity',
-            'tasks.priority:id,name,severity',
-            'tasks.type:id,name,severity',
-            'tasks.users:id,name',
-            'tasks.subTaskRecursive',
-            'tasks.subTaskRecursive.status:id,name,severity',
-            'tasks.subTaskRecursive.priority:id,name,severity',
-            'tasks.subTaskRecursive.type:id,name,severity',
-            'tasks.subTaskRecursive.users:id,name',
+            'tasks' => function ($query) {
+                $query->withRecursive();
+            },
         ])->findOrFail($projectId);
 
         $project->update([

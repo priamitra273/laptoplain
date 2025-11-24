@@ -40,7 +40,7 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
 
 const remove = (t: Task) => {
     const text =
-        t.children && t.children.length > 0 ? "This task has children. Removing it will removing it's children." : 'This action cannot be undone.';
+        t.sub_task_recursive && t.sub_task_recursive.length > 0 ? "This task has children. Removing it will removing it's children." : 'This action cannot be undone.';
     Swal.fire({
         icon: 'warning',
         title: `Remove ${t.title}?`,
@@ -96,7 +96,7 @@ const remove = (t: Task) => {
                 <Button icon="pi pi-plus" severity="help" size="small" @click="emit('add', node.data.id)" />
                 <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
                 <Button icon="pi pi-user-plus" class="p-button-sm p-button-info" @click="emit('assign', node.original)" />
-                <Button icon="pi pi-trash" size="small" @click="remove(node.original)"></Button>
+                <Button icon="pi pi-trash" severity="danger" size="small" @click="remove(node.original)"></Button>
             </template>
         </Column>
     </TreeTable>

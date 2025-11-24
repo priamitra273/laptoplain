@@ -33,7 +33,8 @@ class Task extends Model
         'project_id',
     ];
 
-    protected $appends = ['sub_task'];
+    // protected $appends = ['sub_task'];
+    protected $hidden = ['children'];
 
     public static function boot()
     {
@@ -150,21 +151,35 @@ class Task extends Model
         return $this->subTaskRecursive;
     }
 
+    public function scopeWithRecursive($query)
+    {
+        $query->orderBy('id')
+            ->with([
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'type:id,name,severity',
+                'users:id,name',
+                'subTaskRecursive' => function ($q) {
+                    $q->orderBy('id')->withRecursive();
+                },
+            ]);
+    }
+
     public function calculateProgress(): float
     {
-
-        if ($this->children->isEmpty()) {
+        if ($this->children()->count() === 0) {
             return (float) $this->progress;
         }
 
-        $total = 0;
-        $count = 0;
+        $children = $this->children()->get(['id', 'progress']);
 
-        foreach ($this->children as $child) {
-            $total += $child->calculateProgress();
-            $count++;
+        if ($children->isEmpty()) {
+            return (float) $this->progress;
         }
 
-        return $count > 0 ? round($total / $count, 2) : (float) $this->progress;
+        $total = $children->sum('progress');
+        $count = $children->count();
+
+        return round($total / $count, 2);
     }
 }

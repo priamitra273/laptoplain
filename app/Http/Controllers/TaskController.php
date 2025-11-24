@@ -76,6 +76,66 @@ class TaskController extends Controller
             ->with('success', 'Task created successfully');
     }
 
+    public function show(string $encoded)
+    {
+        $taskId = Sqids::decode($encoded);
+        if (!$taskId) abort(404);
+
+        $task = Task::with([
+            'project:id,title',
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'users:id,name',
+            'parent',
+            'parent.status:id,name,severity',
+            'parent.priority:id,name,severity',
+            'parent.type:id,name,severity',
+            'parent.users:id,name',
+            'subTaskRecursive',
+            'subTaskRecursive.status:id,name,severity',
+            'subTaskRecursive.priority:id,name,severity',
+            'subTaskRecursive.type:id,name,severity',
+            'subTaskRecursive.users:id,name',
+        ])->findOrFail($taskId);
+
+        // Hitung progress
+        $task->update(['progress' => $task->calculateProgress()]);
+
+        // Ambil project & assignable users
+        $project = Project::with(['projectMembers.user:id,name,email', 'projectMembers.role:id,name'])
+            ->findOrFail($task->project_id);
+
+        $assignableUsers = collect($project->projectMembers)
+            ->pluck('user')
+            ->unique('id')
+            ->values()
+            ->toArray();
+
+        // Cek PM
+        $isPM = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->where('role.name', 'Project Manager')
+            ->isNotEmpty();
+
+        // PROPS YANG BENAR UNTUK VUE
+        $data = [
+            'task' => $task->toArray(),
+            'project' => $task->project?->toArray(),
+            'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
+            'assignedUsers' => $task->users?->toArray() ?? [],
+            'assignableUsers' => $assignableUsers,
+            'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
+            'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
+            'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
+            'isPM' => $isPM,
+        ];
+
+        // HANYA ENCODE ID (BUKAN severity)
+        return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
+    }
+
+
     public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
     {
         $taskId = Sqids::decode($taskEncoded);

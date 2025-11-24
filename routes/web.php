@@ -54,6 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('project/{encoded}', [ProjectController::class, 'show'])
         ->name('project.show');
 
+    Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
+    Route::get('task', [TaskController::class, 'index'])->name('task.index');
+
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
         ->group(function () {
@@ -72,8 +75,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('tasks/{taskEncoded}/unassign', [TaskUserController::class, 'unassign'])
                 ->name('tasks.unassign');
         });
-
-    Route::resource('task', TaskController::class)->only(['index']);
 });
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

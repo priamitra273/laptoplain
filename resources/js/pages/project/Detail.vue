@@ -16,14 +16,6 @@ import AssignUser from './task/Assign.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
 
-interface Member {
-    id: string;
-    user: { id: string; name: string; email: string };
-    role: { id: string; name: string };
-    project_role_id: string;
-    is_active: boolean;
-}
-
 interface Props {
     project: {
         id: string;
@@ -226,6 +218,7 @@ const goBack = () => {
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"
                 :editTask="selectedTask"
+                :members="props.members"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;
@@ -237,7 +230,7 @@ const goBack = () => {
         <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
             <MemberEditForm
                 :projectId="props.project.id"
-                :member="selectedMember"
+                :member="selectedMember as ProjectMember"
                 :roles="props.roles"
                 :users="props.users"
                 @close="visibleEdit = false"

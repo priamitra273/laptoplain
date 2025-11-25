@@ -7,18 +7,19 @@ import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Swal from 'sweetalert2';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
-import type { Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { Task, TaskPriority, TaskStatus, TaskType, ProjectMember } from '..';
 
 interface Props {
     parentId: string | null
-    projectId: string;
-    task: Task | null;
-    taskTypes?: TaskType[];
-    taskStatuses?: TaskStatus[];
-    taskPriorities?: TaskPriority[];
-    editTask?: Task | null;
+    projectId: string
+    task: Task | null
+    taskTypes?: TaskType[]
+    taskStatuses?: TaskStatus[]
+    taskPriorities?: TaskPriority[]
+    editTask?: Task | null
+    members: ProjectMember[]
 }
 
 interface Form {
@@ -43,6 +44,13 @@ const minDueDate = computed(() => (form.start_date ? form.start_date : undefined
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
+const selectedMembers = ref<ProjectMember[]>([])
+const formattedMemberOption = computed(() =>
+  props.members.map(m => ({
+    id: m.user.id,
+    name: m.user.name,
+  }))
+)
 
 const form: InertiaForm<Form> = useForm({
     _method: props?.task ? 'PUT' : 'POST',
@@ -115,6 +123,12 @@ const hasChild = computed(() => {
         <div>
             <label class="font-semibold">Description</label>
             <Textarea v-model="form.description" rows="4" class="w-full" />
+        </div>
+        
+        <div class="flex flex-col">
+            <label class="font-semibold">Assigned Member</label>
+            <MultiSelect v-model="selectedMembers" display="chip" :options="formattedMemberOption" optionLabel="name" filter placeholder="Select Member"
+            :maxSelectedLabels="3" class="w-full" />
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

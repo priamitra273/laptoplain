@@ -89,21 +89,19 @@ class TaskController extends Controller
         if (!$taskId) abort(404);
 
         $task = Task::with([
-            'project:id,title',
+            'project:id,title,emoji',
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
             'users:id,name',
-            'parent',
-            'parent.status:id,name,severity',
-            'parent.priority:id,name,severity',
-            'parent.type:id,name,severity',
-            'parent.users:id,name',
             'subTaskRecursive',
             'subTaskRecursive.status:id,name,severity',
             'subTaskRecursive.priority:id,name,severity',
             'subTaskRecursive.type:id,name,severity',
             'subTaskRecursive.users:id,name',
+            'comments' => function ($query) {
+                $query->whereNull('parent_id')->with(['user', 'replies.user']);
+            }
         ])->findOrFail($taskId);
 
         $task->update(['progress' => $task->calculateProgress()]);
@@ -132,11 +130,11 @@ class TaskController extends Controller
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isPM' => $isPM,
+            'comments' => $task->comments?->toArray() ?? [],
         ];
 
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
-
 
     public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
     {

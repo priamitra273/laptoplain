@@ -12,7 +12,6 @@ import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
-import AssignUser from './task/Assign.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
 
@@ -39,7 +38,6 @@ interface Props {
     taskStatuses?: TaskStatus[];
     taskPriorities?: TaskPriority[];
 
-    assignableUsers: { id: string; name: string }[];
     isPM: boolean;
 }
 
@@ -51,13 +49,6 @@ const visibleTaskAdd = ref(false);
 const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
 
-const visibleAssign = ref(false);
-const selectedTaskAssign = ref<Task | null>(null);
-
-const openAssignUser = (task: Task) => {
-    selectedTaskAssign.value = task;
-    visibleAssign.value = true;
-};
 const parentTaskId = ref<string | null>(null);
 
 const openAdd = () => (visibleAdd.value = true);

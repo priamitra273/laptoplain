@@ -18,7 +18,6 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
     (e: 'edit', task: Task): void;
-    (e: 'assign', task: Task): void;
 }>();
 
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
@@ -97,7 +96,6 @@ const remove = (t: Task) => {
             <template #body="{ node }">
                 <Button icon="pi pi-plus" severity="help" size="small" @click="emit('add', node.data.id)" />
                 <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
-                <Button icon="pi pi-user-plus" class="p-button-sm p-button-info" @click="emit('assign', node.original)" />
                 <Button icon="pi pi-trash" severity="danger" size="small" @click="remove(node.original)"></Button>
                 <Button label="Detail" @click="router.visit(route('task.show', node.original))" />
             </template>

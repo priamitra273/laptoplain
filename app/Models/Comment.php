@@ -22,6 +22,7 @@ class Comment extends Model
         'created_by',
         'updated_by',
         'deleted_by',
+        'parent_id',
     ];
 
     /**
@@ -70,5 +71,15 @@ class Comment extends Model
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Comment::class, 'parent_id')->with('user', 'replies');
     }
 }

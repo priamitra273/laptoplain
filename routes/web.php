@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\DashboardController;
@@ -57,6 +58,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
     Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
+    Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/comments/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
+
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
         ->group(function () {
@@ -68,12 +73,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
-
-            Route::post('tasks/{taskEncoded}/assign', [TaskUserController::class, 'assign'])
-                ->name('tasks.assign');
-
-            Route::post('tasks/{taskEncoded}/unassign', [TaskUserController::class, 'unassign'])
-                ->name('tasks.unassign');
         });
 });
 require __DIR__ . '/settings.php';

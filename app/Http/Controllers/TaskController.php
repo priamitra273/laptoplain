@@ -61,14 +61,21 @@ class TaskController extends Controller
 
         $validated['created_by'] = Auth::id();
 
-        $task = Task::create($validated);
-        $parent = $task->parent;
+        $assignUserIds = $validated['assign_users'] ?? [];
 
+        unset($validated['assign_users']);
+
+        $task = Task::create($validated);
+
+        if (!empty($assignUserIds)) {
+            $task->users()->syncWithoutDetaching($assignUserIds);
+        }
+
+        $parent = $task->parent;
         while ($parent) {
             $parent->update([
                 'progress' => $parent->calculateProgress()
             ]);
-
             $parent = $parent->parent;
         }
 
@@ -99,10 +106,8 @@ class TaskController extends Controller
             'subTaskRecursive.users:id,name',
         ])->findOrFail($taskId);
 
-        // Hitung progress
         $task->update(['progress' => $task->calculateProgress()]);
 
-        // Ambil project & assignable users
         $project = Project::with(['projectMembers.user:id,name,email', 'projectMembers.role:id,name'])
             ->findOrFail($task->project_id);
 
@@ -112,13 +117,11 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
-        // Cek PM
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
             ->where('role.name', 'Project Manager')
             ->isNotEmpty();
 
-        // PROPS YANG BENAR UNTUK VUE
         $data = [
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
@@ -131,7 +134,6 @@ class TaskController extends Controller
             'isPM' => $isPM,
         ];
 
-        // HANYA ENCODE ID (BUKAN severity)
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
@@ -143,20 +145,22 @@ class TaskController extends Controller
 
         $data = $request->validated();
 
-        unset($data['parent_id']);
+        $assignUserIds = $data['assign_users'] ?? [];
+        $unassignUserIds = $data['unassign_users'] ?? [];
 
-        $progressInput = $data['progress'] ?? null;
-        $hasChildren = $task->children()->exists();
-
-        if ($hasChildren) {
-            unset($data['progress']);
-        } else {
-            if ($progressInput === null || $progressInput == $task->progress) {
-                unset($data['progress']);
-            }
-        }
+        unset($data['assign_users'], $data['unassign_users'], $data['parent_id']);
 
         $task->update($data);
+
+        foreach ($assignUserIds as $userId) {
+            $task->assignUser($userId);
+        }
+
+        if (!empty($unassignUserIds)) {
+            $task->users()->detach($unassignUserIds);
+        }
+
+        $hasChildren = $task->children()->exists();
 
         if (!$hasChildren && isset($data['progress'])) {
             $parent = $task->parent;

@@ -7,7 +7,7 @@ import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Swal from 'sweetalert2';
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, ref, watch } from 'vue';
 
 import type { Task, TaskPriority, TaskStatus, TaskType, ProjectMember } from '..';
 
@@ -18,7 +18,6 @@ interface Props {
     taskTypes?: TaskType[]
     taskStatuses?: TaskStatus[]
     taskPriorities?: TaskPriority[]
-    editTask?: Task | null
     members: ProjectMember[]
 }
 
@@ -35,7 +34,14 @@ interface Form {
     due_date: Date | null;
     is_archived: boolean;
     progress_value: number;
+    assign_users: string[];
+    unassign_users: string[];
     [key: string]: any;
+}
+
+interface ProjectMemberSimple {
+    id: string;
+    name: string;
 }
 
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
@@ -44,13 +50,30 @@ const minDueDate = computed(() => (form.start_date ? form.start_date : undefined
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
-const selectedMembers = ref<ProjectMember[]>([])
-const formattedMemberOption = computed(() =>
+const existedMembers = computed<ProjectMemberSimple[]>(() =>
+  props.task?.users?.map(u => ({
+    id: u.id,
+    name: u.name,
+  })) ?? []
+);
+
+const selectedMembers = ref<ProjectMemberSimple[]>([]);
+
+const formattedMemberOption = computed<ProjectMemberSimple[]>(() =>
   props.members.map(m => ({
     id: m.user.id,
     name: m.user.name,
   }))
-)
+);
+
+watch(
+  existedMembers,
+  (val) => {
+    selectedMembers.value = val;
+  },
+  { immediate: true }
+);
+
 
 const form: InertiaForm<Form> = useForm({
     _method: props?.task ? 'PUT' : 'POST',
@@ -69,6 +92,9 @@ const form: InertiaForm<Form> = useForm({
 
     is_archived: props?.task?.is_archived ?? false,
     progress_value: props?.task?.progress ?? 0,
+
+    assign_users: [],
+    unassign_users: [],
 });
 
 const isEdit = computed(() => !!props.task);
@@ -76,6 +102,12 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
+    const existed = existedMembers.value.map(u => u.id);
+    const selected = selectedMembers.value.map(u => u.id);
+
+    form.assign_users = selected.filter(id => !existed.includes(id));
+    form.unassign_users = existed.filter(id => !selected.includes(id));
+
     const param: any = { projectEncoded: props.projectId };
 
     if (isEdit.value) {

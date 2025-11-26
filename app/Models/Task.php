@@ -121,8 +121,20 @@ class Task extends Model
         return $this->belongsToMany(User::class, 'task_users')
             ->withTimestamps()
             ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
-            ->using(TaskUser::class);
+            ->using(TaskUser::class)
+            ->wherePivotNull('deleted_at');
     }
+
+    public function usersWithTrashed()
+    {
+        return $this->belongsToMany(User::class, 'task_users')
+            ->withTimestamps()
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+            ->using(TaskUser::class)
+            ->withPivot('deleted_at')
+            ->withTrashed();
+    }
+
 
     public function comments()
     {
@@ -181,5 +193,22 @@ class Task extends Model
         $count = $children->count();
 
         return round($total / $count, 2);
+    }
+
+    public function assignUser($userId)
+    {
+        $pivot = TaskUser::withTrashed()
+            ->where('task_id', $this->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($pivot) {
+            if ($pivot->trashed()) {
+                $pivot->restore();
+            }
+            return $pivot;
+        }
+
+        return $this->users()->attach($userId);
     }
 }

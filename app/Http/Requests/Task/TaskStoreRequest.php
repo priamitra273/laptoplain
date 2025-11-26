@@ -36,6 +36,10 @@ class TaskStoreRequest extends FormRequest
             'progress'        => 'nullable|numeric|min:0|max:100',
             'sequence_number' => 'nullable|integer',
             'is_archived'     => 'boolean',
+            'assign_users' => 'array',
+            'assign_users.*' => 'required|exists:users,id',
+            'unassign_users' => 'array',
+            'unassign_users.*' => 'required|exists:users,id',
         ];
     }
 
@@ -76,6 +80,23 @@ class TaskStoreRequest extends FormRequest
         $projectId = $this->project_id;
         $ownedId = $this->owned_id;
         $parentId = $this->parent_id;
+        $assignUsersEncoded = $this->input('assign_users', []);
+        $unassignUsersEncoded = $this->input('unassign_users', []);
+
+        $assignUsers = [];
+        $unassignUsers = [];
+
+        if (is_array($assignUsersEncoded)) {
+            foreach ($assignUsersEncoded as $user) {
+                $assignUsers[] = Sqids::decode($user);
+            }
+        }
+
+        if (is_array($unassignUsersEncoded)) {
+            foreach ($unassignUsersEncoded as $user) {
+                $unassignUsers[] = Sqids::decode($user);
+            }
+        }
 
         $this->merge([
             'status_id' => is_string($statusId) ? Sqids::decode($statusId) : $statusId,
@@ -85,6 +106,8 @@ class TaskStoreRequest extends FormRequest
             'owned_id' => is_string($ownedId) ? Sqids::decode($ownedId) : $ownedId,
             'parent_id' => is_string($parentId) ? Sqids::decode($parentId) : $parentId,
             'progress' => $this->progress_value,
+            'assign_users' => $assignUsers,
+            'unassign_users' => $unassignUsers,
         ]);
     }
 

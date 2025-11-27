@@ -152,7 +152,6 @@ const toggleShowAllReplies = (commentId: string) => {
                             </template>
                         </div>
 
-                        <!-- Reply Input -->
                         <div v-if="replyTarget === comment.id" class="mt-2 flex w-full flex-col gap-2" :class="currentLevel === 0 ? 'pl-3' : 'pl-2'">
                             <Textarea
                                 v-model="replyText"
@@ -160,13 +159,31 @@ const toggleShowAllReplies = (commentId: string) => {
                                 placeholder="Write a reply..."
                                 class="w-full break-words rounded border p-2 text-sm"
                             />
-                            <Button
-                                label="Submit"
-                                icon="pi pi-send"
-                                size="small"
-                                class="w-full bg-blue-500 text-xs hover:bg-blue-600 md:w-28"
-                                @click="submitReply(comment.id)"
-                            />
+
+                            <!-- Tombol Submit & Cancel di satu baris -->
+                            <div class="flex flex-row gap-2">
+                                <Button
+                                    label="Submit"
+                                    icon="pi pi-send"
+                                    size="small"
+                                    class="bg-blue-500 text-xs hover:bg-blue-600"
+                                    @click="submitReply(comment.id)"
+                                />
+
+                                <Button
+                                    label="Cancel"
+                                    icon="pi pi-times"
+                                    size="small"
+                                    severity="secondary"
+                                    class="text-xs"
+                                    @click="
+                                        () => {
+                                            replyTarget = null;
+                                            replyText = '';
+                                        }
+                                    "
+                                />
+                            </div>
                         </div>
 
                         <!-- Nested Replies (level < 2) -->

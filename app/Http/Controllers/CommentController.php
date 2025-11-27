@@ -14,7 +14,7 @@ class CommentController extends Controller
         $request->validate([
             'body' => 'required|string',
             'commentable_type' => 'required|string',
-            'commentable_id' => 'required|string', // Dikirim Sqids
+            'commentable_id' => 'required|string',
             'parent_id' => 'nullable|string',
         ]);
 
@@ -28,7 +28,7 @@ class CommentController extends Controller
             'body' => $request->body,
             'parent_id' => $parentId,
             'created_by' => Auth::id(),
-            'owned_id' => Auth::id()
+            'owned_id' => Auth::id(),
         ]);
 
         return back();

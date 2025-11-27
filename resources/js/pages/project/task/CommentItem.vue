@@ -5,40 +5,27 @@ import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
 import Swal from 'sweetalert2';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { ref } from 'vue';
+
 const props = defineProps<{
     comment: any;
     taskId: number;
     level?: number;
 }>();
+
 const currentLevel = props.level ?? 0;
+
 const replyTarget = ref<number | null>(null);
 const replyText = ref('');
 const editingCommentId = ref<number | null>(null);
-const showMenu = ref<number | null>(null);
 const showAllReplies = ref<{ [key: number]: boolean }>({});
 const REPLY_LIMIT = 0;
-// Fungsi untuk menutup menu saat klik di luar
-const closeMenuOnClickOutside = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.menu-button') && !target.closest('.menu-dropdown')) {
-        showMenu.value = null;
-    }
-};
-onMounted(() => {
-    document.addEventListener('click', closeMenuOnClickOutside);
-});
-onBeforeUnmount(() => {
-    document.removeEventListener('click', closeMenuOnClickOutside);
-});
-const toggleMenu = (id: number) => {
-    showMenu.value = showMenu.value === id ? null : id;
-};
+
 const setReply = (id: number) => {
     replyTarget.value = id;
     replyText.value = '';
-    showMenu.value = null; // Tutup menu setelah memilih opsi
 };
+
 const submitReply = (parentId: number) => {
     if (!replyText.value.trim()) return;
     router.post(
@@ -58,11 +45,12 @@ const submitReply = (parentId: number) => {
         },
     );
 };
+
 const startEdit = (comment: any) => {
     editingCommentId.value = comment.id;
     replyText.value = comment.body;
-    showMenu.value = null; // Tutup menu setelah memilih opsi
 };
+
 const updateComment = () => {
     if (!replyText.value.trim() || editingCommentId.value === null) return;
     router.put(
@@ -77,7 +65,9 @@ const updateComment = () => {
         },
     );
 };
+
 const cancelEdit = () => (editingCommentId.value = null);
+
 const deleteComment = (id: number) => {
     Swal.fire({
         title: 'Delete Comment?',
@@ -91,20 +81,23 @@ const deleteComment = (id: number) => {
             });
         }
     });
-    showMenu.value = null; // Tutup menu setelah memilih opsi
 };
+
 const displayedReplies = (comment: any) => {
     const showAll = showAllReplies.value[comment.id] ?? false;
     if (showAll) return comment.replies;
     return comment.replies?.slice(0, REPLY_LIMIT) || [];
 };
+
 const remainingReplies = (comment: any) => {
     return (comment.replies?.length || 0) - REPLY_LIMIT;
 };
+
 const toggleShowAllReplies = (commentId: number) => {
     showAllReplies.value[commentId] = !showAllReplies.value[commentId];
 };
 </script>
+
 <template>
     <div class="w-full space-y-2">
         <div class="w-full max-w-full break-words rounded-lg bg-white p-3 shadow transition-shadow hover:shadow-md">
@@ -131,39 +124,27 @@ const toggleShowAllReplies = (commentId: number) => {
                             <h4 :class="['truncate font-semibold text-gray-800', currentLevel === 0 ? 'text-sm' : 'text-xs']">
                                 {{ comment.user?.name }}
                             </h4>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400">{{ moment(comment.created_at).fromNow() }}</span>
-                                <!-- button titik tiga -->
-                                <button @click="toggleMenu(comment.id)" class="menu-button text-gray-500 hover:text-gray-700">
-                                    <i class="pi pi-ellipsis-h text-sm"></i>
-                                </button>
-                                <!-- dropdown -->
-                                <div
-                                    v-if="showMenu === comment.id"
-                                    class="menu-dropdown absolute z-10 mt-6 w-28 rounded-md border bg-white shadow-md"
-                                >
-                                    <button
-                                        v-if="currentLevel < 1"
-                                        @click="setReply(comment.id)"
-                                        class="block w-full px-3 py-1 text-left text-xs hover:bg-gray-100"
-                                    >
-                                        Reply
-                                    </button>
-                                    <button @click="startEdit(comment)" class="block w-full px-3 py-1 text-left text-xs hover:bg-gray-100">
-                                        Edit
-                                    </button>
-                                    <button
-                                        @click="deleteComment(comment.id)"
-                                        class="block w-full px-3 py-1 text-left text-xs text-red-600 hover:bg-gray-100"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
+                            <span class="text-xs text-gray-400">{{ moment(comment.created_at).fromNow() }}</span>
                         </div>
                         <p :class="['break-words text-gray-700', currentLevel === 0 ? 'text-sm' : 'text-xs']">
                             {{ comment.body }}
                         </p>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <button
+                                v-if="currentLevel < 1"
+                                @click="setReply(comment.id)"
+                                class="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
+                            >
+                                Reply
+                            </button>
+                            <button @click="startEdit(comment)" class="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200">Edit</button>
+                            <button @click="deleteComment(comment.id)" class="rounded bg-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-200">
+                                Delete
+                            </button>
+                        </div>
+
                         <!-- Reply Input -->
                         <div v-if="replyTarget === comment.id" class="mt-2 flex w-full flex-col gap-2" :class="currentLevel === 0 ? 'pl-3' : 'pl-2'">
                             <Textarea
@@ -180,6 +161,7 @@ const toggleShowAllReplies = (commentId: number) => {
                                 @click="submitReply(comment.id)"
                             />
                         </div>
+
                         <!-- Nested Replies (level < 2) -->
                         <div
                             v-if="comment.replies?.length && currentLevel < 1"

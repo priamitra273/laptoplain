@@ -6,27 +6,29 @@ import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import { Comment } from '..';
 
 const props = defineProps<{
-    comment: any;
+    currentUserId: string;
+    comment: Comment;
     taskId: number;
     level?: number;
 }>();
 
 const currentLevel = props.level ?? 0;
 
-const replyTarget = ref<number | null>(null);
+const replyTarget = ref<string | null>(null);
 const replyText = ref('');
-const editingCommentId = ref<number | null>(null);
-const showAllReplies = ref<{ [key: number]: boolean }>({});
+const editingCommentId = ref<string | null>(null);
+const showAllReplies = ref<{ [key: string]: boolean }>({});
 const REPLY_LIMIT = 0;
 
-const setReply = (id: number) => {
+const setReply = (id: string) => {
     replyTarget.value = id;
     replyText.value = '';
 };
 
-const submitReply = (parentId: number) => {
+const submitReply = (parentId: string) => {
     if (!replyText.value.trim()) return;
     router.post(
         route('comments.store'),
@@ -68,7 +70,7 @@ const updateComment = () => {
 
 const cancelEdit = () => (editingCommentId.value = null);
 
-const deleteComment = (id: number) => {
+const deleteComment = (id: string) => {
     Swal.fire({
         title: 'Delete Comment?',
         text: 'Are you sure you want to delete this comment?',
@@ -93,7 +95,7 @@ const remainingReplies = (comment: any) => {
     return (comment.replies?.length || 0) - REPLY_LIMIT;
 };
 
-const toggleShowAllReplies = (commentId: number) => {
+const toggleShowAllReplies = (commentId: string) => {
     showAllReplies.value[commentId] = !showAllReplies.value[commentId];
 };
 </script>
@@ -139,10 +141,15 @@ const toggleShowAllReplies = (commentId: number) => {
                             >
                                 Reply
                             </button>
-                            <button @click="startEdit(comment)" class="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200">Edit</button>
-                            <button @click="deleteComment(comment.id)" class="rounded bg-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-200">
-                                Delete
-                            </button>
+
+                            <!-- Hanya tampil jika komentar milik user yang sedang login -->
+                            <template v-if="comment.user.id === currentUserId">
+                                <button @click="startEdit(comment)" class="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200">Edit</button>
+
+                                <button @click="deleteComment(comment.id)" class="rounded bg-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-200">
+                                    Delete
+                                </button>
+                            </template>
                         </div>
 
                         <!-- Reply Input -->
@@ -170,6 +177,7 @@ const toggleShowAllReplies = (commentId: number) => {
                         >
                             <CommentItem
                                 v-for="reply in displayedReplies(comment)"
+                                :currentUserId="props.currentUserId"
                                 :key="reply.id"
                                 :comment="reply"
                                 :taskId="props.taskId"

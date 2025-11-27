@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Facades\Sqids;
 use App\Http\Resources\Menu\MenuSidebarResource;
 use App\Models\Menu;
 use Illuminate\Foundation\Inspiring;
@@ -40,6 +41,12 @@ class HandleInertiaRequests extends Middleware
             ->whereNull('parent_id')
             ->orderBy('sequence_number')
             ->get();
+        
+        if ($request->user()) {
+            $user = Sqids::rec_encode_ids_in_list($request->user()->toArray());
+        } else {
+            $user = null;
+        }
 
         return [
             ...parent::share($request),
@@ -49,7 +56,7 @@ class HandleInertiaRequests extends Middleware
                 'author' => trim($author),
             ],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
                 'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
             ],
             'flash' => [

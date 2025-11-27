@@ -100,7 +100,15 @@ class TaskController extends Controller
             'subTaskRecursive.type:id,name,severity',
             'subTaskRecursive.users:id,name',
             'comments' => function ($query) {
-                $query->whereNull('parent_id')->with(['user', 'replies.user']);
+                $query->whereNull('parent_id')
+                    ->orderBy('id', 'asc')        // urut parent
+                    ->with([
+                        'user',
+                        'replies' => function ($q) {
+                            $q->orderBy('id', 'asc'); // urut child
+                        },
+                        'replies.user'
+                    ]);
             }
         ])->findOrFail($taskId);
 
@@ -121,6 +129,7 @@ class TaskController extends Controller
             ->isNotEmpty();
 
         $data = [
+            'currentUserId' => Auth::id(),
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],

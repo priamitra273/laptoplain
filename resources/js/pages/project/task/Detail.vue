@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -9,8 +9,10 @@ import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import { ref } from 'vue';
 import CommentItem from './CommentItem.vue';
+import { Comment } from '..';
 
 const props = defineProps<{
+    currentUserId: string;
     task: any;
     project: any;
     subTasks: any[];
@@ -20,10 +22,12 @@ const props = defineProps<{
     priorities: any[];
     types: any[];
     isPM: boolean;
-    comments: any[];
+    comments: Comment[];
 }>();
 
 const newComment = ref('');
+
+const currentUerId = usePage().props.auth.user.id
 
 const goBack = () => {
     router.visit(route('project.show', { encoded: props.project.id }));
@@ -167,6 +171,7 @@ const submitComment = () => {
                                 <CommentItem
                                     class="mt-2"
                                     v-for="comment in props.comments"
+                                    :currentUserId="currentUerId"
                                     :key="comment.id"
                                     :comment="comment"
                                     :taskId="props.task.id"

@@ -107,3 +107,45 @@ export interface TaskFormattedData {
   priority?: TaskPriority;
   type?: TaskType;
 }
+
+export interface Comment {
+    id: string;
+    commentable_type: string;
+    commentable_id: string;
+    user_id: string;
+    body: string;
+    reaction: string | null;
+    owned_id: string | null;
+
+    created_by: string | null;
+    updated_by: string | null;
+    deleted_by: string | null;
+
+    created_at: string;
+    updated_at: string | null;
+    deleted_at: string | null;
+
+    parent_id: string | null;
+
+    user: CommentUser;
+    replies: Comment[];
+}
+
+export interface CommentUser {
+    id: string;
+    uuid: string;
+    name: string;
+    email: string;
+
+    email_verified_at: string | null;
+    is_active: boolean;
+
+    created_by: number | string;
+    updated_by: number | string;
+    deleted_by: number | string | null;
+
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+}
+

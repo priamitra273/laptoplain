@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
-import { MsProjectStatus } from '@/types';
+import { severityOptions } from '@/constants';
+import { MsProjectStatus, PrimeSeverity } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
+import Select from 'primevue/select';
 import Swal from 'sweetalert2';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Props {
     value?: MsProjectStatus;
@@ -15,7 +17,7 @@ interface Props {
 interface ProjectStatusForm {
     _method: 'POST' | 'PUT';
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     [key: string]: any;
 }
 
@@ -31,6 +33,8 @@ const visible = computed({
     },
 });
 
+const selectedSeverity = ref<PrimeSeverity | null>(null);
+
 const formHeader = computed(() => (props.value?.id ? 'Edit Project Status' : 'Create New Project Status'));
 
 const form: InertiaForm<ProjectStatusForm> = useForm({
@@ -40,6 +44,8 @@ const form: InertiaForm<ProjectStatusForm> = useForm({
 });
 
 const save = () => {
+    if (selectedSeverity.value) form.severity = selectedSeverity.value;
+
     const url = props.value?.id ? route('project-status.update', props.value.id) : route('project-status.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
@@ -56,12 +62,12 @@ const save = () => {
 const hide = () => {
     form.reset();
     form.clearErrors();
-    form._method = 'POST';
+    selectedSeverity.value = null;
 };
 
 const show = () => {
     form.name = props.value?.name ?? '';
-    form.severity = props.value?.severity ?? '';
+    selectedSeverity.value = props.value?.severity ?? null;
 };
 
 for (const key in form.data()) {
@@ -84,7 +90,14 @@ for (const key in form.data()) {
 
             <div class="flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />
+                <Select
+                    v-model="selectedSeverity"
+                    :options="severityOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select severity"
+                    class="w-full"
+                />
                 <InputError :message="form.errors.severity" />
             </div>
         </form>

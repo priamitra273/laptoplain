@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
-import { TaskPriority } from '@/types';
+import { severityOptions } from '@/constants';
+import { TaskPriority, PrimeSeverity } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
+import Select from 'primevue/select';
 import Swal from 'sweetalert2';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Props {
     value?: TaskPriority;
@@ -15,7 +17,7 @@ interface Props {
 interface TaskPriorityForm {
     _method: 'POST' | 'PUT';
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     [key: string]: any;
 }
 
@@ -30,6 +32,8 @@ const visible = computed<boolean>({
     set: (newValue) => emits('update:visible', newValue),
 });
 
+const selectedSeverity = ref<PrimeSeverity | null>(null);
+
 const formHeader = computed(() => (props.value?.id ? 'Edit Task Priority' : 'Create New Task Priority'));
 
 const form: InertiaForm<TaskPriorityForm> = useForm({
@@ -39,6 +43,8 @@ const form: InertiaForm<TaskPriorityForm> = useForm({
 });
 
 const save = (): void => {
+    if (selectedSeverity.value) form.severity = selectedSeverity.value;
+
     const url = props.value?.id ? route('task-priority.update', props.value.id) : route('task-priority.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
@@ -56,11 +62,12 @@ const hide = (): void => {
     form.reset();
     form.clearErrors();
     form._method = 'POST';
+    selectedSeverity.value = null;
 };
 
 const show = (): void => {
     form.name = props.value?.name ?? '';
-    form.severity = props.value?.severity ?? '';
+    selectedSeverity.value = props.value?.severity ?? null;
 };
 
 // Clear validation error when typing
@@ -84,7 +91,14 @@ for (const key in form.data()) {
 
             <div class="flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <InputText v-model="form.severity" id="severity" placeholder="Enter Severity" />
+                <Select
+                    v-model="selectedSeverity"
+                    :options="severityOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select severity"
+                    class="w-full"
+                />
                 <InputError :message="form.errors.severity" v-if="form.errors.severity" />
             </div>
         </form>

@@ -37,7 +37,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Review',
-                'severity' => 'warning',
+                'severity' => 'warn',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

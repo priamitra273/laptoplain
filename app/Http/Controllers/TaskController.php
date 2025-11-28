@@ -101,11 +101,11 @@ class TaskController extends Controller
             'subTaskRecursive.users:id,name',
             'comments' => function ($query) {
                 $query->whereNull('parent_id')
-                    ->orderBy('id', 'asc')        // urut parent
+                    ->orderBy('id', 'asc')
                     ->with([
                         'user',
                         'replies' => function ($q) {
-                            $q->orderBy('id', 'asc'); // urut child
+                            $q->orderBy('id', 'asc');
                         },
                         'replies.user'
                     ]);

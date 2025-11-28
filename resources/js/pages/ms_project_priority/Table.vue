@@ -9,6 +9,8 @@ import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
 import ProjectPriorityForm from './Form.vue';
+import Tag from 'primevue/tag';
+import { getSeverityLabel } from '@/constants';
 
 interface Props {
     project_priorities?: ProjectPriority[];
@@ -105,7 +107,11 @@ watch(visibleForm, (newValue) => {
                 </Column>
 
                 <Column field="name" header="Name" sortable></Column>
-                <Column field="severity" header="Severity" sortable></Column>
+                <Column field="severity" header="Severity" sortable>
+                    <template #body="{ data }">
+                        <Tag :severity="data.severity" :value="getSeverityLabel(data.severity)"></Tag>
+                    </template>
+                </Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">

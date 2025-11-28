@@ -171,7 +171,6 @@ const goBack = () => {
                             :tasks="props.tasks"
                             @add="openTaskAdd"
                             @edit="openTaskEdit"
-                            @assign="openAssignUser"
                             :isPM="props.isPM"
                         />
                     </div>
@@ -226,19 +225,6 @@ const goBack = () => {
                 :users="props.users"
                 @close="visibleEdit = false"
                 @saved="onSaved"
-            />
-        </Dialog>
-
-        <Dialog v-model:visible="visibleAssign" header="Assign User to Task" modal class="w-[450px]">
-            <AssignUser
-                :projectId="props.project.id"
-                :task="selectedTaskAssign"
-                :assignableUsers="props.assignableUsers"
-                @close="visibleAssign = false"
-                @saved="
-                    visibleAssign = false;
-                    router.reload({ only: ['tasks'] });
-                "
             />
         </Dialog>
     </AppLayout>

@@ -152,12 +152,12 @@ export interface Project {
     status?: {
         id: string;
         name: string;
-        severity: string;
+        severity: PrimeSeverity;
     };
     priority?: {
         id: string;
         name: string;
-        severity: string;
+        severity: PrimeSeverity;
     };
     // owner?: User;
     project_members: {
@@ -173,10 +173,20 @@ export interface Project {
     }[]
 }
 
+export interface Tag {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
 export interface TaskType {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id: number;
     created_by?: string;
     updated_by?: string;
@@ -186,7 +196,7 @@ export interface TaskType {
 export interface TaskStatus {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id: number;
     created_by?: string;
     updated_by?: string;
@@ -196,7 +206,7 @@ export interface TaskStatus {
 export interface ProjectPriority {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id: number;
     created_by?: string;
     updated_by?: string;
@@ -215,7 +225,7 @@ export interface ProjectRole {
 export interface TaskPriority {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id: number;
     created_by?: string;
     updated_by?: string;
@@ -367,7 +377,7 @@ export interface Statistic {
 export interface MsProjectStatus {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id?: number;
     created_at?: string;
     updated_at?: string;
@@ -377,7 +387,7 @@ export interface MsProjectStatus {
 export interface MsProjectPriority {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id?: number;
     created_at?: string;
     updated_at?: string;
@@ -387,7 +397,7 @@ export interface MsProjectPriority {
 export interface MsTaskStatus {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id?: number;
     created_at?: string;
     updated_at?: string;
@@ -397,7 +407,7 @@ export interface MsTaskStatus {
 export interface MsTaskType {
     id: number;
     name: string;
-    severity: string;
+    severity: PrimeSeverity;
     owned_id?: number;
     created_at?: string;
     updated_at?: string;
@@ -405,3 +415,10 @@ export interface MsTaskType {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export type PrimeSeverity = '' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
+
+export interface SeverityOption {
+    label: string;
+    value: PrimeSeverityEnum;
+}

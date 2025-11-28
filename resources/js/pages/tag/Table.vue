@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { Tag } from '@/types';
+import { Tag as TagData } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
@@ -9,9 +9,11 @@ import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2';
 import { ref, watch } from 'vue';
 import TagForm from './Form.vue';
+import Tag from 'primevue/tag';
+import { getSeverityLabel } from '@/constants';
 
 interface Props {
-    tag?: Tag[];
+    tag?: TagData[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -23,7 +25,7 @@ const filters = ref({
 });
 
 const visibleForm = ref(false);
-const selected = ref<Tag | undefined>(undefined);
+const selected = ref<TagData | undefined>(undefined);
 
 const items: MenuItem[] = [
     {
@@ -41,7 +43,7 @@ const items: MenuItem[] = [
     },
 ];
 
-const destroy = (tag: Tag) => {
+const destroy = (tag: TagData) => {
     Swal.fire({
         icon: 'warning',
         title: `Are you sure you want to delete "${tag.name}"?`,
@@ -107,7 +109,11 @@ watch(visibleForm, (newVal) => {
                 </Column>
 
                 <Column field="name" header="Name" sortable />
-                <Column field="severity" header="Severity" sortable />
+                <Column field="severity" header="Severity" sortable>
+                    <template #body="{ data }">
+                        <Tag :severity="data.severity" :value="getSeverityLabel(data.severity)"></Tag>
+                    </template>
+                </Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">

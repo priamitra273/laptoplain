@@ -2,7 +2,8 @@
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Dropdown from 'primevue/dropdown';
-import Swal from 'sweetalert2';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import type { ProjectMember } from '..';
 
 interface Props {
@@ -20,6 +21,7 @@ interface Form {
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
+const toast = useToast();
 
 const form: InertiaForm<Form> = useForm({
     _method: 'PUT',
@@ -31,7 +33,7 @@ const save = () => {
     form.put(route('project.members.update', { projectEncoded: props.projectId, memberEncoded: props.member.id }), {
         onSuccess: () => {
             emit('saved');
-            Swal.fire('Success', 'Member updated', 'success');
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Member updated', life: 3000 });
         },
     });
 };
@@ -55,5 +57,7 @@ const save = () => {
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
             <Button label="Save" icon="pi pi-check" @click="save" />
         </div>
+
+        <Toast />
     </div>
 </template>

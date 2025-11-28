@@ -164,7 +164,7 @@ const goBack = () => {
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->
-                    <div class="mx-8 rounded border p-8">
+                    <div class="mx-8 rounded p-8 shadow-lg">
                         <TaskTable
                             class="w-full"
                             :projectId="props.project.id"

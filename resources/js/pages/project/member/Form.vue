@@ -4,7 +4,7 @@ import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Dropdown from 'primevue/dropdown';
-import Swal from 'sweetalert2';
+import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 
 interface Props {
@@ -22,6 +22,8 @@ interface Form {
 
 const props = defineProps<Props>();
 const emit = defineEmits(['close', 'saved']);
+
+const toast = useToast();
 
 const filteredUsers = ref(props.users);
 const selectedUser = ref(null);
@@ -43,15 +45,23 @@ const onSelect = (value: any) => {
 
 const save = () => {
     form.post(route('project.members.store', { projectEncoded: props.projectId }), {
+        preserveScroll: true,
         onSuccess: () => {
             emit('saved');
-            Swal.fire('Success', 'Member added', 'success');
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Member added successfully',
+                life: 2000,
+            });
         },
     });
 };
 </script>
 
 <template>
+    <Toast />
+
     <div class="flex flex-col gap-4">
         <AutoComplete
             v-model="selectedUser"

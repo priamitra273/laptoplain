@@ -70,7 +70,6 @@ const show = (): void => {
     selectedSeverity.value = props.value?.severity ?? null;
 };
 
-// Clear validation error when typing
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],

@@ -22,7 +22,22 @@ class TagRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'severity' => 'required|string|max:50',
+            'owned_id' => 'nullable|integer|exists:users,id'
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     *
+     * @return void
+     */
+    protected function prepareForValidation()
+    {
+        if (!$this->has('owned_id')) {
+            $this->merge([
+                'owned_id' => Auth::id()
+            ]);
+        }
     }
 
     /**

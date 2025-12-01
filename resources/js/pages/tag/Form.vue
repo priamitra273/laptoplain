@@ -58,15 +58,15 @@ const save = () => {
 const show = () => {
     form.name = props.value?.name ?? '';
     form.severity = props.value?.severity ?? '';
+    selectedSeverity.value = props.value?.severity ?? null;
 };
 
 const hide = () => {
     form.reset();
     form.clearErrors();
-    selectedSeverity.value = props.value?.severity ?? null;
+    selectedSeverity.value = null;
 };
 
-// Hapus error saat user mengetik ulang
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],

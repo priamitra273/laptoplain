@@ -36,7 +36,20 @@ class TagController extends Controller
         Tag::create($request->validated());
         return redirect()
             ->route('tag.index')
-            ->with('success', 'Tag Success Add.');
+            ->with('success', 'Tag added successfully.');
+    }
+
+    public function update(TagRequest $request, string $encodedId): RedirectResponse
+    {
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
+
+        $tag = Tag::findOrFail($id);
+        $tag->update($request->validated());
+
+        return redirect()
+            ->route('tag.index')
+            ->with('success', 'Tag updated successfully.');
     }
 
     public function destroy(string $encodedId): RedirectResponse
@@ -49,6 +62,6 @@ class TagController extends Controller
 
         return redirect()
             ->route('tag.index')
-            ->with('success', 'Tag Deleted.');
+            ->with('success', 'Tag deleted successfully.');
     }
 }

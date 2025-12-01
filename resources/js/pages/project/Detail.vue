@@ -109,9 +109,9 @@ const goBack = () => {
             <!-- Card Detail -->
             <Card class="shadow-sm">
                 <template #content>
-                    <div class="flex w-full flex-col gap-8 p-8 xl:flex-row">
+                    <div class="flex w-full min-w-0 flex-col gap-8 p-8 xl:flex-row">
                         <!-- LEFT CONTENT -->
-                        <div class="flex flex-col xl:w-2/5">
+                        <div class="min-w-1/2 flex flex-col xl:w-1/2">
                             <div
                                 class="prose dark:prose-invert max-w-none overflow-hidden break-words"
                                 v-html="props.project.description || '<p><em>No description</em></p>'"
@@ -152,15 +152,16 @@ const goBack = () => {
                         </div>
 
                         <!-- RIGHT CONTENT -->
-                        <MembersTable
-                            class="xl:w-3/5"
-                            :projectId="props.project.id"
-                            :members="props.members"
-                            :roles="props.roles"
-                            :users="props.users"
-                            @add="openAdd"
-                            @edit="openEdit"
-                        />
+                        <div class="min-w-0 xl:w-1/2">
+                            <MembersTable
+                                :projectId="props.project.id"
+                                :members="props.members"
+                                :roles="props.roles"
+                                :users="props.users"
+                                @add="openAdd"
+                                @edit="openEdit"
+                            />
+                        </div>
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->

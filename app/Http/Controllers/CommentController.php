@@ -46,7 +46,6 @@ class CommentController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-
         $comment->update([
             'body' => $request->body,
             'updated_by' => Auth::id(),
@@ -57,12 +56,36 @@ class CommentController extends Controller
     {
         $commentId = Sqids::decode($id);
         $comment = Comment::findOrFail($commentId);
-
         if ($comment->owned_id !== Auth::id()) {
             abort(403, 'Unauthorized action.');
         }
-
-
         $comment->delete();
+    }
+
+    public function react(Request $request, string $id)
+    {
+        $commentId = Sqids::decode($id);
+        $comment = Comment::findOrFail($commentId);
+        $userId = Auth::id();
+
+        $request->validate([
+            'reaction' => 'required|string',
+        ]);
+
+        $reactions = $comment->reaction ?? [];
+
+        // Jika user sudah memberi reaksi yang sama, hapus reaksi tersebut
+        if (isset($reactions[$userId]) && $reactions[$userId] === $request->reaction) {
+            unset($reactions[$userId]);
+        } else {
+            $reactions[$userId] = $request->reaction;
+        }
+
+        $comment->update([
+            'reaction' => $reactions,
+            'updated_by' => $userId,
+        ]);
+
+        return back();
     }
 }

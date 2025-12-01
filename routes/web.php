@@ -61,6 +61,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('/comments/{id}/reaction', [CommentController::class, 'react'])->name('comments.react');
+
 
     Route::prefix('project/{projectEncoded}')
         ->name('project.')

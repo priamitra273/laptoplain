@@ -8,8 +8,8 @@ import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import { ref } from 'vue';
-import CommentItem from './CommentItem.vue';
 import { Comment } from '..';
+import CommentItem from './CommentItem.vue';
 
 const props = defineProps<{
     currentUserId: string;
@@ -27,7 +27,7 @@ const props = defineProps<{
 
 const newComment = ref('');
 
-const currentUerId = usePage().props.auth.user.id
+const currentUerId = usePage().props.auth.user.id;
 
 const goBack = () => {
     router.visit(route('project.show', { encoded: props.project.id }));
@@ -86,7 +86,10 @@ const submitComment = () => {
                     <Card class="rounded-xl shadow-md">
                         <template #title><h2 class="font-semibold">Description</h2></template>
                         <template #content>
-                            <div v-html="props.task.description || '<p>No description</p>'" />
+                            <div
+                                class="prose prose-sm max-h-60 overflow-auto break-words"
+                                v-html="props.task.description || '<p>No description</p>'"
+                            />
                         </template>
                     </Card>
 

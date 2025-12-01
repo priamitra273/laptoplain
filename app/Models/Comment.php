@@ -65,9 +65,6 @@ class Comment extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /**
-     * Relasi ke user penghapus
-     */
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
@@ -82,4 +79,8 @@ class Comment extends Model
     {
         return $this->hasMany(Comment::class, 'parent_id')->with('user', 'replies');
     }
+
+    protected $casts = [
+        'reaction' => 'array',
+    ];
 }

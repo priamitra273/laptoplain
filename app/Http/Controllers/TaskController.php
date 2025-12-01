@@ -7,6 +7,7 @@ use App\Http\Requests\Task\TaskStoreRequest;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,6 @@ class TaskController extends Controller
             ->orderBy('id')
             ->get();
 
-
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
@@ -45,24 +45,17 @@ class TaskController extends Controller
         return Inertia::render('task/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
-
     public function store(TaskStoreRequest $request, string $encoded)
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
         $validated = $request->validated();
-
         $validated['project_id'] = $projectId;
-
-        if (!isset($validated['parent_id'])) {
-            $validated['parent_id'] = null;
-        }
-
+        $validated['parent_id'] = $validated['parent_id'] ?? null;
         $validated['created_by'] = Auth::id();
 
         $assignUserIds = $validated['assign_users'] ?? [];
-
         unset($validated['assign_users']);
 
         $task = Task::create($validated);
@@ -71,12 +64,26 @@ class TaskController extends Controller
             $task->users()->syncWithoutDetaching($assignUserIds);
         }
 
+        // Hitung progress parent task
         $parent = $task->parent;
         while ($parent) {
             $parent->update([
                 'progress' => $parent->calculateProgress()
             ]);
             $parent = $parent->parent;
+        }
+
+        // Buat notifikasi ke user yang diassign
+        if (!empty($assignUserIds)) {
+            $notification = Notification::create([
+                'task_id' => $task->id,
+                'task_status_id' => $task->status_id,
+                'task_type_id' => $task->type_id,
+                'message' => "Task '{$task->title}' telah dibuat dan ditugaskan kepada Anda."
+            ]);
+            foreach ($assignUserIds as $userId) {
+                $notification->users()->attach($userId, ['is_read' => false]);
+            }
         }
 
         return to_route('project.show', ['encoded' => $encoded])
@@ -159,24 +166,36 @@ class TaskController extends Controller
 
         $task->update($data);
 
+        // Buat notifikasi
+        $notification = Notification::create([
+            'task_id' => $task->id,
+            'task_status_id' => $task->status_id,
+            'task_type_id' => $task->type_id,
+            'message' => "Task '{$task->title}' telah diperbarui"
+        ]);
+
+        $allUserIds = array_merge(
+            $task->users()->pluck('users.id')->toArray(),
+            $assignUserIds
+        );
+        foreach (array_unique($allUserIds) as $userId) {
+            $notification->users()->attach($userId, ['is_read' => false]);
+        }
+
+        // Assign / unassign users
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
         }
-
         if (!empty($unassignUserIds)) {
             $task->users()->detach($unassignUserIds);
         }
 
+        // Hitung progress parent jika task child
         $hasChildren = $task->children()->exists();
-
         if (!$hasChildren && isset($data['progress'])) {
             $parent = $task->parent;
-
             while ($parent) {
-                $parent->update([
-                    'progress' => $parent->calculateProgress()
-                ]);
-
+                $parent->update(['progress' => $parent->calculateProgress()]);
                 $parent = $parent->parent;
             }
         }
@@ -196,6 +215,6 @@ class TaskController extends Controller
         Task::findOrFail($taskId)->delete();
 
         return to_route('project.show', ['encoded' => $encoded])
-            ->with('success', 'Task updated successfully');
+            ->with('success', 'Task deleted successfully');
     }
 }

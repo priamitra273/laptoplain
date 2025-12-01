@@ -18,6 +18,7 @@ use App\Http\Controllers\MsProjectRoleController;
 use App\Http\Controllers\MsTaskPriorityController;
 use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
@@ -62,6 +63,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
     Route::post('/comments/{id}/reaction', [CommentController::class, 'react'])->name('comments.react');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/clear', [NotificationController::class, 'clearAll'])
+        ->name('notifications.clear');
+
 
 
     Route::prefix('project/{projectEncoded}')

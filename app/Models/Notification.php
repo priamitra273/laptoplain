@@ -35,4 +35,11 @@ class Notification extends Model
     {
         return $this->belongsTo(MsTaskType::class, 'task_type_id');
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'notification_users')
+            ->withPivot('is_read')
+            ->withTimestamps();
+    }
 }

@@ -41,7 +41,7 @@ async function markAsRead(notificationId) {
 // Hapus semua notifikasi
 async function clearNotifications() {
     try {
-        await axios.post(route('notifications.clear')); // Pastikan endpoint ini ada di backend
+        await axios.post(route('notifications.clear'));
         notifications.value = [];
     } catch (error) {
         console.error(error);
@@ -62,7 +62,6 @@ onMounted(() => {
 
 <template>
     <div class="layout-topbar">
-        <!-- Topbar Start: Logo & Menu -->
         <div class="layout-topbar-start">
             <Link class="layout-topbar-logo" href="/">
                 <img src="/storage/logo.png" />
@@ -72,7 +71,6 @@ onMounted(() => {
             </a>
         </div>
 
-        <!-- Topbar End: Notifications, User Menu, Config -->
         <div class="layout-topbar-end">
             <div class="layout-topbar-actions-end">
                 <ul class="layout-topbar-items">
@@ -80,9 +78,10 @@ onMounted(() => {
                     <li class="relative">
                         <button
                             @click="
-                                () => {
+                                async () => {
                                     showNotificationDropdown = !showNotificationDropdown;
                                     showUserMenu = false;
+                                    if (showNotificationDropdown) await loadNotifications(); // refresh otomatis
                                 }
                             "
                             class="relative p-2 focus:outline-none"
@@ -95,6 +94,7 @@ onMounted(() => {
                                 {{ unreadCount }}
                             </span>
                         </button>
+
                         <div
                             v-show="showNotificationDropdown"
                             class="absolute right-0 z-50 mt-2 w-64 rounded-md border border-gray-200 bg-white shadow-lg"
@@ -106,6 +106,7 @@ onMounted(() => {
                                     Clear All
                                 </button>
                             </div>
+
                             <ul class="m-0 max-h-64 list-none overflow-y-auto p-0">
                                 <li
                                     v-for="notif in notifications"
@@ -117,6 +118,7 @@ onMounted(() => {
                                     <i class="pi pi-info-circle"></i>
                                     <span>{{ notif.message }}</span>
                                 </li>
+
                                 <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">Tidak ada notifikasi</li>
                             </ul>
                         </div>
@@ -135,6 +137,7 @@ onMounted(() => {
                         >
                             <i class="pi pi-user"></i>
                         </button>
+
                         <div
                             v-show="showUserMenu"
                             class="absolute right-0 z-50 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg"
@@ -142,13 +145,13 @@ onMounted(() => {
                         >
                             <ul class="m-0 list-none p-0">
                                 <li>
-                                    <Link href="/settings" class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
+                                    <Link href="/settings" class="flex cursor-pointer gap-2 px-4 py-2 hover:text-primary">
                                         <i class="pi pi-fw pi-sliders-h text-lg"></i>
                                         <span>Settings</span>
                                     </Link>
                                 </li>
                                 <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary" @click="logout">
+                                    <a class="flex cursor-pointer gap-2 px-4 py-2 hover:text-primary" @click="logout">
                                         <i class="pi pi-fw pi-sign-out text-lg"></i>
                                         <span>Logout</span>
                                     </a>
@@ -157,7 +160,6 @@ onMounted(() => {
                         </div>
                     </li>
 
-                    <!-- Config Sidebar Button -->
                     <li>
                         <button type="button" class="layout-config-button" @click="onConfigSidebarToggle">
                             <i class="pi pi-palette"></i>

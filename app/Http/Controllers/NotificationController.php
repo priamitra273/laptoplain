@@ -40,11 +40,7 @@ class NotificationController extends Controller
     public function clearAll()
     {
         $user = Auth::user();
-
-        // Opsi 1: Hapus semua pivot notifikasi untuk user
         $user->notifications()->detach();
-
-        // Opsi 2: Jika ingin tetap menyimpan notifikasi tapi tandai semua sebagai dibaca
         // $user->notifications()->updateExistingPivot($user->notifications->pluck('id')->toArray(), ['is_read' => true]);
 
         return response()->json(['success' => true]);

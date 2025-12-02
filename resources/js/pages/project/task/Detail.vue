@@ -27,7 +27,7 @@ const props = defineProps<{
 
 const newComment = ref('');
 
-const currentUerId = usePage().props.auth.user.id;
+const currentUserId = usePage().props.auth.user.id;
 
 const goBack = () => {
     router.visit(route('project.show', { encoded: props.project.id }));
@@ -174,7 +174,7 @@ const submitComment = () => {
                                 <CommentItem
                                     class="mt-2"
                                     v-for="comment in props.comments"
-                                    :currentUserId="currentUerId"
+                                    :currentUserId="currentUserId"
                                     :key="comment.id"
                                     :comment="comment"
                                     :taskId="props.task.id"

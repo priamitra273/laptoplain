@@ -152,7 +152,7 @@ const goBack = () => {
                         </div>
 
                         <!-- RIGHT CONTENT -->
-                        <div class="min-w-0 xl:w-1/2">
+                        <div class="min-w-0 xl:w-1/2 card p-4 shadow-sm">
                             <MembersTable
                                 :projectId="props.project.id"
                                 :members="props.members"

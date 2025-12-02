@@ -17,6 +17,7 @@ class TaskController extends Controller
 {
     public function index()
     {
+        $userId = Auth::id();
         $tasks = Task::with([
             'users:id,name',
             'status:id,name,severity',
@@ -25,9 +26,22 @@ class TaskController extends Controller
             'project:id,title',
             'subTaskRecursive'
         ])
-            ->where('created_by', Auth::id())
+            ->where(function ($query) use ($userId) {
+                $query->where('created_by', $userId)
+                    ->orWhereHas('users', function ($q) use ($userId) {
+                        $q->where('users.id', $userId);
+                    });
+            })
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->map(function ($task) use ($userId) {
+                $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
+                $task->is_created_by_me = $task->created_by == $userId;
+                return $task;
+            });
+
+        // Hitung jumlah task yang di-assign ke user saat ini
+        $totalAssigned = $tasks->where('is_assigned', true)->count();
 
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
@@ -40,10 +54,16 @@ class TaskController extends Controller
             'priorities' => $priorities->toArray(),
             'types' => $types->toArray(),
             'projects' => $projects->toArray(),
+
+            'totalAssigned' => $totalAssigned,
         ];
 
-        return Inertia::render('task/Index', Sqids::rec_encode_ids_in_list($response));
+        return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($response));
     }
+
+
+
+
 
     public function store(TaskStoreRequest $request, string $encoded)
     {

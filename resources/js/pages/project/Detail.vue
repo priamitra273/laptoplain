@@ -165,7 +165,7 @@ const goBack = () => {
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->
-                    <div class="mx-8 rounded p-8 shadow-lg">
+                    <div class="mx-8 rounded p-8 shadow-md">
                         <TaskTable
                             class="w-full"
                             :projectId="props.project.id"
@@ -174,13 +174,6 @@ const goBack = () => {
                             @edit="openTaskEdit"
                             :isPM="props.isPM"
                         />
-                    </div>
-                </template>
-
-                <template #footer>
-                    <div class="flex justify-between">
-                        <!-- <Button label="Back to Projects" icon="pi pi-arrow-left" severity="secondary"
-                            @click="router.get(route('project.index'))" /> -->
                     </div>
                 </template>
             </Card>

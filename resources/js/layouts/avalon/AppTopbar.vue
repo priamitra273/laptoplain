@@ -119,7 +119,7 @@ onMounted(() => {
                                     <span>{{ notif.message }}</span>
                                 </li>
 
-                                <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">Tidak ada notifikasi</li>
+                                <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">No notifications</li>
                             </ul>
                         </div>
                     </li>

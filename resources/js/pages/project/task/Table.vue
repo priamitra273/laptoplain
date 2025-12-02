@@ -23,14 +23,11 @@ const emit = defineEmits<{
     (e: 'edit', task: Task): void;
 }>();
 
-// State untuk paginasi
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
-
-// State untuk search
 const searchQuery = ref<string>('');
+const selectedKey = ref<{ [key: string]: any }>({});
 
-// Format data untuk TreeTable
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
@@ -47,11 +44,8 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
-// Search tasks
 const filteredTasks = computed(() => {
     let tasks = formatTasks(props.tasks);
-
-    // Search by title
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         tasks = tasks.filter(
@@ -60,68 +54,105 @@ const filteredTasks = computed(() => {
                 (task.children && task.children.some((child) => child.data.title.toLowerCase().includes(query))),
         );
     }
-
     return tasks;
 });
 
-// Data yang ditampilkan di halaman saat ini (hanya parent)
 const paginatedTasks = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
     return filteredTasks.value.slice(start, end);
 });
 
-// Total halaman (berdasarkan parent yang sudah difilter)
-const totalPages = computed(() => {
-    return Math.ceil(filteredTasks.value.length / itemsPerPage.value);
-});
-
-// Reset ke halaman 1 saat search berubah
 watch([searchQuery], () => {
     currentPage.value = 1;
 });
 
-// Fungsi untuk mengubah halaman atau jumlah item per halaman
 const onPageChange = (event: { page: number; rows: number }) => {
     currentPage.value = event.page + 1;
     itemsPerPage.value = event.rows;
 };
 
-// Setup confirm & toast
 const confirm = useConfirm();
 const toast = useToast();
 
-// Fungsi untuk menghapus task
+// Remove single
 const remove = (t: Task) => {
-    const message =
-        t.sub_task_recursive && t.sub_task_recursive.length > 0
-            ? 'This task has children. Removing it will remove its children.'
-            : 'This action cannot be undone.';
     confirm.require({
-        message: `Remove ${t.title}? ${message}`,
+        message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
         icon: 'pi pi-exclamation-triangle',
         acceptLabel: 'Yes, remove',
         acceptClass: 'p-button-danger',
         rejectLabel: 'Cancel',
         accept: () => {
-            router.delete(
-                route('project.tasks.destroy', {
-                    projectEncoded: props.projectId,
-                    taskEncoded: t.id,
-                }),
-                {
-                    onSuccess: () => {
-                        toast.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Task removed successfully',
-                            life: 3000,
-                        });
-                    },
+            router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
+                preserveScroll: true,
+            });
+
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Task removed successfully',
+                life: 3000,
+            });
+        },
+    });
+};
+
+// Select All (full visual check)
+const selectAll = () => {
+    const keys: { [key: string]: any } = {};
+
+    const mark = (node: TaskFormatted) => {
+        keys[node.key] = { checked: true, partialChecked: false };
+        if (node.children) {
+            node.children.forEach((child) => mark(child));
+        }
+    };
+
+    paginatedTasks.value.forEach((item) => mark(item));
+    selectedKey.value = keys;
+};
+
+// Clear selection
+const clearSelection = () => {
+    selectedKey.value = {};
+};
+
+const removeSelected = () => {
+    const ids = Object.keys(selectedKey.value);
+
+    if (!ids.length) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: 'No tasks selected to delete.',
+            life: 3000,
+        });
+        return;
+    }
+
+    confirm.require({
+        message: `Delete ${ids.length} selected task(s)? This action cannot be undone.`,
+        header: 'Confirmation',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Yes, delete',
+        acceptClass: 'p-button-danger',
+        rejectLabel: 'Cancel',
+        accept: () => {
+            ids.forEach((id) => {
+                router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: id }), {
                     preserveScroll: true,
-                },
-            );
+                });
+            });
+
+            selectedKey.value = {};
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: `${ids.length} tasks deleted successfully`,
+                life: 3000,
+            });
         },
     });
 };
@@ -129,19 +160,29 @@ const remove = (t: Task) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex flex-row justify-between">
+        <div class="flex items-center justify-between">
             <h3 class="mb-4 text-lg font-semibold">Tasks</h3>
-            <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" />
+            <div class="flex gap-2">
+                <Button label="Select All" icon="pi pi-check-square" @click="selectAll" />
+                <Button label="Clear" icon="pi pi-times" severity="secondary" @click="clearSelection" />
+                <Button label="Delete Selected" icon="pi pi-trash" severity="danger" @click="removeSelected" />
+                <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" />
+            </div>
         </div>
 
-        <!-- Search Section -->
         <div class="mb-4 flex-1">
-            <label for="search" class="mb-2 block text-sm font-medium">Search</label>
-            <InputText id="search" v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+            <label class="mb-2 block text-sm font-medium">Search</label>
+            <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
         </div>
 
-        <!-- TreeTable -->
-        <TreeTable :value="paginatedTasks" tableStyle="min-width: 50rem">
+        <TreeTable
+            v-model:selectionKeys="selectedKey"
+            :value="paginatedTasks"
+            selectionMode="checkbox"
+            :propagateSelectionDown="true"
+            :propagateSelectionUp="true"
+            tableStyle="min-width: 50rem"
+        >
             <Column field="title" header="Title" expander />
             <Column header="Status">
                 <template #body="{ node }">
@@ -158,20 +199,21 @@ const remove = (t: Task) => {
                     <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
                 </template>
             </Column>
+
             <Column header="Actions">
                 <template #body="{ node }">
-                    <Button icon="pi pi-plus" severity="help" size="small" @click="emit('add', node.data.id)" />
-                    <Button icon="pi pi-pencil" severity="warning" size="small" @click="emit('edit', node.original)" />
-                    <Button icon="pi pi-trash" severity="danger" size="small" @click="remove(node.original)" />
-                    <Button label="Detail" @click="router.visit(route('task.show', node.original))" />
+                    <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
+                    <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" />
+                    <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" />
+                    <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
                 </template>
             </Column>
+
             <template #empty>
                 <p class="text-center">No Data Available</p>
             </template>
         </TreeTable>
 
-        <!-- Paginator -->
         <Paginator :rows="itemsPerPage" :totalRecords="filteredTasks.length" :rowsPerPageOptions="[10, 25, 50]" @page="onPageChange" />
     </div>
 </template>

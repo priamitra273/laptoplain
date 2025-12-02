@@ -28,6 +28,7 @@ const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 
+// Format tasks for TreeTable
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
@@ -44,6 +45,7 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
+// Filter tasks based on search query
 const filteredTasks = computed(() => {
     let tasks = formatTasks(props.tasks);
     if (searchQuery.value) {
@@ -57,12 +59,14 @@ const filteredTasks = computed(() => {
     return tasks;
 });
 
+// Paginate tasks
 const paginatedTasks = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
     return filteredTasks.value.slice(start, end);
 });
 
+// Reset page when search query changes
 watch([searchQuery], () => {
     currentPage.value = 1;
 });
@@ -75,7 +79,7 @@ const onPageChange = (event: { page: number; rows: number }) => {
 const confirm = useConfirm();
 const toast = useToast();
 
-// Remove single
+// Remove single task
 const remove = (t: Task) => {
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
@@ -99,26 +103,26 @@ const remove = (t: Task) => {
     });
 };
 
-// Select All (full visual check)
+// Select All (all filtered tasks, including children)
 const selectAll = () => {
     const keys: { [key: string]: any } = {};
 
     const mark = (node: TaskFormatted) => {
         keys[node.key] = { checked: true, partialChecked: false };
-        if (node.children) {
-            node.children.forEach((child) => mark(child));
-        }
+        if (node.children) node.children.forEach(mark);
     };
 
-    paginatedTasks.value.forEach((item) => mark(item));
-    selectedKey.value = keys;
+    filteredTasks.value.forEach(mark); // use filteredTasks for full visual select
+    selectedKey.value = { ...keys }; // trigger reactivity
 };
 
 // Clear selection
 const clearSelection = () => {
     selectedKey.value = {};
+    selectedKey.value = { ...selectedKey.value }; // trigger reactivity
 };
 
+// Remove selected tasks
 const removeSelected = () => {
     const ids = Object.keys(selectedKey.value);
 
@@ -147,6 +151,7 @@ const removeSelected = () => {
             });
 
             selectedKey.value = {};
+            selectedKey.value = { ...selectedKey.value }; // trigger reactivity
             toast.add({
                 severity: 'success',
                 summary: 'Success',
@@ -160,60 +165,85 @@ const removeSelected = () => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex items-center justify-between">
-            <h3 class="mb-4 text-lg font-semibold">Tasks</h3>
-            <div class="flex gap-2">
-                <Button label="Select All" icon="pi pi-check-square" @click="selectAll" />
-                <Button label="Clear" icon="pi pi-times" severity="secondary" @click="clearSelection" />
-                <Button label="Delete Selected" icon="pi pi-trash" severity="danger" @click="removeSelected" />
-                <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" />
+        <!-- Header with buttons -->
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 class="text-lg font-semibold">Tasks</h3>
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+                <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
+                <Button
+                    label="Select All"
+                    icon="pi pi-check-square"
+                    @click="selectAll"
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
+                    variant="outlined"
+                />
+                <Button
+                    label="Clear"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    @click="clearSelection"
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
+                />
+                <Button
+                    label="Delete Selected"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    @click="removeSelected"
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
+                    variant="outlined"
+                />
             </div>
         </div>
 
-        <div class="mb-4 flex-1">
+        <!-- Search input -->
+        <div class="mb-4 w-full">
             <label class="mb-2 block text-sm font-medium">Search</label>
             <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
         </div>
 
-        <TreeTable
-            v-model:selectionKeys="selectedKey"
-            :value="paginatedTasks"
-            selectionMode="checkbox"
-            :propagateSelectionDown="true"
-            :propagateSelectionUp="true"
-            tableStyle="min-width: 50rem"
-        >
-            <Column field="title" header="Title" expander />
-            <Column header="Status">
-                <template #body="{ node }">
-                    <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
-                </template>
-            </Column>
-            <Column header="Priority">
-                <template #body="{ node }">
-                    <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
-                </template>
-            </Column>
-            <Column header="Type">
-                <template #body="{ node }">
-                    <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
-                </template>
-            </Column>
+        <!-- TreeTable container scrollable for mobile -->
+        <div class="overflow-x-auto">
+            <TreeTable
+                v-model:selectionKeys="selectedKey"
+                :value="paginatedTasks"
+                selectionMode="checkbox"
+                :propagateSelectionDown="true"
+                :propagateSelectionUp="true"
+                class="min-w-full"
+            >
+                <Column field="title" header="Title" expander />
+                <Column header="Status">
+                    <template #body="{ node }">
+                        <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
+                    </template>
+                </Column>
+                <Column header="Priority">
+                    <template #body="{ node }">
+                        <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
+                    </template>
+                </Column>
+                <Column header="Type">
+                    <template #body="{ node }">
+                        <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
+                    </template>
+                </Column>
 
-            <Column header="Actions">
-                <template #body="{ node }">
-                    <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
-                    <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" />
-                    <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" />
-                    <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
+                <Column header="Actions">
+                    <template #body="{ node }">
+                        <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
+                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" />
+                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" />
+                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
+                    </template>
+                </Column>
+
+                <template #empty>
+                    <p class="text-center">No Data Available</p>
                 </template>
-            </Column>
+            </TreeTable>
+        </div>
 
-            <template #empty>
-                <p class="text-center">No Data Available</p>
-            </template>
-        </TreeTable>
-
+        <!-- Pagination -->
         <Paginator :rows="itemsPerPage" :totalRecords="filteredTasks.length" :rowsPerPageOptions="[10, 25, 50]" @page="onPageChange" />
     </div>
 </template>

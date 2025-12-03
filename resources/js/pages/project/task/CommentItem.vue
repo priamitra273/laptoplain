@@ -10,11 +10,13 @@ import { ref } from 'vue';
 import { Comment } from '..';
 
 const props = defineProps<{
-    CurrentUser:string
     comment: Comment;
     taskId: number;
     level?: number;
 }>();
+
+// Current logged-in user
+const CurrentUser = usePage().props.auth.user;
 
 const currentLevel = props.level ?? 0;
 const replyTarget = ref<string | null>(null);
@@ -24,7 +26,7 @@ const showAllReplies = ref<{ [key: string]: boolean }>({});
 const REPLY_LIMIT = 0;
 const menu = ref<any>(null);
 
-// Reaksi yang tersedia
+// Available reactions
 const availableReactions = {
     like: '👍',
     love: '❤️',
@@ -33,34 +35,24 @@ const availableReactions = {
     angry: '😡',
 };
 
-const CurrentUser = usePage().props.auth.user;
-
-// Fungsi untuk menghitung total reaksi per emoticon
+// Count reactions
 const countReactions = (reactionType: string) => {
     if (!props.comment.reaction) return 0;
     return Object.values(props.comment.reaction).filter((r) => r === reactionType).length;
 };
 
-// Fungsi untuk mengecek apakah user sudah memberi reaksi tertentu
+// Check if current user reacted
 const hasReacted = (reactionType: string) => {
     if (!props.comment.reaction) return false;
-    return props.comment.reaction[props.CurrentUser] === reactionType;
+    return props.comment.reaction[CurrentUser.id] === reactionType;
 };
 
-// Metode untuk mereaksi komentar
+// React to comment
 const reactToComment = (reaction: string) => {
-    router.post(
-        route('comments.react', { id: props.comment.id }),
-        { reaction },
-        {
-            onSuccess: () => {
-                router.reload({ only: ['comments'] });
-            },
-        },
-    );
+    router.post(route('comments.react', { id: props.comment.id }), { reaction }, { onSuccess: () => router.reload({ only: ['comments'] }) });
 };
 
-// Metode lainnya tetap sama
+// Reply methods
 const setReply = (id: string) => {
     replyTarget.value = id;
     replyText.value = '';
@@ -86,6 +78,7 @@ const submitReply = (parentId: string) => {
     );
 };
 
+// Edit comment
 const startEdit = (comment: any) => {
     editingCommentId.value = comment.id;
     replyText.value = comment.body;
@@ -107,12 +100,12 @@ const updateComment = () => {
 };
 
 const cancelEdit = () => (editingCommentId.value = null);
-
 const cancelReply = () => {
     replyTarget.value = null;
     replyText.value = '';
 };
 
+// Delete comment
 const deleteComment = (id: string) => {
     Swal.fire({
         title: 'Delete Comment?',
@@ -128,6 +121,7 @@ const deleteComment = (id: string) => {
     });
 };
 
+// Displayed replies
 const displayedReplies = (comment: any) => {
     const showAll = showAllReplies.value[comment.id] ?? false;
     if (showAll) return comment.replies;
@@ -142,12 +136,13 @@ const toggleShowAllReplies = (commentId: string) => {
     showAllReplies.value[commentId] = !showAllReplies.value[commentId];
 };
 
+// Menu items
 const getMenuItems = (comment: any) => {
     const items: any[] = [];
     if (currentLevel < 1) {
         items.push({ label: 'Reply', icon: 'pi pi-reply', command: () => setReply(comment.id) });
     }
-    if (comment.user.id === props.CurrentUser) {
+    if (comment.user.id === CurrentUser.id) {
         items.push(
             { label: 'Edit', icon: 'pi pi-pencil', command: () => startEdit(comment) },
             { label: 'Delete', icon: 'pi pi-trash', command: () => deleteComment(comment.id) },
@@ -177,6 +172,7 @@ const getMenuItems = (comment: any) => {
                             <Button label="Cancel" icon="pi pi-times" size="small" severity="secondary" class="text-xs" @click="cancelEdit" />
                         </div>
                     </div>
+
                     <!-- View Mode -->
                     <div v-else>
                         <div class="mb-1 flex w-full items-center justify-between">
@@ -195,11 +191,12 @@ const getMenuItems = (comment: any) => {
                                 </template>
                             </div>
                         </div>
+
                         <p :class="['break-words text-gray-700', currentLevel === 0 ? 'text-sm' : 'text-xs']">
                             {{ comment.body }}
                         </p>
 
-                        <!-- Tombol reaksi dengan total reaksi -->
+                        <!-- Reactions -->
                         <div class="mt-1 flex items-center gap-2">
                             <button
                                 v-for="(icon, reaction) in availableReactions"
@@ -209,9 +206,7 @@ const getMenuItems = (comment: any) => {
                                 :class="{ 'bg-gray-200': hasReacted(reaction) }"
                             >
                                 {{ icon }}
-                                <span class="text-xs text-gray-500">
-                                    {{ countReactions(reaction) }}
-                                </span>
+                                <span class="text-xs text-gray-500">{{ countReactions(reaction) }}</span>
                             </button>
                         </div>
 
@@ -247,7 +242,7 @@ const getMenuItems = (comment: any) => {
                         >
                             <CommentItem
                                 v-for="reply in displayedReplies(comment)"
-                                :CurrentUser="props.CurrentUser"
+                                :currentUserId="CurrentUser.id"
                                 :key="reply.id"
                                 :comment="reply"
                                 :taskId="props.taskId"

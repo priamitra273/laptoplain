@@ -109,7 +109,7 @@ const goBack = () => {
             <!-- Card Detail -->
             <Card class="shadow-sm">
                 <template #content>
-                    <div class="flex w-full min-w-0 flex-col gap-8 p-8 xl:flex-row">
+                    <div class="flex w-full min-w-0 flex-col gap-8 p-2 xl:flex-row">
                         <!-- LEFT CONTENT -->
                         <div class="min-w-1/2 flex flex-col xl:w-1/2">
                             <div
@@ -152,7 +152,7 @@ const goBack = () => {
                         </div>
 
                         <!-- RIGHT CONTENT -->
-                        <div class="min-w-0 xl:w-1/2 card p-4 shadow-sm">
+                        <div class="card min-w-0 p-4 shadow-sm xl:w-1/2">
                             <MembersTable
                                 :projectId="props.project.id"
                                 :members="props.members"
@@ -165,7 +165,7 @@ const goBack = () => {
                     </div>
 
                     <!-- TASK TABLE: FULL WIDTH -->
-                    <div class="mx-8 rounded p-8 shadow-md">
+                    <div class="mx-8 mt-4 rounded p-8 shadow-md">
                         <TaskTable
                             class="w-full"
                             :projectId="props.project.id"

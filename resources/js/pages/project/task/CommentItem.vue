@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -10,7 +10,7 @@ import { ref } from 'vue';
 import { Comment } from '..';
 
 const props = defineProps<{
-    currentUserId: string;
+    CurrentUser:string
     comment: Comment;
     taskId: number;
     level?: number;
@@ -33,6 +33,8 @@ const availableReactions = {
     angry: '😡',
 };
 
+const CurrentUser = usePage().props.auth.user;
+
 // Fungsi untuk menghitung total reaksi per emoticon
 const countReactions = (reactionType: string) => {
     if (!props.comment.reaction) return 0;
@@ -42,7 +44,7 @@ const countReactions = (reactionType: string) => {
 // Fungsi untuk mengecek apakah user sudah memberi reaksi tertentu
 const hasReacted = (reactionType: string) => {
     if (!props.comment.reaction) return false;
-    return props.comment.reaction[props.currentUserId] === reactionType;
+    return props.comment.reaction[props.CurrentUser] === reactionType;
 };
 
 // Metode untuk mereaksi komentar
@@ -145,7 +147,7 @@ const getMenuItems = (comment: any) => {
     if (currentLevel < 1) {
         items.push({ label: 'Reply', icon: 'pi pi-reply', command: () => setReply(comment.id) });
     }
-    if (comment.user.id === props.currentUserId) {
+    if (comment.user.id === props.CurrentUser) {
         items.push(
             { label: 'Edit', icon: 'pi pi-pencil', command: () => startEdit(comment) },
             { label: 'Delete', icon: 'pi pi-trash', command: () => deleteComment(comment.id) },
@@ -245,7 +247,7 @@ const getMenuItems = (comment: any) => {
                         >
                             <CommentItem
                                 v-for="reply in displayedReplies(comment)"
-                                :currentUserId="props.currentUserId"
+                                :CurrentUser="props.CurrentUser"
                                 :key="reply.id"
                                 :comment="reply"
                                 :taskId="props.taskId"

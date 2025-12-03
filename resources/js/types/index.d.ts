@@ -161,16 +161,16 @@ export interface Project {
     };
     // owner?: User;
     project_members: {
-        id: string
-        user_id: string
-        role_id: string
+        id: string;
+        user_id: string;
+        role_id: string;
         user: {
-            name: string
-        }
+            name: string;
+        };
         role: {
-            name: string
-        }
-    }[]
+            name: string;
+        };
+    }[];
 }
 
 export interface Tag {
@@ -364,14 +364,11 @@ export interface Progress {
     analytic_config: WorkProgress;
 }
 
-export interface Statistic {
-    uuid: string;
-    name: string;
-    plan_site: number;
-    plan_cctv: number;
-    start_date: string;
-    finish_date: string;
-    progress: Progress;
+export interface TaskStatistic {
+    totalTasks: number;
+    completed: number;
+    inProgress: number;
+    notStarted: number;
 }
 
 export interface MsProjectStatus {

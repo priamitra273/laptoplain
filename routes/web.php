@@ -30,8 +30,8 @@ Route::get('/', fn() => to_route('login'))->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('dashboard/statistic/{project_uuid}', [DashboardController::class, 'statistic'])->name('dashboard.statistic');
-    Route::get('dashboard/map/{project_uuid}', [DashboardController::class, 'map'])->name('dashboard.map');
+    Route::get('dashboard/statistic/{encoded}', [DashboardController::class, 'statistic'])->name('dashboard.statistic');
+    Route::get('dashboard/map/{encoded}', [DashboardController::class, 'map'])->name('dashboard.map');
 
     $except = ['create', 'show', 'edit'];
 

@@ -156,7 +156,6 @@ class TaskController extends Controller
             ->isNotEmpty();
 
         $data = [
-            'currentUserId' => Auth::id(),
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],

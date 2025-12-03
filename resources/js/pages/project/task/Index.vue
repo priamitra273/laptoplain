@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
@@ -24,12 +24,6 @@ interface Task {
     type?: TaskType;
     is_assigned?: boolean;
     is_created_by_me?: boolean;
-}
-
-interface User {
-    id: number;
-    name: string;
-    email?: string;
 }
 
 interface Props {
@@ -175,7 +169,7 @@ const statusSummary = computed(() => {
                                     label="View"
                                     icon="pi pi-eye"
                                     class="p-button-sm p-button-outlined p-button-primary"
-                                    @click="$inertia.get(route('task.show', { encoded: task.id }))"
+                                    @click="() => router.get(route('task.show', { encoded: task.id }))"
                                 />
                             </div>
                         </div>

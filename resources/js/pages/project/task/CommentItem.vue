@@ -153,96 +153,140 @@ const getMenuItems = (comment: any) => {
 </script>
 
 <template>
-    <div class="w-full space-y-2">
-        <div class="relative w-full max-w-full break-words rounded-lg bg-white p-3 shadow transition-shadow hover:shadow-md">
-            <div class="flex w-full gap-2">
-                <Avatar :label="comment.user?.name[0]" size="small" class="flex-shrink-0 bg-blue-500 text-xs text-white" />
-                <div class="w-full flex-1 overflow-hidden">
+    <div class="w-full">
+        <div
+            class="group rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+        >
+            <div class="flex gap-2">
+                <!-- Avatar -->
+                <Avatar
+                    :label="comment.user?.name[0]"
+                    size="normal"
+                    class="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm dark:from-blue-600 dark:to-blue-700"
+                    style="width: 28px; height: 28px; font-size: 0.75rem"
+                />
+
+                <div class="min-w-0 flex-1">
                     <!-- Edit Mode -->
-                    <div v-if="editingCommentId === comment.id">
-                        <Textarea v-model="replyText" rows="2" class="w-full break-words rounded border p-2 text-sm" />
-                        <div class="mt-2 flex flex-wrap gap-2">
+                    <div v-if="editingCommentId === comment.id" class="space-y-2">
+                        <Textarea
+                            v-model="replyText"
+                            rows="2"
+                            class="w-full text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            auto-resize
+                        />
+                        <div class="flex gap-1">
                             <Button
                                 label="Save"
                                 icon="pi pi-check"
                                 size="small"
-                                class="bg-green-500 text-xs hover:bg-green-600"
+                                severity="success"
                                 @click="updateComment"
+                                class="shadow-sm hover:shadow"
                             />
-                            <Button label="Cancel" icon="pi pi-times" size="small" severity="secondary" class="text-xs" @click="cancelEdit" />
+                            <Button
+                                label="Cancel"
+                                icon="pi pi-times"
+                                size="small"
+                                severity="secondary"
+                                text
+                                @click="cancelEdit"
+                                class="dark:text-gray-300 dark:hover:bg-gray-700"
+                            />
                         </div>
                     </div>
 
                     <!-- View Mode -->
-                    <div v-else>
-                        <div class="mb-1 flex w-full items-center justify-between">
-                            <h4 :class="['truncate font-semibold text-gray-800', currentLevel === 0 ? 'text-sm' : 'text-xs']">
-                                {{ comment.user?.name }}
-                            </h4>
-                            <div class="flex items-center gap-1">
-                                <span class="text-xs text-gray-400">{{ moment(comment.created_at).fromNow() }}</span>
-                                <template v-if="getMenuItems(comment).length > 0">
-                                    <Button
-                                        icon="pi pi-ellipsis-v"
-                                        class="p-button-text p-button-rounded text-gray-500"
-                                        @click="menu?.toggle($event)"
-                                    />
-                                    <Menu :model="getMenuItems(comment)" :popup="true" ref="menu" />
-                                </template>
+                    <div v-else class="space-y-1">
+                        <!-- Header -->
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                                <span class="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                    {{ comment.user?.name }}
+                                </span>
+                                <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">
+                                    {{ moment(comment.created_at).fromNow() }}
+                                </span>
                             </div>
+
+                            <Button
+                                v-if="getMenuItems(comment).length > 0"
+                                icon="pi pi-ellipsis-v"
+                                text
+                                rounded
+                                size="small"
+                                class="h-6 w-6 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-500 dark:hover:bg-gray-700"
+                                @click="menu?.toggle($event)"
+                            />
+                            <Menu :model="getMenuItems(comment)" :popup="true" ref="menu" />
                         </div>
 
-                        <p :class="['break-words text-gray-700', currentLevel === 0 ? 'text-sm' : 'text-xs']">
+                        <!-- Body -->
+                        <p class="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
                             {{ comment.body }}
                         </p>
 
                         <!-- Reactions -->
-                        <div class="mt-1 flex items-center gap-2">
+                        <div class="flex items-center gap-1 pt-0.5">
                             <button
                                 v-for="(icon, reaction) in availableReactions"
                                 :key="reaction"
                                 @click="reactToComment(reaction)"
-                                class="flex items-center gap-1 rounded p-1 text-xs hover:bg-gray-100"
-                                :class="{ 'bg-gray-200': hasReacted(reaction) }"
+                                class="flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs transition-all duration-150 hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                :class="{
+                                    'bg-blue-50 ring-1 ring-blue-200 dark:bg-blue-900/30 dark:ring-blue-800': hasReacted(reaction),
+                                    'hover:shadow-sm': countReactions(reaction) > 0,
+                                }"
                             >
-                                {{ icon }}
-                                <span class="text-xs text-gray-500">{{ countReactions(reaction) }}</span>
+                                <span class="text-sm">{{ icon }}</span>
+                                <span
+                                    v-if="countReactions(reaction) > 0"
+                                    class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    :class="{ 'text-blue-600 dark:text-blue-400': hasReacted(reaction) }"
+                                >
+                                    {{ countReactions(reaction) }}
+                                </span>
                             </button>
                         </div>
 
                         <!-- Reply Box -->
                         <div
                             v-if="replyTarget === comment.id && currentLevel < 1"
-                            class="mt-2 flex w-full flex-col gap-2"
-                            :class="currentLevel === 0 ? 'pl-3' : 'pl-2'"
+                            class="mt-2 space-y-1.5 border-t border-gray-200 pt-2 dark:border-gray-700"
                         >
                             <Textarea
                                 v-model="replyText"
                                 rows="2"
                                 placeholder="Write a reply..."
-                                class="w-full break-words rounded border p-2 text-sm"
+                                class="w-full text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500"
+                                auto-resize
                             />
-                            <div class="flex flex-row gap-2">
+                            <div class="flex gap-1">
                                 <Button
-                                    label="Submit"
+                                    label="Reply"
                                     icon="pi pi-send"
                                     size="small"
-                                    class="bg-blue-500 text-xs hover:bg-blue-600"
                                     @click="submitReply(comment.id)"
+                                    class="shadow-sm hover:shadow"
                                 />
-                                <Button label="Cancel" icon="pi pi-times" size="small" severity="secondary" class="text-xs" @click="cancelReply" />
+                                <Button
+                                    label="Cancel"
+                                    size="small"
+                                    severity="secondary"
+                                    text
+                                    @click="cancelReply"
+                                    class="dark:text-gray-300 dark:hover:bg-gray-700"
+                                />
                             </div>
                         </div>
 
                         <!-- Nested Replies -->
                         <div
                             v-if="comment.replies?.length && currentLevel < 1"
-                            class="mt-2 w-full space-y-2 overflow-hidden"
-                            :class="currentLevel === 0 ? 'pl-3' : 'pl-2'"
+                            class="mt-2 space-y-1.5 border-l-2 border-gray-200 pl-2 dark:border-gray-700"
                         >
                             <CommentItem
                                 v-for="reply in displayedReplies(comment)"
-                                :currentUserId="CurrentUser.id"
                                 :key="reply.id"
                                 :comment="reply"
                                 :taskId="props.taskId"
@@ -251,14 +295,14 @@ const getMenuItems = (comment: any) => {
                             <button
                                 v-if="!showAllReplies[comment.id] && remainingReplies(comment) > 0"
                                 @click="toggleShowAllReplies(comment.id)"
-                                class="text-xs text-gray-500 hover:underline"
+                                class="text-xs font-medium transition-colors hover:text-slate-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
-                                View {{ remainingReplies(comment) }} more replies
+                                View {{ remainingReplies(comment) }} more {{ remainingReplies(comment) === 1 ? 'reply' : 'replies' }}
                             </button>
                             <button
-                                v-else-if="showAllReplies[comment.id] && remainingReplies(comment) > 0"
+                                v-else-if="showAllReplies[comment.id]"
                                 @click="toggleShowAllReplies(comment.id)"
-                                class="text-xs text-gray-500 hover:underline"
+                                class="text-xs font-medium transition-colors hover:text-slate-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                                 Show less
                             </button>

@@ -3,14 +3,16 @@ import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
+import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Chip from 'primevue/chip';
+import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import { ref } from 'vue';
-import { Comment } from '..';
+import { Comment, Tag as TagData } from '..';
 import CommentItem from './CommentItem.vue';
-import { Tag as TagData } from '..';
 
 const props = defineProps<{
     currentUserId: string;
@@ -63,134 +65,247 @@ const submitComment = () => {
     <Head :title="`Task Detail - ${props.task.title}`" />
 
     <AppLayout>
-        <div class="flex flex-col gap-6">
-            <!-- HEADER -->
-            <Card class="rounded-xl border shadow-md">
-                <template #title>
-                    <div class="flex items-center justify-between">
-                        <div class="flex cursor-pointer items-center gap-3" @click="goToProject">
-                            <span class="text-4xl">{{ props.project.emoji }}</span>
-                            <div>
-                                <h1 class="text-2xl font-bold">{{ props.task.title }}</h1>
-                                <p class="text-sm text-gray-500">
-                                    Project: <span class="font-semibold">{{ props.project.title }}</span>
-                                </p>
+        <div class="flex flex-col gap-6 pb-8">
+            <!-- HEADER WITH GRADIENT -->
+            <Card
+                class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
+            >
+                <template #content>
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
+                            <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
+                                <span class="text-4xl">{{ props.project.emoji }}</span>
+                            </div>
+                            <div class="flex-1">
+                                <h1 class="mb-1 text-3xl font-bold text-gray-800 dark:text-white">{{ props.task.title }}</h1>
+                                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                    <i class="pi pi-folder text-blue-500"></i>
+                                    <span>Project:</span>
+                                    <span class="font-semibold text-blue-600 dark:text-blue-400">{{ props.project.title }}</span>
+                                </div>
                             </div>
                         </div>
-                        <Button label="Back" icon="pi pi-arrow-left" severity="secondary" @click="goBack" />
+                        <Button label="Back" icon="pi pi-arrow-left" severity="secondary" class="shadow-md" outlined @click="goBack" />
                     </div>
                 </template>
             </Card>
 
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <!-- LEFT COLUMN -->
                 <div class="space-y-6">
-                    <Card class="rounded-xl shadow-md">
-                        <template #title><h2 class="font-semibold">Description</h2></template>
+                    <!-- DESCRIPTION CARD -->
+                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
+                        <template #title>
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-align-left text-blue-500"></i>
+                                <h2 class="text-lg font-bold">Description</h2>
+                            </div>
+                        </template>
                         <template #content>
+                            <Divider class="my-3" />
                             <div
-                                class="prose prose-sm max-h-60 overflow-auto break-words"
-                                v-html="props.task.description || '<p>No description</p>'"
+                                class="prose prose-sm max-h-60 overflow-auto break-words text-gray-700 dark:text-gray-300"
+                                v-html="props.task.description || '<p class=\'text-gray-400 italic\'>No description provided</p>'"
                             />
                         </template>
                     </Card>
 
-                    <Card class="rounded-xl shadow-md">
-                        <template #title><h2 class="font-semibold">Details</h2></template>
-                        <template #content>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p class="font-medium">Status</p>
-                                    <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" />
-                                </div>
-                                <div>
-                                    <p class="font-medium">Priority</p>
-                                    <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" />
-                                </div>
-                                <div>
-                                    <p class="font-medium">Type</p>
-                                    <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" />
-                                </div>
-                                <div>
-                                    <p class="font-medium">Progress</p>
-                                    <Tag :value="`${props.task.progress}%`" severity="success" />
-                                </div>
-                                <div>
-                                    <p class="font-medium">Start Date</p>
-                                    <p>{{ formatDate(props.task.start_date) }}</p>
-                                </div>
-                                <div>
-                                    <p class="font-medium">Due Date</p>
-                                    <p>{{ formatDate(props.task.due_date) }}</p>
-                                </div>
+                    <!-- DETAILS CARD -->
+                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
+                        <template #title>
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-info-circle text-purple-500"></i>
+                                <h2 class="text-lg font-bold">Details</h2>
                             </div>
-                            <div class="mt-8 gap-2 flex flex-wrap" >
-                                <Tag
-                                    v-for="tag in props.task.tags"
-                                    :key="tag.id ?? tag.name"
-                                    :value="tag.name"
-                                    :severity="tag.severity"
-                                />
+                        </template>
+                        <template #content>
+                            <Divider class="my-3" />
+                            <div class="space-y-4">
+                                <!-- Status & Priority Row -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">STATUS</p>
+                                        <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" class="w-full" />
+                                    </div>
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PRIORITY</p>
+                                        <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" class="w-full" />
+                                    </div>
+                                </div>
+
+                                <!-- Type & Progress Row -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">TYPE</p>
+                                        <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" class="w-full" />
+                                    </div>
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PROGRESS</p>
+                                        <div class="flex items-center gap-2">
+                                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                                <div
+                                                    class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
+                                                    :style="{ width: `${props.task.progress}%` }"
+                                                ></div>
+                                            </div>
+                                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">{{ props.task.progress }}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Dates Row -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            <i class="pi pi-calendar mr-1 text-blue-500"></i>START DATE
+                                        </p>
+                                        <p class="text-sm font-semibold">{{ formatDate(props.task.start_date) }}</p>
+                                    </div>
+                                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE
+                                        </p>
+                                        <p class="text-sm font-semibold">{{ formatDate(props.task.due_date) }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Tags -->
+                                <div v-if="props.task.tags?.length" class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                    <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <i class="pi pi-tags mr-1 text-orange-500"></i>TAGS
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Chip v-for="tag in props.task.tags" :key="tag.id ?? tag.name" :label="tag.name" class="text-xs" />
+                                    </div>
+                                </div>
                             </div>
                         </template>
                     </Card>
 
-                    <Card>
-                        <template #title><h2 class="font-semibold">Assigned Users</h2></template>
-                        <template #content>
-                            <div class="flex flex-wrap gap-2">
-                                <Avatar v-for="user in props.assignedUsers" :key="user.id" :label="user.name.charAt(0)" shape="circle" />
+                    <!-- ASSIGNED USERS CARD -->
+                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
+                        <template #title>
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-users text-green-500"></i>
+                                <h2 class="text-lg font-bold">Team Members</h2>
                             </div>
+                        </template>
+                        <template #content>
+                            <Divider class="my-3" />
+                            <div v-if="props.assignedUsers?.length" class="flex flex-col gap-3">
+                                <AvatarGroup>
+                                    <Avatar
+                                        v-for="(user, idx) in props.assignedUsers.slice(0, 5)"
+                                        :key="user.id"
+                                        :label="user.name.charAt(0).toUpperCase()"
+                                        shape="circle"
+                                        size="large"
+                                        class="border-2 border-white shadow-md"
+                                        :style="{ backgroundColor: `hsl(${idx * 60}, 70%, 60%)` }"
+                                    />
+                                    <Avatar
+                                        v-if="props.assignedUsers.length > 5"
+                                        :label="`+${props.assignedUsers.length - 5}`"
+                                        shape="circle"
+                                        size="large"
+                                        class="border-2 border-white bg-gray-300 shadow-md"
+                                    />
+                                </AvatarGroup>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ props.assignedUsers.length }} member{{ props.assignedUsers.length > 1 ? 's' : '' }} assigned
+                                </div>
+                            </div>
+                            <p v-else class="text-sm italic text-gray-400">No members assigned</p>
                         </template>
                     </Card>
                 </div>
 
                 <!-- RIGHT COLUMN -->
-                <div class="space-y-6 xl:col-span-2">
-                    <Card>
+                <div class="space-y-6 lg:col-span-2">
+                    <!-- SUBTASKS CARD -->
+                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
-                            <h2 class="font-semibold">Subtasks</h2>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="pi pi-list text-indigo-500"></i>
+                                    <h2 class="text-lg font-bold">Subtasks</h2>
+                                </div>
+                                <Chip v-if="props.subTasks.length" :label="`${props.subTasks.length}`" class="bg-indigo-100 text-indigo-700" />
+                            </div>
                         </template>
                         <template #content>
-                            <div v-if="props.subTasks.length" class="space-y-4">
-                                <div v-for="subTask in props.subTasks" :key="subTask.id" class="rounded-lg border p-4">
-                                    <div class="mb-2 flex items-center justify-between">
-                                        <p class="max-w-[80%] truncate text-lg font-semibold">{{ subTask.title }}</p>
-                                        <Tag :value="subTask.status?.name" :severity="subTask.status?.severity" />
+                            <Divider class="my-3" />
+                            <div v-if="props.subTasks.length" class="space-y-3">
+                                <div
+                                    v-for="subTask in props.subTasks"
+                                    :key="subTask.id"
+                                    class="group rounded-xl border-2 border-gray-100 bg-white p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-600"
+                                >
+                                    <div class="mb-3 flex items-start justify-between gap-3">
+                                        <div class="flex min-w-0 flex-1 items-start gap-3">
+                                            <i class="pi pi-circle mt-1.5 text-xs text-gray-400 transition-colors group-hover:text-indigo-500"></i>
+                                            <p class="break-words text-base font-semibold text-gray-800 dark:text-white">{{ subTask.title }}</p>
+                                        </div>
+                                        <Tag :value="subTask.status?.name" :severity="subTask.status?.severity" class="shrink-0" />
                                     </div>
-                                    <div class="text-sm text-gray-700">
-                                        <p class="mb-1 font-medium">Description</p>
-                                        <p
-                                            class="max-h-40 overflow-auto break-words"
-                                            v-html="subTask.description || '<span class=\'text-gray-400\'>No description</span>'"
-                                        ></p>
+                                    <div class="ml-6 text-sm text-gray-600 dark:text-gray-300">
+                                        <div
+                                            class="prose prose-sm dark:prose-invert max-h-32 overflow-auto break-words"
+                                            v-html="subTask.description || '<span class=\'text-gray-400 italic\'>No description</span>'"
+                                        ></div>
                                     </div>
                                 </div>
                             </div>
-                            <p v-else class="italic text-gray-500">No subtasks available</p>
+                            <div v-else class="flex flex-col items-center justify-center py-8 text-gray-400">
+                                <i class="pi pi-inbox mb-3 text-4xl opacity-50"></i>
+                                <p class="italic">No subtasks available</p>
+                            </div>
                         </template>
                     </Card>
 
-                    <!-- COMMENTS -->
-                    <Card class="mt-6">
-                        <template #title><h2 class="font-semibold">Comments</h2></template>
+                    <!-- COMMENTS CARD -->
+                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
+                        <template #title>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="pi pi-comments text-teal-500"></i>
+                                    <h2 class="text-lg font-bold">Comments</h2>
+                                </div>
+                                <Chip v-if="props.comments?.length" :label="`${props.comments.length}`" class="bg-teal-100 text-teal-700" />
+                            </div>
+                        </template>
                         <template #content>
-                            <div class="mb-6 flex flex-col gap-3">
-                                <Textarea v-model="newComment" rows="3" placeholder="Write a comment..." />
-                                <Button label="Submit" icon="pi pi-send" @click="submitComment" />
+                            <Divider class="my-3" />
+
+                            <!-- Comment Input -->
+                            <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                                <Textarea v-model="newComment" rows="3" placeholder="Share your thoughts..." class="mb-3 w-full" :autoResize="true" />
+                                <div class="flex justify-end">
+                                    <Button
+                                        label="Post Comment"
+                                        icon="pi pi-send"
+                                        @click="submitComment"
+                                        :disabled="!newComment.trim()"
+                                        class="shadow-md"
+                                    />
+                                </div>
                             </div>
 
-                            <div v-if="props.comments?.length">
+                            <!-- Comments List -->
+                            <div v-if="props.comments?.length" class="space-y-4">
                                 <CommentItem
-                                    class="mt-2"
                                     v-for="comment in props.comments"
                                     :currentUserId="currentUserId"
                                     :key="comment.id"
                                     :comment="comment"
                                     :taskId="props.task.id"
+                                    class="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                                 />
                             </div>
-                            <p v-else class="italic text-gray-500">No comments yet</p>
+                            <div v-else class="flex flex-col items-center justify-center py-8 text-gray-400">
+                                <i class="pi pi-comment mb-3 text-4xl opacity-50"></i>
+                                <p class="italic">No comments yet. Be the first to comment!</p>
+                            </div>
                         </template>
                     </Card>
                 </div>

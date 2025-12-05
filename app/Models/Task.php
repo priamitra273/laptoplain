@@ -171,6 +171,7 @@ class Task extends Model
                 'priority:id,name,severity',
                 'type:id,name,severity',
                 'users:id,name',
+                'tags:id,name,severity',
                 'subTaskRecursive' => function ($q) {
                     $q->orderBy('id')->withRecursive();
                 },

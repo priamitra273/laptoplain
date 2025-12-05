@@ -55,4 +55,15 @@ class Tag extends Model
         )->withTimestamps()
             ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
     }
+
+    public function tasks()
+    {
+        return $this->morphedByMany(
+            Task::class,
+            'model',
+            'taggables',
+            'tag_id',
+            'model_id'
+        );
+    }
 }

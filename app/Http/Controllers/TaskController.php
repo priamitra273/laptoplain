@@ -9,6 +9,7 @@ use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\Notification;
 use App\Models\Project;
+use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -76,12 +77,32 @@ class TaskController extends Controller
         $validated['created_by'] = Auth::id();
 
         $assignUserIds = $validated['assign_users'] ?? [];
-        unset($validated['assign_users']);
+
+        $addTagExist = $validated['add_tag']['exists'] ?? [];
+        $addTagNew = [];
+        foreach ($validated['add_tag']['new'] ?? [] as $newTag) {
+            $tag = Tag::create([
+                'name'       => $newTag['name'],
+                'severity'   => $newTag['severity']
+            ]);
+
+            $addTagNew[] = $tag->id;
+        }
+        
+        unset($validated['assign_users'], $validated['add_tag']);
 
         $task = Task::create($validated);
 
         if (!empty($assignUserIds)) {
             $task->users()->syncWithoutDetaching($assignUserIds);
+        }
+
+        if (!empty($addTagExist)) {
+            $task->tags()->syncWithoutDetaching($addTagExist);
+        }
+
+        if (!empty($addTagNew)) {
+            $task->tags()->syncWithoutDetaching($addTagNew);
         }
 
         // Hitung progress parent task
@@ -121,6 +142,7 @@ class TaskController extends Controller
             'priority:id,name,severity',
             'type:id,name,severity',
             'users:id,name',
+            'tags:id,name,severity',
             'subTaskRecursive',
             'subTaskRecursive.status:id,name,severity',
             'subTaskRecursive.priority:id,name,severity',
@@ -181,7 +203,42 @@ class TaskController extends Controller
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
 
-        unset($data['assign_users'], $data['unassign_users'], $data['parent_id']);
+        // ==============================
+        // HANDLE TAGGING
+        // ==============================
+
+        // 1. Add existing tags
+        if (!empty($data['add_tag']['exists'])) {
+            $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
+        }
+
+        // 2. Add new tags
+        $newTagIds = [];
+        foreach ($data['add_tag']['new'] ?? [] as $newTag) {
+            $tag = Tag::create([
+                'name'       => $newTag['name'],
+                'severity'   => $newTag['severity']
+            ]);
+
+            $newTagIds[] = $tag->id;
+        }
+
+        if (!empty($newTagIds)) {
+            $task->tags()->syncWithoutDetaching($newTagIds);
+        }
+
+        // 3. Remove tags
+        if (!empty($data['remove_tag'])) {
+            $task->tags()->detach($data['remove_tag']);
+        }
+
+        unset(
+            $data['assign_users'], 
+            $data['unassign_users'], 
+            $data['add_tag'], 
+            $data['remove_tag'], 
+            $data['parent_id']
+        );
 
         $task->update($data);
 

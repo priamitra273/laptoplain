@@ -55,24 +55,31 @@ export interface Task {
   sub_task: Task[];
   sub_task_recursive: Task[];
   children: Task[];
+  tags: Tag[]
 }
 
 export interface TaskStatus {
   id: string;
   name: string;
-  severity?: string;
+  severity: string;
 }
 
 export interface TaskPriority {
   id: string;
   name: string;
-  severity?: string;
+  severity: string;
 }
 
 export interface TaskType {
   id: string;
   name: string;
-  severity?: string;
+  severity: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  severity: string;
 }
 
 export interface TaskUser {

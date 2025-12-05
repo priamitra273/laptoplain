@@ -6,20 +6,22 @@ import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
+import AutoComplete from 'primevue/autocomplete';
 import Textarea from 'primevue/textarea';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
-import type { ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { ProjectMember, Task, TaskPriority, TaskStatus, TaskType, Tag } from '..';
 
 interface Props {
     parentId: string | null;
     projectId: string;
     task: Task | null;
-    taskTypes?: TaskType[];
-    taskStatuses?: TaskStatus[];
-    taskPriorities?: TaskPriority[];
+    taskTypes: TaskType[];
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    tags: Tag[];
     members: ProjectMember[];
 }
 
@@ -38,6 +40,14 @@ interface Form {
     progress_value: number;
     assign_users: string[];
     unassign_users: string[];
+    add_tag: {
+        new: {
+            name: string
+            severity: string
+        }[],
+        exists: string[]
+    };
+    remove_tag: string[]
     [key: string]: any;
 }
 
@@ -83,7 +93,79 @@ const form: InertiaForm<Form> = useForm({
     progress_value: props?.task?.progress ?? 0,
     assign_users: [],
     unassign_users: [],
+    add_tag: {
+        new: [],
+        exists: []
+    },
+    remove_tag: []
 });
+
+const tagOptions = computed<Tag[]>(() => props.tags);
+const selectedTags = ref<Tag[]>([]);
+const filteredTags = ref<Tag[]>([]);
+
+watch(
+    () => props.task?.tags,
+    (tags) => {
+        if (tags && Array.isArray(tags)) {
+            // masuk ke selectedTags
+            selectedTags.value = tags.map((t) => ({
+                id: t.id,            // hashed id
+                name: t.name,
+                severity: t.severity ?? ''
+            }));
+        }
+    },
+    { immediate: true }
+);
+
+// === SEARCH MIRIP PRIMEVUE EXAMPLE ===
+const search = (event: any) => {
+    const query = event.query.trim().toLowerCase();
+
+    if (!query.length) {
+        filteredTags.value = [...tagOptions.value];
+        return;
+    }
+
+    filteredTags.value = tagOptions.value.filter(tag =>
+        tag.name.toLowerCase().includes(query)
+    ).filter(tag =>
+        !selectedTags.value.some(sel => sel.id === tag.id)
+    );
+};
+
+// === ADD NEW TAG ===
+const addNewTag = (event: any) => {
+    const inputValue = event.target.value.trim();
+    if (!inputValue) return;
+
+    // Cek apakah nama sudah ada di existing
+    const existsInExisting = tagOptions.value.some(
+        tag => tag.name.toLowerCase() === inputValue.toLowerCase()
+    );
+
+    // Cek apakah sudah dipilih
+    const existsInSelected = selectedTags.value.some(
+        tag => tag.name.toLowerCase() === inputValue.toLowerCase()
+    );
+
+    // random severity karena gak tau mekanisme buat nambah severity di input ini
+    const severities = ['primary', 'secondary', 'success', 'info', 'warn', 'danger', 'contrast']
+    const randomSeverity = severities[Math.floor(Math.random() * severities.length)];
+
+    if (!existsInExisting && !existsInSelected) {
+        const newTag: Tag = {
+            id: "",
+            name: inputValue,
+            severity: randomSeverity  // buat sekarang random aja dulu
+        };
+
+        selectedTags.value.push(newTag);
+    }
+
+    event.target.value = "";  // reset input
+};
 
 const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
@@ -94,6 +176,17 @@ const submit = () => {
 
     form.assign_users = selected.filter((id) => !existed.includes(id));
     form.unassign_users = existed.filter((id) => !selected.includes(id));
+
+    const oldTags = props?.task?.tags?.map(t => t.id) ?? [];
+    const tagExist = selectedTags.value.filter(t => t.id);
+    const tagExistIds = tagExist.map(t => t.id);
+    const addTagExist = tagExistIds.filter(id => !oldTags.includes(id));
+    const addTagNew = selectedTags.value.filter(t => !t.id);
+    const removeTags = oldTags.filter(id => !tagExistIds.includes(id));
+
+    form.add_tag.new = addTagNew
+    form.add_tag.exists = addTagExist
+    form.remove_tag = removeTags
 
     const param: any = { projectEncoded: props.projectId };
 
@@ -224,6 +317,20 @@ const hasChild = computed(() => {
                 />
                 <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
             </div>
+        </div>
+        
+        <div class="flex flex-col">
+            <label class="font-semibold">Tags</label>
+            <AutoComplete
+                v-model="selectedTags"
+                multiple
+                optionLabel="name"
+                :suggestions="filteredTags"
+                @complete="search"
+                @keydown.enter.prevent="addNewTag"
+                fluid
+            />
+            <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>
 
         <!-- ARCHIVED & PROGRESS -->

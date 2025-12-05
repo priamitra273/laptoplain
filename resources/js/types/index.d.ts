@@ -413,7 +413,7 @@ export interface MsTaskType {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
-export type PrimeSeverity = '' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
+export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
 
 export interface SeverityOption {
     label: string;

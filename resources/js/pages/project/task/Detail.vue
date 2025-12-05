@@ -10,6 +10,7 @@ import Textarea from 'primevue/textarea';
 import { ref } from 'vue';
 import { Comment } from '..';
 import CommentItem from './CommentItem.vue';
+import { Tag as TagData } from '..';
 
 const props = defineProps<{
     currentUserId: string;
@@ -23,6 +24,7 @@ const props = defineProps<{
     types: any[];
     isPM: boolean;
     comments: Comment[];
+    tags: TagData[];
 }>();
 
 const newComment = ref('');
@@ -121,6 +123,14 @@ const submitComment = () => {
                                     <p class="font-medium">Due Date</p>
                                     <p>{{ formatDate(props.task.due_date) }}</p>
                                 </div>
+                            </div>
+                            <div class="mt-8 gap-2 flex flex-wrap" >
+                                <Tag
+                                    v-for="tag in props.task.tags"
+                                    :key="tag.id ?? tag.name"
+                                    :value="tag.name"
+                                    :severity="tag.severity"
+                                />
                             </div>
                         </template>
                     </Card>

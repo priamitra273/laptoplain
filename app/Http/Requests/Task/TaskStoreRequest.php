@@ -22,24 +22,32 @@ class TaskStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'project_id'      => 'required|exists:projects,id',
-            'parent_id'       => 'nullable|exists:tasks,id',
-            'status_id'       => 'required|exists:ms_task_statuses,id',
-            'priority_id'     => 'required|exists:ms_task_priorities,id',
-            'type_id'         => 'required|exists:ms_task_types,id',
-            'owned_id'        => 'nullable|exists:users,id',
-            'emoji'           => 'nullable|string|max:100',
-            'title'           => 'required|string|max:255',
-            'description'     => 'required|nullable|string',
-            'start_date'      => 'required|nullable|date',
-            'due_date'        => 'required|nullable|date|after_or_equal:start_date',
-            'progress'        => 'nullable|numeric|min:0|max:100',
-            'sequence_number' => 'nullable|integer',
-            'is_archived'     => 'boolean',
-            'assign_users' => 'array',
-            'assign_users.*' => 'required|exists:users,id',
-            'unassign_users' => 'array',
-            'unassign_users.*' => 'required|exists:users,id',
+            'project_id'        => 'required|exists:projects,id',
+            'parent_id'         => 'nullable|exists:tasks,id',
+            'status_id'         => 'required|exists:ms_task_statuses,id',
+            'priority_id'       => 'required|exists:ms_task_priorities,id',
+            'type_id'           => 'required|exists:ms_task_types,id',
+            'owned_id'          => 'nullable|exists:users,id',
+            'emoji'             => 'nullable|string|max:100',
+            'title'             => 'required|string|max:255',
+            'description'       => 'required|nullable|string',
+            'start_date'        => 'required|nullable|date',
+            'due_date'          => 'required|nullable|date|after_or_equal:start_date',
+            'progress'          => 'nullable|numeric|min:0|max:100',
+            'sequence_number'   => 'nullable|integer',
+            'is_archived'       => 'boolean',
+            'assign_users'      => 'array',
+            'assign_users.*'    => 'required|exists:users,id',
+            'unassign_users'    => 'array',
+            'unassign_users.*'  => 'required|exists:users,id',
+            'add_tag'           => 'array',
+            'add_tag.exists'    => 'array',
+            'add_tag.exists.*'  => 'required|exists:tags,id',
+            'add_tag.new'       => 'array',
+            'add_tag.new.*.name'    => 'required|string|max:255',
+            'add_tag.new.*.severity'    => 'nullable|string|max:50',
+            'remove_tag'        => 'array',
+            'remove_tag.*'      => 'required|exists:tags,id',
         ];
     }
 
@@ -56,6 +64,12 @@ class TaskStoreRequest extends FormRequest
             'type_id.exists' => 'The selected type is invalid.',
             'owned_id.exists' => 'The selected owner is invalid.',
             'progress.numeric' => 'The progress must be a number.',
+            'add_tag.exists.*.required' => 'Existing tag ID is required.',
+            'add_tag.exists.*.exists'   => 'One of the existing tags is invalid.',
+            'add_tag.new.*.name.required' => 'Each new tag must have a name.',
+            'add_tag.new.*.name.max'      => 'New tag name may not exceed 255 characters.',
+            'add_tag.new.*.severity.max'  => 'The severity value may not exceed 50 characters.',
+            'remove_tag.*.exists' => 'One of the tags to remove is invalid.',
         ];
     }
 
@@ -82,9 +96,13 @@ class TaskStoreRequest extends FormRequest
         $parentId = $this->parent_id;
         $assignUsersEncoded = $this->input('assign_users', []);
         $unassignUsersEncoded = $this->input('unassign_users', []);
+        $addTagEncoded = $this->input('add_tag.exists', []);
+        $removeTagEncoded = $this->input('remove_tag', []);
 
         $assignUsers = [];
         $unassignUsers = [];
+        $addTag = [];
+        $removeTag = [];
 
         if (is_array($assignUsersEncoded)) {
             foreach ($assignUsersEncoded as $user) {
@@ -98,6 +116,18 @@ class TaskStoreRequest extends FormRequest
             }
         }
 
+        if (is_array($addTagEncoded)) {
+            foreach ($addTagEncoded as $encoded) {
+                $addTag[] = Sqids::decode($encoded);
+            }
+        }
+
+        if (is_array($removeTagEncoded)) {
+            foreach ($removeTagEncoded as $encoded) {
+                $removeTag[] = Sqids::decode($encoded);
+            }
+        }
+
         $this->merge([
             'status_id' => is_string($statusId) ? Sqids::decode($statusId) : $statusId,
             'priority_id' => is_string($priorityId) ? Sqids::decode($priorityId) : $priorityId,
@@ -108,6 +138,11 @@ class TaskStoreRequest extends FormRequest
             'progress' => $this->progress_value,
             'assign_users' => $assignUsers,
             'unassign_users' => $unassignUsers,
+            'add_tag' => [
+                'exists' => $addTag,
+                'new'    => $this->input('add_tag.new', [])
+            ],
+            'remove_tag' => $removeTag,
         ]);
     }
 

@@ -11,6 +11,7 @@ use App\Models\MsProjectRole;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -73,6 +74,7 @@ class ProjectController extends Controller
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
+        $tags = Tag::select('id', 'name', 'severity')->get();
 
         $assignableUsers = collect($projectArr['project_members'])
             ->pluck('user')
@@ -93,6 +95,7 @@ class ProjectController extends Controller
             'taskStatuses' => $statuses,
             'taskPriorities' => $priorities,
             'taskTypes' => $types,
+            'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers,
             'isPM' => $isPM
         ];

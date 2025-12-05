@@ -8,7 +8,7 @@ import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
-import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '.';
+import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType, Tag as TagData } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
@@ -34,9 +34,10 @@ interface Props {
     users: { id: string; name: string }[];
 
     tasks: Task[];
-    taskTypes?: TaskType[];
-    taskStatuses?: TaskStatus[];
-    taskPriorities?: TaskPriority[];
+    taskTypes: TaskType[];
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    tags: TagData[];
 
     isPM: boolean;
 }
@@ -201,6 +202,7 @@ const goBack = () => {
                 :taskTypes="props.taskTypes"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"
+                :tags="props.tags"
                 :editTask="selectedTask"
                 :members="props.members"
                 @close="

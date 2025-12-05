@@ -92,11 +92,11 @@ class ProjectController extends Controller
             'roles'   => $roles,
             'users'   => $availableUsers,
             'tasks'   => $projectArr['tasks'],
-            'taskStatuses' => $statuses,
-            'taskPriorities' => $priorities,
-            'taskTypes' => $types,
+            'taskStatuses' => $statuses->toArray(),
+            'taskPriorities' => $priorities->toArray(),
+            'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
-            'assignableUsers' => $assignableUsers,
+            'assignableUsers' => $assignableUsers->toArray(),
             'isPM' => $isPM
         ];
 

@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import moment from 'moment';
+import Avatar from 'primevue/avatar';
+import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
-import Divider from 'primevue/divider';
+import ProgressBar from 'primevue/progressbar';
+import TabPanel from 'primevue/tabpanel';
+import TabView from 'primevue/tabview';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
-import { ProjectMember, Task, TaskPriority, TaskStatus, TaskType, Tag as TagData } from '.';
+import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
@@ -82,7 +85,6 @@ const formatDate = (date: string | undefined) => {
     return date ? moment(date).format('DD MMMM YYYY') : '-';
 };
 
-// Navigasi kembali
 const goBack = () => {
     router.visit(route('project.index'));
 };
@@ -92,94 +94,169 @@ const goBack = () => {
     <Head :title="`Project Detail - ${props.project.title}`" />
 
     <AppLayout>
-        <div class="flex flex-col gap-6">
-            <Heading title="Project Detail" description="Detail information about this project" />
-
-            <Card class="flex flex-row shadow-md">
-                <template #title>
-                    <div class="flex flex-row justify-between">
-                        <div class="flex items-center gap-3">
-                            <span class="text-3xl">{{ props.project?.emoji }}</span>
-                            <h2 class="text-xl font-semibold">{{ props.project.title }}</h2>
-                        </div>
-                        <Button label="Back to Projects" icon="pi pi-arrow-left" severity="secondary" @click="router.get(route('project.index'))" />
+        <div class="flex flex-col gap-4">
+            <!-- Header Section - Jira Style -->
+            <div class="flex items-center justify-between border-b border-surface-200 pb-4 dark:border-surface-700">
+                <div class="flex items-center gap-3">
+                    <Button
+                        icon="pi pi-arrow-left"
+                        text
+                        rounded
+                        severity="secondary"
+                        @click="router.get(route('project.index'))"
+                        class="hover:bg-surface-100 dark:hover:bg-surface-800"
+                    />
+                    <span class="text-4xl">{{ props.project?.emoji }}</span>
+                    <div>
+                        <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
+                            {{ props.project.title }}
+                        </h1>
+                        <p class="text-sm text-surface-600 dark:text-surface-400">Software project</p>
                     </div>
-                </template>
-            </Card>
+                </div>
 
-            <!-- Card Detail -->
+                <div class="flex items-center gap-2">
+                    <AvatarGroup v-if="props.members.length > 0">
+                        <Avatar
+                            v-for="member in props.members.slice(0, 3)"
+                            :key="member.id"
+                            :label="member.user.name.charAt(0).toUpperCase()"
+                            size="normal"
+                            shape="circle"
+                            class="border-2 border-white dark:border-surface-900"
+                        />
+                        <Avatar
+                            v-if="props.members.length > 3"
+                            :label="`+${props.members.length - 3}`"
+                            size="normal"
+                            shape="circle"
+                            class="border-2 border-white dark:border-surface-900"
+                        />
+                    </AvatarGroup>
+                </div>
+            </div>
+
+            <!-- Project Info Bar -->
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Status</span>
+                            <Tag
+                                :value="props.project.status?.name || 'In Progress'"
+                                :severity="props.project.status?.severity || 'info'"
+                                class="w-fit"
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Priority</span>
+                            <Tag
+                                :value="props.project.priority?.name || 'Medium'"
+                                :severity="props.project.priority?.severity || 'warning'"
+                                class="w-fit"
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Timeline</span>
+                            <div class="text-sm text-surface-700 dark:text-surface-300">
+                                {{ moment(props.project.start_date).format('MMM DD') }} -
+                                {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
+                            <div class="flex items-center gap-2">
+                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="false" />
+                                <span class="text-sm font-semibold text-surface-700 dark:text-surface-300"> {{ props.project.progress }}% </span>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+            </div>
+
+            <!-- Main Content with Tabs -->
             <Card class="shadow-sm">
                 <template #content>
-                    <div class="flex w-full min-w-0 flex-col gap-8 p-2 xl:flex-row">
-                        <!-- LEFT CONTENT -->
-                        <div class="min-w-1/2 flex flex-col xl:w-1/2">
-                            <div
-                                class="prose dark:prose-invert max-w-none overflow-hidden break-words"
-                                v-html="props.project.description || '<p><em>No description</em></p>'"
-                            />
+                    <TabView>
+                        <TabPanel header="Board">
+                            <div class="py-4">
+                                <TaskTable
+                                    :projectId="props.project.id"
+                                    :tasks="props.tasks"
+                                    @add="openTaskAdd"
+                                    @edit="openTaskEdit"
+                                    :isPM="props.isPM"
+                                />
+                            </div>
+                        </TabPanel>
 
-                            <Divider />
-
-                            <div class="mt-4 grid grid-cols-1 gap-16 md:grid-cols-2">
-                                <div class="space-y-3">
-                                    <div>
-                                        <p class="mb-1 font-semibold">Status</p>
-                                        <Tag :value="props.project.status?.name || '-'" :severity="props.project.status?.severity" />
-                                    </div>
-
-                                    <div>
-                                        <p class="mb-1 font-semibold">Priority</p>
-                                        <Tag :value="props.project.priority?.name || '-'" :severity="props.project.priority?.severity" />
-                                    </div>
+                        <TabPanel header="Details">
+                            <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
+                                <!-- Description -->
+                                <div class="lg:col-span-2">
+                                    <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
+                                    <div
+                                        class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
+                                        v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
+                                    />
                                 </div>
 
-                                <div class="space-y-3">
+                                <!-- Sidebar Info -->
+                                <div class="flex flex-col gap-6">
                                     <div>
-                                        <p class="mb-1 font-semibold">Start Date</p>
-                                        <p>{{ moment(props.project.start_date).format('YYYY-MM-DD') }}</p>
-                                    </div>
-
-                                    <div>
-                                        <p class="mb-1 font-semibold">Due Date</p>
-                                        <p>{{ moment(props.project.due_date).format('YYYY-MM-DD') }}</p>
+                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
+                                        <div class="flex flex-col gap-3">
+                                            <div class="flex items-start justify-between">
+                                                <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
+                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                    {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-start justify-between">
+                                                <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
+                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                    {{ moment(props.project.updated_at).fromNow() }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        </TabPanel>
 
-                            <div class="mt-3">
-                                <p class="mb-1 font-semibold">Progress</p>
-                                <Tag :value="`${props.project.progress}%`" severity="success" class="px-3 py-1 text-base" />
+                        <TabPanel header="Team">
+                            <div class="py-4">
+                                <MembersTable
+                                    :projectId="props.project.id"
+                                    :members="props.members"
+                                    :roles="props.roles"
+                                    :users="props.users"
+                                    @add="openAdd"
+                                    @edit="openEdit"
+                                />
                             </div>
-                        </div>
-
-                        <!-- RIGHT CONTENT -->
-                        <div class="card min-w-0 p-4 shadow-sm xl:w-1/2">
-                            <MembersTable
-                                :projectId="props.project.id"
-                                :members="props.members"
-                                :roles="props.roles"
-                                :users="props.users"
-                                @add="openAdd"
-                                @edit="openEdit"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- TASK TABLE: FULL WIDTH -->
-                    <div class="mx-8 mt-4 rounded p-8 shadow-md">
-                        <TaskTable
-                            class="w-full"
-                            :projectId="props.project.id"
-                            :tasks="props.tasks"
-                            @add="openTaskAdd"
-                            @edit="openTaskEdit"
-                            :isPM="props.isPM"
-                        />
-                    </div>
+                        </TabPanel>
+                    </TabView>
                 </template>
             </Card>
         </div>
 
+        <!-- Dialogs -->
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
             <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
@@ -189,12 +266,13 @@ const goBack = () => {
                 :projectId="props.project.id"
                 :member="selectedMember as ProjectMember"
                 :roles="props.roles"
+                :users="props.users"
                 @close="visibleEdit = false"
                 @saved="onSaved"
             />
         </Dialog>
 
-        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Add Task'" @hide="onDialogClosed" modal class="w-[600px]">
+        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Create Task'" @hide="onDialogClosed" modal class="w-[600px]">
             <TaskForm
                 :projectId="props.project.id"
                 :parentId="parentTaskId"
@@ -211,16 +289,6 @@ const goBack = () => {
                     parentTaskId = null;
                 "
                 @saved="router.reload({ only: ['tasks', 'project'] })"
-            />
-        </Dialog>
-        <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
-            <MemberEditForm
-                :projectId="props.project.id"
-                :member="selectedMember as ProjectMember"
-                :roles="props.roles"
-                :users="props.users"
-                @close="visibleEdit = false"
-                @saved="onSaved"
             />
         </Dialog>
     </AppLayout>

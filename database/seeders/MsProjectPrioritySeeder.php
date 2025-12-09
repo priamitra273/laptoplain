@@ -17,7 +17,7 @@ class MsProjectPrioritySeeder extends Seeder
         [
             [
                 'name' => 'Low',
-                'severity' => 'Low impact, not urgent',
+                'severity' => 'info',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -27,7 +27,7 @@ class MsProjectPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'Medium',
-                'severity' => 'Moderate impact, needs attention',
+                'severity' => 'warn',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -37,7 +37,7 @@ class MsProjectPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'High',
-                'severity' => 'High impact, requires immediate action',
+                'severity' => 'danger',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -47,7 +47,7 @@ class MsProjectPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'Critical',
-                'severity' => 'Critical impact, urgent resolution needed',
+                'severity' => 'contrast',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

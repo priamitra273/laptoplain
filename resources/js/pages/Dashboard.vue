@@ -1,136 +1,279 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { type BreadcrumbItem, Project, Statistic } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
-import { onMounted, ref } from 'vue';
-import Colors from 'tailwindcss/colors';
+import type { BreadcrumbItem, Project, Task } from '@/types';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+
 import Heading from '@/components/Heading.vue';
-import axios from 'axios';
-import StatisticCard from '@/components/StatisticCard.vue';
-import ChartProgress from '@/components/ChartProgress.vue';
-import * as Highchart from 'highcharts'
-import ChartRegency from '@/components/ChartRegency.vue';
+import Avatar from 'primevue/avatar';
+import AvatarGroup from 'primevue/avatargroup';
+import Badge from 'primevue/badge';
+import Button from 'primevue/button';
+import Card from 'primevue/card';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import ProgressBar from 'primevue/progressbar';
+import Tag from 'primevue/tag';
 
 interface Props {
     projects: Project[];
-    latestProject: Project;
-}
-
-interface MapValue {
-    data: (string | number)[],
-    geojson: Highcharts.GeoJSON
+    tasks: Task[];
+    stats: {
+        tasks: { total: number; completed: number; in_progress: number };
+        projects: { total: number; completed: number; in_progress: number };
+        members: { total: number; list: { id: number; name: string }[] };
+    };
 }
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
-];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }];
 
-const project = ref<Project>(props.latestProject);
-const statistic = ref<Statistic | undefined>(undefined);
-const regencyStat = ref<MapValue|undefined>()
+const latestProjects = ref<Project[]>(props.projects.slice(0, 5));
+const latestTasks = ref<Task[]>(props.tasks.slice(0, 5));
 
-const loading = ref({
-    statistic: false,
-    regencyStatistic: false,
-});
+const taskStatistic = computed(() => ({
+    completed: props.stats.tasks.completed,
+    inProgress: props.stats.tasks.in_progress,
+    notStarted: props.stats.tasks.total - props.stats.tasks.completed - props.stats.tasks.in_progress,
+}));
 
-const value = ref([
-    { label: 'Space used', value: 15, color: 'var(--p-primary-color)' },
-    { label: 'Pending', value: 30, color: Colors.amber[500] },
-]);
+const projectStatistic = computed(() => ({
+    completed: props.stats.projects.completed,
+    inProgress: props.stats.projects.in_progress,
+    notStarted: props.stats.projects.total - props.stats.projects.completed - props.stats.projects.in_progress,
+    total: props.stats.projects.total,
+}));
 
-async function getStatistics(project: Project) {
-    loading.value.statistic = true;
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
 
-    const response = await axios.get(route('dashboard.statistic', project.uuid));
-    statistic.value = response.data.data as Statistic;
+const getRandomColor = (index: number) => {
+    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f43f5e'];
+    return colors[index % colors.length];
+};
 
-    loading.value.statistic = false;
-}
-
-async function getRegencyStatistic(project: Project) {
-    loading.value.regencyStatistic = true;
-
-    const response = await axios.get(route('dashboard.map', project.uuid));
-    regencyStat.value = response.data.data as MapValue;
-
-    loading.value.regencyStatistic = false;
-}
-
-function loadData() {
-    getStatistics(project.value);
-    getRegencyStatistic(project.value);
-}
-
-onMounted(() => {
-    if (project.value) loadData();
-});
+const viewAllProjects = () => router.get(route('project.index'));
+const viewAllTasks = () => router.get(route('task.index'));
 </script>
 
 <template>
     <Head title="Dashboard" />
-
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex items-center justify-between">
-            <Heading title="Dashboard" />
-            <Select v-model="project" :options="projects" option-label="name" placeholder="Select a project" class="w-48" :loading="loading.statistic" @value-change="loadData">
-            </Select>
-        </div>
+        <div class="dashboard space-y-6 p-4">
+            <Heading title="Dashboard" description="Overview of your projects, tasks, and team members" />
 
-        <div class="flex flex-1 flex-col gap-4 rounded-xl p-4">
-            <div class="grid auto-rows-min gap-4 md:grid-cols-3 lg:grid-cols-6">
-                <!-- <div v-for="i in 6" class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div> -->
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <Card class="shadow-md transition-shadow hover:shadow-lg">
+                    <template #content>
+                        <div class="space-y-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="mb-1 flex items-center gap-2">
+                                        <i class="pi pi-check-square text-xl text-blue-500"></i>
+                                        <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Tasks</span>
+                                    </div>
+                                    <div class="text-4xl font-bold">{{ props.stats.tasks.total }}</div>
+                                </div>
+                                <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                                    <i class="pi pi-check-square text-3xl text-blue-500"></i>
+                                </div>
+                            </div>
 
-                <StatisticCard title="Plan CCTV" :value="statistic?.plan_cctv" :description="`Total from ${statistic?.plan_site ?? 0} sites.`" variant="text" />
-                <StatisticCard title="Registered Site" :value="statistic?.progress.total_site" :max="statistic?.plan_site" variant="single" />
-                <StatisticCard title="Total Preconfig" :value="statistic?.progress.total_preconfig" :max="statistic?.plan_cctv" variant="single" info="Based on total CCTV"/>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span>Progress</span>
+                                    <span class="font-semibold">{{ Math.round((taskStatistic.completed / props.stats.tasks.total) * 100) }}%</span>
+                                </div>
+                                <ProgressBar :value="(taskStatistic.completed / props.stats.tasks.total) * 100" :showValue="false" class="h-2" />
+                            </div>
 
-                <StatisticCard
-                    title="Progress Installation"
-                    :value="statistic?.progress.installation.total"
-                    :done="statistic?.progress.installation.done"
-                    :pending="statistic?.progress.installation.pending"
-                    :max="statistic?.plan_site"
-                    variant="multiple"
-                    info="Based on total site"
-                />
+                            <div class="flex items-center gap-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <Badge value="" severity="success" class="h-2 w-2 min-w-0 p-0" />
+                                    <span>Completed</span>
+                                    <span class="font-semibold">{{ taskStatistic.completed }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge value="" severity="warn" class="h-2 w-2 min-w-0 p-0" />
+                                    <span>In Progress</span>
+                                    <span class="font-semibold">{{ taskStatistic.inProgress }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
 
-                <StatisticCard
-                    title="Config Streaming"
-                    :value="statistic?.progress.stream_config.total"
-                    :done="statistic?.progress.stream_config.done"
-                    :pending="statistic?.progress.stream_config.pending"
-                    :max="statistic?.plan_cctv"
-                    variant="multiple"
-                    info="Based on total CCTV"
-                />
+                <Card class="shadow-md transition-shadow hover:shadow-lg">
+                    <template #content>
+                        <div class="space-y-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="mb-1 flex items-center gap-2">
+                                        <i class="pi pi-briefcase text-xl text-purple-500"></i>
+                                        <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Projects</span>
+                                    </div>
+                                    <div class="text-4xl font-bold">{{ projectStatistic.total }}</div>
+                                </div>
+                                <div class="rounded-lg bg-purple-50 p-3 dark:bg-purple-900/20">
+                                    <i class="pi pi-briefcase text-3xl text-purple-500"></i>
+                                </div>
+                            </div>
 
-                <StatisticCard
-                    title="Config Analytics"
-                    :value="statistic?.progress.analytic_config.total"
-                    :done="statistic?.progress.analytic_config.done"
-                    :pending="statistic?.progress.analytic_config.pending"
-                    :max="statistic?.plan_cctv"
-                    variant="multiple"
-                    info="Based on total CCTV"
-                />
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span>Progress</span>
+                                    <span class="font-semibold">{{ Math.round((projectStatistic.completed / projectStatistic.total) * 100) }}%</span>
+                                </div>
+                                <ProgressBar :value="(projectStatistic.completed / projectStatistic.total) * 100" :showValue="false" class="h-2" />
+                            </div>
 
-                <div class="col-span-3 aspect-video rounded-xl overflow-hidden shadow">
-                    <ChartRegency :project="project" :value="regencyStat" />
-                </div>
+                            <div class="flex items-center gap-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <Badge value="" severity="success" class="h-2 w-2 min-w-0 p-0" />
+                                    <span>Completed</span>
+                                    <span class="font-semibold">{{ projectStatistic.completed }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge value="" severity="warn" class="h-2 w-2 min-w-0 p-0" />
+                                    <span>In Progress</span>
+                                    <span class="font-semibold">{{ projectStatistic.inProgress }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
 
-                <div class="col-span-3 aspect-video rounded-xl overflow-hidden shadow">
-                    <ChartProgress :statistic="statistic" :project="project" />
-                </div>
+                <Card class="shadow-md transition-shadow hover:shadow-lg">
+                    <template #content>
+                        <div class="space-y-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="mb-1 flex items-center gap-2">
+                                        <i class="pi pi-users text-xl text-green-500"></i>
+                                        <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Team Members</span>
+                                    </div>
+                                    <div class="text-4xl font-bold">{{ props.stats.members.total }}</div>
+                                </div>
+                                <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                                    <i class="pi pi-users text-3xl text-green-500"></i>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="text-sm">Active team members</div>
+                                <AvatarGroup>
+                                    <Avatar
+                                        v-for="(member, index) in props.stats.members.list.slice(0, 5)"
+                                        :key="member.id"
+                                        :label="getInitials(member.name)"
+                                        shape="circle"
+                                        size="large"
+                                        :style="{ backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }"
+                                        :title="member.name"
+                                        class="border-2 border-white dark:border-gray-800"
+                                    />
+                                    <Avatar
+                                        v-if="props.stats.members.total > 5"
+                                        :label="`+${props.stats.members.total - 5}`"
+                                        shape="circle"
+                                        size="large"
+                                        style="background-color: #64748b; color: white; font-weight: 600"
+                                        class="border-2 border-white dark:border-gray-800"
+                                    />
+                                </AvatarGroup>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
             </div>
+
+            <Card class="shadow-md">
+                <template #title>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="pi pi-briefcase text-2xl text-purple-500"></i>
+                            <span class="text-xl font-bold">Latest Projects</span>
+                        </div>
+                        <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" @click="viewAllProjects" />
+                    </div>
+                </template>
+                <template #content>
+                    <DataTable :value="latestProjects" stripedRows responsiveLayout="scroll" class="text-sm">
+                        <Column field="title" header="Project" style="min-width: 250px">
+                            <template #body="{ data }">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">{{ data.emoji }}</span>
+                                    <span class="font-semibold">{{ data.title }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column field="status" header="Status" style="min-width: 150px">
+                            <template #body="{ data }">
+                                <Tag :value="data.status.name" :severity="data.status.severity" rounded class="font-semibold" />
+                            </template>
+                        </Column>
+                        <Column field="priority" header="Priority" style="min-width: 150px">
+                            <template #body="{ data }">
+                                <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
+                            </template>
+                        </Column>
+                    </DataTable>
+                </template>
+            </Card>
+
+            <Card class="shadow-md">
+                <template #title>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="pi pi-check-square text-2xl text-blue-500"></i>
+                            <span class="text-xl font-bold">Latest Tasks</span>
+                        </div>
+                        <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" @click="viewAllTasks" />
+                    </div>
+                </template>
+                <template #content>
+                    <DataTable :value="latestTasks" stripedRows responsiveLayout="scroll" class="text-sm">
+                        <Column field="title" header="Task" style="min-width: 250px">
+                            <template #body="{ data }">
+                                <div class="font-semibold">{{ data.title }}</div>
+                            </template>
+                        </Column>
+                        <Column field="status" header="Status" style="min-width: 150px">
+                            <template #body="{ data }">
+                                <Tag :value="data.status.name" :severity="data.status.severity" rounded class="font-semibold" />
+                            </template>
+                        </Column>
+                        <Column field="priority" header="Priority" style="min-width: 150px">
+                            <template #body="{ data }">
+                                <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
+                            </template>
+                        </Column>
+                    </DataTable>
+                </template>
+            </Card>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.dashboard {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>

@@ -6,6 +6,9 @@ use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\MsProjectPriority;
+use App\Models\MsProjectStatus;
+use App\Models\ProjectMember;
+use App\Models\User;
 
 class Project extends Model
 {
@@ -36,6 +39,14 @@ class Project extends Model
         'progress' => 'double',
     ];
 
+
+    protected $with = [
+        'status',
+        'priority',
+        'owner',
+        'owned',
+    ];
+
     public function status()
     {
         return $this->belongsTo(MsProjectStatus::class, 'status_id');
@@ -45,6 +56,7 @@ class Project extends Model
     {
         return $this->belongsTo(MsProjectPriority::class, 'priority_id');
     }
+
 
     public function owner()
     {
@@ -56,8 +68,60 @@ class Project extends Model
         return $this->belongsTo(User::class, 'owned_id');
     }
 
+
     public function projectMembers()
     {
         return $this->hasMany(ProjectMember::class, 'project_id');
+    }
+
+    public function getStatusNameAttribute(): ?string
+    {
+        return $this->status->name ?? null;
+    }
+
+    public function getPriorityNameAttribute(): ?string
+    {
+        return $this->priority->name ?? null;
+    }
+
+    public function getOwnerNameAttribute(): ?string
+    {
+        return $this->owner->name ?? null;
+    }
+
+    public function getOwnedNameAttribute(): ?string
+    {
+        return $this->owned->name ?? null;
+    }
+
+    public function setProgressAttribute($value)
+    {
+        $this->attributes['progress'] = round(min(max($value, 0), 100), 2);
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'project_id')
+            ->whereNull('parent_id')
+            ->with('children');
+    }
+
+    public function calculateProgress(): float
+    {
+        $tasks = $this->tasks()->with('children')->get();
+
+        if ($tasks->isEmpty()) {
+            return 0;
+        }
+
+        $total = 0;
+        $count = 0;
+
+        foreach ($tasks as $task) {
+            $total += $task->calculateProgress();
+            $count++;
+        }
+
+        return round($total / $count, 2);
     }
 }

@@ -17,7 +17,7 @@ class MsTaskPrioritySeeder extends Seeder
         $priorities = [
             [
                 'name' => 'Low',
-                'severity' => 'Minor impact, can be handled later',
+                'severity' => 'info',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -27,7 +27,7 @@ class MsTaskPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'Medium',
-                'severity' => 'Moderate impact, needs attention soon',
+                'severity' => 'warn',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -37,7 +37,7 @@ class MsTaskPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'High',
-                'severity' => 'Significant impact, prioritize resolution',
+                'severity' => 'danger',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -47,7 +47,7 @@ class MsTaskPrioritySeeder extends Seeder
             ],
             [
                 'name' => 'Critical',
-                'severity' => 'Severe impact, immediate action required',
+                'severity' => 'contrast',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

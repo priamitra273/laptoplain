@@ -6,106 +6,153 @@ import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
-import Swal from 'sweetalert2';
+import ProgressBar from 'primevue/progressbar';
+import Tag from 'primevue/tag';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
 
 interface Props {
     projects?: Project[];
+    statuses: { id: number; name: string }[];
+    priorities: { id: number; name: string }[];
+    progresses?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     projects: () => [],
+    statuses: () => [],
+    priorities: () => [],
+    progresses: () => 0,
 });
+
+const toast = useToast();
+const confirm = useConfirm();
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
 const visibleForm = ref<boolean>(false);
-const visibleImportDialog = ref<boolean>(false);
-const selected = ref<Project>();
-
-// Mapping label & warna status / priority
-const statusLabels: Record<number, { label: string; color: string }> = {
-    1: { label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
-    2: { label: 'In Progress', color: 'bg-blue-100 text-blue-700' },
-    3: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-};
-
-const priorityLabels: Record<number, { label: string; color: string }> = {
-    1: { label: 'Low', color: 'bg-green-100 text-green-700' },
-    2: { label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-    3: { label: 'High', color: 'bg-red-100 text-red-700' },
-};
+const selected = ref<Project | undefined>(undefined);
 
 const goToCreate = () => {
+    selected.value = undefined;
     visibleForm.value = true;
 };
 
-const splitButtonItems: MenuItem[] = [
-    {
-        label: 'Import',
-        icon: 'pi pi-upload',
-        command: () => {
-            visibleImportDialog.value = true;
-        },
-    },
-    {
-        label: 'Export',
-        icon: 'pi pi-download',
-        command: () => {
-            window.open(route('project.export'), '_blank');
-        },
-    },
-];
-
 const items: MenuItem[] = [
     {
-        label: 'Edit',
+        label: 'View Detail',
         command(event) {
-            selected.value = props.projects?.find((item) => item.id === event.item.menuKey);
-            visibleForm.value = true;
+            const data = event.item.data;
+            router.visit(route('project.show', { encoded: data.id }));
         },
     },
     {
         label: 'Delete',
         command(event) {
-            destroy(event.item.data);
+            confirmDelete(event.item.data);
         },
     },
 ];
 
-const destroy = (project: Project) => {
-    Swal.fire({
-        icon: 'warning',
-        title: `Are you sure want to delete "${project.title}"?`,
-        text: 'This action cannot be undone!',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
-        },
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            router.delete(route('project.destroy', project.id), {
-                onSuccess() {
-                    Swal.fire('Deleted!', 'Project deleted successfully.', 'success');
-                },
+const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
+    if (data[field] === newValue) return;
+
+    let payload: any = { ...data };
+    if (field === 'start_date' || field === 'due_date') {
+        payload[field] = moment(newValue).format('YYYY-MM-DD');
+    } else {
+        payload[field] = newValue;
+    }
+
+    payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
+    payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
+
+    router.put(route('project.update', data.encoded || data.id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Updated',
+                detail: `${field} updated successfully.`,
+                life: 2000,
             });
-        }
+        },
     });
 };
 
-watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = undefined;
+const confirmDelete = (project: Project) => {
+    confirm.require({
+        message: `Are you sure you want to delete "${project.title}"?`,
+        header: 'Confirm Deletion',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Cancel',
+        acceptLabel: 'Yes, Delete',
+        acceptClass: 'p-button-danger',
+        accept: () => {
+            router.delete(route('project.destroy', { project: project.id }), {
+                onSuccess: () => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Deleted',
+                        detail: 'Project deleted successfully.',
+                        life: 3000,
+                    });
+                },
+            });
+        },
+    });
+};
+const truncateHtmlPreserve = (html: string, maxLength = 20) => {
+    if (!html) return '';
+
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    let totalLength = 0;
+
+    const truncateNode = (node: Node): Node | null => {
+        if (totalLength >= maxLength) return null;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.nodeValue || '';
+            if (totalLength + text.length <= maxLength) {
+                totalLength += text.length;
+                return document.createTextNode(text);
+            } else {
+                const truncated = text.substring(0, maxLength - totalLength) + '...';
+                totalLength = maxLength;
+                return document.createTextNode(truncated);
+            }
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const clone = node.cloneNode(false);
+            for (const child of Array.from(node.childNodes)) {
+                const truncatedChild = truncateNode(child);
+                if (truncatedChild) clone.appendChild(truncatedChild);
+                if (totalLength >= maxLength) break;
+            }
+            return clone;
+        }
+
+        return null;
+    };
+
+    const result = truncateNode(div) as HTMLDivElement;
+    return result ? result.innerHTML : '';
+};
+watch(visibleForm, (val) => {
+    if (!val) selected.value = undefined;
 });
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Toolbar -->
         <div class="flex items-center justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search Project..." />
@@ -114,106 +161,110 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <SplitButton class="p-button-raised" :model="splitButtonItems" @click="goToCreate" size="small">
-                <Icon name="Plus" />
-                <span>Add Project</span>
-            </SplitButton>
+            <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
-        <!-- Data Table -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="projects"
                 v-model:filters="filters"
                 data-key="id"
+                editMode="cell"
+                @cell-edit-complete="onCellEditComplete"
                 paginator
-                :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]"
+                :rows="10"
+                :rowsPerPageOptions="[10, 25, 50]"
                 :globalFilterFields="['title', 'description']"
                 striped-rows
                 row-hover
+                :closeOnEscape="false"
             >
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
 
-                <Column field="emoji" header="Emoji" class="w-20 text-center">
-                    <template #body="{ data }">{{ data.emoji || '-' }}</template>
-                </Column>
-
-                <Column field="title" header="Title" sortable></Column>
-
-                <Column field="description" header="Description" sortable>
-                    <template #body="{ data }">
-                        {{ data.description || '-' }}
+                <Column field="title" header="Title" sortable>
+                    <template #editor="{ data, field }">
+                        <InputText v-model="data[field]" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="status_id" header="Status" sortable>
+                <Column field="description" header="Description">
                     <template #body="{ data }">
-                        <span
-                            v-if="statusLabels[data.status_id]"
-                            :class="['rounded-full px-2 py-1 text-xs font-medium', statusLabels[data.status_id].color]"
-                        >
-                            {{ statusLabels[data.status_id].label }}
-                        </span>
-                        <span v-else>-</span>
+                        <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
+                    </template>
+
+                    <template #editor="{ data, field }">
+                        <Editor v-model="data[field]" editorStyle="height: 200px">
+                            <template #toolbar>
+                                <span class="ql-formats">
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
+                                </span>
+                            </template>
+                        </Editor>
                     </template>
                 </Column>
 
-                <Column field="priority_id" header="Priority" sortable>
+                <Column field="status_id" header="Status">
                     <template #body="{ data }">
-                        <span
-                            v-if="priorityLabels[data.priority_id]"
-                            :class="['rounded-full px-2 py-1 text-xs font-medium', priorityLabels[data.priority_id].color]"
-                        >
-                            {{ priorityLabels[data.priority_id].label }}
-                        </span>
-                        <span v-else>-</span>
+                        <Tag :value="data.status?.name" :severity="data.status?.severity" />
+                    </template>
+                    <template #editor="{ data }">
+                        <Dropdown v-model="data.status_id" :options="props.statuses" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="start_date" header="Start Date" sortable>
+                <Column field="priority_id" header="Priority">
+                    <template #body="{ data }">
+                        <Tag :value="data.priority?.name" :severity="data.priority?.severity" />
+                    </template>
+                    <template #editor="{ data }">
+                        <Dropdown v-model="data.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column field="start_date" header="Start">
                     <template #body="{ data }">
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
+
+                    <template #editor="{ data, field }">
+                        <InputText v-model="data[field]" type="date" class="w-full" />
+                    </template>
                 </Column>
 
-                <Column field="due_date" header="Due Date" sortable>
+                <Column field="due_date" header="Due">
                     <template #body="{ data }">
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
-                </Column>
 
-                <Column field="progress" header="Progress" sortable>
-                    <template #body="{ data }">
-                        <div class="flex items-center gap-2">
-                            <div class="h-2 w-full rounded bg-gray-200">
-                                <div class="h-2 rounded bg-blue-500" :style="{ width: data.progress + '%' }"></div>
-                            </div>
-                            <span class="text-xs text-gray-600">{{ data.progress }}%</span>
-                        </div>
+                    <template #editor="{ data, field }">
+                        <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="created_at" header="Created" sortable>
+                <Column field="progress" header="Progress">
                     <template #body="{ data }">
-                        {{ moment(data.created_at).format('DD MMM YYYY, HH:mm') }}
+                        <ProgressBar :value="data.progress" :showValue="true" />
                     </template>
                 </Column>
 
-                <Column header="Action" class="w-16 text-center">
+                <Column header="Action">
                     <template #body="{ data }">
-                        <DropdownButton :items="items" :data="data" :menu-key="data.id" />
+                        <DropdownButton :items="items" :data="data" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="py-4 text-center text-gray-500">No Project Data</p>
+                    <p class="text-center">No Data Available</p>
                 </template>
             </DataTable>
         </div>
     </div>
 
-    <ProjectForm v-model:visible="visibleForm" :value="selected" />
+    <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" />
+    <ConfirmDialog />
+    <Toast />
 </template>

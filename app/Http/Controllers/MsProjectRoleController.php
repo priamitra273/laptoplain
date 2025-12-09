@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Facades\Sqids;
 use App\Models\MsProjectRole;
 use App\Http\Requests\MsProjectRole\MsProjectRoleRequest;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MsProjectRoleController extends Controller
 {
-    
-    public function index()
+    public function index(): Response
     {
-        $msProjectRoles = MsProjectRole::select([
+        $roles = MsProjectRole::select([
             'id',
             'name',
             'owned_id',
@@ -20,62 +22,46 @@ class MsProjectRoleController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
+        $roles = Sqids::rec_encode_ids_in_list($roles);
         return Inertia::render('ms_project_role/Index', [
-            'project_roles' => $msProjectRoles,
+            'project_roles' => $roles,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+
+    public function store(MsProjectRoleRequest $request): RedirectResponse
     {
-        //
+        MsProjectRole::create($request->validated());
+
+        return redirect()
+            ->route('project-role.index')
+            ->with('success', 'Project Role berhasil ditambahkan.');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(MsProjectRoleRequest $request)
-    {
-        MsProjectRole::create($request->safe()->toArray());
 
-        return to_route('ms_project_role.index');
+    public function update(MsProjectRoleRequest $request, string $encodedId): RedirectResponse
+    {
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
+
+        $msProjectRole = MsProjectRole::findOrFail($id);
+        $msProjectRole->update($request->validated());
+
+        return redirect()
+            ->route('project-role.index')
+            ->with('success', 'Project Role berhasil diperbarui.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(MsProjectRole $msProjectRole)
+    public function destroy(string $encodedId): RedirectResponse
     {
-        //
-    }
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(MsProjectRole $msProjectRole)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(MsProjectRoleRequest $request, MsProjectRole $msProjectRole)
-    {
-        $msProjectRole->update($request->safe()->toArray());
-
-        return to_route('ms_project_role.index');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(MsProjectRole $msProjectRole)
-    {
+        $msProjectRole = MsProjectRole::findOrFail($id);
         $msProjectRole->delete();
 
-        return to_route('ms_project_role.index');
+        return redirect()
+            ->route('project-role.index')
+            ->with('success', 'Project Role berhasil dihapus.');
     }
 }

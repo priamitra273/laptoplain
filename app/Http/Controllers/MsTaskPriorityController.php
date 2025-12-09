@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Facades\Sqids;
 use App\Models\MsTaskPriority;
 use App\Http\Requests\MsTaskPriority\MsTaskPriorityRequest;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MsTaskPriorityController extends Controller
 {
-    public function index()
+    public function index():Response
     {
         $msTaskPriorities = MsTaskPriority::select([
             'id',
@@ -20,48 +23,46 @@ class MsTaskPriorityController extends Controller
             'deleted_by'
         ])->orderBy('id')->get();
 
+        $msTaskPriorities = Sqids::rec_encode_ids_in_list($msTaskPriorities);
+
         return Inertia::render('ms_task_priority/Index', [
             'task_priorities' => $msTaskPriorities,
         ]);
     }
 
     
-    public function create()
+    public function store(MsTaskPriorityRequest $request): RedirectResponse
     {
-        //
+        MsTaskPriority::create($request->validated());
+
+        return redirect()
+            ->route('task-priority.index')
+            ->with('success', 'Task Priority berhasil ditambahkan.');
     }
 
-    
-    public function store(MsTaskPriorityRequest $request)
+    public function update(MsTaskPriorityRequest $request, string $encodedId): RedirectResponse
     {
-        MsTaskPriority::create($request->safe()->toArray());
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        return to_route('ms_task_priority.index');
+        $msTaskPriorities = MsTaskPriority::findOrFail($id);
+        $msTaskPriorities->update($request->validated());
+
+        return redirect()
+            ->route('task-priority.index')
+            ->with('success', 'Task Priority berhasil diperbarui.');
     }
 
-    
-    public function show(MsTaskPriority $msTaskPriority)
+    public function destroy(string $encodedId): RedirectResponse
     {
-        //
-    }
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-    
-    public function edit(MsTaskPriority $msTaskPriority)
-    {
-        //
-    }
+        $msTaskPriorities = MsTaskPriority::findOrFail($id);
+        $msTaskPriorities->delete();
 
-    public function update(MsTaskPriorityRequest $request, MsTaskPriority $msTaskPriority)
-    {
-        $msTaskPriority->update($request->safe()->toArray());
-
-        return to_route('ms_task_priority.index');
-    }
-
-    public function destroy(MsTaskPriority $msTaskPriority)
-    {
-        $msTaskPriority->delete();
-
-        return to_route('ms_task_priority.index');
+        return redirect()
+            ->route('task-priority.index')
+            ->with('success', 'Task Priority berhasil dihapus.');
     }
 }

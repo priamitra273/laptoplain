@@ -23,17 +23,14 @@ const filters = ref({
 });
 
 const visibleForm = ref<boolean>(false);
-const selected = ref<ProjectRole>();
-
-const goToCreate = () => {
-    router.visit(route('site.create'));
-};
+const selected = ref<ProjectRole | undefined>(undefined);
 
 const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            selected.value = props.project_roles?.find((item) => item.id === event.item.menuKey);
+            const id = event.item.menuKey;
+            selected.value = props.project_roles.find((item) => item.id === id);
             visibleForm.value = true;
         },
     },
@@ -48,19 +45,19 @@ const items: MenuItem[] = [
 const destroy = (project_role: ProjectRole) => {
     Swal.fire({
         icon: 'warning',
-        title: `Are you sure want to delete ${project_role.name} project role?`,
-        text: 'This action cannot be undone, so please proceed with caution!',
+        title: `Are you sure want to delete "${project_role.name}"?`,
+        text: 'This action cannot be undone!',
         showCancelButton: true,
         confirmButtonText: 'Delete',
-        cancelButtonText: `Cancel`,
+        cancelButtonText: 'Cancel',
         customClass: {
             confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
         },
-    }).then(async (result) => {
+    }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(route('ms_project_role.destroy', project_role.id), {
-                onSuccess() {
-                    Swal.fire('Success', 'Success delete data', 'success');
+            router.delete(route('project-role.destroy', project_role.id), {
+                onSuccess: () => {
+                    Swal.fire('Deleted!', 'Project role has been deleted.', 'success');
                 },
             });
         }
@@ -74,7 +71,6 @@ watch(visibleForm, (newValue) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Action Table -->
         <div class="flex justify-between gap-2">
             <IconField>
                 <InputText v-model="filters.global.value" placeholder="Search" />
@@ -90,7 +86,6 @@ watch(visibleForm, (newValue) => {
             </Button>
         </div>
 
-        <!-- Datatable -->
         <div class="card overflow-hidden">
             <DataTable
                 :value="project_roles"
@@ -103,7 +98,7 @@ watch(visibleForm, (newValue) => {
                 striped-rows
                 row-hover
             >
-                <Column header="No">
+                <Column header="No" style="width: 5%">
                     <template #body="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -117,14 +112,14 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column>
+                <Column header="Actions" style="width: 10%">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="text-center">No Data</p>
+                    <p class="py-4 text-center">No Data Available</p>
                 </template>
             </DataTable>
         </div>

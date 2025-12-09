@@ -16,7 +16,7 @@ class MsTaskTypeSeeder extends Seeder
         $types = [
             [
                 'name' => 'Bug',
-                'severity' => 'Perbaikan kesalahan atau error pada sistem',
+                'severity' => 'danger',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -26,7 +26,7 @@ class MsTaskTypeSeeder extends Seeder
             ],
             [
                 'name' => 'Feature',
-                'severity' => 'Penambahan fitur baru dalam sistem',
+                'severity' => 'success',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -36,7 +36,7 @@ class MsTaskTypeSeeder extends Seeder
             ],
             [
                 'name' => 'Improvement',
-                'severity' => 'Peningkatan fitur yang sudah ada agar lebih baik',
+                'severity' => 'info',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -46,7 +46,7 @@ class MsTaskTypeSeeder extends Seeder
             ],
             [
                 'name' => 'Research',
-                'severity' => 'Penelitian atau analisa untuk pengembangan fitur',
+                'severity' => 'info',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -56,7 +56,7 @@ class MsTaskTypeSeeder extends Seeder
             ],
             [
                 'name' => 'Documentation',
-                'severity' => 'Pembuatan atau pembaruan dokumentasi proyek',
+                'severity' => 'primary',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

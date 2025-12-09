@@ -18,7 +18,7 @@ class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasUuid, HasRoles;
-    
+
     use SoftDeletes, InteractsWithMedia, LogUsers;
 
     /**
@@ -64,9 +64,15 @@ class User extends Authenticatable implements HasMedia
     public function tasks()
     {
         return $this->belongsToMany(Task::class, 'task_users')
-                    ->withTimestamps()
-                    ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
-                    ->using(TaskUser::class);
+            ->withTimestamps()
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+            ->using(TaskUser::class);
     }
 
+    public function notifications()
+    {
+        return $this->belongsToMany(Notification::class, 'notification_users')
+            ->withPivot('is_read')
+            ->withTimestamps();
+    }
 }

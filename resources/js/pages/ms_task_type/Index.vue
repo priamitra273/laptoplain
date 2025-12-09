@@ -20,7 +20,6 @@ const props = withDefaults(defineProps<Props>(), {
     <AppLayout>
         <div class="flex flex-col gap-6">
             <Heading title="Task Type" description="Manage master data task type" />
-
             <TaskTypeTable :task_types="props.task_types" />
         </div>
     </AppLayout>

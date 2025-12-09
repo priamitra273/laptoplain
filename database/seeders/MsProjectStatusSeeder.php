@@ -17,7 +17,7 @@ class MsProjectStatusSeeder extends Seeder
         $statuses = [
             [
                 'name' => 'Not Started',
-                'severity' => 'Project has not started yet',
+                'severity' => 'secondary',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -27,7 +27,7 @@ class MsProjectStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Progress',
-                'severity' => 'Project is currently in progress',
+                'severity' => 'primary',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -37,7 +37,7 @@ class MsProjectStatusSeeder extends Seeder
             ],
             [
                 'name' => 'On Hold',
-                'severity' => 'Project temporarily paused',
+                'severity' => 'warn',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -47,7 +47,7 @@ class MsProjectStatusSeeder extends Seeder
             ],
             [
                 'name' => 'Completed',
-                'severity' => 'Project completed successfully',
+                'severity' => 'success',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -57,7 +57,7 @@ class MsProjectStatusSeeder extends Seeder
             ],
             [
                 'name' => 'Cancelled',
-                'severity' => 'Project cancelled before completion',
+                'severity' => 'danger',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

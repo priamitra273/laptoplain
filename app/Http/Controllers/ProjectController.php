@@ -2,146 +2,139 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\ProjectExport;
-use App\Http\Requests\Project\ProjectImportRequest;
+use App\Facades\Sqids;
 use App\Http\Requests\Project\ProjectStoreRequest;
-use App\Imports\ProjectStoreImport;
 use App\Models\Project;
-use App\Services\ProjectService;
-use Illuminate\Http\Request;
+use App\Models\MsProjectStatus;
+use App\Models\MsProjectPriority;
+use App\Models\MsProjectRole;
+use App\Models\MsTaskPriority;
+use App\Models\MsTaskStatus;
+use App\Models\MsTaskType;
+use App\Models\Tag;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Maatwebsite\Excel\Facades\Excel;
 
 class ProjectController extends Controller
 {
-    public function __construct(
-        protected ProjectService $service
-    ) {}
-
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $projects = Project::select([
-            'id',
-            'emoji',
-            'title',
-            'description',
-            'start_date',
-            'due_date',
-            'progress',
-            'sequence_number',
-            'status_id',
-            'priority_id',
-            'owner_id',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'created_at',
-            'updated_at',
+        $projects = Project::with([
+            'status:id,name,severity',
+            'priority:id,name,severity'
         ])
             ->orderBy('id')
             ->get();
 
-        return Inertia::render('project/Project', [
-            'projects' => $projects,
-        ]);
+        $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
+        $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
+
+        $response = [
+            'projects'   => $projects->toArray(),
+            'statuses'   => $statuses->toArray(),
+            'priorities' => $priorities->toArray(),
+        ];
+
+        return Inertia::render('project/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function show(string $encoded)
     {
-        return Inertia::render('project/ProjectCreate');
+        $projectId = Sqids::decode($encoded);
+        if (!$projectId) abort(404);
+
+        $project = Project::with([
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'projectMembers.user:id,name,email',
+            'projectMembers.role:id,name',
+            'tasks' => function ($query) {
+                $query->withRecursive();
+            },
+        ])->findOrFail($projectId);
+
+        $project->update([
+            'progress' => $project->calculateProgress()
+        ]);
+
+        $projectArr = $project->toArray();
+
+        $memberUserIds = collect($projectArr['project_members'])
+            ->pluck('user.id')
+            ->filter()
+            ->values();
+
+        $availableUsers = User::whereNotIn('id', $memberUserIds)
+            ->get(['id', 'name'])
+            ->toArray();
+
+        $roles = MsProjectRole::all(['id', 'name'])->toArray();
+
+        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
+        $types = MsTaskType::select('id', 'name', 'severity')->get();
+        $tags = Tag::select('id', 'name', 'severity')->get();
+
+        $assignableUsers = collect($projectArr['project_members'])
+            ->pluck('user')
+            ->unique('id')
+            ->values();
+
+        $isPM = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->where('role.name', 'Project Manager')
+            ->isNotEmpty();
+
+        $data = [
+            'project' => $projectArr,
+            'members' => $projectArr['project_members'],
+            'roles'   => $roles,
+            'users'   => $availableUsers,
+            'tasks'   => $projectArr['tasks'],
+            'taskStatuses' => $statuses->toArray(),
+            'taskPriorities' => $priorities->toArray(),
+            'taskTypes' => $types->toArray(),
+            'tags' => $tags->toArray(),
+            'assignableUsers' => $assignableUsers->toArray(),
+            'isPM' => $isPM
+        ];
+
+        return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(ProjectStoreRequest $request)
     {
-        Project::create($request->safe()->toArray());
+        $project = Project::create($request->validated());
+
+        // Set progress default (0)
+        $project->update([
+            'progress' => $project->calculateProgress()
+        ]);
 
         return to_route('project.index');
     }
 
-    /**
-     * Verify and preview imported file.
-     */
-    public function verify_import(Request $request)
+    public function update(ProjectStoreRequest $request, string $encoded)
     {
-        $request->validate([
-            'type' => ['required', 'string', 'in:INSERT,UPDATE'],
-            'file' => ['required', 'file', 'mimes:xls,xlsx,csv']
+        $id = Sqids::decode($encoded);
+
+        $project = Project::findOrFail($id);
+        $project->update($request->validated());
+
+        // Update progress terbaru setelah update data project
+        $project->update([
+            'progress' => $project->calculateProgress()
         ]);
-
-        $result = $this->service->verifyImport($request->get('type'), $request->file('file'));
-
-        return Inertia::render('project/ProjectVerifyImport', [
-            'projects' => $result['data'],
-            'header' => $result['header'],
-        ]);
-    }
-
-    /**
-     * Import validated data into the database.
-     */
-    public function import(ProjectImportRequest $request)
-    {
-        foreach ($request->safe()->projects as $project) {
-            Project::create($project);
-        }
 
         return to_route('project.index');
     }
 
-    /**
-     * Export all projects to Excel.
-     */
-    public function export(Request $request)
+    public function destroy(string $encoded)
     {
-        $datetime = date('YmdHis');
-        return Excel::download(new ProjectExport, "project-$datetime.xlsx");
-    }
+        $id = Sqids::decode($encoded);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Project $project)
-    {
-        return Inertia::render('project/ProjectShow', [
-            'project' => $project,
-        ]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Project $project)
-    {
-        return Inertia::render('project/ProjectEdit', [
-            'project' => $project,
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(ProjectStoreRequest $request, Project $project)
-    {
-        $project->update($request->safe()->toArray());
-
-        return to_route('project.index');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Project $project)
-    {
-        $project->delete();
+        Project::findOrFail($id)->delete();
 
         return to_route('project.index');
     }

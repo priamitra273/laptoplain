@@ -17,7 +17,7 @@ class MsTaskStatusSeeder extends Seeder
         $statuses = [
             [
                 'name' => 'To Do',
-                'severity' => 'Task belum dimulai',
+                'severity' => 'secondary',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -27,7 +27,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Progress',
-                'severity' => 'Task sedang dikerjakan',
+                'severity' => 'primary',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -37,7 +37,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Review',
-                'severity' => 'Task sudah selesai dan menunggu review',
+                'severity' => 'warn',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -47,7 +47,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'Completed',
-                'severity' => 'Task telah selesai dan disetujui',
+                'severity' => 'success',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -57,7 +57,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'Blocked',
-                'severity' => 'Task terhambat oleh kendala lain',
+                'severity' => 'danger',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Facades\Sqids;
 use App\Http\Resources\Menu\MenuSidebarResource;
 use App\Models\Menu;
 use Illuminate\Foundation\Inspiring;
@@ -15,16 +16,12 @@ class HandleInertiaRequests extends Middleware
     /**
      * The root template that's loaded on the first page visit.
      *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
      * @var string
      */
     protected $rootView = 'app';
 
     /**
      * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
@@ -33,8 +30,6 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
      *
      * @return array<string, mixed>
      */
@@ -46,14 +41,27 @@ class HandleInertiaRequests extends Middleware
             ->whereNull('parent_id')
             ->orderBy('sequence_number')
             ->get();
+        
+        if ($request->user()) {
+            $user = Sqids::rec_encode_ids_in_list($request->user()->toArray());
+        } else {
+            $user = null;
+        }
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
+            'quote' => [
+                'message' => trim($message),
+                'author' => trim($author),
+            ],
             'auth' => [
-                'user' => $request->user(),
-                'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve()
+                'user' => $user,
+                'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
+            ],
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error'   => fn() => $request->session()->get('error'),
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

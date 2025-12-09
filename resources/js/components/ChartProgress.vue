@@ -1,143 +1,111 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { Chart } from "highcharts-vue";
-import Highcharts from "highcharts";
-import exportingInit from 'highcharts/modules/exporting'
-import A11yInit from 'highcharts/modules/accessibility'
-import { Project, Statistic } from '@/types';
+import Highcharts from 'highcharts';
+import { Chart } from 'highcharts-vue';
+import A11yInit from 'highcharts/modules/accessibility';
+import exportingInit from 'highcharts/modules/exporting';
 import Colors from 'tailwindcss/colors';
+import { computed } from 'vue';
 
-exportingInit(Highcharts);
 A11yInit(Highcharts);
+exportingInit(Highcharts);
 
-interface HighchartsChartOptions extends Highcharts.ChartOptions {
-    custom: {
-        [key: string]: any;
-    }
+interface TaskStatistic {
+    completed: number;
+    inProgress: number;
+    notStarted: number;
+}
+
+interface ProjectStatistic {
+    total: number;
+    completed: number;
+    in_progress: number;
 }
 
 interface Props {
-    project: Project,
-    statistic?: Statistic
+    taskStatistic: TaskStatistic;
+    projectStatistic: ProjectStatistic;
+    project?: { title?: string };
 }
 
 const props = defineProps<Props>();
-const chart = ref();
 
-const countCctvInProgress = computed<number>(() => {
-    return props.statistic
-        ? props.statistic.progress.total_preconfig - props.statistic.progress.analytic_config.done
-        : 0
-});
+const taskTotal = computed(() => props.taskStatistic.completed + props.taskStatistic.inProgress + props.taskStatistic.notStarted);
 
-const countUnregisteredCctv = computed(() => {
-    return props.statistic
-        ? props.statistic.plan_cctv - props.statistic.progress.total_preconfig
-        : 0
-})
+const projectNotStarted = computed(() => props.projectStatistic.total - props.projectStatistic.completed - props.projectStatistic.in_progress);
 
-const options = computed(() => {
-    return {
-        chart: {
-            type: 'pie',
-            custom: {},
-            events: {
-                render(): void {
-                    const chart = (this as any) as Highcharts.Chart;
-                    const series = chart.series[0] as Highcharts.Series;
-
-                    let chartOptions = chart.options.chart as HighchartsChartOptions;
-                    let customLabel = chartOptions.custom.label;
-
-                    if (!customLabel) {
-                        customLabel = chartOptions.custom.label =
-                            chart.renderer.label(
-                                'Plan CCTV<br/>' + `<strong>${series.total}</strong>`,
-                                0
-                            )
-                                .css({
-                                    color: '#000',
-                                    textAnchor: 'middle'
-                                })
-                                .add();
-                    }
-                    else {
-                        customLabel.textSetter('Plan CCTV<br/>' + `<strong>${series.total}</strong>`)
-                    }
-
-                    const x = series.center[0] + chart.plotLeft,
-                        y = series.center[1] + chart.plotTop -
-                            (customLabel.attr('height') / 2);
-
-                    customLabel.attr({
-                        x,
-                        y
-                    });
-                    // Set font size based on chart diameter
-                    customLabel.css({
-                        fontSize: `${series.center[2] / 12}px`
-                    });
-                }
-            }
+const options = computed(() => ({
+    chart: {
+        type: 'pie',
+        height: '100%',
+        backgroundColor: 'transparent',
+    },
+    title: {
+        text: `Progress Overview${props.project?.title ? ` - ${props.project.title}` : ''}`,
+        align: 'center',
+        style: { fontSize: '16px', fontWeight: '600' },
+    },
+    credits: { enabled: false },
+    tooltip: {
+        pointFormatter: function () {
+            const percent = ((this.y / (this.total ?? 1)) * 100).toFixed(1);
+            return `<b>${this.name}</b>: ${this.y} (${percent}%)`;
         },
-        accessibility: {
-            point: {
-                valueSuffix: '%'
-            }
-        },
-        credits: false,
-        title: {
-            text: `Project Overview`,
-            style: {
-                fontFamily: "'Instrument Sans', sans-serif",
-            }
-        },
-        tooltip: {
-            pointFormat: '{series.name}: <b>{point.percentage:.0f}%</b>',
-            style: {
-                fontFamily: "'Instrument Sans', sans-serif",
-            }
-        },
-        legend: {
-            enabled: false
-        },
-        plotOptions: {
-            series: {
-                allowPointSelect: true,
-                cursor: 'pointer',
-                borderRadius: 8,
-                dataLabels: [{
-                    enabled: true,
-                    distance: 20,
-                    format: '{point.name}'
-                }, {
-                    enabled: true,
-                    distance: -15,
-                    format: '{point.percentage:.0f}%',
-                    style: {
-                        fontSize: '0.9em'
-                    }
-                }],
-                showInLegend: true
+        useHTML: true,
+    },
+    plotOptions: {
+        pie: {
+            innerSize: '50%',
+            borderWidth: 2,
+            borderColor: '#fff',
+            allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+                enabled: true,
+                format: '{point.name}: {point.y}',
+                distance: -40,
+                style: { fontWeight: 'bold', color: '#333' },
             },
-            style: {
-                fontFamily: "'Instrument Sans', sans-serif",
-            }
+            showInLegend: true,
         },
-        series: [{
-            name: 'Registrations',
+    },
+    series: [
+        {
+            name: 'Tasks',
+            size: '60%',
+            innerSize: '50%',
             colorByPoint: true,
-            innerSize: '84%',
             data: [
-                {name: 'Completed', color: 'var(--p-primary-color)', y: props.statistic?.progress.analytic_config.done ?? 0},
-                {name: 'In Progress', color: Colors.amber[500], y: countCctvInProgress.value},
-                {name: 'Unregistered', color: Colors.slate[200], y: countUnregisteredCctv.value},
-            ]
-        }]
-    }
-});
+                { name: 'Completed Tasks', y: props.taskStatistic.completed, color: Colors.green[500], total: taskTotal.value },
+                { name: 'In Progress Tasks', y: props.taskStatistic.inProgress, color: Colors.amber[500], total: taskTotal.value },
+                { name: 'Not Started Tasks', y: props.taskStatistic.notStarted, color: Colors.gray[300], total: taskTotal.value },
+            ],
+        },
+        {
+            name: 'Projects',
+            size: '90%',
+            innerSize: '70%',
+            colorByPoint: true,
+            data: [
+                { name: 'Completed Projects', y: props.projectStatistic.completed, color: Colors.green[700], total: props.projectStatistic.total },
+                {
+                    name: 'In Progress Projects',
+                    y: props.projectStatistic.in_progress,
+                    color: Colors.amber[700],
+                    total: props.projectStatistic.total,
+                },
+                { name: 'Not Started Projects', y: projectNotStarted.value, color: Colors.gray[400], total: props.projectStatistic.total },
+            ],
+        },
+    ],
+    legend: {
+        layout: 'horizontal',
+        align: 'center',
+        verticalAlign: 'bottom',
+        itemStyle: { fontWeight: '500' },
+    },
+}));
 </script>
 
 <template>
-    <Chart ref="chart" :options="options" class="h-full" />
+    <Chart :options="options" class="h-full w-full" />
 </template>

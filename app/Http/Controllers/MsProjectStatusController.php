@@ -2,19 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Project\MsProjectStatusStoreRequest;
+use App\Facades\Sqids;
+use App\Http\Requests\MsProjectStatus\MsProjectStatusStoreRequest;
 use App\Models\MsProjectStatus;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MsProjectStatusController extends Controller
 {
     
-    public function index()
+    public function index(): Response
     {
-        $statuses = MsProjectStatus::query()
-            ->with('owned:id,name')
-            ->orderByDesc('created_at')
-            ->get();
+        $statuses = MsProjectStatus::select([
+            'id',
+            'name',
+            'severity',
+            'owned_id',
+            'created_by',
+            'updated_by',
+            'deleted_by'
+        ])->orderBy('id')->get();
+
+        $statuses = Sqids::rec_encode_ids_in_list($statuses);
 
         return Inertia::render('ms_project_status/Index', [
             'statuses' => $statuses,
@@ -22,49 +32,40 @@ class MsProjectStatusController extends Controller
     }
 
     
-    public function store(MsProjectStatusStoreRequest $request)
+    public function store(MsProjectStatusStoreRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
-
-        MsProjectStatus::create([
-            'name' => $validated['name'],
-            'severity' => $validated['severity'],
-            'owned_id' => auth()->id(),
-            'created_by' => auth()->id(),
-        ]);
+        MsProjectStatus::create($request->validated());
 
         return redirect()
-            ->route('ms_project_status.index')
-            ->with('success', 'Status project berhasil ditambahkan.');
+        ->route('project-status.index')
+        ->with('success', 'Project Status berhasil ditambahkan');
     }
 
     
-    public function update(MsProjectStatusStoreRequest $request, MsProjectStatus $ms_project_status)
+    public function update(MsProjectStatusStoreRequest $request, string $encodedId): RedirectResponse
     {
-        $validated = $request->validated();
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        $ms_project_status->update([
-            'name' => $validated['name'],
-            'severity' => $validated['severity'],
-            'updated_by' => auth()->id(),
-        ]);
+        $statuses = MsProjectStatus::findOrFail($id);
+        $statuses->update($request->validated());
 
         return redirect()
-            ->route('ms_project_status.index')
-            ->with('success', 'Status project berhasil diperbarui.');
+            ->route('project-status.index')
+            ->with('success', 'Project Status berhasil diperbarui.');
     }
 
     
-    public function destroy(MsProjectStatus $ms_project_status)
+     public function destroy(string $encodedId): RedirectResponse
     {
-        $ms_project_status->update([
-            'deleted_by' => auth()->id(),
-        ]);
+        $id = Sqids::decode($encodedId);
+        if (empty($id)) abort(404, 'ID tidak valid.');
 
-        $ms_project_status->delete();
+        $statuses = MsProjectStatus::findOrFail($id);
+        $statuses->delete();
 
         return redirect()
-            ->route('ms_project_status.index')
-            ->with('success', 'Status project berhasil dihapus.');
+            ->route('project-status.index')
+            ->with('success', 'Project Status berhasil dihapus.');
     }
 }

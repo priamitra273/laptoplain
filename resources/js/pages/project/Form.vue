@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
-import { InertiaForm, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import moment from 'moment';
-import Swal from 'sweetalert2';
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dropdown from 'primevue/dropdown';
+import Editor from 'primevue/editor';
+import InputText from 'primevue/inputtext';
+import { useToast } from 'primevue/usetoast';
 import { computed, watch as vueWatch } from 'vue';
 
 interface Props {
@@ -17,16 +21,18 @@ interface ProjectForm {
     title: string;
     start_date: Date | null;
     due_date: Date | null;
-    description: string | null;
+    description: string;
     emoji: string | null;
     status_id: number | null;
     priority_id: number | null;
     owner_id?: number | null;
     owned_id?: number | null;
+    [key: string]: any;
 }
 
 const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
+const toast = useToast();
 
 const visible = computed<boolean>({
     get() {
@@ -37,9 +43,7 @@ const visible = computed<boolean>({
     },
 });
 
-const formHeader = computed(() => (props.value?.id ? 'Edit Project' : 'Create New Project'));
-
-const form: InertiaForm<ProjectForm> = useForm({
+const form = useForm<ProjectForm>({
     title: '',
     start_date: null,
     due_date: null,
@@ -52,57 +56,32 @@ const form: InertiaForm<ProjectForm> = useForm({
 });
 
 const save = (): void => {
-    const isEdit = !!props.value?.id;
-    const url = isEdit ? route('project.update', props.value.id) : route('project.store');
+    const url = route('project.store');
 
-    const payload = form.transform((data) => ({
+    form.transform((data) => ({
         ...data,
         start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
         due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
     }));
 
-    const successMessage = isEdit ? 'Project successfully updated!' : 'Project successfully created!';
-
-    if (isEdit) {
-        payload.put(url, {
-            preserveScroll: true,
-            onSuccess: () => {
-                Swal.fire('Success', successMessage, 'success');
-                visible.value = false;
-            },
-            onError: () => {
-                Swal.fire('Error', 'Please fix the errors below.', 'error');
-            },
-        });
-    } else {
-        payload.post(url, {
-            preserveScroll: true,
-            onSuccess: () => {
-                Swal.fire('Success', successMessage, 'success');
-                visible.value = false;
-            },
-            onError: () => {
-                Swal.fire('Error', 'Please fix the errors below.', 'error');
-            },
-        });
-    }
+    form.post(url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            visible.value = false;
+            hide();
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Project created successfully.',
+                life: 3000,
+            });
+        },
+    });
 };
 
 const show = (): void => {
     form.reset();
     form.clearErrors();
-
-    if (props.value) {
-        form.title = props.value.title ?? '';
-        form.description = props.value.description ?? '';
-        form.emoji = props.value.emoji ?? '';
-        form.status_id = props.value.status_id ?? null;
-        form.priority_id = props.value.priority_id ?? null;
-        form.owner_id = props.value.owner_id ?? null;
-        form.owned_id = props.value.owned_id ?? null;
-        form.start_date = props.value.start_date ? moment(props.value.start_date, 'YYYY-MM-DD', true).toDate() : null;
-        form.due_date = props.value.due_date ? moment(props.value.due_date, 'YYYY-MM-DD', true).toDate() : null;
-    }
 };
 
 const hide = (): void => {
@@ -110,14 +89,11 @@ const hide = (): void => {
     form.clearErrors();
 };
 
-// Clear errors when input changes
 vueWatch(
-    () => form,
+    () => form.data(),
     () => {
         Object.keys(form.errors).forEach((key) => {
-            if (form[key] !== undefined) {
-                delete form.errors[key];
-            }
+            if (form[key] !== undefined) delete form.errors[key];
         });
     },
     { deep: true },
@@ -125,23 +101,29 @@ vueWatch(
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
+    <Drawer
+        v-model:visible="visible"
+        class="!w-full md:!w-[40vw]"
+        position="right"
+        header="Create New Project"
+        @show="show"
+        @after-hide="hide"
+        :blockScroll="true"
+        :dismissable="false"
+    >
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
-            <!-- Title -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
-                <InputText v-model="form.title" id="title" placeholder="Enter Project Title" />
-                <InputError :message="form.errors.title" />
+                <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
+                <small v-if="form.errors.title" class="mt-1 text-sm text-red-500">{{ form.errors.title }}</small>
             </div>
 
-            <!-- Start Date -->
             <div class="flex flex-col gap-2">
                 <Label for="start_date">Start Date</Label>
-                <DatePicker v-model="form.start_date" input-id="start_date" show-icon fluid date-format="yy-mm-dd" placeholder="Enter Start Date" />
-                <InputError :message="form.errors.start_date" />
+                <DatePicker v-model="form.start_date" input-id="start_date" show-icon fluid date-format="yy-mm-dd" />
+                <small v-if="form.errors.start_date" class="mt-1 text-sm text-red-500">{{ form.errors.start_date }}</small>
             </div>
 
-            <!-- Due Date -->
             <div class="flex flex-col gap-2">
                 <Label for="due_date">Due Date</Label>
                 <DatePicker
@@ -151,45 +133,61 @@ vueWatch(
                     fluid
                     date-format="yy-mm-dd"
                     :min-date="form.start_date ?? undefined"
-                    placeholder="Enter Due Date"
                 />
-                <InputError :message="form.errors.due_date" />
+                <small v-if="form.errors.due_date" class="mt-1 text-sm text-red-500">{{ form.errors.due_date }}</small>
             </div>
 
-            <!-- Status -->
             <div class="flex flex-col gap-2">
                 <Label for="status_id">Status</Label>
-                <Dropdown v-model="form.status_id" :options="props.statuses" optionLabel="name" optionValue="id" placeholder="Select Status" />
-                <InputError :message="form.errors.status_id" />
+                <Dropdown
+                    v-model="form.status_id"
+                    :options="props.statuses"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Status"
+                    class="w-full"
+                />
+                <small v-if="form.errors.status_id" class="mt-1 text-sm text-red-500">{{ form.errors.status_id }}</small>
             </div>
 
-            <!-- Priority -->
             <div class="flex flex-col gap-2">
                 <Label for="priority_id">Priority</Label>
-                <Dropdown v-model="form.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" placeholder="Select Priority" />
-                <InputError :message="form.errors.priority_id" />
+                <Dropdown
+                    v-model="form.priority_id"
+                    :options="props.priorities"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Priority"
+                    class="w-full"
+                />
+                <small v-if="form.errors.priority_id" class="mt-1 text-sm text-red-500">{{ form.errors.priority_id }}</small>
             </div>
 
-            <!-- Emoji -->
             <div class="flex flex-col gap-2">
                 <Label for="emoji">Emoji</Label>
                 <InputText v-model="form.emoji" id="emoji" placeholder="e.g. 🚀" maxlength="2" />
-                <InputError :message="form.errors.emoji" />
+                <small v-if="form.errors.emoji" class="mt-1 text-sm text-red-500">{{ form.errors.emoji }}</small>
             </div>
 
-            <!-- Description -->
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="description">Description</Label>
-                <Textarea v-model="form.description" id="description" placeholder="Enter Project Description" rows="4" />
-                <InputError :message="form.errors.description" />
+                <Editor v-model="form.description" editorStyle="height: 200px">
+                    <template #toolbar>
+                        <span class="ql-formats">
+                            <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                            <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                            <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                        </span>
+                    </template>
+                </Editor>
+
+                <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
+            </div>
+
+            <div class="col-span-2 flex justify-end gap-2">
+                <Button label="Cancel" severity="secondary" @click="visible = false" />
+                <Button label="Save" type="submit" :loading="form.processing" :disabled="form.processing" />
             </div>
         </form>
-
-        <template #footer>
-            <div class="flex justify-end gap-2">
-                <Button label="Cancel" severity="secondary" @click="visible = false" />
-                <Button label="Save" :loading="form.processing" :disabled="form.processing" @click="save" />
-            </div>
-        </template>
     </Drawer>
 </template>

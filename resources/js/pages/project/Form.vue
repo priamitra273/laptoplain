@@ -9,6 +9,7 @@ import Editor from 'primevue/editor';
 import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
 import { computed, watch as vueWatch } from 'vue';
+import EmojiPicker from '@/components/EmojiPicker.vue';
 
 interface Props {
     value?: any;
@@ -48,7 +49,7 @@ const form = useForm<ProjectForm>({
     start_date: null,
     due_date: null,
     description: '',
-    emoji: '',
+    emoji: ':page_facing_up:',
     status_id: null,
     priority_id: null,
     owner_id: null,
@@ -114,7 +115,12 @@ vueWatch(
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
-                <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
+                <InputGroup>
+                    <InputGroupAddon>
+                        <EmojiPicker v-model="form.emoji" />
+                    </InputGroupAddon>
+                    <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
+                </InputGroup>
                 <small v-if="form.errors.title" class="mt-1 text-sm text-red-500">{{ form.errors.title }}</small>
             </div>
 
@@ -161,12 +167,6 @@ vueWatch(
                     class="w-full"
                 />
                 <small v-if="form.errors.priority_id" class="mt-1 text-sm text-red-500">{{ form.errors.priority_id }}</small>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <Label for="emoji">Emoji</Label>
-                <InputText v-model="form.emoji" id="emoji" placeholder="e.g. 🚀" maxlength="2" />
-                <small v-if="form.errors.emoji" class="mt-1 text-sm text-red-500">{{ form.errors.emoji }}</small>
             </div>
 
             <div class="col-span-2 flex flex-col gap-2">

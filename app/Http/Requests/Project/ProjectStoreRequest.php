@@ -26,7 +26,7 @@ class ProjectStoreRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'description' => 'nullable|required|string',
-            'emoji' => 'nullable|required|string|max:10',
+            'emoji' => 'nullable|required|string|max:100',
             'start_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:start_date',
             'status_id' => 'required|exists:ms_project_statuses,id',

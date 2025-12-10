@@ -49,6 +49,6 @@ const selectEmoji = (emoji: any) => {
     </Button>
 
     <Popover ref="op">
-        <Picker :data="emojiIndex" set="google" :show-preview="false" class="!border-0" @select="selectEmoji" />
+        <Picker :data="emojiIndex" set="google" :show-preview="false" class="!border-0 dark:!bg-surface-800" @select="selectEmoji" />
     </Popover>
 </template>

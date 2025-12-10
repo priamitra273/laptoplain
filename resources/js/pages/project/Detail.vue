@@ -17,6 +17,10 @@ import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
+import { Emoji, EmojiIndex } from "emoji-mart-vue-fast/src";
+import emojiData from "emoji-mart-vue-fast/data/all.json";
+
+import "emoji-mart-vue-fast/css/emoji-mart.css";
 
 interface Props {
     project: {
@@ -54,6 +58,8 @@ const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
 
 const parentTaskId = ref<string | null>(null);
+
+let emojiIndex = new EmojiIndex(emojiData);
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: ProjectMember) => {
@@ -106,7 +112,8 @@ const goBack = () => {
                         @click="router.get(route('project.index'))"
                         class="hover:bg-surface-100 dark:hover:bg-surface-800"
                     />
-                    <span class="text-4xl">{{ props.project?.emoji }}</span>
+                    <Emoji v-if="props.project?.emoji.startsWith(':')" :data="emojiIndex" :emoji="props.project.emoji" set="google" :size="36"></Emoji>
+                    <span v-else class="text-4xl" >{{ props.project?.emoji }}</span>
                     <div>
                         <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
                             {{ props.project.title }}

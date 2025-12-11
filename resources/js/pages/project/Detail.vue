@@ -7,8 +7,12 @@ import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import ProgressBar from 'primevue/progressbar';
+import Tab from 'primevue/tab';
+import TabList from 'primevue/tablist';
 import TabPanel from 'primevue/tabpanel';
-import TabView from 'primevue/tabview';
+import Tabs from 'primevue/tabs';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
@@ -17,10 +21,8 @@ import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
-import { Emoji, EmojiIndex } from "emoji-mart-vue-fast/src";
-import emojiData from "emoji-mart-vue-fast/data/all.json";
 
-import "emoji-mart-vue-fast/css/emoji-mart.css";
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
 
 interface Props {
     project: {
@@ -112,8 +114,14 @@ const goBack = () => {
                         @click="router.get(route('project.index'))"
                         class="hover:bg-surface-100 dark:hover:bg-surface-800"
                     />
-                    <Emoji v-if="props.project?.emoji.startsWith(':')" :data="emojiIndex" :emoji="props.project.emoji" set="google" :size="36"></Emoji>
-                    <span v-else class="text-4xl" >{{ props.project?.emoji }}</span>
+                    <Emoji
+                        v-if="props.project?.emoji.startsWith(':')"
+                        :data="emojiIndex"
+                        :emoji="props.project.emoji"
+                        set="google"
+                        :size="36"
+                    ></Emoji>
+                    <span v-else class="text-4xl">{{ props.project?.emoji }}</span>
                     <div>
                         <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
                             {{ props.project.title }}
@@ -199,66 +207,73 @@ const goBack = () => {
             <!-- Main Content with Tabs -->
             <Card class="shadow-sm">
                 <template #content>
-                    <TabView>
-                        <TabPanel header="Board">
-                            <div class="py-4">
-                                <TaskTable
-                                    :projectId="props.project.id"
-                                    :tasks="props.tasks"
-                                    @add="openTaskAdd"
-                                    @edit="openTaskEdit"
-                                    :isPM="props.isPM"
-                                />
-                            </div>
-                        </TabPanel>
-
-                        <TabPanel header="Details">
-                            <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
-                                <!-- Description -->
-                                <div class="lg:col-span-2">
-                                    <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
-                                    <div
-                                        class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
-                                        v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
+                    <Tabs value="Board">
+                        <TabList>
+                            <Tab value="Board">Board</Tab>
+                            <Tab value="Details">Details</Tab>
+                            <Tab value="Team">Team</Tab>
+                        </TabList>
+                        <TabPanels>
+                            <TabPanel value="Board">
+                                <div class="py-4">
+                                    <TaskTable
+                                        :projectId="props.project.id"
+                                        :tasks="props.tasks"
+                                        @add="openTaskAdd"
+                                        @edit="openTaskEdit"
+                                        :isPM="props.isPM"
                                     />
                                 </div>
-
-                                <!-- Sidebar Info -->
-                                <div class="flex flex-col gap-6">
-                                    <div>
-                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
-                                        <div class="flex flex-col gap-3">
-                                            <div class="flex items-start justify-between">
-                                                <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
-                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                    {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
-                                                </span>
-                                            </div>
-                                            <div class="flex items-start justify-between">
-                                                <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
-                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                    {{ moment(props.project.updated_at).fromNow() }}
-                                                </span>
+                            </TabPanel>
+        
+                            <TabPanel value="Details">
+                                <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
+                                    <!-- Description -->
+                                    <div class="lg:col-span-2">
+                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
+                                        <div
+                                            class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
+                                            v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
+                                        />
+                                    </div>
+        
+                                    <!-- Sidebar Info -->
+                                    <div class="flex flex-col gap-6">
+                                        <div>
+                                            <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
+                                            <div class="flex flex-col gap-3">
+                                                <div class="flex items-start justify-between">
+                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                        {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-start justify-between">
+                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                        {{ moment(props.project.updated_at).fromNow() }}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </TabPanel>
-
-                        <TabPanel header="Team">
-                            <div class="py-4">
-                                <MembersTable
-                                    :projectId="props.project.id"
-                                    :members="props.members"
-                                    :roles="props.roles"
-                                    :users="props.users"
-                                    @add="openAdd"
-                                    @edit="openEdit"
-                                />
-                            </div>
-                        </TabPanel>
-                    </TabView>
+                            </TabPanel>
+        
+                            <TabPanel value="Team">
+                                <div class="py-4">
+                                    <MembersTable
+                                        :projectId="props.project.id"
+                                        :members="props.members"
+                                        :roles="props.roles"
+                                        :users="props.users"
+                                        @add="openAdd"
+                                        @edit="openEdit"
+                                    />
+                                </div>
+                            </TabPanel>
+                        </TabPanels>
+                    </Tabs>
                 </template>
             </Card>
         </div>

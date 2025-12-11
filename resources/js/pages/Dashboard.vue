@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import type { BreadcrumbItem, Project, Task } from '@/types';
+import type { BreadcrumbItem, Project } from '@/types';
+import type { Task } from './project';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 

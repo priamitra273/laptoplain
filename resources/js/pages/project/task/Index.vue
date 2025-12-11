@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
 import Tag from 'primevue/tag';
@@ -177,14 +178,10 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                     <!-- Left: Search & Filters -->
                     <div class="flex w-full flex-wrap items-center gap-3">
                         <!-- Search -->
-                        <InputText v-model="searchQuery" placeholder="Search assignments..." class="min-w-[200px] flex-1 sm:w-80">
-                            <template #prefix>
-                                <i class="pi pi-search text-gray-400"></i>
-                            </template>
-                        </InputText>
+                        <InputText v-model="searchQuery" placeholder="Search assignments..." class="min-w-[200px] flex-1 sm:w-80" />
 
                         <!-- Filters -->
-                        <Dropdown
+                        <Select
                             v-model="filterStatus"
                             :options="statusOptions"
                             optionLabel="label"
@@ -193,7 +190,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                             :showClear="true"
                             class="w-36"
                         />
-                        <Dropdown
+                        <Select
                             v-model="filterPriority"
                             :options="priorityOptions"
                             optionLabel="label"
@@ -202,7 +199,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                             :showClear="true"
                             class="w-36"
                         />
-                        <Dropdown
+                        <Select
                             v-model="filterType"
                             :options="typeOptions"
                             optionLabel="label"

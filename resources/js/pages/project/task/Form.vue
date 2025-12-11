@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { InertiaForm, useForm } from '@inertiajs/vue3';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Calendar from 'primevue/calendar';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
-import AutoComplete from 'primevue/autocomplete';
 import Textarea from 'primevue/textarea';
 import Toast from 'primevue/toast';
+import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
-import type { ProjectMember, Task, TaskPriority, TaskStatus, TaskType, Tag } from '..';
+import type { ProjectMember, TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
     parentId: string | null;
@@ -21,7 +22,7 @@ interface Props {
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
-    tags: Tag[];
+    tags: TagData[];
     members: ProjectMember[];
 }
 
@@ -42,12 +43,12 @@ interface Form {
     unassign_users: string[];
     add_tag: {
         new: {
-            name: string
-            severity: string
-        }[],
-        exists: string[]
+            name: string;
+            severity: string;
+        }[];
+        exists: string[];
     };
-    remove_tag: string[]
+    remove_tag: string[];
     [key: string]: any;
 }
 
@@ -95,14 +96,14 @@ const form: InertiaForm<Form> = useForm({
     unassign_users: [],
     add_tag: {
         new: [],
-        exists: []
+        exists: [],
     },
-    remove_tag: []
+    remove_tag: [],
 });
 
-const tagOptions = computed<Tag[]>(() => props.tags);
-const selectedTags = ref<Tag[]>([]);
-const filteredTags = ref<Tag[]>([]);
+const tagOptions = computed<TagData[]>(() => props.tags);
+const selectedTags = ref<TagData[]>([]);
+const filteredTags = ref<TagData[]>([]);
 
 watch(
     () => props.task?.tags,
@@ -110,29 +111,47 @@ watch(
         if (tags && Array.isArray(tags)) {
             // masuk ke selectedTags
             selectedTags.value = tags.map((t) => ({
-                id: t.id,            // hashed id
+                id: t.id, // hashed id
                 name: t.name,
-                severity: t.severity ?? ''
+                severity: t.severity ?? '',
             }));
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 // === SEARCH MIRIP PRIMEVUE EXAMPLE ===
 const search = (event: any) => {
     const query = event.query.trim().toLowerCase();
 
+    // Jika query kosong → tampilkan semua yang belum dipilih
     if (!query.length) {
-        filteredTags.value = [...tagOptions.value];
+        filteredTags.value = tagOptions.value.filter((tag) => !selectedTags.value.some((sel) => sel.id === tag.id));
         return;
     }
 
-    filteredTags.value = tagOptions.value.filter(tag =>
-        tag.name.toLowerCase().includes(query)
-    ).filter(tag =>
-        !selectedTags.value.some(sel => sel.id === tag.id)
-    );
+    // Filter tag yang cocok dengan query dan belum dipilih
+    let result = tagOptions.value
+        .filter((tag) => tag.name.toLowerCase().includes(query))
+        .filter((tag) => !selectedTags.value.some((sel) => sel.id === tag.id));
+
+    // Cek apakah nama sudah ada di existing atau selected
+    const existsInExisting = tagOptions.value.some((tag) => tag.name.toLowerCase() === query);
+    const existsInSelected = selectedTags.value.some((tag) => tag.name.toLowerCase() === query);
+
+    // Jika belum ada → tambahkan opsi "tag baru"
+    if (!existsInExisting && !existsInSelected) {
+        const newTag = {
+            id: '',
+            name: event.query.trim(),
+            severity: '', // dibiarkan kosong, akan diisi addNewTag
+        };
+
+        // Pastikan tag baru muncul di urutan paling atas
+        result = [newTag, ...result];
+    }
+
+    filteredTags.value = result;
 };
 
 // === ADD NEW TAG ===
@@ -140,31 +159,35 @@ const addNewTag = (event: any) => {
     const inputValue = event.target.value.trim();
     if (!inputValue) return;
 
+    const normalized = inputValue.toLowerCase();
+
     // Cek apakah nama sudah ada di existing
-    const existsInExisting = tagOptions.value.some(
-        tag => tag.name.toLowerCase() === inputValue.toLowerCase()
-    );
+    const existsInExisting = tagOptions.value.some((tag) => tag.name.toLowerCase() === normalized);
 
     // Cek apakah sudah dipilih
-    const existsInSelected = selectedTags.value.some(
-        tag => tag.name.toLowerCase() === inputValue.toLowerCase()
-    );
+    const existsInSelected = selectedTags.value.some((tag) => tag.name.toLowerCase() === normalized);
 
-    // random severity karena gak tau mekanisme buat nambah severity di input ini
-    const severities = ['primary', 'secondary', 'success', 'info', 'warn', 'danger', 'contrast']
-    const randomSeverity = severities[Math.floor(Math.random() * severities.length)];
-
-    if (!existsInExisting && !existsInSelected) {
-        const newTag: Tag = {
-            id: "",
-            name: inputValue,
-            severity: randomSeverity  // buat sekarang random aja dulu
-        };
-
-        selectedTags.value.push(newTag);
+    // Jika nama ada di existing → tidak membuat tag baru (pilih lewat click)
+    if (existsInExisting || existsInSelected) {
+        event.target.value = '';
+        return;
     }
 
-    event.target.value = "";  // reset input
+    // === Jika sampai sini, berarti user ingin membuat tag baru ===
+
+    // random severity → nanti bisa diganti dengan mekanisme input user
+    const severities = ['primary', 'secondary', 'success', 'info', 'warn', 'danger', 'contrast'];
+    const randomSeverity = severities[Math.floor(Math.random() * severities.length)];
+
+    const newTag: Tag = {
+        id: '',
+        name: inputValue,
+        severity: randomSeverity,
+    };
+
+    selectedTags.value.push(newTag);
+
+    event.target.value = ''; // reset input
 };
 
 const isEdit = computed(() => !!props.task);
@@ -177,16 +200,16 @@ const submit = () => {
     form.assign_users = selected.filter((id) => !existed.includes(id));
     form.unassign_users = existed.filter((id) => !selected.includes(id));
 
-    const oldTags = props?.task?.tags?.map(t => t.id) ?? [];
-    const tagExist = selectedTags.value.filter(t => t.id);
-    const tagExistIds = tagExist.map(t => t.id);
-    const addTagExist = tagExistIds.filter(id => !oldTags.includes(id));
-    const addTagNew = selectedTags.value.filter(t => !t.id);
-    const removeTags = oldTags.filter(id => !tagExistIds.includes(id));
+    const oldTags = props?.task?.tags?.map((t) => t.id) ?? [];
+    const tagExist = selectedTags.value.filter((t) => t.id);
+    const tagExistIds = tagExist.map((t) => t.id);
+    const addTagExist = tagExistIds.filter((id) => !oldTags.includes(id));
+    const addTagNew = selectedTags.value.filter((t) => !t.id);
+    const removeTags = oldTags.filter((id) => !tagExistIds.includes(id));
 
-    form.add_tag.new = addTagNew
-    form.add_tag.exists = addTagExist
-    form.remove_tag = removeTags
+    form.add_tag.new = addTagNew;
+    form.add_tag.exists = addTagExist;
+    form.remove_tag = removeTags;
 
     const param: any = { projectEncoded: props.projectId };
 
@@ -256,13 +279,13 @@ const hasChild = computed(() => {
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Start Date</label>
-                <Calendar class="w-full" v-model="form.start_date" dateFormat="yy-mm-dd" showIcon :class="{ 'p-invalid': form.errors.start_date }" />
+                <DatePicker class="w-full" v-model="form.start_date" dateFormat="yy-mm-dd" showIcon :class="{ 'p-invalid': form.errors.start_date }" />
                 <small v-if="form.errors.start_date" class="p-error text-red-500">{{ form.errors.start_date }}</small>
             </div>
 
             <div>
                 <label class="font-semibold">Due Date</label>
-                <Calendar
+                <DatePicker
                     class="w-full"
                     v-model="form.due_date"
                     dateFormat="yy-mm-dd"
@@ -278,7 +301,7 @@ const hasChild = computed(() => {
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
                 <label class="font-semibold">Type</label>
-                <Dropdown
+                <Select
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
@@ -286,13 +309,28 @@ const hasChild = computed(() => {
                     optionValue="id"
                     placeholder="Select Type"
                     :class="{ 'p-invalid': form.errors.type_id }"
-                />
+                >
+                    <!-- Komen dulu bentar, ntar dibenerin, jan diapus -->
+                    <!-- <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
+                        </div>
+                    </template> -->
+                </Select>
                 <small v-if="form.errors.type_id" class="p-error text-red-500">{{ form.errors.type_id }}</small>
             </div>
 
             <div>
                 <label class="font-semibold">Status</label>
-                <Dropdown
+                <Select
                     class="w-full"
                     v-model="form.status_id"
                     :options="props.taskStatuses"
@@ -306,7 +344,7 @@ const hasChild = computed(() => {
 
             <div>
                 <label class="font-semibold">Priority</label>
-                <Dropdown
+                <Select
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
@@ -318,7 +356,7 @@ const hasChild = computed(() => {
                 <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
             </div>
         </div>
-        
+
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
@@ -329,7 +367,16 @@ const hasChild = computed(() => {
                 @complete="search"
                 @keydown.enter.prevent="addNewTag"
                 fluid
-            />
+            >
+                <template #option="slotProps">
+                    <div class="flex items-center gap-2" :class="{ 'font-bold text-blue-600': slotProps.option.isNew }">
+                        <span v-if="!slotProps.option.id" class="font-bold">
+                            {{ slotProps.option.name }}
+                        </span>
+                        <span v-else>{{ slotProps.option.name }}</span>
+                    </div>
+                </template>
+            </AutoComplete>
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>
 
@@ -337,7 +384,7 @@ const hasChild = computed(() => {
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Archived</label>
-                <Dropdown
+                <Select
                     class="w-full"
                     v-model="form.is_archived"
                     :options="[

@@ -25,6 +25,7 @@ class TaskController extends Controller
             'priority:id,name,severity',
             'type:id,name,severity',
             'project:id,title',
+            'tags:id,name,severity',
             'subTaskRecursive'
         ])
             ->where(function ($query) use ($userId) {
@@ -55,7 +56,6 @@ class TaskController extends Controller
             'priorities' => $priorities->toArray(),
             'types' => $types->toArray(),
             'projects' => $projects->toArray(),
-
             'totalAssigned' => $totalAssigned,
         ];
 

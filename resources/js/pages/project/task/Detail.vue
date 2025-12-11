@@ -15,7 +15,6 @@ import { Comment, Tag as TagData } from '..';
 import CommentItem from './CommentItem.vue';
 
 const props = defineProps<{
-    currentUserId: string;
     task: any;
     project: any;
     subTasks: any[];
@@ -26,7 +25,6 @@ const props = defineProps<{
     types: any[];
     isPM: boolean;
     comments: Comment[];
-    tags: TagData[];
 }>();
 
 const newComment = ref('');

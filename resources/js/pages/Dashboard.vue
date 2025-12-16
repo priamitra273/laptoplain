@@ -61,6 +61,10 @@ const getRandomColor = (index: number) => {
 
 const viewAllProjects = () => router.get(route('project.index'));
 const viewAllTasks = () => router.get(route('task.index'));
+const calcProgress = (completed: number, total: number) => {
+    if (!total || total <= 0) return 0;
+    return Math.round((completed / total) * 100);
+};
 </script>
 
 <template>
@@ -89,9 +93,9 @@ const viewAllTasks = () => router.get(route('task.index'));
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold">{{ Math.round((taskStatistic.completed / props.stats.tasks.total) * 100) }}%</span>
+                                    <span class="font-semibold"> {{ calcProgress(taskStatistic.completed, props.stats.tasks.total) }}% </span>
                                 </div>
-                                <ProgressBar :value="(taskStatistic.completed / props.stats.tasks.total) * 100" :showValue="false" class="h-2" />
+                                <ProgressBar :value="calcProgress(taskStatistic.completed, props.stats.tasks.total)" :showValue="false" class="h-2" />
                             </div>
 
                             <div class="flex items-center gap-4 text-sm">
@@ -129,9 +133,13 @@ const viewAllTasks = () => router.get(route('task.index'));
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold">{{ Math.round((projectStatistic.completed / projectStatistic.total) * 100) }}%</span>
+                                    <span class="font-semibold"> {{ calcProgress(projectStatistic.completed, projectStatistic.total) }}% </span>
                                 </div>
-                                <ProgressBar :value="(projectStatistic.completed / projectStatistic.total) * 100" :showValue="false" class="h-2" />
+                                <ProgressBar
+                                    :value="calcProgress(projectStatistic.completed, projectStatistic.total)"
+                                    :showValue="false"
+                                    class="h-2"
+                                />
                             </div>
 
                             <div class="flex items-center gap-4 text-sm">

@@ -11,7 +11,7 @@ import { Comment } from '..';
 
 const props = defineProps<{
     comment: Comment;
-    taskId: number;
+    taskId: string;
     level?: number;
 }>();
 

@@ -19,11 +19,7 @@ return new class extends Migration
             $table->text('body');
             $table->string('reaction', 255)->nullable();
 
-            // Created by Deleted by and Updated by
             $table->foreignId('owned_id')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->string('deleted_by')->nullable();

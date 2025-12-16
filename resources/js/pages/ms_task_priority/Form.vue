@@ -2,7 +2,7 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { severityOptions } from '@/constants';
-import { TaskPriority, PrimeSeverity } from '@/types';
+import { TaskPriority, PrimeSeverity, SeverityOption } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
@@ -17,7 +17,7 @@ interface Props {
 interface TaskPriorityForm {
     _method: 'POST' | 'PUT';
     name: string;
-    severity: PrimeSeverity;
+    severity: PrimeSeverity | string;
     [key: string]: any;
 }
 
@@ -32,7 +32,7 @@ const visible = computed<boolean>({
     set: (newValue) => emits('update:visible', newValue),
 });
 
-const selectedSeverity = ref<PrimeSeverity | null>(null);
+const selectedSeverity = ref<SeverityOption | null>(null);
 
 const formHeader = computed(() => (props.value?.id ? 'Edit Task Priority' : 'Create New Task Priority'));
 
@@ -43,7 +43,7 @@ const form: InertiaForm<TaskPriorityForm> = useForm({
 });
 
 const save = (): void => {
-    if (selectedSeverity.value) form.severity = selectedSeverity.value;
+    if (selectedSeverity.value) form.severity = selectedSeverity.value.value;
 
     const url = props.value?.id ? route('task-priority.update', props.value.id) : route('task-priority.store');
 
@@ -65,9 +65,13 @@ const hide = (): void => {
     selectedSeverity.value = null;
 };
 
-const show = (): void => {
+const show = () => {
     form.name = props.value?.name ?? '';
-    selectedSeverity.value = props.value?.severity ?? null;
+    selectedSeverity.value = getSeverityByValue(props.value?.severity ?? '');
+};
+
+const getSeverityByValue = (value: PrimeSeverity | string): SeverityOption | null => {
+    return severityOptions.find((option) => option.value === value) || null;
 };
 
 for (const key in form.data()) {
@@ -93,11 +97,23 @@ for (const key in form.data()) {
                 <Select
                     v-model="selectedSeverity"
                     :options="severityOptions"
-                    optionLabel="label"
-                    optionValue="value"
                     placeholder="Select severity"
                     class="w-full"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag :value="slotProps.value.label" :severity="slotProps.value.value" />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class=" mx-auto" />
+                        </div>
+                    </template>
+                </Select>
                 <InputError :message="form.errors.severity" v-if="form.errors.severity" />
             </div>
         </form>

@@ -13,16 +13,16 @@ return new class extends Migration
     {
         Schema::create('ms_project_priority', function (Blueprint $table) {
             $table->id();
-            
             $table->string('name', 255)->nullable();
             $table->string('severity', 50)->nullable();
+            
+            $table->foreignId('owned_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->string('deleted_by')->nullable();
+            
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreignId('owned_id')->nullable()->constrained('users')->nullOnDelete();
         });
     }
 

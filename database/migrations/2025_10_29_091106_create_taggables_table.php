@@ -17,11 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('model_id');
             $table->foreignId('tag_id')->constrained('tags')->cascadeOnDelete();
 
-            // Created by Deleted by and Updated by
             $table->foreignId('owned_id')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();
-            // $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->string('deleted_by')->nullable();

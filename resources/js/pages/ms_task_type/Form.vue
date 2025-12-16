@@ -2,7 +2,7 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { severityOptions } from '@/constants';
-import { TaskType, PrimeSeverity } from '@/types';
+import { TaskType, PrimeSeverity, SeverityOption } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
@@ -17,7 +17,7 @@ interface Props {
 interface TaskTypeForm {
     _method: 'POST' | 'PUT';
     name: string;
-    severity: PrimeSeverity;
+    severity: PrimeSeverity | string;
     [key: string]: any;
 }
 
@@ -29,7 +29,7 @@ const visible = computed({
     set: (val) => emits('update:visible', val),
 });
 
-const selectedSeverity = ref<PrimeSeverity | null>(null);
+const selectedSeverity = ref<SeverityOption | null>(null);
 
 const form: InertiaForm<TaskTypeForm> = useForm({
     _method: 'POST',
@@ -40,7 +40,7 @@ const form: InertiaForm<TaskTypeForm> = useForm({
 const formHeader = computed(() => (props.value?.id ? 'Edit Task Type' : 'Create Task Type'));
 
 const save = () => {
-    if (selectedSeverity.value) form.severity = selectedSeverity.value;
+    if (selectedSeverity.value) form.severity = selectedSeverity.value.value;
 
     const url = props.value?.id ? route('task-type.update', props.value.id) : route('task-type.store');
 
@@ -58,7 +58,7 @@ const save = () => {
 const show = () => {
     form.name = props.value?.name ?? '';
     form.severity = props.value?.severity ?? '';
-    selectedSeverity.value = props.value?.severity ?? null;
+    selectedSeverity.value = getSeverityByValue(props.value?.severity ?? '');
 };
 
 const hide = () => {
@@ -67,7 +67,10 @@ const hide = () => {
     selectedSeverity.value = null;
 };
 
-// Hapus error saat user mengetik ulang
+const getSeverityByValue = (value: PrimeSeverity | string): SeverityOption | null => {
+    return severityOptions.find((option) => option.value === value) || null;
+};
+
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],
@@ -91,11 +94,23 @@ for (const key in form.data()) {
                 <Select
                     v-model="selectedSeverity"
                     :options="severityOptions"
-                    optionLabel="label"
-                    optionValue="value"
                     placeholder="Select severity"
                     class="w-full"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag :value="slotProps.value.label" :severity="slotProps.value.value" />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class=" mx-auto" />
+                        </div>
+                    </template>
+                </Select>
                 <InputError :message="form.errors.severity" />
             </div>
         </form>

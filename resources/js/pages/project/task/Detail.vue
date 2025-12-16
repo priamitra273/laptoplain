@@ -2,16 +2,18 @@
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
+
 import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
+import Breadcrumb from 'primevue/breadcrumb';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import Chip from 'primevue/chip';
 import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
-import { ref } from 'vue';
-import { Comment, Tag as TagData } from '..';
+
+import { computed, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
 
 const props = defineProps<{
@@ -19,24 +21,48 @@ const props = defineProps<{
     project: any;
     subTasks: any[];
     assignedUsers: any[];
-    assignableUsers: any[];
-    statuses: any[];
-    priorities: any[];
-    types: any[];
-    isPM: boolean;
-    comments: Comment[];
+    comments: any[];
 }>();
-
-const newComment = ref('');
 
 const currentUserId = usePage().props.auth.user.id;
 
-const goBack = () => {
-    router.visit(route('project.show', { encoded: props.project.id }));
+/* ========================
+   BREADCRUMB
+======================== */
+const breadcrumbItems = computed(() => [
+    {
+        label: 'Projects',
+        icon: 'pi pi-folder',
+        command: () => router.visit(route('projects.index')),
+    },
+    {
+        label: props.project.title,
+        icon: 'pi pi-folder-open',
+        command: () => router.visit(route('project.show', { encoded: props.project.id })),
+    },
+    {
+        label: props.task.title,
+        icon: 'pi pi-file',
+    },
+]);
+
+const breadcrumbHome = {
+    icon: 'pi pi-home',
+    command: () => router.visit(route('dashboard')),
 };
 
-const goToProject = () => props.project?.id && router.visit(route('project.show', { encoded: props.project.id }));
-const formatDate = (date: string | undefined) => (date ? moment(date).format('DD MMM YYYY') : '-');
+const formatDate = (date?: string) => (date ? moment(date).format('DD MMM YYYY') : '-');
+
+const goToProject = () => {
+    if (props.project?.id) {
+        router.visit(route('project.show', { encoded: props.project.id }));
+    }
+};
+
+/* ========================
+   COMMENTS
+======================== */
+const newComment = ref('');
 
 const submitComment = () => {
     if (!newComment.value.trim()) return;
@@ -64,6 +90,23 @@ const submitComment = () => {
 
     <AppLayout>
         <div class="flex flex-col gap-6 pb-8">
+            <!-- BREADCRUMB -->
+            <Card class="rounded-2xl border-0 shadow-md">
+                <template #content>
+                    <Breadcrumb :home="breadcrumbHome" :model="breadcrumbItems" class="border-none bg-transparent p-0 text-sm">
+                        <template #item="{ item, props }">
+                            <a
+                                v-bind="props.action"
+                                class="flex cursor-pointer items-center gap-1.5 text-gray-500 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                            >
+                                <i :class="item.icon" class="text-xs"></i>
+                                <span class="font-medium">{{ item.label }}</span>
+                            </a>
+                        </template>
+                    </Breadcrumb>
+                </template>
+            </Card>
+
             <!-- HEADER WITH GRADIENT -->
             <Card
                 class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
@@ -83,7 +126,6 @@ const submitComment = () => {
                                 </div>
                             </div>
                         </div>
-                        <Button label="Back" icon="pi pi-arrow-left" severity="secondary" class="shadow-md" outlined @click="goBack" />
                     </div>
                 </template>
             </Card>

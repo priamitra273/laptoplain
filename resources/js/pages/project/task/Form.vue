@@ -13,7 +13,7 @@ import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
-import type { ProjectMember, TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
     parentId: string | null;
@@ -179,7 +179,7 @@ const addNewTag = (event: any) => {
     const severities = ['primary', 'secondary', 'success', 'info', 'warn', 'danger', 'contrast'];
     const randomSeverity = severities[Math.floor(Math.random() * severities.length)];
 
-    const newTag: Tag = {
+    const newTag: TagData = {
         id: '',
         name: inputValue,
         severity: randomSeverity,
@@ -240,6 +240,10 @@ const submit = () => {
 const hasChild = computed(() => {
     return Boolean(props.task && Array.isArray(props.task.children) && props.task.children.length > 0);
 });
+
+const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[]) => {
+    return options.find((option) => option.id === id) || null;
+};
 </script>
 
 <template>
@@ -305,15 +309,16 @@ const hasChild = computed(() => {
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
-                    optionLabel="name"
                     optionValue="id"
                     placeholder="Select Type"
                     :class="{ 'p-invalid': form.errors.type_id }"
                 >
-                    <!-- Komen dulu bentar, ntar dibenerin, jan diapus -->
-                    <!-- <template #value="slotProps">
+                    <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
-                            <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                            <Tag 
+                                :value="getSelectValue(slotProps.value, props.taskTypes)?.name" 
+                                :severity="getSelectValue(slotProps.value, props.taskTypes)?.severity" 
+                            />
                         </div>
                         <span v-else>
                             {{ slotProps.placeholder }}
@@ -323,7 +328,7 @@ const hasChild = computed(() => {
                         <div class="flex w-full">
                             <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
                         </div>
-                    </template> -->
+                    </template>
                 </Select>
                 <small v-if="form.errors.type_id" class="p-error text-red-500">{{ form.errors.type_id }}</small>
             </div>
@@ -334,11 +339,27 @@ const hasChild = computed(() => {
                     class="w-full"
                     v-model="form.status_id"
                     :options="props.taskStatuses"
-                    optionLabel="name"
                     optionValue="id"
                     placeholder="Select Status"
                     :class="{ 'p-invalid': form.errors.status_id }"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag 
+                                :value="getSelectValue(slotProps.value, props.taskStatuses)?.name" 
+                                :severity="getSelectValue(slotProps.value, props.taskStatuses)?.severity" 
+                            />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
+                        </div>
+                    </template>
+                </Select>
                 <small v-if="form.errors.status_id" class="p-error text-red-500">{{ form.errors.status_id }}</small>
             </div>
 
@@ -348,11 +369,27 @@ const hasChild = computed(() => {
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
-                    optionLabel="name"
                     optionValue="id"
                     placeholder="Select Priority"
                     :class="{ 'p-invalid': form.errors.priority_id }"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag 
+                                :value="getSelectValue(slotProps.value, props.taskPriorities)?.name" 
+                                :severity="getSelectValue(slotProps.value, props.taskPriorities)?.severity" 
+                            />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
+                        </div>
+                    </template>
+                </Select>
                 <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
             </div>
         </div>

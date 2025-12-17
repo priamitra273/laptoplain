@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
@@ -11,8 +13,6 @@ import Tab from 'primevue/tab';
 import TabList from 'primevue/tablist';
 import TabPanel from 'primevue/tabpanel';
 import Tabs from 'primevue/tabs';
-import emojiData from 'emoji-mart-vue-fast/data/all.json';
-import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import Tag from 'primevue/tag';
 import { ref } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
@@ -225,7 +225,7 @@ const goBack = () => {
                                     />
                                 </div>
                             </TabPanel>
-        
+
                             <TabPanel value="Details">
                                 <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
                                     <!-- Description -->
@@ -236,7 +236,7 @@ const goBack = () => {
                                             v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
                                         />
                                     </div>
-        
+
                                     <!-- Sidebar Info -->
                                     <div class="flex flex-col gap-6">
                                         <div>
@@ -259,7 +259,7 @@ const goBack = () => {
                                     </div>
                                 </div>
                             </TabPanel>
-        
+
                             <TabPanel value="Team">
                                 <div class="py-4">
                                     <MembersTable
@@ -305,6 +305,7 @@ const goBack = () => {
                 :tags="props.tags"
                 :editTask="selectedTask"
                 :members="props.members"
+                :isPM="props.isPM"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;

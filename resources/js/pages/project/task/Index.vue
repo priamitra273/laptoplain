@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import Dropdown from 'primevue/dropdown';
-import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
+import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { computed, onMounted, ref, watch } from 'vue';
 
@@ -166,12 +166,8 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
 <template>
     <Head title="Tasks" />
     <AppLayout>
-        <div class="p-4">
-            <div class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Tasks</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage and track your work items - {{ CurrentUser?.name || 'User' }}</p>
-            </div>
-
+        <div class="space-y-6 p-4">
+            <Heading title="My Task" :description="`Manage and track your work items - ${CurrentUser?.name ?? 'User'}`" />
             <div class="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <!-- Toolbar -->
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

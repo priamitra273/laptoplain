@@ -42,7 +42,6 @@ class TaskController extends Controller
                 return $task;
             });
 
-        // Hitung jumlah task yang di-assign ke user saat ini
         $totalAssigned = $tasks->where('is_assigned', true)->count();
 
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
@@ -61,10 +60,6 @@ class TaskController extends Controller
 
         return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($response));
     }
-
-
-
-
 
     public function store(TaskStoreRequest $request, string $encoded)
     {
@@ -88,7 +83,7 @@ class TaskController extends Controller
 
             $addTagNew[] = $tag->id;
         }
-        
+
         unset($validated['assign_users'], $validated['add_tag']);
 
         $task = Task::create($validated);
@@ -105,7 +100,6 @@ class TaskController extends Controller
             $task->tags()->syncWithoutDetaching($addTagNew);
         }
 
-        // Hitung progress parent task
         $parent = $task->parent;
         while ($parent) {
             $parent->update([
@@ -114,7 +108,6 @@ class TaskController extends Controller
             $parent = $parent->parent;
         }
 
-        // Buat notifikasi ke user yang diassign
         if (!empty($assignUserIds)) {
             $notification = Notification::create([
                 'task_id' => $task->id,
@@ -207,12 +200,10 @@ class TaskController extends Controller
         // HANDLE TAGGING
         // ==============================
 
-        // 1. Add existing tags
         if (!empty($data['add_tag']['exists'])) {
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
         }
 
-        // 2. Add new tags
         $newTagIds = [];
         foreach ($data['add_tag']['new'] ?? [] as $newTag) {
             $tag = Tag::create([
@@ -227,22 +218,20 @@ class TaskController extends Controller
             $task->tags()->syncWithoutDetaching($newTagIds);
         }
 
-        // 3. Remove tags
         if (!empty($data['remove_tag'])) {
             $task->tags()->detach($data['remove_tag']);
         }
 
         unset(
-            $data['assign_users'], 
-            $data['unassign_users'], 
-            $data['add_tag'], 
-            $data['remove_tag'], 
+            $data['assign_users'],
+            $data['unassign_users'],
+            $data['add_tag'],
+            $data['remove_tag'],
             $data['parent_id']
         );
 
         $task->update($data);
 
-        // Buat notifikasi
         $notification = Notification::create([
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
@@ -258,7 +247,6 @@ class TaskController extends Controller
             $notification->users()->attach($userId, ['is_read' => false]);
         }
 
-        // Assign / unassign users
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
         }
@@ -266,7 +254,6 @@ class TaskController extends Controller
             $task->users()->detach($unassignUserIds);
         }
 
-        // Hitung progress parent jika task child
         $hasChildren = $task->children()->exists();
         if (!$hasChildren && isset($data['progress'])) {
             $parent = $task->parent;
@@ -276,7 +263,10 @@ class TaskController extends Controller
             }
         }
 
-        return to_route('project.show', ['encoded' => $encoded])
+        $redirectTo = $request->input('redirect_to')
+            ?? route('task.show', Sqids::encode($task->id));
+
+        return redirect($redirectTo)
             ->with('success', 'Task updated successfully');
     }
 

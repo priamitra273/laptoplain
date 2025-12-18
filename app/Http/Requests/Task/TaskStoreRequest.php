@@ -21,33 +21,53 @@ class TaskStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $isCreate = $this->isMethod('post');
+
         return [
-            'project_id'        => 'required|exists:projects,id',
-            'parent_id'         => 'nullable|exists:tasks,id',
-            'status_id'         => 'required|exists:ms_task_statuses,id',
-            'priority_id'       => 'required|exists:ms_task_priorities,id',
-            'type_id'           => 'required|exists:ms_task_types,id',
-            'owned_id'          => 'nullable|exists:users,id',
-            'emoji'             => 'nullable|string|max:100',
-            'title'             => 'required|string|max:255',
-            'description'       => 'required|nullable|string',
-            'start_date'        => 'required|nullable|date',
-            'due_date'          => 'required|nullable|date|after_or_equal:start_date',
-            'progress'          => 'nullable|numeric|min:0|max:100',
-            'sequence_number'   => 'nullable|integer',
-            'is_archived'       => 'boolean',
-            'assign_users'      => 'required|array|min:1',
-            'assign_users.*'    => 'required|exists:users,id',
-            'unassign_users'    => 'array',
-            'unassign_users.*'  => 'required|exists:users,id',
-            'add_tag'           => 'array',
-            'add_tag.exists'    => 'array',
-            'add_tag.exists.*'  => 'required|exists:tags,id',
-            'add_tag.new'       => 'array',
-            'add_tag.new.*.name'    => 'required|string|max:255',
-            'add_tag.new.*.severity'    => 'nullable|string|max:50',
-            'remove_tag'        => 'array',
-            'remove_tag.*'      => 'required|exists:tags,id',
+            'project_id' => $isCreate
+                ? 'required|exists:projects,id'
+                : 'sometimes|exists:projects,id',
+
+            'parent_id' => 'sometimes|nullable|exists:tasks,id',
+
+            'status_id'   => 'required|exists:ms_task_statuses,id',
+            'priority_id' => 'required|exists:ms_task_priorities,id',
+            'type_id'     => 'required|exists:ms_task_types,id',
+
+            'owned_id' => 'sometimes|exists:users,id',
+
+            'emoji' => 'nullable|string|max:100',
+            'title' => 'required|string|max:255',
+
+            'description' => 'nullable|string',
+
+            'start_date' => 'nullable|date',
+            'due_date'   => 'nullable|date|after_or_equal:start_date',
+
+            'progress' => 'nullable|numeric|min:0|max:100',
+
+            'sequence_number' => 'nullable|integer',
+            'is_archived'     => 'boolean',
+
+            'assign_users' => $isCreate
+                ? 'required|array|min:1'
+                : 'sometimes|array',
+
+            'assign_users.*' => 'exists:users,id',
+
+            'unassign_users'   => 'sometimes|array',
+            'unassign_users.*' => 'exists:users,id',
+
+            'add_tag'          => 'sometimes|array',
+            'add_tag.exists'   => 'sometimes|array',
+            'add_tag.exists.*' => 'exists:tags,id',
+
+            'add_tag.new' => 'sometimes|array',
+            'add_tag.new.*.name'     => 'required|string|max:255',
+            'add_tag.new.*.severity' => 'nullable|string|max:50',
+
+            'remove_tag'   => 'sometimes|array',
+            'remove_tag.*' => 'exists:tags,id',
         ];
     }
 

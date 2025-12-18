@@ -180,20 +180,9 @@ class Task extends Model
 
     public function calculateProgress(): float
     {
-        if ($this->children()->count() === 0) {
-            return (float) $this->progress;
-        }
+        $avg = $this->children()->avg('progress');
 
-        $children = $this->children()->get(['id', 'progress']);
-
-        if ($children->isEmpty()) {
-            return (float) $this->progress;
-        }
-
-        $total = $children->sum('progress');
-        $count = $children->count();
-
-        return round($total / $count, 2);
+        return round($avg ?? (float) $this->progress, 2);
     }
 
     public function assignUser($userId)

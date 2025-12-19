@@ -3,12 +3,12 @@ import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
+import Editor from 'primevue/editor';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
-import Textarea from 'primevue/textarea';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
@@ -24,7 +24,7 @@ interface Props {
     taskPriorities: TaskPriority[];
     tags: TagData[];
     members: ProjectMember[];
-    isPM?: boolean; // Tambahkan prop isPM
+    isPM?: boolean;
 }
 
 interface Form {
@@ -63,7 +63,7 @@ const toDate = (value?: string | null): Date | null => (value ? new Date(value) 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
 const props = withDefaults(defineProps<Props>(), {
-    isPM: false, // Default false jika tidak ada
+    isPM: false,
 });
 
 const emit = defineEmits(['close', 'saved']);
@@ -75,7 +75,6 @@ const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
 
-// Computed untuk menentukan apakah field assignment disabled
 const isAssignmentDisabled = computed(() => !props.isPM);
 
 watch(
@@ -186,7 +185,6 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
-    // Hanya proses assign/unassign jika user adalah PM
     if (props.isPM) {
         const existed = existedMembers.value.map((u) => u.id);
         const selected = selectedMembers.value.map((u) => u.id);
@@ -194,7 +192,6 @@ const submit = () => {
         form.assign_users = selected.filter((id) => !existed.includes(id));
         form.unassign_users = existed.filter((id) => !selected.includes(id));
     } else {
-        // Jika bukan PM, kosongkan array assign/unassign
         form.assign_users = [];
         form.unassign_users = [];
     }
@@ -236,6 +233,21 @@ const submit = () => {
     }
 };
 
+const onProgressChange = (val: number | null) => {
+    if (val === null) {
+        form.progress_value = 0;
+        return;
+    }
+
+    if (val > 100) {
+        form.progress_value = 100;
+    } else if (val < 0) {
+        form.progress_value = 0;
+    } else {
+        form.progress_value = val;
+    }
+};
+
 const hasChild = computed(() => {
     return Boolean(props.task && Array.isArray(props.task.children) && props.task.children.length > 0);
 });
@@ -254,14 +266,42 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <small v-if="form.errors.title" class="p-error text-red-500">{{ form.errors.title }}</small>
         </div>
 
-        <!-- DESCRIPTION -->
+        <!-- DESCRIPTION WITH EDITOR -->
         <div>
             <label class="font-semibold">Description</label>
-            <Textarea v-model="form.description" rows="4" class="w-full" :class="{ 'p-invalid': form.errors.description }" />
+            <Editor v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
+                <template #toolbar>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button>
+                        <button class="ql-italic"></button>
+                        <button class="ql-underline"></button>
+                        <button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-header">
+                            <option value="1">Heading 1</option>
+                            <option value="2">Heading 2</option>
+                            <option value="3">Heading 3</option>
+                            <option selected></option>
+                        </select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-list" value="ordered"></button>
+                        <button class="ql-list" value="bullet"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                        <button class="ql-code-block"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-clean"></button>
+                    </span>
+                </template>
+            </Editor>
             <small v-if="form.errors.description" class="p-error text-red-500">{{ form.errors.description }}</small>
         </div>
 
-        <!-- ASSIGNED MEMBERS - DISABLED JIKA BUKAN PM -->
+        <!-- ASSIGNED MEMBERS -->
         <div class="flex flex-col">
             <label class="font-semibold">
                 Assigned Member
@@ -403,6 +443,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </div>
         </div>
 
+        <!-- TAGS -->
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
@@ -448,9 +489,14 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     v-model="form.progress_value"
                     class="w-full"
                     placeholder="0 - 100"
+                    :min="0"
+                    :max="100"
+                    showButtons
                     :disabled="hasChild"
-                    :class="{ 'p-invalid': form.errors.progress }"
+                    @update:modelValue="onProgressChange"
+                    :class="{ 'p-invalid': form.errors.progress_value }"
                 />
+
                 <small v-if="form.errors.progress" class="p-error text-red-500">{{ form.errors.progress }}</small>
             </div>
         </div>

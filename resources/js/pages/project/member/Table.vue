@@ -13,6 +13,8 @@ interface Props {
     members: ProjectMember[];
     roles: { id: string; name: string }[];
     users: { id: string; name: string }[];
+    isPM: boolean;
+    isAdmin: boolean;
 }
 
 const props = defineProps<Props>();
@@ -66,7 +68,8 @@ const remove = (member: ProjectMember) => {
 
     <div class="mb-4 flex items-center justify-between">
         <h3 class="text-lg font-semibold">Members</h3>
-        <Button label="Add Member" icon="pi pi-plus" @click="emit('add')" />
+        <!-- Hanya tampilkan tombol Add Member jika isPM atau isAdmin true -->
+        <Button v-if="props.isPM || props.isAdmin" label="Add Member" icon="pi pi-plus" @click="emit('add')" />
     </div>
 
     <div class="w-full overflow-x-auto">
@@ -99,7 +102,8 @@ const remove = (member: ProjectMember) => {
                 </template>
             </Column>
 
-            <Column header="Action" class="w-28 text-center">
+            <!-- Hanya tampilkan kolom Action jika isPM atau isAdmin true -->
+            <Column v-if="props.isPM || props.isAdmin" header="Action" class="w-28 text-center">
                 <template #body="{ data }">
                     <div class="flex items-center justify-center gap-1">
                         <Button icon="pi pi-pencil" size="small" text @click="emit('edit', data)" />

@@ -81,10 +81,16 @@ class ProjectController extends Controller
             ->unique('id')
             ->values();
 
+        $currentUser = Auth::user();
+
+        $isAdmin = $currentUser->hasAnyRole(['admin-it', 'Admin', 'admin', 'Administrator', 'administrator']);
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
             ->where('role.name', 'Project Manager')
             ->isNotEmpty();
+
+
+        $canManageMembers = $isAdmin || $isPM;
 
         $data = [
             'project' => $projectArr,
@@ -97,7 +103,9 @@ class ProjectController extends Controller
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers->toArray(),
-            'isPM' => $isPM
+            'isAdmin' => $isAdmin,
+            'isPM' => $isPM,
+            'canManageMembers' => $canManageMembers
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

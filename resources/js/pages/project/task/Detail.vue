@@ -15,6 +15,8 @@ import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 
 import { computed, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
@@ -31,6 +33,7 @@ const props = defineProps<{
 }>();
 
 const currentUserId = usePage().props.auth.user.id;
+const toast = useToast();
 
 /* ========================
    BREADCRUMB
@@ -94,6 +97,18 @@ const cancelEdit = () => {
     editValue.value = null;
 };
 
+const getFieldLabel = (field: string): string => {
+    const labels: Record<string, string> = {
+        status_id: 'Status',
+        priority_id: 'Priority',
+        type_id: 'Type',
+        progress: 'Progress',
+        start_date: 'Start Date',
+        due_date: 'Due Date',
+    };
+    return labels[field] || field;
+};
+
 const saveEdit = (field: string) => {
     let valueToSave = editValue.value;
 
@@ -118,9 +133,21 @@ const saveEdit = (field: string) => {
         {
             onSuccess: () => {
                 cancelEdit();
+                toast.add({
+                    severity: 'success',
+                    summary: 'Update Successful',
+                    detail: `${getFieldLabel(field)} has been updated successfully`,
+                    life: 3000,
+                });
             },
-            onError: () => {
+            onError: (errors) => {
                 cancelEdit();
+                toast.add({
+                    severity: 'error',
+                    summary: 'Update Failed',
+                    detail: 'Failed to update task. Please try again.',
+                    life: 3000,
+                });
             },
         },
     );
@@ -146,6 +173,20 @@ const submitComment = () => {
             onSuccess: () => {
                 newComment.value = '';
                 router.reload({ only: ['comments'] });
+                toast.add({
+                    severity: 'success',
+                    summary: 'Comment Posted',
+                    detail: 'Your comment has been added successfully',
+                    life: 3000,
+                });
+            },
+            onError: () => {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Failed',
+                    detail: 'Failed to post comment. Please try again.',
+                    life: 3000,
+                });
             },
         },
     );
@@ -156,6 +197,8 @@ const submitComment = () => {
     <Head :title="`Task Detail - ${props.task.title}`" />
 
     <AppLayout>
+        <Toast />
+
         <div class="flex flex-col gap-6 pb-8">
             <!-- BREADCRUMB -->
             <Card class="rounded-2xl border-0 shadow-md">

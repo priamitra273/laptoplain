@@ -24,7 +24,6 @@ interface Props {
     taskPriorities: TaskPriority[];
     tags: TagData[];
     members: ProjectMember[];
-    isPM?: boolean;
 }
 
 interface Form {
@@ -62,9 +61,7 @@ const toDate = (value?: string | null): Date | null => (value ? new Date(value) 
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
-const props = withDefaults(defineProps<Props>(), {
-    isPM: false,
-});
+const props = defineProps<Props>();
 
 const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
@@ -74,8 +71,6 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
-
-const isAssignmentDisabled = computed(() => !props.isPM);
 
 watch(
     existedMembers,
@@ -185,16 +180,11 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
-    if (props.isPM) {
-        const existed = existedMembers.value.map((u) => u.id);
-        const selected = selectedMembers.value.map((u) => u.id);
+    const existed = existedMembers.value.map((u) => u.id);
+    const selected = selectedMembers.value.map((u) => u.id);
 
-        form.assign_users = selected.filter((id) => !existed.includes(id));
-        form.unassign_users = existed.filter((id) => !selected.includes(id));
-    } else {
-        form.assign_users = [];
-        form.unassign_users = [];
-    }
+    form.assign_users = selected.filter((id) => !existed.includes(id));
+    form.unassign_users = existed.filter((id) => !selected.includes(id));
 
     const oldTags = props?.task?.tags?.map((t) => t.id) ?? [];
     const tagExist = selectedTags.value.filter((t) => t.id);
@@ -303,10 +293,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
         <!-- ASSIGNED MEMBERS -->
         <div class="flex flex-col">
-            <label class="font-semibold">
-                Assigned Member
-                <span v-if="isAssignmentDisabled" class="ml-2 text-xs text-gray-500">(Only Project Manager can assign)</span>
-            </label>
+            <label class="font-semibold">Assigned Member</label>
             <MultiSelect
                 v-model="selectedMembers"
                 display="chip"
@@ -317,7 +304,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 :maxSelectedLabels="3"
                 class="w-full"
                 :class="{ 'p-invalid': form.errors.assign_users }"
-                :disabled="isAssignmentDisabled"
             />
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>

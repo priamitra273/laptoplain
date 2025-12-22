@@ -49,6 +49,7 @@ interface Props {
     tags: TagData[];
 
     isPM: boolean;
+    isAdmin: boolean;
 }
 
 const props = defineProps<Props>();
@@ -267,6 +268,8 @@ const goBack = () => {
                                         :members="props.members"
                                         :roles="props.roles"
                                         :users="props.users"
+                                        :isPM="props.isPM"
+                                        :isAdmin="props.isAdmin"
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />
@@ -305,7 +308,6 @@ const goBack = () => {
                 :tags="props.tags"
                 :editTask="selectedTask"
                 :members="props.members"
-                :isPM="props.isPM"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;

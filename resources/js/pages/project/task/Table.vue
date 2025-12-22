@@ -45,9 +45,17 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
-// Filter tasks based on search query
+// Filter and sort tasks based on search query (newest first)
 const filteredTasks = computed(() => {
     let tasks = formatTasks(props.tasks);
+
+    // Sort by created_at or updated_at (newest first)
+    tasks = tasks.sort((a, b) => {
+        const dateA = new Date(a.original.updated_at || a.original.created_at).getTime();
+        const dateB = new Date(b.original.updated_at || b.original.created_at).getTime();
+        return dateB - dateA; // Descending order (newest first)
+    });
+
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         tasks = tasks.filter(
@@ -112,14 +120,14 @@ const selectAll = () => {
         if (node.children) node.children.forEach(mark);
     };
 
-    filteredTasks.value.forEach(mark); // use filteredTasks for full visual select
-    selectedKey.value = { ...keys }; // trigger reactivity
+    filteredTasks.value.forEach(mark);
+    selectedKey.value = { ...keys };
 };
 
 // Clear selection
 const clearSelection = () => {
     selectedKey.value = {};
-    selectedKey.value = { ...selectedKey.value }; // trigger reactivity
+    selectedKey.value = { ...selectedKey.value };
 };
 
 // Remove selected tasks
@@ -151,7 +159,7 @@ const removeSelected = () => {
             });
 
             selectedKey.value = {};
-            selectedKey.value = { ...selectedKey.value }; // trigger reactivity
+            selectedKey.value = { ...selectedKey.value };
             toast.add({
                 severity: 'success',
                 summary: 'Success',

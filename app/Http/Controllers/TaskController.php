@@ -278,7 +278,21 @@ class TaskController extends Controller
         $taskId = Sqids::decode($taskEncoded);
         if (!$taskId) abort(404);
 
-        Task::findOrFail($taskId)->delete();
+        $task = Task::findOrFail($taskId);
+
+        $notification = Notification::create([
+            'task_id' => $task->id,
+            'task_status_id' => $task->status_id,
+            'task_type_id' => $task->type_id,
+            'message' => "Task '{$task->title}' telah dihapus"
+        ]);
+
+        $allUserIds = $task->users()->pluck('users.id')->toArray();
+        foreach (array_unique($allUserIds) as $userId) {
+            $notification->users()->attach($userId, ['is_read' => false]);
+        }
+
+        $task->delete();
 
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');

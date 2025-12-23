@@ -82,13 +82,23 @@ class ProjectController extends Controller
             ->values();
 
         $currentUser = Auth::user();
+        $currentUserId = Auth::id();
 
-        $isAdmin = $currentUser->hasAnyRole(['admin-it', 'Admin', 'admin', 'Administrator', 'administrator']);
+        // Check if user is admin
+        $isAdmin = $currentUser->roles->contains(function ($role) {
+            return stripos($role->name, 'admin-') === 0;
+        });
+
+        // Check if user is Project Manager
         $isPM = $project->projectMembers
-            ->where('user.id', Auth::id())
+            ->where('user.id', $currentUserId)
             ->where('role.name', 'Project Manager')
             ->isNotEmpty();
 
+        // Check if user is a member of the project
+        $isMember = $project->projectMembers
+            ->where('user.id', $currentUserId)
+            ->isNotEmpty();
 
         $canManageMembers = $isAdmin || $isPM;
 
@@ -105,6 +115,7 @@ class ProjectController extends Controller
             'assignableUsers' => $assignableUsers->toArray(),
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
+            'isMember' => $isMember, // Added this
             'canManageMembers' => $canManageMembers
         ];
 

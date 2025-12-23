@@ -66,6 +66,16 @@ class TaskController extends Controller
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
 
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($projectId);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
+
         $validated = $request->validated();
         $validated['project_id'] = $projectId;
         $validated['parent_id'] = $validated['parent_id'] ?? null;
@@ -165,6 +175,10 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
+        $isMember = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->isNotEmpty();
+
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
             ->where('role.name', 'Project Manager')
@@ -180,6 +194,7 @@ class TaskController extends Controller
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isPM' => $isPM,
+            'isMember' => $isMember,
             'comments' => $task->comments?->toArray() ?? [],
         ];
 
@@ -190,6 +205,16 @@ class TaskController extends Controller
     {
         $taskId = Sqids::decode($taskEncoded);
         $task = Task::findOrFail($taskId);
+
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($task->project_id);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
 
         $data = $request->validated();
 
@@ -279,6 +304,16 @@ class TaskController extends Controller
         if (!$taskId) abort(404);
 
         $task = Task::findOrFail($taskId);
+
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($task->project_id);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
 
         $notification = Notification::create([
             'task_id' => $task->id,

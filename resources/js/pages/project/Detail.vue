@@ -8,13 +8,17 @@ import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Dialog from 'primevue/dialog';
 import ProgressBar from 'primevue/progressbar';
 import Tab from 'primevue/tab';
 import TabList from 'primevue/tablist';
 import TabPanel from 'primevue/tabpanel';
+import TabPanels from 'primevue/tabpanels';
 import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
-import { ref } from 'vue';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
@@ -47,12 +51,17 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     tags: TagData[];
+    assignableUsers: { id: string; name: string; email?: string }[];
 
     isPM: boolean;
     isAdmin: boolean;
+    isMember: boolean;
+    canManageMembers: boolean;
 }
 
 const props = defineProps<Props>();
+
+const toast = useToast();
 
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
@@ -69,11 +78,31 @@ const openEdit = (member: ProjectMember) => {
     selectedMember.value = member;
     visibleEdit.value = true;
 };
+
 const openTaskAdd = (parentId: string | null) => {
+    if (!props.isMember) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You must be a project member to create tasks',
+            life: 3000,
+        });
+        return;
+    }
     parentTaskId.value = parentId;
     visibleTaskAdd.value = true;
 };
+
 const openTaskEdit = (task: Task) => {
+    if (!props.isMember) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You must be a project member to edit tasks',
+            life: 3000,
+        });
+        return;
+    }
     selectedTask.value = task;
     visibleTaskAdd.value = true;
 };
@@ -97,6 +126,19 @@ const formatDate = (date: string | undefined) => {
 const goBack = () => {
     router.visit(route('project.index'));
 };
+
+// Convert assignableUsers to ProjectMember format for TaskForm
+const formattedMembers = computed(() => {
+    return props.assignableUsers.map((user) => ({
+        id: user.id,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email || '',
+        },
+        role: { id: '', name: '' },
+    }));
+});
 </script>
 
 <template>
@@ -127,7 +169,11 @@ const goBack = () => {
                         <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
                             {{ props.project.title }}
                         </h1>
-                        <p class="text-sm text-surface-600 dark:text-surface-400">Software project</p>
+                        <p class="text-sm text-surface-600 dark:text-surface-400">
+                            Software project
+                            <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"> <i class="pi pi-check-circle"></i> Member </span>
+                            <span v-else class="ml-2 text-gray-500 dark:text-gray-400"> <i class="pi pi-eye"></i> Viewer </span>
+                        </p>
                     </div>
                 </div>
 
@@ -223,6 +269,7 @@ const goBack = () => {
                                         @add="openTaskAdd"
                                         @edit="openTaskEdit"
                                         :isPM="props.isPM"
+                                        :isMember="props.isMember"
                                     />
                                 </div>
                             </TabPanel>
@@ -307,7 +354,8 @@ const goBack = () => {
                 :taskPriorities="props.taskPriorities"
                 :tags="props.tags"
                 :editTask="selectedTask"
-                :members="props.members"
+                :members="formattedMembers"
+                :isMember="props.isMember"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;
@@ -316,5 +364,8 @@ const goBack = () => {
                 @saved="router.reload({ only: ['tasks', 'project'] })"
             />
         </Dialog>
+
+        <!-- Toast -->
+        <Toast />
     </AppLayout>
 </template>

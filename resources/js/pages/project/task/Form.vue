@@ -24,7 +24,6 @@ interface Props {
     taskPriorities: TaskPriority[];
     tags: TagData[];
     members: ProjectMember[];
-    isMember?: boolean;
 }
 
 interface Form {
@@ -62,9 +61,7 @@ const toDate = (value?: string | null): Date | null => (value ? new Date(value) 
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
-const props = withDefaults(defineProps<Props>(), {
-    isMember: true,
-});
+const props = defineProps<Props>();
 
 const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
@@ -183,16 +180,6 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
-    if (!props.isMember) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Access Denied',
-            detail: 'You must be a project member to create or edit tasks',
-            life: 3000,
-        });
-        return;
-    }
-
     const existed = existedMembers.value.map((u) => u.id);
     const selected = selectedMembers.value.map((u) => u.id);
 
@@ -222,9 +209,6 @@ const submit = () => {
                 form.reset();
                 toast.add({ severity: 'success', summary: 'Success', detail: 'Task updated', life: 3000 });
             },
-            onError: () => {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update task', life: 3000 });
-            },
         });
     } else {
         form.post(route(routeName.value, param), {
@@ -234,9 +218,6 @@ const submit = () => {
                 emit('close');
                 form.reset();
                 toast.add({ severity: 'success', summary: 'Success', detail: 'Task added', life: 3000 });
-            },
-            onError: () => {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create task', life: 3000 });
             },
         });
     }
@@ -268,33 +249,17 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Warning message if not a member -->
-        <div v-if="!isMember" class="rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
-            <div class="flex items-center gap-2">
-                <i class="pi pi-exclamation-triangle text-yellow-600 dark:text-yellow-400"></i>
-                <span class="text-sm text-yellow-800 dark:text-yellow-200">
-                    You are not a member of this project. You cannot create or edit tasks.
-                </span>
-            </div>
-        </div>
-
         <!-- TITLE -->
         <div>
             <label class="font-semibold">Title</label>
-            <InputText
-                v-model="form.title"
-                class="w-full"
-                placeholder="Task title"
-                :class="{ 'p-invalid': form.errors.title }"
-                :disabled="!isMember"
-            />
+            <InputText v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
             <small v-if="form.errors.title" class="p-error text-red-500">{{ form.errors.title }}</small>
         </div>
 
         <!-- DESCRIPTION WITH EDITOR -->
         <div>
             <label class="font-semibold">Description</label>
-            <Editor v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }" :readonly="!isMember">
+            <Editor v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
                 <template #toolbar>
                     <span class="ql-formats">
                         <button class="ql-bold"></button>
@@ -339,7 +304,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 :maxSelectedLabels="3"
                 class="w-full"
                 :class="{ 'p-invalid': form.errors.assign_users }"
-                :disabled="!isMember"
             />
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>
@@ -354,7 +318,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     dateFormat="yy-mm-dd"
                     showIcon
                     :class="{ 'p-invalid': form.errors.start_date }"
-                    :disabled="!isMember"
                 />
                 <small v-if="form.errors.start_date" class="p-error text-red-500">{{ form.errors.start_date }}</small>
             </div>
@@ -368,7 +331,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     showIcon
                     :minDate="minDueDate"
                     :class="{ 'p-invalid': form.errors.due_date }"
-                    :disabled="!isMember"
                 />
                 <small v-if="form.errors.due_date" class="p-error text-red-500">{{ form.errors.due_date }}</small>
             </div>
@@ -385,7 +347,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     optionValue="id"
                     placeholder="Select Type"
                     :class="{ 'p-invalid': form.errors.type_id }"
-                    :disabled="!isMember"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -416,7 +377,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     optionValue="id"
                     placeholder="Select Status"
                     :class="{ 'p-invalid': form.errors.status_id }"
-                    :disabled="!isMember"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -447,7 +407,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     optionValue="id"
                     placeholder="Select Priority"
                     :class="{ 'p-invalid': form.errors.priority_id }"
-                    :disabled="!isMember"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -469,6 +428,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
             </div>
         </div>
+
         <!-- TAGS -->
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
@@ -480,7 +440,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 @complete="search"
                 @keydown.enter.prevent="addNewTag"
                 fluid
-                :disabled="!isMember"
             >
                 <template #option="slotProps">
                     <div class="flex items-center gap-2" :class="{ 'font-bold text-blue-600': slotProps.option.isNew }">
@@ -508,7 +467,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select Archived Status"
-                    :disabled="!isMember"
                 />
             </div>
             <div>
@@ -520,7 +478,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     :min="0"
                     :max="100"
                     showButtons
-                    :disabled="hasChild || !isMember"
+                    :disabled="hasChild"
                     @update:modelValue="onProgressChange"
                     :class="{ 'p-invalid': form.errors.progress_value }"
                 />
@@ -532,8 +490,8 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         <!-- ACTION BUTTONS -->
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
-            <Button v-if="!isEdit" label="Create Task" @click="submit" :disabled="!isMember" />
-            <Button v-else label="Update Task" severity="warning" @click="submit" :disabled="!isMember" />
+            <Button v-if="!isEdit" label="Create Task" @click="submit" />
+            <Button v-else label="Update Task" severity="warning" @click="submit" />
         </div>
 
         <!-- Toast -->

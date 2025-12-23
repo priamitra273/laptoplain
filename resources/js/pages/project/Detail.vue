@@ -137,7 +137,7 @@ const formattedMembers = computed(() => {
             email: user.email || '',
         },
         role: { id: '', name: '' },
-    }));
+    } as ProjectMember));
 });
 </script>
 

@@ -15,6 +15,7 @@ interface Props {
     projectId: string;
     tasks: Task[];
     isPM: boolean;
+    isMember: boolean;
 }
 
 const props = defineProps<Props>();
@@ -176,7 +177,7 @@ const removeSelected = () => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember">
                 <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
                 <Button
                     label="Select All"

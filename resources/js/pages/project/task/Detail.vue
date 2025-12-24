@@ -30,6 +30,7 @@ const props = defineProps<{
     statuses: any[];
     priorities: any[];
     types: any[];
+    isMember: boolean;
 }>();
 
 const currentUserId = usePage().props.auth.user.id;
@@ -81,6 +82,17 @@ const editingField = ref<string | null>(null);
 const editValue = ref<any>(null);
 
 const startEdit = (field: string, currentValue: any) => {
+    // Cek apakah user adalah member project
+    if (!props.isMember) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You must be a project member to edit this task',
+            life: 3000,
+        });
+        return;
+    }
+
     editingField.value = field;
 
     if (field === 'start_date' || field === 'due_date') {
@@ -279,7 +291,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'status_id'"
                                             @click="startEdit('status_id', props.task.status_id)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" class="w-full" />
                                         </div>
@@ -305,7 +322,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'priority_id'"
                                             @click="startEdit('priority_id', props.task.priority_id)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" class="w-full" />
                                         </div>
@@ -334,7 +356,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'type_id'"
                                             @click="startEdit('type_id', props.task.type_id)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" class="w-full" />
                                         </div>
@@ -360,7 +387,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'progress'"
                                             @click="startEdit('progress', props.task.progress)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <div class="flex items-center gap-2">
                                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -397,7 +429,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'start_date'"
                                             @click="startEdit('start_date', props.task.start_date)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.start_date) }}</p>
                                         </div>
@@ -418,7 +455,12 @@ const submitComment = () => {
                                         <div
                                             v-if="editingField !== 'due_date'"
                                             @click="startEdit('due_date', props.task.due_date)"
-                                            class="cursor-pointer rounded p-1 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            :class="[
+                                                props.isMember
+                                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    : 'cursor-not-allowed opacity-75',
+                                                'rounded p-1 transition-all',
+                                            ]"
                                         >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.due_date) }}</p>
                                         </div>

@@ -240,9 +240,9 @@ const removeSelected = () => {
                 <Column header="Actions">
                     <template #body="{ node }">
                         <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
-                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)"  v-if="isMember" />
-                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)"  v-if="isMember" />
-                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)"  v-if="isMember" />
+                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
+                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" v-if="isMember" />
+                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" v-if="isMember" />
                     </template>
                 </Column>
 

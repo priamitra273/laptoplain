@@ -65,6 +65,14 @@ const calcProgress = (completed: number, total: number) => {
     if (!total || total <= 0) return 0;
     return Math.round((completed / total) * 100);
 };
+
+const onTaskRowClick = (event: any) => {
+    router.visit(route('task.show', event.data.id));
+};
+const onProjectRowClick = (event: any) => {
+    router.visit(route('project.show', event.data.id));
+};
+
 </script>
 
 <template>
@@ -213,7 +221,14 @@ const calcProgress = (completed: number, total: number) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable :value="latestProjects" stripedRows responsiveLayout="scroll" class="text-sm">
+                    <DataTable 
+                        :value="latestProjects" 
+                        stripedRows 
+                        responsiveLayout="scroll" 
+                        class="text-sm cursor-pointer" 
+                        row-hover
+                        @row-click="onProjectRowClick"
+                    >
                         <Column field="title" header="Project" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="flex items-center gap-3">
@@ -247,7 +262,14 @@ const calcProgress = (completed: number, total: number) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable :value="latestTasks" stripedRows responsiveLayout="scroll" class="text-sm">
+                    <DataTable 
+                        :value="latestTasks" 
+                        stripedRows 
+                        responsiveLayout="scroll" 
+                        class="text-sm cursor-pointer" 
+                        row-hover
+                        @row-click="onTaskRowClick"
+                    >
                         <Column field="title" header="Task" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="font-semibold">{{ data.title }}</div>

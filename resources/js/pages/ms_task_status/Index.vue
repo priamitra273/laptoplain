@@ -3,6 +3,8 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { TaskStatus } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
 import TaskStatusTable from './Table.vue';
 
 interface Props {
@@ -22,5 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
             <Heading title="Task Status" description="Manage master data task status" />
             <TaskStatusTable :task_statuses="props.task_statuses" />
         </div>
+        <Toast />
+        <ConfirmDialog />
     </AppLayout>
 </template>

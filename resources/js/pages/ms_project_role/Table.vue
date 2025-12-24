@@ -6,7 +6,8 @@ import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
-import Swal from 'sweetalert2';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectRoleForm from './Form.vue';
 
@@ -24,6 +25,9 @@ const filters = ref({
 
 const visibleForm = ref<boolean>(false);
 const selected = ref<ProjectRole | undefined>(undefined);
+
+const confirm = useConfirm();
+const toast = useToast();
 
 const items: MenuItem[] = [
     {
@@ -43,24 +47,31 @@ const items: MenuItem[] = [
 ];
 
 const destroy = (project_role: ProjectRole) => {
-    Swal.fire({
-        icon: 'warning',
-        title: `Are you sure want to delete "${project_role.name}"?`,
-        text: 'This action cannot be undone!',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
+    confirm.require({
+        message: 'This action cannot be undone!',
+        header: `Are you sure want to delete "${project_role.name}"?`,
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
         },
-    }).then((result) => {
-        if (result.isConfirmed) {
+        acceptProps: {
+            label: 'Yes, Delete',
+            severity: 'danger',
+        },
+        accept: () => {
             router.delete(route('project-role.destroy', project_role.id), {
+                preserveScroll: true,
                 onSuccess: () => {
-                    Swal.fire('Deleted!', 'Project role has been deleted.', 'success');
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Deleted',
+                        detail: 'Data has been deleted successfully',
+                        life: 3000,
+                    });
                 },
             });
-        }
+        },
     });
 };
 

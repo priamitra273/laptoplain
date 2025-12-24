@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
+import { getSeverityLabel } from '@/constants';
 import { TaskPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
-import Swal from 'sweetalert2';
+import Tag from 'primevue/tag';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskPriorityForm from './Form.vue';
-import Tag from 'primevue/tag';
-import { getSeverityLabel } from '@/constants';
 
 interface Props {
     task_priorities?: TaskPriority[];
@@ -25,6 +26,9 @@ const filters = ref({
 
 const visibleForm = ref<boolean>(false);
 const selected = ref<TaskPriority | undefined>(undefined);
+
+const confirm = useConfirm();
+const toast = useToast();
 
 const items = [
     {
@@ -44,24 +48,31 @@ const items = [
 ];
 
 const destroy = (taskPriority: TaskPriority) => {
-    Swal.fire({
-        icon: 'warning',
-        title: `Are you sure want to delete "${taskPriority.name}"?`,
-        text: 'This action cannot be undone!',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
+    confirm.require({
+        message: 'This action cannot be undone!',
+        header: `Are you sure want to delete "${taskPriority.name}"?`,
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
         },
-    }).then((result) => {
-        if (result.isConfirmed) {
+        acceptProps: {
+            label: 'Delete',
+            severity: 'danger',
+        },
+        accept: () => {
             router.delete(route('task-priority.destroy', taskPriority.id), {
+                preserveScroll: true,
                 onSuccess: () => {
-                    Swal.fire('Deleted!', 'Task priority has been deleted.', 'success');
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Data has been deleted successfully',
+                        life: 3000,
+                    });
                 },
             });
-        }
+        },
     });
 };
 

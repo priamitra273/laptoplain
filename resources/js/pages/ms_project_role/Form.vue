@@ -4,7 +4,7 @@ import Label from '@/components/ui/label/Label.vue';
 import { ProjectRole } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
-import Swal from 'sweetalert2';
+import { useToast } from 'primevue/usetoast';
 import { computed } from 'vue';
 
 interface Props {
@@ -37,15 +37,24 @@ const form: InertiaForm<ProjectRoleForm> = useForm({
     name: '',
 });
 
+const toast = useToast();
+
 const save = () => {
     const url = props.value?.id ? route('project-role.update', props.value.id) : route('project-role.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
+    const isUpdate = props.value?.id ? true : false;
+
     form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
-            Swal.fire('Success', 'Data has been saved successfully', 'success');
+            toast.add({
+                severity: 'success',
+                summary: isUpdate ? 'Updated!' : 'Created!',
+                detail: isUpdate ? 'Project role has been updated successfully' : 'Project priority has been created successfully',
+                life: 3000,
+            });
             visible.value = false;
         },
     });

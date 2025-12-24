@@ -2,11 +2,11 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { severityOptions } from '@/constants';
-import { TaskPriority, PrimeSeverity, SeverityOption } from '@/types';
+import { PrimeSeverity, SeverityOption, TaskPriority } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
-import Swal from 'sweetalert2';
+import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 
 interface Props {
@@ -42,6 +42,8 @@ const form: InertiaForm<TaskPriorityForm> = useForm({
     severity: '',
 });
 
+const toast = useToast();
+
 const save = (): void => {
     if (selectedSeverity.value) form.severity = selectedSeverity.value.value;
 
@@ -49,10 +51,17 @@ const save = (): void => {
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
+    const isUpdate = props.value?.id ? true : false;
+
     form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
-            Swal.fire('Success', 'Successfully saved data', 'success');
+            toast.add({
+                severity: 'success',
+                summary: isUpdate ? 'Updated!' : 'Created!',
+                detail: isUpdate ? 'Project priority has been updated successfully' : 'Project priority has been created successfully',
+                life: 3000,
+            });
             visible.value = false;
         },
     });
@@ -94,12 +103,7 @@ for (const key in form.data()) {
 
             <div class="flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <Select
-                    v-model="selectedSeverity"
-                    :options="severityOptions"
-                    placeholder="Select severity"
-                    class="w-full"
-                >
+                <Select v-model="selectedSeverity" :options="severityOptions" placeholder="Select severity" class="w-full">
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
                             <Tag :value="slotProps.value.label" :severity="slotProps.value.value" />
@@ -110,7 +114,7 @@ for (const key in form.data()) {
                     </template>
                     <template #option="slotProps">
                         <div class="flex w-full">
-                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class=" mx-auto" />
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class="mx-auto" />
                         </div>
                     </template>
                 </Select>

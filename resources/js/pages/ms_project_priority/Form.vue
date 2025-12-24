@@ -2,11 +2,11 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { severityOptions } from '@/constants';
-import { ProjectPriority, PrimeSeverity, SeverityOption } from '@/types';
+import { PrimeSeverity, ProjectPriority, SeverityOption } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
-import Swal from 'sweetalert2';
+import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 
 interface Props {
@@ -24,6 +24,8 @@ interface ProjectPriorityForm {
 const props = defineProps<Props>();
 const emits = defineEmits<{ (event: 'update:visible', value: boolean): void }>();
 
+const toast = useToast();
+
 const visible = computed({
     get() {
         return props.visible;
@@ -35,9 +37,7 @@ const visible = computed({
 
 const selectedSeverity = ref<SeverityOption | null>(null);
 
-const formHeader = computed(() =>
-    props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority'
-);
+const formHeader = computed(() => (props.value?.id ? 'Edit Project Priority' : 'Create New Project Priority'));
 
 const form: InertiaForm<ProjectPriorityForm> = useForm({
     _method: 'POST',
@@ -48,16 +48,21 @@ const form: InertiaForm<ProjectPriorityForm> = useForm({
 const save = () => {
     if (selectedSeverity.value) form.severity = selectedSeverity.value.value;
 
-    const url = props.value?.id
-        ? route('project-priority.update', props.value.id)
-        : route('project-priority.store');
+    const url = props.value?.id ? route('project-priority.update', props.value.id) : route('project-priority.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
+
+    const isUpdate = props.value?.id ? true : false;
 
     form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
-            Swal.fire('Success', 'Data has been saved successfully', 'success');
+            toast.add({
+                severity: 'success',
+                summary: isUpdate ? 'Updated!' : 'Created!',
+                detail: isUpdate ? 'Project priority has been updated successfully' : 'Project priority has been created successfully',
+                life: 3000,
+            });
             visible.value = false;
         },
     });
@@ -89,14 +94,7 @@ for (const key in form.data()) {
 </script>
 
 <template>
-    <Drawer
-        v-model:visible="visible"
-        class="!w-full md:!w-[40vw]"
-        position="right"
-        :header="formHeader"
-        @show="show"
-        @after-hide="hide"
-    >
+    <Drawer v-model:visible="visible" class="!w-full md:!w-[40vw]" position="right" :header="formHeader" @show="show" @after-hide="hide">
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="name">Name</Label>
@@ -106,12 +104,7 @@ for (const key in form.data()) {
 
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <Select
-                    v-model="selectedSeverity"
-                    :options="severityOptions"
-                    placeholder="Select severity"
-                    class="w-full"
-                >
+                <Select v-model="selectedSeverity" :options="severityOptions" placeholder="Select severity" class="w-full">
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
                             <Tag :value="slotProps.value.label" :severity="slotProps.value.value" />
@@ -122,7 +115,7 @@ for (const key in form.data()) {
                     </template>
                     <template #option="slotProps">
                         <div class="flex w-full">
-                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class=" mx-auto" />
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class="mx-auto" />
                         </div>
                     </template>
                 </Select>

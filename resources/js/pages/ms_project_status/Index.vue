@@ -3,6 +3,8 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { MsProjectStatus } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
 import ProjectStatusTable from './Table.vue';
 
 interface Props {
@@ -23,5 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
 
             <ProjectStatusTable :statuses="props.statuses" />
         </div>
+        <Toast />
+        <ConfirmDialog />
     </AppLayout>
 </template>

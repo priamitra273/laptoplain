@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
+import { getSeverityLabel } from '@/constants';
 import { ProjectPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
-import Swal from 'sweetalert2';
+import Tag from 'primevue/tag';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectPriorityForm from './Form.vue';
-import Tag from 'primevue/tag';
-import { getSeverityLabel } from '@/constants';
 
 interface Props {
     project_priorities?: ProjectPriority[];
@@ -19,6 +20,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     project_priorities: () => [],
 });
+
+const confirm = useConfirm();
+const toast = useToast();
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -45,24 +49,30 @@ const items: MenuItem[] = [
 ];
 
 const destroy = (project_priority: ProjectPriority) => {
-    Swal.fire({
-        icon: 'warning',
-        title: `Are you sure want to delete "${project_priority.name}"?`,
-        text: 'This action cannot be undone!',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
+    confirm.require({
+        message: 'This action cannot be undone!',
+        header: `Are you sure want to delete "${project_priority.name}"?`,
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
         },
-    }).then((result) => {
-        if (result.isConfirmed) {
+        acceptProps: {
+            label: 'Delete',
+            severity: 'danger',
+        },
+        accept: () => {
             router.delete(route('project-priority.destroy', project_priority.id), {
                 onSuccess: () => {
-                    Swal.fire('Deleted!', 'Project priority has been deleted.', 'success');
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Deleted!',
+                        detail: 'Project priority has been deleted.',
+                        life: 3000,
+                    });
                 },
             });
-        }
+        },
     });
 };
 

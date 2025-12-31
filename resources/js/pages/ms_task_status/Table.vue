@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
+import { getSeverityLabel } from '@/constants';
 import { TaskStatus } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
-import Swal from 'sweetalert2';
+import Tag from 'primevue/tag';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskStatusForm from './Form.vue';
-import Tag from 'primevue/tag';
-import { getSeverityLabel } from '@/constants';
 
 interface Props {
     task_statuses?: TaskStatus[];
@@ -26,6 +27,9 @@ const filters = ref({
 
 const visibleForm = ref(false);
 const selected = ref<TaskStatus | undefined>(undefined);
+
+const confirm = useConfirm();
+const toast = useToast();
 
 const items: MenuItem[] = [
     {
@@ -44,24 +48,31 @@ const items: MenuItem[] = [
 ];
 
 const destroy = (task_status: TaskStatus) => {
-    Swal.fire({
-        icon: 'warning',
-        title: `Are you sure you want to delete "${task_status.name}"?`,
-        text: 'This action cannot be undone!',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
+    confirm.require({
+        message: 'This action cannot be undone!',
+        header: `Are you sure want to delete "${task_status.name}"?`,
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
         },
-    }).then(async (result) => {
-        if (result.isConfirmed) {
+        acceptProps: {
+            label: 'Yes, Delete it',
+            severity: 'danger',
+        },
+        accept: () => {
             router.delete(route('task-status.destroy', task_status.id), {
-                onSuccess() {
-                    Swal.fire('Deleted!', 'Task status has been deleted.', 'success');
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Deleted',
+                        detail: 'Data has been deleted successfully',
+                        life: 3000,
+                    });
                 },
             });
-        }
+        },
     });
 };
 

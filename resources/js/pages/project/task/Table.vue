@@ -15,6 +15,7 @@ interface Props {
     projectId: string;
     tasks: Task[];
     isPM: boolean;
+    isMember: boolean;
 }
 
 const props = defineProps<Props>();
@@ -45,9 +46,17 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
-// Filter tasks based on search query
+// Filter and sort tasks based on search query (newest first)
 const filteredTasks = computed(() => {
     let tasks = formatTasks(props.tasks);
+
+    // Sort by created_at or updated_at (newest first)
+    tasks = tasks.sort((a, b) => {
+        const dateA = new Date(a.original.updated_at || a.original.created_at).getTime();
+        const dateB = new Date(b.original.updated_at || b.original.created_at).getTime();
+        return dateB - dateA; // Descending order (newest first)
+    });
+
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         tasks = tasks.filter(
@@ -112,14 +121,14 @@ const selectAll = () => {
         if (node.children) node.children.forEach(mark);
     };
 
-    filteredTasks.value.forEach(mark); // use filteredTasks for full visual select
-    selectedKey.value = { ...keys }; // trigger reactivity
+    filteredTasks.value.forEach(mark);
+    selectedKey.value = { ...keys };
 };
 
 // Clear selection
 const clearSelection = () => {
     selectedKey.value = {};
-    selectedKey.value = { ...selectedKey.value }; // trigger reactivity
+    selectedKey.value = { ...selectedKey.value };
 };
 
 // Remove selected tasks
@@ -151,7 +160,7 @@ const removeSelected = () => {
             });
 
             selectedKey.value = {};
-            selectedKey.value = { ...selectedKey.value }; // trigger reactivity
+            selectedKey.value = { ...selectedKey.value };
             toast.add({
                 severity: 'success',
                 summary: 'Success',
@@ -168,7 +177,7 @@ const removeSelected = () => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember">
                 <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
                 <Button
                     label="Select All"
@@ -231,9 +240,9 @@ const removeSelected = () => {
                 <Column header="Actions">
                     <template #body="{ node }">
                         <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
-                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" />
-                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" />
-                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" />
+                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
+                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" v-if="isMember" />
+                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" v-if="isMember" />
                     </template>
                 </Column>
 

@@ -25,6 +25,7 @@ class TaskController extends Controller
             'priority:id,name,severity',
             'type:id,name,severity',
             'project:id,title',
+            'tags:id,name,severity',
             'subTaskRecursive'
         ])
             ->where(function ($query) use ($userId) {
@@ -41,7 +42,6 @@ class TaskController extends Controller
                 return $task;
             });
 
-        // Hitung jumlah task yang di-assign ke user saat ini
         $totalAssigned = $tasks->where('is_assigned', true)->count();
 
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
@@ -55,21 +55,26 @@ class TaskController extends Controller
             'priorities' => $priorities->toArray(),
             'types' => $types->toArray(),
             'projects' => $projects->toArray(),
-
             'totalAssigned' => $totalAssigned,
         ];
 
         return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
-
-
-
-
     public function store(TaskStoreRequest $request, string $encoded)
     {
         $projectId = Sqids::decode($encoded);
         if (!$projectId) abort(404);
+
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($projectId);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
 
         $validated = $request->validated();
         $validated['project_id'] = $projectId;
@@ -88,7 +93,7 @@ class TaskController extends Controller
 
             $addTagNew[] = $tag->id;
         }
-        
+
         unset($validated['assign_users'], $validated['add_tag']);
 
         $task = Task::create($validated);
@@ -105,7 +110,6 @@ class TaskController extends Controller
             $task->tags()->syncWithoutDetaching($addTagNew);
         }
 
-        // Hitung progress parent task
         $parent = $task->parent;
         while ($parent) {
             $parent->update([
@@ -114,7 +118,6 @@ class TaskController extends Controller
             $parent = $parent->parent;
         }
 
-        // Buat notifikasi ke user yang diassign
         if (!empty($assignUserIds)) {
             $notification = Notification::create([
                 'task_id' => $task->id,
@@ -172,6 +175,10 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
+        $isMember = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->isNotEmpty();
+
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
             ->where('role.name', 'Project Manager')
@@ -187,6 +194,7 @@ class TaskController extends Controller
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isPM' => $isPM,
+            'isMember' => $isMember,
             'comments' => $task->comments?->toArray() ?? [],
         ];
 
@@ -198,6 +206,16 @@ class TaskController extends Controller
         $taskId = Sqids::decode($taskEncoded);
         $task = Task::findOrFail($taskId);
 
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($task->project_id);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
+
         $data = $request->validated();
 
         $assignUserIds = $data['assign_users'] ?? [];
@@ -207,12 +225,10 @@ class TaskController extends Controller
         // HANDLE TAGGING
         // ==============================
 
-        // 1. Add existing tags
         if (!empty($data['add_tag']['exists'])) {
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
         }
 
-        // 2. Add new tags
         $newTagIds = [];
         foreach ($data['add_tag']['new'] ?? [] as $newTag) {
             $tag = Tag::create([
@@ -227,22 +243,20 @@ class TaskController extends Controller
             $task->tags()->syncWithoutDetaching($newTagIds);
         }
 
-        // 3. Remove tags
         if (!empty($data['remove_tag'])) {
             $task->tags()->detach($data['remove_tag']);
         }
 
         unset(
-            $data['assign_users'], 
-            $data['unassign_users'], 
-            $data['add_tag'], 
-            $data['remove_tag'], 
+            $data['assign_users'],
+            $data['unassign_users'],
+            $data['add_tag'],
+            $data['remove_tag'],
             $data['parent_id']
         );
 
         $task->update($data);
 
-        // Buat notifikasi
         $notification = Notification::create([
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
@@ -258,7 +272,6 @@ class TaskController extends Controller
             $notification->users()->attach($userId, ['is_read' => false]);
         }
 
-        // Assign / unassign users
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
         }
@@ -266,7 +279,6 @@ class TaskController extends Controller
             $task->users()->detach($unassignUserIds);
         }
 
-        // Hitung progress parent jika task child
         $hasChildren = $task->children()->exists();
         if (!$hasChildren && isset($data['progress'])) {
             $parent = $task->parent;
@@ -276,7 +288,10 @@ class TaskController extends Controller
             }
         }
 
-        return to_route('project.show', ['encoded' => $encoded])
+        $redirectTo = $request->input('redirect_to')
+            ?? route('task.show', Sqids::encode($task->id));
+
+        return redirect($redirectTo)
             ->with('success', 'Task updated successfully');
     }
 
@@ -288,7 +303,31 @@ class TaskController extends Controller
         $taskId = Sqids::decode($taskEncoded);
         if (!$taskId) abort(404);
 
-        Task::findOrFail($taskId)->delete();
+        $task = Task::findOrFail($taskId);
+
+        // Validasi: Cek apakah user adalah anggota project
+        $project = Project::with('projectMembers')->findOrFail($task->project_id);
+        $isMember = $project->projectMembers()
+            ->where('user_id', Auth::id())
+            ->exists();
+
+        if (!$isMember) {
+            return back()->with('error', 'You are not a member of this project');
+        }
+
+        $notification = Notification::create([
+            'task_id' => $task->id,
+            'task_status_id' => $task->status_id,
+            'task_type_id' => $task->type_id,
+            'message' => "Task '{$task->title}' telah dihapus"
+        ]);
+
+        $allUserIds = $task->users()->pluck('users.id')->toArray();
+        foreach (array_unique($allUserIds) as $userId) {
+            $notification->users()->attach($userId, ['is_read' => false]);
+        }
+
+        $task->delete();
 
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');

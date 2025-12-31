@@ -1,26 +1,32 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Dialog from 'primevue/dialog';
 import ProgressBar from 'primevue/progressbar';
+import Tab from 'primevue/tab';
+import TabList from 'primevue/tablist';
 import TabPanel from 'primevue/tabpanel';
-import TabView from 'primevue/tabview';
+import TabPanels from 'primevue/tabpanels';
+import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
-import { ref } from 'vue';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
-import { Emoji, EmojiIndex } from "emoji-mart-vue-fast/src";
-import emojiData from "emoji-mart-vue-fast/data/all.json";
 
-import "emoji-mart-vue-fast/css/emoji-mart.css";
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
 
 interface Props {
     project: {
@@ -45,11 +51,17 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     tags: TagData[];
+    assignableUsers: { id: string; name: string; email?: string }[];
 
     isPM: boolean;
+    isAdmin: boolean;
+    isMember: boolean;
+    canManageMembers: boolean;
 }
 
 const props = defineProps<Props>();
+
+const toast = useToast();
 
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
@@ -66,11 +78,31 @@ const openEdit = (member: ProjectMember) => {
     selectedMember.value = member;
     visibleEdit.value = true;
 };
+
 const openTaskAdd = (parentId: string | null) => {
+    if (!props.isMember) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You must be a project member to create tasks',
+            life: 3000,
+        });
+        return;
+    }
     parentTaskId.value = parentId;
     visibleTaskAdd.value = true;
 };
+
 const openTaskEdit = (task: Task) => {
+    if (!props.isMember) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You must be a project member to edit tasks',
+            life: 3000,
+        });
+        return;
+    }
     selectedTask.value = task;
     visibleTaskAdd.value = true;
 };
@@ -94,6 +126,19 @@ const formatDate = (date: string | undefined) => {
 const goBack = () => {
     router.visit(route('project.index'));
 };
+
+// Convert assignableUsers to ProjectMember format for TaskForm
+const formattedMembers = computed(() => {
+    return props.assignableUsers.map((user) => ({
+        id: user.id,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email || '',
+        },
+        role: { id: '', name: '' },
+    } as ProjectMember));
+});
 </script>
 
 <template>
@@ -112,13 +157,23 @@ const goBack = () => {
                         @click="router.get(route('project.index'))"
                         class="hover:bg-surface-100 dark:hover:bg-surface-800"
                     />
-                    <Emoji v-if="props.project?.emoji.startsWith(':')" :data="emojiIndex" :emoji="props.project.emoji" set="google" :size="36"></Emoji>
-                    <span v-else class="text-4xl" >{{ props.project?.emoji }}</span>
+                    <Emoji
+                        v-if="props.project?.emoji.startsWith(':')"
+                        :data="emojiIndex"
+                        :emoji="props.project.emoji"
+                        set="google"
+                        :size="36"
+                    ></Emoji>
+                    <span v-else class="text-4xl">{{ props.project?.emoji }}</span>
                     <div>
                         <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
                             {{ props.project.title }}
                         </h1>
-                        <p class="text-sm text-surface-600 dark:text-surface-400">Software project</p>
+                        <p class="text-sm text-surface-600 dark:text-surface-400">
+                            Software project
+                            <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"> <i class="pi pi-check-circle"></i> Member </span>
+                            <span v-else class="ml-2 text-gray-500 dark:text-gray-400"> <i class="pi pi-eye"></i> Viewer </span>
+                        </p>
                     </div>
                 </div>
 
@@ -199,66 +254,76 @@ const goBack = () => {
             <!-- Main Content with Tabs -->
             <Card class="shadow-sm">
                 <template #content>
-                    <TabView>
-                        <TabPanel header="Board">
-                            <div class="py-4">
-                                <TaskTable
-                                    :projectId="props.project.id"
-                                    :tasks="props.tasks"
-                                    @add="openTaskAdd"
-                                    @edit="openTaskEdit"
-                                    :isPM="props.isPM"
-                                />
-                            </div>
-                        </TabPanel>
-
-                        <TabPanel header="Details">
-                            <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
-                                <!-- Description -->
-                                <div class="lg:col-span-2">
-                                    <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
-                                    <div
-                                        class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
-                                        v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
+                    <Tabs value="Board">
+                        <TabList>
+                            <Tab value="Board">Board</Tab>
+                            <Tab value="Details">Details</Tab>
+                            <Tab value="Team">Team</Tab>
+                        </TabList>
+                        <TabPanels>
+                            <TabPanel value="Board">
+                                <div class="py-4">
+                                    <TaskTable
+                                        :projectId="props.project.id"
+                                        :tasks="props.tasks"
+                                        @add="openTaskAdd"
+                                        @edit="openTaskEdit"
+                                        :isPM="props.isPM"
+                                        :isMember="props.isMember"
                                     />
                                 </div>
+                            </TabPanel>
 
-                                <!-- Sidebar Info -->
-                                <div class="flex flex-col gap-6">
-                                    <div>
-                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
-                                        <div class="flex flex-col gap-3">
-                                            <div class="flex items-start justify-between">
-                                                <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
-                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                    {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
-                                                </span>
-                                            </div>
-                                            <div class="flex items-start justify-between">
-                                                <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
-                                                <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                    {{ moment(props.project.updated_at).fromNow() }}
-                                                </span>
+                            <TabPanel value="Details">
+                                <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
+                                    <!-- Description -->
+                                    <div class="lg:col-span-2">
+                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
+                                        <div
+                                            class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
+                                            v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
+                                        />
+                                    </div>
+
+                                    <!-- Sidebar Info -->
+                                    <div class="flex flex-col gap-6">
+                                        <div>
+                                            <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
+                                            <div class="flex flex-col gap-3">
+                                                <div class="flex items-start justify-between">
+                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                        {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-start justify-between">
+                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
+                                                        {{ moment(props.project.updated_at).fromNow() }}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </TabPanel>
+                            </TabPanel>
 
-                        <TabPanel header="Team">
-                            <div class="py-4">
-                                <MembersTable
-                                    :projectId="props.project.id"
-                                    :members="props.members"
-                                    :roles="props.roles"
-                                    :users="props.users"
-                                    @add="openAdd"
-                                    @edit="openEdit"
-                                />
-                            </div>
-                        </TabPanel>
-                    </TabView>
+                            <TabPanel value="Team">
+                                <div class="py-4">
+                                    <MembersTable
+                                        :projectId="props.project.id"
+                                        :members="props.members"
+                                        :roles="props.roles"
+                                        :users="props.users"
+                                        :isPM="props.isPM"
+                                        :isAdmin="props.isAdmin"
+                                        @add="openAdd"
+                                        @edit="openEdit"
+                                    />
+                                </div>
+                            </TabPanel>
+                        </TabPanels>
+                    </Tabs>
                 </template>
             </Card>
         </div>
@@ -289,7 +354,8 @@ const goBack = () => {
                 :taskPriorities="props.taskPriorities"
                 :tags="props.tags"
                 :editTask="selectedTask"
-                :members="props.members"
+                :members="formattedMembers"
+                :isMember="props.isMember"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;
@@ -298,5 +364,8 @@ const goBack = () => {
                 @saved="router.reload({ only: ['tasks', 'project'] })"
             />
         </Dialog>
+
+        <!-- Toast -->
+        <Toast />
     </AppLayout>
 </template>

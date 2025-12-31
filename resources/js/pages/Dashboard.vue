@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import type { BreadcrumbItem, Project, Task } from '@/types';
+import type { BreadcrumbItem, Project } from '@/types';
+import type { Task } from './project';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -60,6 +61,18 @@ const getRandomColor = (index: number) => {
 
 const viewAllProjects = () => router.get(route('project.index'));
 const viewAllTasks = () => router.get(route('task.index'));
+const calcProgress = (completed: number, total: number) => {
+    if (!total || total <= 0) return 0;
+    return Math.round((completed / total) * 100);
+};
+
+const onTaskRowClick = (event: any) => {
+    router.visit(route('task.show', event.data.id));
+};
+const onProjectRowClick = (event: any) => {
+    router.visit(route('project.show', event.data.id));
+};
+
 </script>
 
 <template>
@@ -88,9 +101,9 @@ const viewAllTasks = () => router.get(route('task.index'));
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold">{{ Math.round((taskStatistic.completed / props.stats.tasks.total) * 100) }}%</span>
+                                    <span class="font-semibold"> {{ calcProgress(taskStatistic.completed, props.stats.tasks.total) }}% </span>
                                 </div>
-                                <ProgressBar :value="(taskStatistic.completed / props.stats.tasks.total) * 100" :showValue="false" class="h-2" />
+                                <ProgressBar :value="calcProgress(taskStatistic.completed, props.stats.tasks.total)" :showValue="false" class="h-2" />
                             </div>
 
                             <div class="flex items-center gap-4 text-sm">
@@ -128,9 +141,13 @@ const viewAllTasks = () => router.get(route('task.index'));
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold">{{ Math.round((projectStatistic.completed / projectStatistic.total) * 100) }}%</span>
+                                    <span class="font-semibold"> {{ calcProgress(projectStatistic.completed, projectStatistic.total) }}% </span>
                                 </div>
-                                <ProgressBar :value="(projectStatistic.completed / projectStatistic.total) * 100" :showValue="false" class="h-2" />
+                                <ProgressBar
+                                    :value="calcProgress(projectStatistic.completed, projectStatistic.total)"
+                                    :showValue="false"
+                                    class="h-2"
+                                />
                             </div>
 
                             <div class="flex items-center gap-4 text-sm">
@@ -204,7 +221,14 @@ const viewAllTasks = () => router.get(route('task.index'));
                     </div>
                 </template>
                 <template #content>
-                    <DataTable :value="latestProjects" stripedRows responsiveLayout="scroll" class="text-sm">
+                    <DataTable 
+                        :value="latestProjects" 
+                        stripedRows 
+                        responsiveLayout="scroll" 
+                        class="text-sm cursor-pointer" 
+                        row-hover
+                        @row-click="onProjectRowClick"
+                    >
                         <Column field="title" header="Project" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="flex items-center gap-3">
@@ -238,7 +262,14 @@ const viewAllTasks = () => router.get(route('task.index'));
                     </div>
                 </template>
                 <template #content>
-                    <DataTable :value="latestTasks" stripedRows responsiveLayout="scroll" class="text-sm">
+                    <DataTable 
+                        :value="latestTasks" 
+                        stripedRows 
+                        responsiveLayout="scroll" 
+                        class="text-sm cursor-pointer" 
+                        row-hover
+                        @row-click="onTaskRowClick"
+                    >
                         <Column field="title" header="Task" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="font-semibold">{{ data.title }}</div>

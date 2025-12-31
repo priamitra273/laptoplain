@@ -81,10 +81,26 @@ class ProjectController extends Controller
             ->unique('id')
             ->values();
 
+        $currentUser = Auth::user();
+        $currentUserId = Auth::id();
+
+        // Check if user is admin
+        $isAdmin = $currentUser->roles->contains(function ($role) {
+            return stripos($role->name, 'admin-') === 0;
+        });
+
+        // Check if user is Project Manager
         $isPM = $project->projectMembers
-            ->where('user.id', Auth::id())
+            ->where('user.id', $currentUserId)
             ->where('role.name', 'Project Manager')
             ->isNotEmpty();
+
+        // Check if user is a member of the project
+        $isMember = $project->projectMembers
+            ->where('user.id', $currentUserId)
+            ->isNotEmpty();
+
+        $canManageMembers = $isAdmin || $isPM;
 
         $data = [
             'project' => $projectArr,
@@ -97,7 +113,10 @@ class ProjectController extends Controller
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers->toArray(),
-            'isPM' => $isPM
+            'isAdmin' => $isAdmin,
+            'isPM' => $isPM,
+            'isMember' => $isMember, // Added this
+            'canManageMembers' => $canManageMembers
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

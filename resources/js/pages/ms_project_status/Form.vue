@@ -2,11 +2,11 @@
 import InputError from '@/components/InputError.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { severityOptions } from '@/constants';
-import { MsProjectStatus, PrimeSeverity } from '@/types';
+import { MsProjectStatus, PrimeSeverity, SeverityOption } from '@/types';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
-import Swal from 'sweetalert2';
+import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 interface ProjectStatusForm {
     _method: 'POST' | 'PUT';
     name: string;
-    severity: PrimeSeverity;
+    severity: PrimeSeverity | string;
     [key: string]: any;
 }
 
@@ -33,7 +33,7 @@ const visible = computed({
     },
 });
 
-const selectedSeverity = ref<PrimeSeverity | null>(null);
+const selectedSeverity = ref<SeverityOption | null>(null);
 
 const formHeader = computed(() => (props.value?.id ? 'Edit Project Status' : 'Create New Project Status'));
 
@@ -43,17 +43,26 @@ const form: InertiaForm<ProjectStatusForm> = useForm({
     severity: '',
 });
 
+const toast = useToast();
+
 const save = () => {
-    if (selectedSeverity.value) form.severity = selectedSeverity.value;
+    if (selectedSeverity.value) form.severity = selectedSeverity.value.value;
 
     const url = props.value?.id ? route('project-status.update', props.value.id) : route('project-status.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
+    const isUpdate = props.value?.id ? true : false;
+
     form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
-            Swal.fire('Success', 'Successfully saved data', 'success');
+            toast.add({
+                severity: 'success',
+                summary: isUpdate ? 'Updated!' : 'Created!',
+                detail: isUpdate ? 'Project status has been updated successfully' : 'Project priority has been created successfully',
+                life: 3000,
+            });
             visible.value = false;
         },
     });
@@ -67,7 +76,11 @@ const hide = () => {
 
 const show = () => {
     form.name = props.value?.name ?? '';
-    selectedSeverity.value = props.value?.severity ?? null;
+    selectedSeverity.value = getSeverityByValue(props.value?.severity ?? '');
+};
+
+const getSeverityByValue = (value: PrimeSeverity | string): SeverityOption | null => {
+    return severityOptions.find((option) => option.value === value) || null;
 };
 
 for (const key in form.data()) {
@@ -90,14 +103,21 @@ for (const key in form.data()) {
 
             <div class="flex flex-col gap-2">
                 <Label for="severity">Severity</Label>
-                <Select
-                    v-model="selectedSeverity"
-                    :options="severityOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select severity"
-                    class="w-full"
-                />
+                <Select v-model="selectedSeverity" :options="severityOptions" placeholder="Select severity" class="w-full">
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag :value="slotProps.value.label" :severity="slotProps.value.value" />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex w-full">
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class="mx-auto" />
+                        </div>
+                    </template>
+                </Select>
                 <InputError :message="form.errors.severity" />
             </div>
         </form>

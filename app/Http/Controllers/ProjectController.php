@@ -92,7 +92,7 @@ class ProjectController extends Controller
         // Check if user is Project Manager
         $isPM = $project->projectMembers
             ->where('user.id', $currentUserId)
-            ->where('role.name', 'Project Manager')
+            ->where('role.name', 'Owner')
             ->isNotEmpty();
 
         // Check if user is a member of the project

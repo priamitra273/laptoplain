@@ -129,15 +129,18 @@ const goBack = () => {
 
 // Convert assignableUsers to ProjectMember format for TaskForm
 const formattedMembers = computed(() => {
-    return props.assignableUsers.map((user) => ({
-        id: user.id,
-        user: {
-            id: user.id,
-            name: user.name,
-            email: user.email || '',
-        },
-        role: { id: '', name: '' },
-    } as ProjectMember));
+    return props.assignableUsers.map(
+        (user) =>
+            ({
+                id: user.id,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email || '',
+                },
+                role: { id: '', name: '' },
+            }) as ProjectMember,
+    );
 });
 </script>
 

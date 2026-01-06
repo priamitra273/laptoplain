@@ -18,6 +18,12 @@ import Textarea from 'primevue/textarea';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
+
+const emojiIndex = new EmojiIndex(emojiData);
+
 import { computed, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
 
@@ -237,7 +243,16 @@ const submitComment = () => {
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
                             <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
-                                <span class="text-4xl">{{ props.project.emoji }}</span>
+                                <Emoji
+                                    v-if="props.project?.emoji?.startsWith(':')"
+                                    :data="emojiIndex"
+                                    :emoji="props.project.emoji"
+                                    set="google"
+                                    :size="36"
+                                />
+                                <span v-else class="text-4xl">
+                                    {{ props.project.emoji }}
+                                </span>
                             </div>
                             <div class="flex-1">
                                 <h1 class="mb-1 text-3xl font-bold text-gray-800 dark:text-white">{{ props.task.title }}</h1>

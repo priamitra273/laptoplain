@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import type { BreadcrumbItem, Project } from '@/types';
-import type { Task } from './project';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import type { Task } from './project';
 
 import Heading from '@/components/Heading.vue';
 import Avatar from 'primevue/avatar';
@@ -15,6 +15,12 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
+
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
+
+const emojiIndex = new EmojiIndex(emojiData);
 
 interface Props {
     projects: Project[];
@@ -72,7 +78,6 @@ const onTaskRowClick = (event: any) => {
 const onProjectRowClick = (event: any) => {
     router.visit(route('project.show', event.data.id));
 };
-
 </script>
 
 <template>
@@ -221,22 +226,28 @@ const onProjectRowClick = (event: any) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable 
-                        :value="latestProjects" 
-                        stripedRows 
-                        responsiveLayout="scroll" 
-                        class="text-sm cursor-pointer" 
+                    <DataTable
+                        :value="latestProjects"
+                        stripedRows
+                        responsiveLayout="scroll"
+                        class="cursor-pointer text-sm"
                         row-hover
                         @row-click="onProjectRowClick"
                     >
                         <Column field="title" header="Project" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="flex items-center gap-3">
-                                    <span class="text-3xl">{{ data.emoji }}</span>
-                                    <span class="font-semibold">{{ data.title }}</span>
+                                    <Emoji v-if="data.emoji?.startsWith(':')" :data="emojiIndex" :emoji="data.emoji" set="google" :size="24" />
+                                    <span v-else class="text-2xl leading-none">
+                                        {{ data.emoji }}
+                                    </span>
+                                    <span class="truncate font-semibold">
+                                        {{ data.title }}
+                                    </span>
                                 </div>
                             </template>
                         </Column>
+
                         <Column field="status" header="Status" style="min-width: 150px">
                             <template #body="{ data }">
                                 <Tag :value="data.status.name" :severity="data.status.severity" rounded class="font-semibold" />
@@ -262,11 +273,11 @@ const onProjectRowClick = (event: any) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable 
-                        :value="latestTasks" 
-                        stripedRows 
-                        responsiveLayout="scroll" 
-                        class="text-sm cursor-pointer" 
+                    <DataTable
+                        :value="latestTasks"
+                        stripedRows
+                        responsiveLayout="scroll"
+                        class="cursor-pointer text-sm"
                         row-hover
                         @row-click="onTaskRowClick"
                     >

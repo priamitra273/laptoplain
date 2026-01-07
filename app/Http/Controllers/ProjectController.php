@@ -11,6 +11,7 @@ use App\Models\MsProjectRole;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\ProjectMember;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -126,9 +127,22 @@ class ProjectController extends Controller
     {
         $project = Project::create($request->validated());
 
-        // Set progress default (0)
         $project->update([
             'progress' => $project->calculateProgress()
+        ]);
+
+        $projectId = $project->id;
+        $userId = Auth::id();
+        $projectRoleId = MsProjectRole::where('name', 'Owner')->first()->id;
+        
+        ProjectMember::create([
+            'project_id' => $projectId,
+            'user_id' => $userId,
+            'project_role_id' => $projectRoleId,
+            'owned_id' => $request["owned_id"],
+            'created_by' => $request["created_by"],
+            'updated_by' => $request["updated_by"],
+            'is_active' => true
         ]);
 
         return to_route('project.index');

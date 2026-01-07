@@ -16,12 +16,20 @@ class RoleSeeder extends Seeder
     {
         $role = Role::create([
             'team_id' => 1,
-            'name' => 'admin-it',
+            'name' => 'admin',
             'guard_name' => 'web',
             'label' => 'Admin',
             'is_active' => true
         ]);
 
         $role->syncPermissions(Permission::all());
+
+        Role::create([
+            'team_id' => 2,
+            'name' => 'user',
+            'guard_name' => 'web',
+            'label' => 'User',
+            'is_active' => true
+        ]);
     }
 }

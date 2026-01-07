@@ -13,7 +13,7 @@ class TeamSeeder extends Seeder
      */
     public function run(): void
     {
-        $names = ['IT'];
+        $names = ['Admin', 'User'];
 
         foreach ($names as $name) {
             Team::create(['name' => $name]);

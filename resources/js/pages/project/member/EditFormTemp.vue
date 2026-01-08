@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import Dropdown from 'primevue/dropdown';
+import InputError from '@/components/InputError.vue';
+import Select from 'primevue/select';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import type { ProjectMember } from '..';
@@ -41,9 +42,10 @@ const save = () => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <Dropdown v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" />
+        <Select v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" />
+        <InputError :message="form.errors.project_role_id" />
 
-        <Dropdown
+        <Select
             v-model="form.is_active"
             :options="[
                 { label: 'Active', value: true },
@@ -52,6 +54,7 @@ const save = () => {
             optionLabel="label"
             optionValue="value"
         />
+        <InputError :message="form.errors.is_active" />
 
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" />

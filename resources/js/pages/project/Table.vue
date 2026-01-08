@@ -4,6 +4,9 @@ import Icon from '@/components/Icon.vue';
 import { Project } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import ProgressBar from 'primevue/progressbar';
@@ -12,6 +15,8 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
+
+const emojiIndex = new EmojiIndex(emojiData);
 
 interface Props {
     projects?: Project[];
@@ -107,6 +112,7 @@ const confirmDelete = (project: Project) => {
         },
     });
 };
+
 const truncateHtmlPreserve = (html: string, maxLength = 20) => {
     if (!html) return '';
 
@@ -146,6 +152,17 @@ const truncateHtmlPreserve = (html: string, maxLength = 20) => {
     const result = truncateNode(div) as HTMLDivElement;
     return result ? result.innerHTML : '';
 };
+
+const onEmojiSelect = (emoji: any, data: any) => {
+    const emojiNative = emoji.native || emoji.emoji;
+
+    onCellEditComplete({
+        data: data,
+        newValue: emojiNative,
+        field: 'emoji',
+    });
+};
+
 watch(visibleForm, (val) => {
     if (!val) selected.value = undefined;
 });
@@ -183,7 +200,26 @@ watch(visibleForm, (val) => {
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
 
-                <Column field="title" header="Title" sortable>
+                <Column field="emoji" header="Emoji" class="w-20">
+                    <template #body="{ data }">
+                        <span class="text-2xl">{{ data.emoji || '😀' }}</span>
+                    </template>
+
+                    <template #editor="{ data }">
+                        <div @click.stop class="emoji-picker-wrapper">
+                            <Picker
+                                :data="emojiIndex"
+                                @select="(emoji) => onEmojiSelect(emoji, data)"
+                                set="native"
+                                :native="true"
+                                title="Pick an emoji"
+                                emoji="point_up"
+                            />
+                        </div>
+                    </template>
+                </Column>
+
+                <Column field="title" header="Title" sortable :sortOrder="-1">
                     <template #editor="{ data, field }">
                         <InputText v-model="data[field]" class="w-full" />
                     </template>

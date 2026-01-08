@@ -25,7 +25,7 @@ class ProjectController extends Controller
             'status:id,name,severity',
             'priority:id,name,severity'
         ])
-            ->orderBy('id')
+            ->orderByDesc('id')
             ->get();
 
         $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
@@ -84,19 +84,13 @@ class ProjectController extends Controller
 
         $currentUser = Auth::user();
         $currentUserId = Auth::id();
-
-        // Check if user is admin
         $isAdmin = $currentUser->roles->contains(function ($role) {
             return stripos($role->name, 'admin-') === 0;
         });
-
-        // Check if user is Project Manager
         $isPM = $project->projectMembers
             ->where('user.id', $currentUserId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
-
-        // Check if user is a member of the project
         $isMember = $project->projectMembers
             ->where('user.id', $currentUserId)
             ->isNotEmpty();
@@ -116,7 +110,7 @@ class ProjectController extends Controller
             'assignableUsers' => $assignableUsers->toArray(),
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
-            'isMember' => $isMember, // Added this
+            'isMember' => $isMember,
             'canManageMembers' => $canManageMembers
         ];
 
@@ -134,7 +128,7 @@ class ProjectController extends Controller
         $projectId = $project->id;
         $userId = Auth::id();
         $projectRoleId = MsProjectRole::where('name', 'Owner')->first()->id;
-        
+
         ProjectMember::create([
             'project_id' => $projectId,
             'user_id' => $userId,
@@ -154,8 +148,6 @@ class ProjectController extends Controller
 
         $project = Project::findOrFail($id);
         $project->update($request->validated());
-
-        // Update progress terbaru setelah update data project
         $project->update([
             'progress' => $project->calculateProgress()
         ]);

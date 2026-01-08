@@ -249,14 +249,12 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- TITLE -->
         <div>
             <label class="font-semibold">Title</label>
             <InputText v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
             <small v-if="form.errors.title" class="p-error text-red-500">{{ form.errors.title }}</small>
         </div>
 
-        <!-- DESCRIPTION WITH EDITOR -->
         <div>
             <label class="font-semibold">Description</label>
             <Editor v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
@@ -291,7 +289,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <small v-if="form.errors.description" class="p-error text-red-500">{{ form.errors.description }}</small>
         </div>
 
-        <!-- ASSIGNED MEMBERS -->
         <div class="flex flex-col">
             <label class="font-semibold">Assigned Member</label>
             <MultiSelect
@@ -307,8 +304,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             />
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>
-
-        <!-- START & DUE DATE -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Start Date</label>
@@ -335,8 +330,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 <small v-if="form.errors.due_date" class="p-error text-red-500">{{ form.errors.due_date }}</small>
             </div>
         </div>
-
-        <!-- TYPE / STATUS / PRIORITY -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
                 <label class="font-semibold">Type</label>
@@ -428,8 +421,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
             </div>
         </div>
-
-        <!-- TAGS -->
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
@@ -452,8 +443,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </AutoComplete>
             <small v-if="Object.keys(form.errors).some((key) => key.startsWith('add_tag'))" class="p-error text-red-500"> Invalid tag data. </small>
         </div>
-
-        <!-- ARCHIVED & PROGRESS -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Archived</label>
@@ -487,14 +476,12 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </div>
         </div>
 
-        <!-- ACTION BUTTONS -->
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
             <Button v-if="!isEdit" label="Create Task" @click="submit" />
             <Button v-else label="Update Task" severity="warning" @click="submit" />
         </div>
 
-        <!-- Toast -->
         <Toast />
     </div>
 </template>

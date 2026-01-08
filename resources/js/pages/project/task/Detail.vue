@@ -42,14 +42,11 @@ const props = defineProps<{
 const currentUserId = usePage().props.auth.user.id;
 const toast = useToast();
 
-/* ========================
-   BREADCRUMB
-======================== */
 const breadcrumbItems = computed(() => [
     {
         label: 'Projects',
         icon: 'pi pi-folder',
-        command: () => router.visit(route('projects.index')),
+        command: () => router.visit(route('project.index')),
     },
     {
         label: props.project.title,
@@ -81,14 +78,10 @@ const goToSubTask = (subTaskId: string) => {
     }
 };
 
-/* ========================
-   INLINE EDITING
-======================== */
 const editingField = ref<string | null>(null);
 const editValue = ref<any>(null);
 
 const startEdit = (field: string, currentValue: any) => {
-    // Cek apakah user adalah member project
     if (!props.isMember) {
         toast.add({
             severity: 'warn',
@@ -110,11 +103,6 @@ const startEdit = (field: string, currentValue: any) => {
     }
 };
 
-const cancelEdit = () => {
-    editingField.value = null;
-    editValue.value = null;
-};
-
 const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
         status_id: 'Status',
@@ -127,15 +115,13 @@ const getFieldLabel = (field: string): string => {
     return labels[field] || field;
 };
 
-const saveEdit = (field: string) => {
-    let valueToSave = editValue.value;
+const autoSave = (field: string, value: any) => {
+    let valueToSave = value;
 
-    // Format date if needed
     if (field === 'start_date' || field === 'due_date') {
-        valueToSave = editValue.value ? moment(editValue.value).format('YYYY-MM-DD') : null;
+        valueToSave = value ? moment(value).format('YYYY-MM-DD') : null;
     }
 
-    // Prepare update data
     const updateData: any = {
         ...props.task,
         [field]: valueToSave,
@@ -150,7 +136,8 @@ const saveEdit = (field: string) => {
         updateData,
         {
             onSuccess: () => {
-                cancelEdit();
+                editingField.value = null;
+                editValue.value = null;
                 toast.add({
                     severity: 'success',
                     summary: 'Update Successful',
@@ -159,7 +146,8 @@ const saveEdit = (field: string) => {
                 });
             },
             onError: (errors) => {
-                cancelEdit();
+                editingField.value = null;
+                editValue.value = null;
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
@@ -170,10 +158,13 @@ const saveEdit = (field: string) => {
         },
     );
 };
+const handleSelectChange = (field: string, value: any) => {
+    autoSave(field, value);
+};
+const handleSliderChange = (field: string, value: any) => {
+    autoSave(field, value);
+};
 
-/* ========================
-   COMMENTS
-======================== */
 const newComment = ref('');
 
 const submitComment = () => {
@@ -218,7 +209,6 @@ const submitComment = () => {
         <Toast />
 
         <div class="flex flex-col gap-6 pb-8">
-            <!-- BREADCRUMB -->
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
                     <Breadcrumb :home="breadcrumbHome" :model="breadcrumbItems" class="border-none bg-transparent p-0 text-sm">
@@ -234,8 +224,6 @@ const submitComment = () => {
                     </Breadcrumb>
                 </template>
             </Card>
-
-            <!-- HEADER WITH GRADIENT -->
             <Card
                 class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
             >
@@ -268,9 +256,7 @@ const submitComment = () => {
             </Card>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <!-- LEFT COLUMN -->
                 <div class="space-y-6">
-                    <!-- DESCRIPTION CARD -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center gap-2">
@@ -286,8 +272,6 @@ const submitComment = () => {
                             />
                         </template>
                     </Card>
-
-                    <!-- DETAILS CARD WITH INLINE EDIT -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center gap-2">
@@ -298,9 +282,7 @@ const submitComment = () => {
                         <template #content>
                             <Divider class="my-3" />
                             <div class="space-y-4">
-                                <!-- Status & Priority Row -->
                                 <div class="grid grid-cols-2 gap-3">
-                                    <!-- Status -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">STATUS</p>
                                         <div
@@ -315,7 +297,7 @@ const submitComment = () => {
                                         >
                                             <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" class="w-full" />
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
+                                        <div v-else>
                                             <Select
                                                 v-model="editValue"
                                                 :options="props.statuses"
@@ -323,15 +305,10 @@ const submitComment = () => {
                                                 optionValue="id"
                                                 placeholder="Select Status"
                                                 class="w-full"
+                                                @change="handleSelectChange('status_id', editValue)"
                                             />
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('status_id')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
-                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- Priority -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PRIORITY</p>
                                         <div
@@ -346,7 +323,7 @@ const submitComment = () => {
                                         >
                                             <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" class="w-full" />
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
+                                        <div v-else>
                                             <Select
                                                 v-model="editValue"
                                                 :options="props.priorities"
@@ -354,18 +331,12 @@ const submitComment = () => {
                                                 optionValue="id"
                                                 placeholder="Select Priority"
                                                 class="w-full"
+                                                @change="handleSelectChange('priority_id', editValue)"
                                             />
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('priority_id')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Type & Progress Row -->
                                 <div class="grid grid-cols-2 gap-3">
-                                    <!-- Type -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">TYPE</p>
                                         <div
@@ -380,7 +351,7 @@ const submitComment = () => {
                                         >
                                             <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" class="w-full" />
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
+                                        <div v-else>
                                             <Select
                                                 v-model="editValue"
                                                 :options="props.types"
@@ -388,15 +359,10 @@ const submitComment = () => {
                                                 optionValue="id"
                                                 placeholder="Select Type"
                                                 class="w-full"
+                                                @change="handleSelectChange('type_id', editValue)"
                                             />
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('type_id')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
-                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- Progress -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PROGRESS</p>
                                         <div
@@ -421,22 +387,21 @@ const submitComment = () => {
                                                 >
                                             </div>
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
+                                        <div v-else>
                                             <div class="flex items-center gap-2">
-                                                <Slider v-model="editValue" class="flex-1" :min="0" :max="100" />
+                                                <Slider
+                                                    v-model="editValue"
+                                                    class="flex-1"
+                                                    :min="0"
+                                                    :max="100"
+                                                    @slideend="handleSliderChange('progress', editValue)"
+                                                />
                                                 <span class="w-12 text-right text-sm font-semibold">{{ editValue }}%</span>
-                                            </div>
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('progress')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Dates Row -->
                                 <div class="grid grid-cols-2 gap-3">
-                                    <!-- Start Date -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             <i class="pi pi-calendar mr-1 text-blue-500"></i>START DATE
@@ -453,16 +418,16 @@ const submitComment = () => {
                                         >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.start_date) }}</p>
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
-                                            <DatePicker v-model="editValue" dateFormat="dd M yy" class="w-full" showIcon />
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('start_date')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
-                                            </div>
+                                        <div v-else>
+                                            <DatePicker
+                                                v-model="editValue"
+                                                dateFormat="dd M yy"
+                                                class="w-full"
+                                                showIcon
+                                                @date-select="handleSelectChange('start_date', editValue)"
+                                            />
                                         </div>
                                     </div>
-
-                                    <!-- Due Date -->
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE
@@ -479,17 +444,17 @@ const submitComment = () => {
                                         >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.due_date) }}</p>
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
-                                            <DatePicker v-model="editValue" dateFormat="dd M yy" class="w-full" showIcon />
-                                            <div class="flex gap-1">
-                                                <Button icon="pi pi-check" @click="saveEdit('due_date')" size="small" severity="success" />
-                                                <Button icon="pi pi-times" @click="cancelEdit" size="small" severity="danger" />
-                                            </div>
+                                        <div v-else>
+                                            <DatePicker
+                                                v-model="editValue"
+                                                dateFormat="dd M yy"
+                                                class="w-full"
+                                                showIcon
+                                                @date-select="handleSelectChange('due_date', editValue)"
+                                            />
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Tags -->
                                 <div v-if="props.task.tags?.length" class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                                     <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                         <i class="pi pi-tags mr-1 text-orange-500"></i>TAGS
@@ -501,8 +466,6 @@ const submitComment = () => {
                             </div>
                         </template>
                     </Card>
-
-                    <!-- ASSIGNED USERS CARD -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center gap-2">
@@ -539,10 +502,7 @@ const submitComment = () => {
                         </template>
                     </Card>
                 </div>
-
-                <!-- RIGHT COLUMN -->
                 <div class="space-y-6 lg:col-span-2">
-                    <!-- SUBTASKS CARD -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center justify-between">
@@ -586,8 +546,6 @@ const submitComment = () => {
                             </div>
                         </template>
                     </Card>
-
-                    <!-- COMMENTS CARD -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center justify-between">
@@ -600,8 +558,6 @@ const submitComment = () => {
                         </template>
                         <template #content>
                             <Divider class="my-3" />
-
-                            <!-- Comment Input -->
                             <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
                                 <Textarea v-model="newComment" rows="3" placeholder="Share your thoughts..." class="mb-3 w-full" :autoResize="true" />
                                 <div class="flex justify-end">
@@ -614,8 +570,6 @@ const submitComment = () => {
                                     />
                                 </div>
                             </div>
-
-                            <!-- Comments List -->
                             <div v-if="props.comments?.length" class="space-y-4">
                                 <CommentItem
                                     v-for="comment in props.comments"

@@ -126,8 +126,6 @@ const formatDate = (date: string | undefined) => {
 const goBack = () => {
     router.visit(route('project.index'));
 };
-
-// Convert assignableUsers to ProjectMember format for TaskForm
 const formattedMembers = computed(() => {
     return props.assignableUsers.map(
         (user) =>
@@ -142,6 +140,12 @@ const formattedMembers = computed(() => {
             }) as ProjectMember,
     );
 });
+const taskDialogHeader = computed(() => {
+    if (selectedTask.value) {
+        return 'Edit Task';
+    }
+    return parentTaskId.value ? 'Create Subtask' : 'Create Task';
+});
 </script>
 
 <template>
@@ -149,7 +153,6 @@ const formattedMembers = computed(() => {
 
     <AppLayout>
         <div class="flex flex-col gap-4">
-            <!-- Header Section - Jira Style -->
             <div class="flex items-center justify-between border-b border-surface-200 pb-4 dark:border-surface-700">
                 <div class="flex items-center gap-3">
                     <Button
@@ -200,8 +203,6 @@ const formattedMembers = computed(() => {
                     </AvatarGroup>
                 </div>
             </div>
-
-            <!-- Project Info Bar -->
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <Card class="shadow-sm">
                     <template #content>
@@ -253,8 +254,6 @@ const formattedMembers = computed(() => {
                     </template>
                 </Card>
             </div>
-
-            <!-- Main Content with Tabs -->
             <Card class="shadow-sm">
                 <template #content>
                     <Tabs value="Board">
@@ -279,7 +278,6 @@ const formattedMembers = computed(() => {
 
                             <TabPanel value="Details">
                                 <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
-                                    <!-- Description -->
                                     <div class="lg:col-span-2">
                                         <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
                                         <div
@@ -331,7 +329,6 @@ const formattedMembers = computed(() => {
             </Card>
         </div>
 
-        <!-- Dialogs -->
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
             <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
@@ -347,7 +344,7 @@ const formattedMembers = computed(() => {
             />
         </Dialog>
 
-        <Dialog v-model:visible="visibleTaskAdd" :header="selectedTask ? 'Edit Task' : 'Create Task'" @hide="onDialogClosed" modal class="w-[600px]">
+        <Dialog v-model:visible="visibleTaskAdd" :header="taskDialogHeader" @hide="onDialogClosed" modal class="w-[600px]">
             <TaskForm
                 :projectId="props.project.id"
                 :parentId="parentTaskId"
@@ -368,7 +365,6 @@ const formattedMembers = computed(() => {
             />
         </Dialog>
 
-        <!-- Toast -->
         <Toast />
     </AppLayout>
 </template>

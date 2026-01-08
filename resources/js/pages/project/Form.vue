@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import Label from '@/components/ui/label/Label.vue';
 import { useForm } from '@inertiajs/vue3';
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
@@ -8,8 +11,9 @@ import Dropdown from 'primevue/dropdown';
 import Editor from 'primevue/editor';
 import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
-import { computed, watch as vueWatch } from 'vue';
-import EmojiPicker from '@/components/EmojiPicker.vue';
+import { computed, ref, watch as vueWatch } from 'vue';
+
+const emojiIndex = new EmojiIndex(emojiData);
 
 interface Props {
     value?: any;
@@ -35,6 +39,8 @@ const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
+const showEmojiPicker = ref(false);
+
 const visible = computed<boolean>({
     get() {
         return props.visible;
@@ -49,12 +55,21 @@ const form = useForm<ProjectForm>({
     start_date: null,
     due_date: null,
     description: '',
-    emoji: ':page_facing_up:',
+    emoji: '🗒️',
     status_id: null,
     priority_id: null,
     owner_id: null,
     owned_id: null,
 });
+
+const onEmojiSelect = (emoji: any) => {
+    form.emoji = emoji.native || emoji.emoji;
+    showEmojiPicker.value = false;
+};
+
+const toggleEmojiPicker = () => {
+    showEmojiPicker.value = !showEmojiPicker.value;
+};
 
 const save = (): void => {
     const url = route('project.store');
@@ -83,11 +98,13 @@ const save = (): void => {
 const show = (): void => {
     form.reset();
     form.clearErrors();
+    showEmojiPicker.value = false;
 };
 
 const hide = (): void => {
     form.reset();
     form.clearErrors();
+    showEmojiPicker.value = false;
 };
 
 vueWatch(
@@ -116,12 +133,19 @@ vueWatch(
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputGroup>
-                    <InputGroupAddon>
-                        <EmojiPicker v-model="form.emoji" />
+                    <InputGroupAddon class="cursor-pointer" @click="toggleEmojiPicker">
+                        <span class="text-xl">{{ form.emoji || '😀' }}</span>
                     </InputGroupAddon>
                     <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
                 </InputGroup>
                 <small v-if="form.errors.title" class="mt-1 text-sm text-red-500">{{ form.errors.title }}</small>
+
+                <!-- Emoji Picker Popup -->
+                <div v-if="showEmojiPicker" class="relative z-50">
+                    <div class="absolute left-0 top-0 shadow-lg">
+                        <Picker :data="emojiIndex" @select="onEmojiSelect" set="native" :native="true" title="Pick an emoji" emoji="point_up" />
+                    </div>
+                </div>
             </div>
 
             <div class="flex flex-col gap-2">

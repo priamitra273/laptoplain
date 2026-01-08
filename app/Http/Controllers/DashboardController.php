@@ -51,67 +51,42 @@ class DashboardController extends Controller
                 return $task;
             });
 
-        $completedTaskStatusId = MsTaskStatus::where('name', 'Completed')->first()->id ?? 0;
+        $avgProjectProgress = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
+            ->avg('progress') ?? 0;
 
+        $avgTaskProgress = Task::where(function ($q) use ($userId) {
+            $q->where('created_by', $userId)
+                ->orWhereHas('users', fn($qq) => $qq->where('users.id', $userId));
+        })
+            ->avg('progress') ?? 0;
+
+        $totalProjects = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))->count();
         $totalTasks = Task::where(function ($query) use ($userId) {
             $query->where('created_by', $userId)
-                ->orWhereHas('users', function ($q) use ($userId) {
-                    $q->where('users.id', $userId);
-                });
+                ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
         })->count();
 
-        $completedTasks = Task::where(function ($query) use ($userId) {
-            $query->where('created_by', $userId)
-                ->orWhereHas('users', function ($q) use ($userId) {
-                    $q->where('users.id', $userId);
-                });
-        })
-            ->where('status_id', $completedTaskStatusId)
-            ->count();
-
-        $inProgressTasks = $totalTasks - $completedTasks;
-
-        $completedProjectStatusId = MsProjectStatus::where('name', 'Completed')->first()->id ?? 0;
-
-        $totalProjects = Project::whereHas('projectMembers', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })->count();
-
-        $completedProjects = Project::whereHas('projectMembers', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })
-            ->where('status_id', $completedProjectStatusId)
-            ->count();
-
-        $inProgressProjects = $totalProjects - $completedProjects;
-
-        $members = Project::whereHas('projectMembers', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })
+        $members = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
             ->with('projectMembers.user')
             ->get()
             ->flatMap(fn($project) => $project->projectMembers->pluck('user'))
             ->unique('id')
             ->values();
 
-        $totalMembers = $members->count();
-
         $data = [
             'projects' => $projects->toArray(),
             'tasks' => $tasks->toArray(),
             'stats' => [
-                'tasks' => [
-                    'total' => $totalTasks,
-                    'completed' => $completedTasks,
-                    'in_progress' => $inProgressTasks,
-                ],
                 'projects' => [
                     'total' => $totalProjects,
-                    'completed' => $completedProjects,
-                    'in_progress' => $inProgressProjects,
+                    'progress' => round($avgProjectProgress),
+                ],
+                'tasks' => [
+                    'total' => $totalTasks,
+                    'progress' => round($avgTaskProgress),
                 ],
                 'members' => [
-                    'total' => $totalMembers,
+                    'total' => $members->count(),
                     'list' => $members->toArray(),
                 ],
             ],

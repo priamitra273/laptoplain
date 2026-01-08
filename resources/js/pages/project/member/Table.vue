@@ -52,6 +52,15 @@ const remove = (member: ProjectMember) => {
                             life: 2000,
                         });
                     },
+
+                    onError: (errors) => {
+                        toast.add({
+                            severity: 'error',
+                            summary: 'Action denied',
+                            detail: errors.member ?? 'Failed to remove member',
+                            life: 3000,
+                        });
+                    },
                 },
             );
         },

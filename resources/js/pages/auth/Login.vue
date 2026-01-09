@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import bgImage from '@/images/Bg.jpg';
+import Logo from '@/images/logo-white.png';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
@@ -38,9 +39,9 @@ const submit = () => {
                 <!-- Overlay -->
                 <div class="absolute inset-0 bg-gradient-to-br from-[#536976]/80 to-[#292E49]/90"></div>
 
-                <!-- Optional Branding -->
-                <div class="relative z-10 flex h-full items-end p-10">
-                    <div>
+                <div class="relative z-10 flex h-full flex-col items-center justify-center p-10">
+                    <img :src="Logo" alt="Logo" class="mb-12 h-32 w-auto" />
+                    <div class="text-center">
                         <h1 class="font-serif text-3xl leading-tight text-white">Welcome Back</h1>
                         <p class="mt-2 max-w-sm text-sm text-white/80">Securely access your dashboard and manage everything in one place.</p>
                     </div>

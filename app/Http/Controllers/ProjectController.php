@@ -42,9 +42,18 @@ class ProjectController extends Controller
 
     public function show(string $encoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
-
+        try {
+            $projectId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+        if (!$projectId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
@@ -53,7 +62,14 @@ class ProjectController extends Controller
             'tasks' => function ($query) {
                 $query->withRecursive();
             },
-        ])->findOrFail($projectId);
+        ])->find($projectId);
+
+        // If project not found, return 404 page
+        if (!$project) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $project->update([
             'progress' => $project->calculateProgress()

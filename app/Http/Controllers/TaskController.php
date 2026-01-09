@@ -63,11 +63,29 @@ class TaskController extends Controller
 
     public function store(TaskStoreRequest $request, string $encoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
+        try {
+            $projectId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!$projectId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($projectId);
+        $project = Project::with('projectMembers')->find($projectId);
+
+        if (!$project) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
         $isMember = $project->projectMembers()
             ->where('user_id', Auth::id())
             ->exists();
@@ -136,8 +154,19 @@ class TaskController extends Controller
 
     public function show(string $encoded)
     {
-        $taskId = Sqids::decode($encoded);
-        if (!$taskId) abort(404);
+        try {
+            $taskId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $task = Task::with([
             'project:id,title,emoji',
@@ -162,7 +191,13 @@ class TaskController extends Controller
                         'replies.user'
                     ]);
             }
-        ])->findOrFail($taskId);
+        ])->find($taskId);
+
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $task->update(['progress' => $task->calculateProgress()]);
 
@@ -203,8 +238,27 @@ class TaskController extends Controller
 
     public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
     {
-        $taskId = Sqids::decode($taskEncoded);
-        $task = Task::findOrFail($taskId);
+        try {
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        $task = Task::find($taskId);
+
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         // Validasi: Cek apakah user adalah anggota project
         $project = Project::with('projectMembers')->findOrFail($task->project_id);
@@ -297,16 +351,36 @@ class TaskController extends Controller
 
     public function destroy(string $encoded, string $taskEncoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
+        try {
+            $projectId = Sqids::decode($encoded);
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
-        $taskId = Sqids::decode($taskEncoded);
-        if (!$taskId) abort(404);
+        if (!$projectId || !$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
-        $task = Task::findOrFail($taskId);
+        $task = Task::find($taskId);
 
-        // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($task->project_id);
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+        $project = Project::with('projectMembers')->find($task->project_id);
+
+        if (!$project) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
         $isMember = $project->projectMembers()
             ->where('user_id', Auth::id())
             ->exists();

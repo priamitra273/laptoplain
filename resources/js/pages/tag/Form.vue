@@ -111,7 +111,7 @@ for (const key in form.data()) {
                     </template>
                     <template #option="slotProps">
                         <div class="flex w-full">
-                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class="mx-auto" />
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" />
                         </div>
                     </template>
                 </Select>

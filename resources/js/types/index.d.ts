@@ -31,6 +31,7 @@ declare module '@inertiajs/core' {
         name: string;
         quote: { message: string; author: string };
         auth: Auth;
+        flash: {success: string | null; error: string|null}
         ziggy: Config & { location: string };
     }
 }

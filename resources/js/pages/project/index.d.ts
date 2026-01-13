@@ -113,6 +113,7 @@ export interface TaskFormattedData {
   status?: TaskStatus;
   priority?: TaskPriority;
   type?: TaskType;
+  users: TaskUser[];
 }
 
 export interface Comment {

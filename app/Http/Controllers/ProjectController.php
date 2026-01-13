@@ -110,6 +110,10 @@ class ProjectController extends Controller
         $isMember = $project->projectMembers
             ->where('user.id', $currentUserId)
             ->isNotEmpty();
+        $isOwner = $project->projectMembers
+            ->where('user.id', $currentUserId)
+            ->where('role.name', 'Owner')
+            ->isNotEmpty();
 
         $canManageMembers = $isAdmin || $isPM;
 
@@ -127,6 +131,7 @@ class ProjectController extends Controller
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
             'isMember' => $isMember,
+            'isOwner' => $isOwner,
             'canManageMembers' => $canManageMembers
         ];
 

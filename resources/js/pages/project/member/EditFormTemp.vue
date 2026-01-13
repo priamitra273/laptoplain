@@ -34,7 +34,9 @@ const save = () => {
     form.put(route('project.members.update', { projectEncoded: props.projectId, memberEncoded: props.member.id }), {
         onSuccess: () => {
             emit('saved');
-            toast.add({ severity: 'success', summary: 'Success', detail: 'Member updated', life: 3000 });
+        },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update member', life: 3000 });
         },
     });
 };

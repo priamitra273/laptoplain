@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
@@ -8,14 +8,15 @@ import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref, watch } from 'vue';
-import { Task, TaskFormatted } from '..';
+import { computed, ComputedRef, ref, watch } from 'vue';
+import { Task, TaskFormatted, TaskFormattedData, TaskUser } from '..';
 
 interface Props {
     projectId: string;
     tasks: Task[];
     isPM: boolean;
     isMember: boolean;
+    isOwner: boolean;
 }
 
 const props = defineProps<Props>();
@@ -23,6 +24,8 @@ const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
     (e: 'edit', task: Task): void;
 }>();
+
+const currentUser = usePage().props.auth.user;
 
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
@@ -41,13 +44,14 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             status: t.status,
             priority: t.priority,
             type: t.type,
+            users: t.users || [],
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
 };
 
 // Filter and sort tasks based on search query (newest first)
-const filteredTasks = computed(() => {
+const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     let tasks = formatTasks(props.tasks);
 
     // Sort by created_at or updated_at (newest first)
@@ -69,7 +73,7 @@ const filteredTasks = computed(() => {
 });
 
 // Paginate tasks
-const paginatedTasks = computed(() => {
+const paginatedTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
     return filteredTasks.value.slice(start, end);
@@ -170,6 +174,15 @@ const removeSelected = () => {
         },
     });
 };
+
+const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
+    if (props.isOwner) return true;
+
+    const taskUsers: TaskUser[] = task.users || [];
+    const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
+
+    return isMember;
+};
 </script>
 
 <template>
@@ -241,8 +254,8 @@ const removeSelected = () => {
                     <template #body="{ node }">
                         <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
                         <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
-                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" v-if="isMember" />
-                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" v-if="isMember" />
+                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" v-if="isMember && hasAccessToEditAndDelete(node.data)" />
+                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" v-if="isMember && hasAccessToEditAndDelete(node.data)" />
                     </template>
                 </Column>
 

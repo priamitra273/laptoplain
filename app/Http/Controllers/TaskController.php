@@ -11,11 +11,42 @@ use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    private function hasTaskAccess(Task $task): bool
+    {
+        try {
+            $userId = Auth::id();
+        } catch (\Throwable $th) {
+            throw $th;
+        }
+
+        $project = Project::with('projectMembers')->find($task->project_id);
+
+        if (!$project) {
+            return false;
+        }
+
+        $isOwner = $project->projectMembers
+            ->where('user.id', $userId)
+            ->where('role.name', 'Owner')
+            ->isNotEmpty();
+        
+        if ($isOwner) {
+            return $isOwner;
+        }
+
+        $isMember = $task->users()
+            ->where('user_id', $userId)
+            ->exists();
+
+        return $isMember;
+    }
+
     public function index()
     {
         $userId = Auth::id();
@@ -260,24 +291,14 @@ class TaskController extends Controller
                 ->setStatusCode(404);
         }
 
-        // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($task->project_id);
-        $isMember = $project->projectMembers()
-            ->where('user_id', Auth::id())
-            ->exists();
-
-        if (!$isMember) {
-            return back()->with('error', 'You are not a member of this project');
+        if (!self::hasTaskAccess($task)) {
+            return back()->with('error', 'You have no access to this task');
         }
 
         $data = $request->validated();
 
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
-
-        // ==============================
-        // HANDLE TAGGING
-        // ==============================
 
         if (!empty($data['add_tag']['exists'])) {
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
@@ -342,11 +363,7 @@ class TaskController extends Controller
             }
         }
 
-        $redirectTo = $request->input('redirect_to')
-            ?? route('task.show', Sqids::encode($task->id));
-
-        return redirect($redirectTo)
-            ->with('success', 'Task updated successfully');
+        return back()->with('success', 'Task updated successfully');
     }
 
     public function destroy(string $encoded, string $taskEncoded)
@@ -373,21 +390,26 @@ class TaskController extends Controller
                 ->toResponse(request())
                 ->setStatusCode(404);
         }
-        $project = Project::with('projectMembers')->find($task->project_id);
 
-        if (!$project) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+        if (!self::hasTaskAccess($task)) {
+            return back()->with('error', 'You have no access to this task');
         }
 
-        $isMember = $project->projectMembers()
-            ->where('user_id', Auth::id())
-            ->exists();
+        // $project = Project::with('projectMembers')->find($task->project_id);
 
-        if (!$isMember) {
-            return back()->with('error', 'You are not a member of this project');
-        }
+        // if (!$project) {
+        //     return Inertia::render('errors/NotFound')
+        //         ->toResponse(request())
+        //         ->setStatusCode(404);
+        // }
+
+        // $isMember = $project->projectMembers()
+        //     ->where('user_id', Auth::id())
+        //     ->exists();
+
+        // if (!$isMember) {
+        //     return back()->with('error', 'You are not a member of this project');
+        // }
 
         $notification = Notification::create([
             'task_id' => $task->id,

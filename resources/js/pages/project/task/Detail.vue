@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 
 import Avatar from 'primevue/avatar';
@@ -15,7 +15,6 @@ import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
@@ -126,6 +125,11 @@ const getFieldLabel = (field: string): string => {
     return labels[field] || field;
 };
 
+const form = useForm({
+    ...props.task,
+    progress_value: props.task.progress,
+});
+
 const autoSave = (field: string, value: any) => {
     let valueToSave = value;
 
@@ -133,13 +137,13 @@ const autoSave = (field: string, value: any) => {
         valueToSave = value ? moment(value).format('YYYY-MM-DD') : null;
     }
 
-    const updateData: any = {
-        ...props.task,
-        [field]: valueToSave,
-        progress_value: field === 'progress' ? valueToSave : props.task.progress,
-    };
+    form[field] = valueToSave;
 
-    router.put(
+    if (field === 'progress') {
+        form.progress_value = valueToSave;
+    }
+
+    form.put(
         route('project.tasks.update', {
             projectEncoded: props.project.id,
             taskEncoded: props.task.id,
@@ -160,7 +164,7 @@ const autoSave = (field: string, value: any) => {
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
-                    detail: 'Failed to update task. Please try again.',
+                    detail: `Failed to update ${getFieldLabel(field)}. Please try again.`,
                     life: 3000,
                 });
             },
@@ -267,8 +271,6 @@ const submitComment = () => {
     <Head :title="`Task Detail - ${props.task.title}`" />
 
     <AppLayout>
-        <Toast />
-
         <div class="flex flex-col gap-6 pb-8">
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>

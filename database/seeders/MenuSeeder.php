@@ -130,7 +130,7 @@ class MenuSeeder extends Seeder
             'label' => 'Task Status',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'taskstatus.index',
+            'route_name' => 'task-status.index',
             'sequence_number' => 4,
             'is_active' => true
         ]));

@@ -207,8 +207,10 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                toast.add({ severity: 'success', summary: 'Success', detail: 'Task updated', life: 3000 });
             },
+            onError: () => {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update task', life: 3000 });
+            }
         });
     } else {
         form.post(route(routeName.value, param), {
@@ -217,8 +219,10 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                toast.add({ severity: 'success', summary: 'Success', detail: 'Task added', life: 3000 });
             },
+            onError: () => {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to store task', life: 3000 });
+            }
         });
     }
 };

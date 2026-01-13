@@ -56,6 +56,7 @@ interface Props {
     isPM: boolean;
     isAdmin: boolean;
     isMember: boolean;
+    isOwner: boolean;
     canManageMembers: boolean;
 }
 
@@ -272,6 +273,7 @@ const taskDialogHeader = computed(() => {
                                         @edit="openTaskEdit"
                                         :isPM="props.isPM"
                                         :isMember="props.isMember"
+                                        :isOwner="props.isOwner"
                                     />
                                 </div>
                             </TabPanel>
@@ -361,10 +363,7 @@ const taskDialogHeader = computed(() => {
                     selectedTask = null;
                     parentTaskId = null;
                 "
-                @saved="router.reload({ only: ['tasks', 'project'] })"
             />
         </Dialog>
-
-        <Toast />
     </AppLayout>
 </template>

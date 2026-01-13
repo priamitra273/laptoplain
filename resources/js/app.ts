@@ -17,6 +17,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import FocusTrap from 'primevue/focustrap';
 import Toast from 'primevue/toast';
 import ToastService from 'primevue/toastservice';
+import FlashToastProvider from './provider/FlashToastProvider.vue';
 
 import HighchartsVue from 'highcharts-vue';
 
@@ -75,7 +76,12 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+        createApp({
+            render: () =>
+                h(FlashToastProvider, null, {
+                    default: () => h(App, props),
+                }),
+        })
             .use(plugin)
             .use(ZiggyVue)
             .use(ToastService)

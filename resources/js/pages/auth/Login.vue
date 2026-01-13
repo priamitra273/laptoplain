@@ -2,7 +2,7 @@
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import bgImage from '@/images/Bg.jpg';
-import Logo from '@/images/logo-white.png';
+import Logo from '@/images/logo-dark.png';
 import { Head, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
@@ -32,7 +32,7 @@ const submit = () => {
             <!-- LEFT IMAGE SECTION -->
             <div class="relative hidden overflow-hidden md:block lg:col-span-2">
                 <!-- Background Image -->
-                <img :src="bgImage" alt="Background" class="absolute inset-0 h-full w-full scale-105 object-cover object-center" />
+                <img :src="bgImage" alt="Background" class="absolute inset-0 h-full w-full scale-105 bg-transparent object-cover object-center" />
 
                 <!-- Overlay -->
                 <div class="absolute inset-0 bg-gradient-to-br from-[#536976]/80 to-[#292E49]/90"></div>

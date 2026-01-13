@@ -29,9 +29,12 @@ Route::get('/', fn() => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('dashboard/statistic/{encoded}', [DashboardController::class, 'statistic'])->name('dashboard.statistic');
-    Route::get('dashboard/map/{encoded}', [DashboardController::class, 'map'])->name('dashboard.map');
+    // HAPUS route ini karena akan ditangani oleh fallback
+    // Route::get('dashboard/{any}', fn() => abort(404))
+    //     ->where('any', '.*');
+
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
     $except = ['create', 'show', 'edit'];
 
@@ -69,12 +72,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/clear', [NotificationController::class, 'clearAll'])
         ->name('notifications.clear');
 
-
-
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
         ->group(function () {
-
             Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
             Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
             Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
@@ -84,5 +84,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
 });
+
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
+
+Route::fallback(function () {
+    abort(404);
+});

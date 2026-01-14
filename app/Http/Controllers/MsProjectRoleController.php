@@ -35,7 +35,7 @@ class MsProjectRoleController extends Controller
 
         return redirect()
             ->route('project-role.index')
-            ->with('success', 'Project Role berhasil ditambahkan.');
+            ->with('success', 'Project Role has been successfully added.');
     }
 
 
@@ -49,7 +49,7 @@ class MsProjectRoleController extends Controller
 
         return redirect()
             ->route('project-role.index')
-            ->with('success', 'Project Role berhasil diperbarui.');
+            ->with('success', 'Project Role has been successfully updated.');
     }
 
     public function destroy(string $encodedId): RedirectResponse
@@ -62,6 +62,6 @@ class MsProjectRoleController extends Controller
 
         return redirect()
             ->route('project-role.index')
-            ->with('success', 'Project Role berhasil dihapus.');
+            ->with('success', 'Project Role has been successfully deleted.');
     }
 }

@@ -11,7 +11,7 @@ use Inertia\Response;
 
 class MsTaskTypeController extends Controller
 {
-    
+
     public function index(): Response
     {
         $msTaskTypes = MsTaskType::select([
@@ -25,21 +25,21 @@ class MsTaskTypeController extends Controller
         ])->orderBy('id')->get();
 
         $msTaskTypes = Sqids::rec_encode_ids_in_list($msTaskTypes);
-        
+
         return Inertia::render('ms_task_type/Index', [
             'task_types' => $msTaskTypes,
         ]);
     }
-   
+
     public function store(MsTaskTypeStoreRequest $request): RedirectResponse
     {
         MsTaskType::create($request->validated());
         return redirect()
             ->route('task-type.index')
-            ->with('success', 'Task Type berhasil ditambahkan.');
+            ->with('success', 'Task Type has been successfully added.');
     }
 
-     
+
     public function update(MsTaskTypeStoreRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
@@ -50,10 +50,10 @@ class MsTaskTypeController extends Controller
 
         return redirect()
             ->route('task-type.index')
-            ->with('success', 'Task Type berhasil diperbarui.');
+            ->with('success', 'Task Type has been successfully updated.');
     }
 
-    
+
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
@@ -64,6 +64,6 @@ class MsTaskTypeController extends Controller
 
         return redirect()
             ->route('task-type.index')
-            ->with('success', 'Task Type berhasil dihapus.');
+            ->with('success', 'Task Type has been successfully deleted.');
     }
 }

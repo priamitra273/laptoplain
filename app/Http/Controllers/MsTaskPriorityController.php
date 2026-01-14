@@ -11,7 +11,7 @@ use Inertia\Response;
 
 class MsTaskPriorityController extends Controller
 {
-    public function index():Response
+    public function index(): Response
     {
         $msTaskPriorities = MsTaskPriority::select([
             'id',
@@ -30,14 +30,14 @@ class MsTaskPriorityController extends Controller
         ]);
     }
 
-    
+
     public function store(MsTaskPriorityRequest $request): RedirectResponse
     {
         MsTaskPriority::create($request->validated());
 
         return redirect()
             ->route('task-priority.index')
-            ->with('success', 'Task Priority berhasil ditambahkan.');
+            ->with('success', 'Task Priority has been successfully added.');
     }
 
     public function update(MsTaskPriorityRequest $request, string $encodedId): RedirectResponse
@@ -50,7 +50,7 @@ class MsTaskPriorityController extends Controller
 
         return redirect()
             ->route('task-priority.index')
-            ->with('success', 'Task Priority berhasil diperbarui.');
+            ->with('success', 'Task Priority has been successfully updated.');
     }
 
     public function destroy(string $encodedId): RedirectResponse
@@ -63,6 +63,6 @@ class MsTaskPriorityController extends Controller
 
         return redirect()
             ->route('task-priority.index')
-            ->with('success', 'Task Priority berhasil dihapus.');
+            ->with('success', 'Task Priority has been successfully deleted.');
     }
 }

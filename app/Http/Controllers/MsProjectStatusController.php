@@ -11,7 +11,7 @@ use Inertia\Response;
 
 class MsProjectStatusController extends Controller
 {
-    
+
     public function index(): Response
     {
         $statuses = MsProjectStatus::select([
@@ -31,17 +31,17 @@ class MsProjectStatusController extends Controller
         ]);
     }
 
-    
+
     public function store(MsProjectStatusStoreRequest $request): RedirectResponse
     {
         MsProjectStatus::create($request->validated());
 
         return redirect()
-        ->route('project-status.index')
-        ->with('success', 'Project Status berhasil ditambahkan');
+            ->route('project-status.index')
+            ->with('success', 'Project Status has been successfully added.');
     }
 
-    
+
     public function update(MsProjectStatusStoreRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
@@ -52,11 +52,11 @@ class MsProjectStatusController extends Controller
 
         return redirect()
             ->route('project-status.index')
-            ->with('success', 'Project Status berhasil diperbarui.');
+            ->with('success', 'Project Status has been successfully updated.');
     }
 
-    
-     public function destroy(string $encodedId): RedirectResponse
+
+    public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
         if (empty($id)) abort(404, 'ID tidak valid.');
@@ -66,6 +66,6 @@ class MsProjectStatusController extends Controller
 
         return redirect()
             ->route('project-status.index')
-            ->with('success', 'Project Status berhasil dihapus.');
+            ->with('success', 'Project Status has been successfully deleted.');
     }
 }

@@ -11,7 +11,6 @@ use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -35,7 +34,7 @@ class TaskController extends Controller
             ->where('user.id', $userId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
-        
+
         if ($isOwner) {
             return $isOwner;
         }
@@ -172,7 +171,7 @@ class TaskController extends Controller
                 'task_id' => $task->id,
                 'task_status_id' => $task->status_id,
                 'task_type_id' => $task->type_id,
-                'message' => "Task '{$task->title}' telah dibuat dan ditugaskan kepada Anda."
+                'message' => "Task '{$task->title}' Has Been Created And Assigned to You."
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
@@ -336,7 +335,7 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' telah diperbarui"
+            'message' => "Task '{$task->title}' Has Been Updated."
         ]);
 
         $allUserIds = array_merge(

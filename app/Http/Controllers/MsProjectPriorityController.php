@@ -36,7 +36,7 @@ class MsProjectPriorityController extends Controller
 
         return redirect()
             ->route('project-priority.index')
-            ->with('success', 'Project Priority berhasil ditambahkan.');
+            ->with('success', 'Project Priority has been successfully added.');
     }
 
     public function update(MsProjectPriorityRequest $request, string $encodedId): RedirectResponse
@@ -49,7 +49,7 @@ class MsProjectPriorityController extends Controller
 
         return redirect()
             ->route('project-priority.index')
-            ->with('success', 'Project Priority berhasil diperbarui.');
+            ->with('success', 'Project Priority has been successfully updated.');
     }
 
     public function destroy(string $encodedId): RedirectResponse
@@ -62,6 +62,6 @@ class MsProjectPriorityController extends Controller
 
         return redirect()
             ->route('project-priority.index')
-            ->with('success', 'Project Priority berhasil dihapus.');
+            ->with('success', 'Project Priority has been successfully deleted.');
     }
 }

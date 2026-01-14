@@ -247,12 +247,6 @@ const submitComment = () => {
             onSuccess: () => {
                 newComment.value = '';
                 router.reload({ only: ['comments'] });
-                toast.add({
-                    severity: 'success',
-                    summary: 'Comment Posted',
-                    detail: 'Your comment has been added successfully',
-                    life: 3000,
-                });
             },
             onError: () => {
                 toast.add({

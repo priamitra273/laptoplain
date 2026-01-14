@@ -46,14 +46,9 @@ const onSelect = (value: any) => {
 const save = () => {
     form.post(route('project.members.store', { projectEncoded: props.projectId }), {
         preserveScroll: true,
-        onSuccess: () => {
-            emit('saved');
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Member added successfully',
-                life: 2000,
-            });
+        onSuccess: () => { emit('saved') },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save member', life: 3000 });
         },
     });
 };

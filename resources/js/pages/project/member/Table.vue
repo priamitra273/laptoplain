@@ -44,22 +44,8 @@ const remove = (member: ProjectMember) => {
                 }),
                 {
                     preserveScroll: true,
-                    onSuccess: () => {
-                        toast.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Member removed successfully',
-                            life: 2000,
-                        });
-                    },
-
-                    onError: (errors) => {
-                        toast.add({
-                            severity: 'error',
-                            summary: 'Action denied',
-                            detail: errors.member ?? 'Failed to remove member',
-                            life: 3000,
-                        });
+                    onError: () => {
+                        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete member', life: 3000 });
                     },
                 },
             );

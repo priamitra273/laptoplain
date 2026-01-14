@@ -63,13 +63,8 @@ const destroy = (taskPriority: TaskPriority) => {
         accept: () => {
             router.delete(route('task-priority.destroy', taskPriority.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Success',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task priority', life: 3000 });
                 },
             });
         },

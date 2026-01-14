@@ -148,19 +148,10 @@ const autoSave = (field: string, value: any) => {
             projectEncoded: props.project.id,
             taskEncoded: props.task.id,
         }),
-        updateData,
         {
-            onSuccess: () => {
-                cancelEdit();
-                toast.add({
-                    severity: 'success',
-                    summary: 'Update Successful',
-                    detail: `${getFieldLabel(field)} has been updated successfully`,
-                    life: 3000,
-                });
-            },
-            onError: (errors) => {
-                cancelEdit();
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => {
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
@@ -168,6 +159,7 @@ const autoSave = (field: string, value: any) => {
                     life: 3000,
                 });
             },
+
         },
     );
 };

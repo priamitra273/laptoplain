@@ -160,7 +160,7 @@ class ProjectController extends Controller
             'is_active' => true
         ]);
 
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project added successfully');
     }
 
     public function update(ProjectStoreRequest $request, string $encoded)
@@ -173,7 +173,7 @@ class ProjectController extends Controller
             'progress' => $project->calculateProgress()
         ]);
 
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project updated successfully');
     }
 
     public function destroy(string $encoded)
@@ -182,6 +182,6 @@ class ProjectController extends Controller
 
         Project::findOrFail($id)->delete();
 
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project deleted successfully');
     }
 }

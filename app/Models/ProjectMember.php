@@ -33,33 +33,34 @@ class ProjectMember extends Model
         'is_active' => 'boolean'
     ];
 
-    /**
-     * Relasi ke project
-     */
+    protected static function booted()
+    {
+        static::deleting(function ($member) {
+            // Ambil semua task dari project
+            $tasks = Task::where('project_id', $member->project_id)->get();
+
+            // Detach user dari setiap task
+            foreach ($tasks as $task) {
+                $task->users()->detach($member->user_id);
+            }
+        });
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');
     }
 
-    /**
-     * Relasi ke user
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /**
-     * Relasi ke project role
-     */
     public function role(): BelongsTo
     {
         return $this->belongsTo(MsProjectRole::class, 'project_role_id');
     }
 
-    /**
-     * Relasi ke user (owner)
-     */
     public function owned(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owned_id');

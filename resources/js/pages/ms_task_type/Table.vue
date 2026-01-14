@@ -63,13 +63,8 @@ const destroy = (task_type: TaskType) => {
         accept: () => {
             router.delete(route('task-type.destroy', task_type.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Success',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task type', life: 3000 });
                 },
             });
         },

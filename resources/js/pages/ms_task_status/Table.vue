@@ -63,13 +63,8 @@ const destroy = (task_status: TaskStatus) => {
         accept: () => {
             router.delete(route('task-status.destroy', task_status.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Deleted',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task status', life: 3000 });
                 },
             });
         },

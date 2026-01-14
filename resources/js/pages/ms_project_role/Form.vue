@@ -48,14 +48,9 @@ const save = () => {
 
     form.post(url, {
         preserveScroll: true,
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: isUpdate ? 'Updated!' : 'Created!',
-                detail: isUpdate ? 'Project role has been updated successfully' : 'Project priority has been created successfully',
-                life: 3000,
-            });
-            visible.value = false;
+        onSuccess: () => { visible.value = false },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save project role', life: 3000 });
         },
     });
 };

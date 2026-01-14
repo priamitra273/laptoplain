@@ -48,18 +48,13 @@ const save = () => {
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
-    const isUpdate = props.value?.id ? true : false;
-
     form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: isUpdate ? 'Updated!' : 'Created!',
-                detail: isUpdate ? 'Task Status has been updated successfully' : 'Project priority has been created successfully',
-                life: 3000,
-            });
             visible.value = false;
+        },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save task status', life: 3000 });
         },
     });
 };

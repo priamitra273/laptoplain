@@ -63,13 +63,9 @@ const destroy = (project_priority: ProjectPriority) => {
         },
         accept: () => {
             router.delete(route('project-priority.destroy', project_priority.id), {
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Deleted!',
-                        detail: 'Project priority has been deleted.',
-                        life: 3000,
-                    });
+                preserveScroll: true,
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete project priority', life: 3000 });
                 },
             });
         },

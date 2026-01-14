@@ -79,14 +79,6 @@ const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: an
     router.put(route('project.update', data.encoded || data.id), payload, {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: 'Updated',
-                detail: `${field} updated successfully.`,
-                life: 2000,
-            });
-        },
     });
 };
 
@@ -100,13 +92,9 @@ const confirmDelete = (project: Project) => {
         acceptClass: 'p-button-danger',
         accept: () => {
             router.delete(route('project.destroy', { project: project.id }), {
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Deleted',
-                        detail: 'Project deleted successfully.',
-                        life: 3000,
-                    });
+                preserveScroll: true,
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete project', life: 3000 });
                 },
             });
         },

@@ -62,13 +62,8 @@ const destroy = (project_role: ProjectRole) => {
         accept: () => {
             router.delete(route('project-role.destroy', project_role.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Deleted',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete project role', life: 3000 });
                 },
             });
         },

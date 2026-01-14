@@ -84,13 +84,9 @@ const save = (): void => {
         preserveScroll: true,
         onSuccess: () => {
             visible.value = false;
-            hide();
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Project created successfully.',
-                life: 3000,
-            });
+        },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save project', life: 3000 });
         },
     });
 };

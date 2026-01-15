@@ -16,6 +16,36 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    private function hasTaskAccess(Task $task): bool
+    {
+        try {
+            $userId = Auth::id();
+        } catch (\Throwable $th) {
+            throw $th;
+        }
+
+        $project = Project::with('projectMembers')->find($task->project_id);
+
+        if (!$project) {
+            return false;
+        }
+
+        $isOwner = $project->projectMembers
+            ->where('user.id', $userId)
+            ->where('role.name', 'Owner')
+            ->isNotEmpty();
+
+        if ($isOwner) {
+            return $isOwner;
+        }
+
+        $isMember = $task->users()
+            ->where('user_id', $userId)
+            ->exists();
+
+        return $isMember;
+    }
+
     public function index()
     {
         $userId = Auth::id();
@@ -63,11 +93,29 @@ class TaskController extends Controller
 
     public function store(TaskStoreRequest $request, string $encoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
+        try {
+            $projectId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!$projectId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($projectId);
+        $project = Project::with('projectMembers')->find($projectId);
+
+        if (!$project) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
         $isMember = $project->projectMembers()
             ->where('user_id', Auth::id())
             ->exists();
@@ -123,7 +171,7 @@ class TaskController extends Controller
                 'task_id' => $task->id,
                 'task_status_id' => $task->status_id,
                 'task_type_id' => $task->type_id,
-                'message' => "Task '{$task->title}' telah dibuat dan ditugaskan kepada Anda."
+                'message' => "Task '{$task->title}' Has Been Created And Assigned to You."
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
@@ -136,8 +184,19 @@ class TaskController extends Controller
 
     public function show(string $encoded)
     {
-        $taskId = Sqids::decode($encoded);
-        if (!$taskId) abort(404);
+        try {
+            $taskId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $task = Task::with([
             'project:id,title,emoji',
@@ -162,7 +221,13 @@ class TaskController extends Controller
                         'replies.user'
                     ]);
             }
-        ])->findOrFail($taskId);
+        ])->find($taskId);
+
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $task->update(['progress' => $task->calculateProgress()]);
 
@@ -178,6 +243,10 @@ class TaskController extends Controller
         $isMember = $project->projectMembers
             ->where('user.id', Auth::id())
             ->isNotEmpty();
+        
+        $isTaskMember =$task->users()
+            ->where('user_id', Auth::id())
+            ->exists();
 
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
@@ -195,6 +264,7 @@ class TaskController extends Controller
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isPM' => $isPM,
             'isMember' => $isMember,
+            'isTaskMember' => $isTaskMember,
             'comments' => $task->comments?->toArray() ?? [],
         ];
 
@@ -203,27 +273,36 @@ class TaskController extends Controller
 
     public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
     {
-        $taskId = Sqids::decode($taskEncoded);
-        $task = Task::findOrFail($taskId);
+        try {
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
-        // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($task->project_id);
-        $isMember = $project->projectMembers()
-            ->where('user_id', Auth::id())
-            ->exists();
+        if (!$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
-        if (!$isMember) {
-            return back()->with('error', 'You are not a member of this project');
+        $task = Task::find($taskId);
+
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!self::hasTaskAccess($task)) {
+            return back()->with('error', 'You have no access to this task');
         }
 
         $data = $request->validated();
 
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
-
-        // ==============================
-        // HANDLE TAGGING
-        // ==============================
 
         if (!empty($data['add_tag']['exists'])) {
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
@@ -261,7 +340,7 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' telah diperbarui"
+            'message' => "Task '{$task->title}' Has Been Updated."
         ]);
 
         $allUserIds = array_merge(
@@ -288,32 +367,53 @@ class TaskController extends Controller
             }
         }
 
-        $redirectTo = $request->input('redirect_to')
-            ?? route('task.show', Sqids::encode($task->id));
-
-        return redirect($redirectTo)
-            ->with('success', 'Task updated successfully');
+        return back()->with('success', 'Task updated successfully');
     }
 
     public function destroy(string $encoded, string $taskEncoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
-
-        $taskId = Sqids::decode($taskEncoded);
-        if (!$taskId) abort(404);
-
-        $task = Task::findOrFail($taskId);
-
-        // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->findOrFail($task->project_id);
-        $isMember = $project->projectMembers()
-            ->where('user_id', Auth::id())
-            ->exists();
-
-        if (!$isMember) {
-            return back()->with('error', 'You are not a member of this project');
+        try {
+            $projectId = Sqids::decode($encoded);
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
         }
+
+        if (!$projectId || !$taskId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        $task = Task::find($taskId);
+
+        if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        if (!self::hasTaskAccess($task)) {
+            return back()->with('error', 'You have no access to this task');
+        }
+
+        // $project = Project::with('projectMembers')->find($task->project_id);
+
+        // if (!$project) {
+        //     return Inertia::render('errors/NotFound')
+        //         ->toResponse(request())
+        //         ->setStatusCode(404);
+        // }
+
+        // $isMember = $project->projectMembers()
+        //     ->where('user_id', Auth::id())
+        //     ->exists();
+
+        // if (!$isMember) {
+        //     return back()->with('error', 'You are not a member of this project');
+        // }
 
         $notification = Notification::create([
             'task_id' => $task->id,

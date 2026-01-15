@@ -52,18 +52,11 @@ const save = () => {
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
-    const isUpdate = props.value?.id ? true : false;
-
     form.post(url, {
         preserveScroll: true,
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: isUpdate ? 'Updated!' : 'Created!',
-                detail: isUpdate ? 'Project priority has been updated successfully' : 'Project priority has been created successfully',
-                life: 3000,
-            });
-            visible.value = false;
+        onSuccess: () => { visible.value = false },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save project priority', life: 3000 });
         },
     });
 };
@@ -115,7 +108,7 @@ for (const key in form.data()) {
                     </template>
                     <template #option="slotProps">
                         <div class="flex w-full">
-                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" class="mx-auto" />
+                            <Tag :value="slotProps.option.label" :severity="slotProps.option.value" />
                         </div>
                     </template>
                 </Select>

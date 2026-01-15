@@ -11,6 +11,7 @@ use App\Models\MsProjectRole;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\ProjectMember;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +25,7 @@ class ProjectController extends Controller
             'status:id,name,severity',
             'priority:id,name,severity'
         ])
-            ->orderBy('id')
+            ->orderByDesc('id')
             ->get();
 
         $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
@@ -41,9 +42,18 @@ class ProjectController extends Controller
 
     public function show(string $encoded)
     {
-        $projectId = Sqids::decode($encoded);
-        if (!$projectId) abort(404);
-
+        try {
+            $projectId = Sqids::decode($encoded);
+        } catch (\Exception $e) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+        if (!$projectId) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
@@ -52,7 +62,14 @@ class ProjectController extends Controller
             'tasks' => function ($query) {
                 $query->withRecursive();
             },
-        ])->findOrFail($projectId);
+        ])->find($projectId);
+
+        // If project not found, return 404 page
+        if (!$project) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
 
         $project->update([
             'progress' => $project->calculateProgress()
@@ -83,21 +100,19 @@ class ProjectController extends Controller
 
         $currentUser = Auth::user();
         $currentUserId = Auth::id();
-
-        // Check if user is admin
         $isAdmin = $currentUser->roles->contains(function ($role) {
             return stripos($role->name, 'admin-') === 0;
         });
-
-        // Check if user is Project Manager
         $isPM = $project->projectMembers
             ->where('user.id', $currentUserId)
-            ->where('role.name', 'Project Manager')
+            ->where('role.name', 'Owner')
             ->isNotEmpty();
-
-        // Check if user is a member of the project
         $isMember = $project->projectMembers
             ->where('user.id', $currentUserId)
+            ->isNotEmpty();
+        $isOwner = $project->projectMembers
+            ->where('user.id', $currentUserId)
+            ->where('role.name', 'Owner')
             ->isNotEmpty();
 
         $canManageMembers = $isAdmin || $isPM;
@@ -115,7 +130,8 @@ class ProjectController extends Controller
             'assignableUsers' => $assignableUsers->toArray(),
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
-            'isMember' => $isMember, // Added this
+            'isMember' => $isMember,
+            'isOwner' => $isOwner,
             'canManageMembers' => $canManageMembers
         ];
 
@@ -126,12 +142,25 @@ class ProjectController extends Controller
     {
         $project = Project::create($request->validated());
 
-        // Set progress default (0)
         $project->update([
             'progress' => $project->calculateProgress()
         ]);
 
-        return to_route('project.index');
+        $projectId = $project->id;
+        $userId = Auth::id();
+        $projectRoleId = MsProjectRole::where('name', 'Owner')->first()->id;
+
+        ProjectMember::create([
+            'project_id' => $projectId,
+            'user_id' => $userId,
+            'project_role_id' => $projectRoleId,
+            'owned_id' => $request["owned_id"],
+            'created_by' => $request["created_by"],
+            'updated_by' => $request["updated_by"],
+            'is_active' => true
+        ]);
+
+        return to_route('project.index')->with('success', 'Project added successfully');
     }
 
     public function update(ProjectStoreRequest $request, string $encoded)
@@ -140,13 +169,11 @@ class ProjectController extends Controller
 
         $project = Project::findOrFail($id);
         $project->update($request->validated());
-
-        // Update progress terbaru setelah update data project
         $project->update([
             'progress' => $project->calculateProgress()
         ]);
 
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project updated successfully');
     }
 
     public function destroy(string $encoded)
@@ -155,6 +182,6 @@ class ProjectController extends Controller
 
         Project::findOrFail($id)->delete();
 
-        return to_route('project.index');
+        return to_route('project.index')->with('success', 'Project deleted successfully');
     }
 }

@@ -1,21 +1,38 @@
 <script setup lang="ts">
 import Label from '@/components/ui/label/Label.vue';
 import { useForm } from '@inertiajs/vue3';
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Editor from 'primevue/editor';
 import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
-import { computed, watch as vueWatch } from 'vue';
-import EmojiPicker from '@/components/EmojiPicker.vue';
+import { computed, ref, watch as vueWatch } from 'vue';
+import { PrimeSeverity } from '@/types';
+
+const emojiIndex = new EmojiIndex(emojiData);
+
+interface ProjectStatus { 
+    id: string; 
+    name: string;
+    severity: PrimeSeverity 
+}
+
+interface ProjectPriority { 
+    id: string; 
+    name: string;
+    severity: PrimeSeverity 
+}
 
 interface Props {
     value?: any;
     visible: boolean;
-    statuses: { id: number; name: string }[];
-    priorities: { id: number; name: string }[];
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
 }
 
 interface ProjectForm {
@@ -24,8 +41,8 @@ interface ProjectForm {
     due_date: Date | null;
     description: string;
     emoji: string | null;
-    status_id: number | null;
-    priority_id: number | null;
+    status_id: string | null;
+    priority_id: string | null;
     owner_id?: number | null;
     owned_id?: number | null;
     [key: string]: any;
@@ -34,6 +51,8 @@ interface ProjectForm {
 const props = defineProps<Props>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
+
+const showEmojiPicker = ref(false);
 
 const visible = computed<boolean>({
     get() {
@@ -49,12 +68,21 @@ const form = useForm<ProjectForm>({
     start_date: null,
     due_date: null,
     description: '',
-    emoji: ':page_facing_up:',
+    emoji: '🗒️',
     status_id: null,
     priority_id: null,
     owner_id: null,
     owned_id: null,
 });
+
+const onEmojiSelect = (emoji: any) => {
+    form.emoji = emoji.native || emoji.emoji;
+    showEmojiPicker.value = false;
+};
+
+const toggleEmojiPicker = () => {
+    showEmojiPicker.value = !showEmojiPicker.value;
+};
 
 const save = (): void => {
     const url = route('project.store');
@@ -69,13 +97,11 @@ const save = (): void => {
         preserveScroll: true,
         onSuccess: () => {
             visible.value = false;
-            hide();
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Project created successfully.',
-                life: 3000,
-            });
+            form.reset();
+            form.clearErrors();
+        },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save project', life: 3000 });
         },
     });
 };
@@ -83,11 +109,13 @@ const save = (): void => {
 const show = (): void => {
     form.reset();
     form.clearErrors();
+    showEmojiPicker.value = false;
 };
 
 const hide = (): void => {
     form.reset();
     form.clearErrors();
+    showEmojiPicker.value = false;
 };
 
 vueWatch(
@@ -99,6 +127,10 @@ vueWatch(
     },
     { deep: true },
 );
+
+const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]) => {
+    return options.find((option) => option.id === id) || null;
+};
 </script>
 
 <template>
@@ -116,12 +148,19 @@ vueWatch(
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputGroup>
-                    <InputGroupAddon>
-                        <EmojiPicker v-model="form.emoji" />
+                    <InputGroupAddon class="cursor-pointer" @click="toggleEmojiPicker">
+                        <span class="text-xl">{{ form.emoji || '😀' }}</span>
                     </InputGroupAddon>
                     <InputText v-model="form.title" id="title" placeholder="Enter Project Title" fluid />
                 </InputGroup>
                 <small v-if="form.errors.title" class="mt-1 text-sm text-red-500">{{ form.errors.title }}</small>
+
+                <!-- Emoji Picker Popup -->
+                <div v-if="showEmojiPicker" class="relative z-50">
+                    <div class="absolute left-0 top-0 shadow-lg">
+                        <Picker :data="emojiIndex" @select="onEmojiSelect" set="native" :native="true" title="Pick an emoji" emoji="point_up" />
+                    </div>
+                </div>
             </div>
 
             <div class="flex flex-col gap-2">
@@ -145,27 +184,61 @@ vueWatch(
 
             <div class="flex flex-col gap-2">
                 <Label for="status_id">Status</Label>
-                <Dropdown
+                <Select
                     v-model="form.status_id"
                     :options="props.statuses"
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Select Status"
                     class="w-full"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag
+                                :value="getSelectValue(slotProps.value, props.statuses)?.name"
+                                :severity="getSelectValue(slotProps.value, props.statuses)?.severity"
+                            />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex">
+                            <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
+                        </div>
+                    </template>
+                </Select>
                 <small v-if="form.errors.status_id" class="mt-1 text-sm text-red-500">{{ form.errors.status_id }}</small>
             </div>
 
             <div class="flex flex-col gap-2">
                 <Label for="priority_id">Priority</Label>
-                <Dropdown
+                <Select
                     v-model="form.priority_id"
                     :options="props.priorities"
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Select Priority"
                     class="w-full"
-                />
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <Tag
+                                :value="getSelectValue(slotProps.value, props.priorities)?.name"
+                                :severity="getSelectValue(slotProps.value, props.priorities)?.severity"
+                            />
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex">
+                            <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
+                        </div>
+                    </template>
+                </Select>
                 <small v-if="form.errors.priority_id" class="mt-1 text-sm text-red-500">{{ form.errors.priority_id }}</small>
             </div>
 

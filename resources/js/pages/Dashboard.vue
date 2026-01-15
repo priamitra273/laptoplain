@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import type { BreadcrumbItem, Project } from '@/types';
-import type { Task } from './project';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import type { Task } from './project';
 
 import Heading from '@/components/Heading.vue';
 import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
-import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import Column from 'primevue/column';
@@ -16,12 +15,18 @@ import DataTable from 'primevue/datatable';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
+
+const emojiIndex = new EmojiIndex(emojiData);
+
 interface Props {
     projects: Project[];
     tasks: Task[];
     stats: {
-        tasks: { total: number; completed: number; in_progress: number };
-        projects: { total: number; completed: number; in_progress: number };
+        tasks: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
+        projects: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
         members: { total: number; list: { id: number; name: string }[] };
     };
 }
@@ -33,18 +38,46 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' 
 const latestProjects = ref<Project[]>(props.projects.slice(0, 5));
 const latestTasks = ref<Task[]>(props.tasks.slice(0, 5));
 
-const taskStatistic = computed(() => ({
-    completed: props.stats.tasks.completed,
-    inProgress: props.stats.tasks.in_progress,
-    notStarted: props.stats.tasks.total - props.stats.tasks.completed - props.stats.tasks.in_progress,
-}));
+// Computed properties for status breakdown
+const taskStatusBreakdown = computed(() => {
+    if (props.stats.tasks.byStatus) {
+        return props.stats.tasks.byStatus;
+    }
 
-const projectStatistic = computed(() => ({
-    completed: props.stats.projects.completed,
-    inProgress: props.stats.projects.in_progress,
-    notStarted: props.stats.projects.total - props.stats.projects.completed - props.stats.projects.in_progress,
-    total: props.stats.projects.total,
-}));
+    const statusMap = new Map();
+    props.tasks.forEach((task) => {
+        const statusName = task.status.name;
+        if (!statusMap.has(statusName)) {
+            statusMap.set(statusName, {
+                name: statusName,
+                count: 0,
+                severity: task.status.severity,
+            });
+        }
+        statusMap.get(statusName).count++;
+    });
+    return Array.from(statusMap.values());
+});
+
+const projectStatusBreakdown = computed(() => {
+    if (props.stats.projects.byStatus) {
+        return props.stats.projects.byStatus;
+    }
+
+    const statusMap = new Map();
+    props.projects.forEach((project) => {
+        const statusName = project.status.name;
+        if (!statusMap.has(statusName)) {
+            statusMap.set(statusName, {
+                name: statusName,
+                count: 0,
+                severity: project.status.severity,
+            });
+        }
+        statusMap.get(statusName).count++;
+    });
+    return Array.from(statusMap.values());
+});
 
 const getInitials = (name: string) =>
     name
@@ -61,18 +94,14 @@ const getRandomColor = (index: number) => {
 
 const viewAllProjects = () => router.get(route('project.index'));
 const viewAllTasks = () => router.get(route('task.index'));
-const calcProgress = (completed: number, total: number) => {
-    if (!total || total <= 0) return 0;
-    return Math.round((completed / total) * 100);
-};
 
 const onTaskRowClick = (event: any) => {
     router.visit(route('task.show', event.data.id));
 };
+
 const onProjectRowClick = (event: any) => {
     router.visit(route('project.show', event.data.id));
 };
-
 </script>
 
 <template>
@@ -82,6 +111,7 @@ const onProjectRowClick = (event: any) => {
             <Heading title="Dashboard" description="Overview of your projects, tasks, and team members" />
 
             <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <!-- TASK CARD -->
                 <Card class="shadow-md transition-shadow hover:shadow-lg">
                     <template #content>
                         <div class="space-y-4">
@@ -101,27 +131,30 @@ const onProjectRowClick = (event: any) => {
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold"> {{ calcProgress(taskStatistic.completed, props.stats.tasks.total) }}% </span>
+                                    <span class="font-semibold">{{ props.stats.tasks.progress }}%</span>
                                 </div>
-                                <ProgressBar :value="calcProgress(taskStatistic.completed, props.stats.tasks.total)" :showValue="false" class="h-2" />
+                                <ProgressBar :value="props.stats.tasks.progress" :showValue="false" class="h-2" />
                             </div>
 
-                            <div class="flex items-center gap-4 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <Badge value="" severity="success" class="h-2 w-2 min-w-0 p-0" />
-                                    <span>Completed</span>
-                                    <span class="font-semibold">{{ taskStatistic.completed }}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <Badge value="" severity="warn" class="h-2 w-2 min-w-0 p-0" />
-                                    <span>In Progress</span>
-                                    <span class="font-semibold">{{ taskStatistic.inProgress }}</span>
+                            <!-- Status Breakdown -->
+                            <div class="space-y-2 border-t pt-3 dark:border-gray-700">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <Tag
+                                        v-for="status in taskStatusBreakdown"
+                                        :key="status.name"
+                                        :value="`${status.name} (${status.count})`"
+                                        :severity="status.severity"
+                                        rounded
+                                        class="text-xs"
+                                    />
                                 </div>
                             </div>
                         </div>
                     </template>
                 </Card>
 
+                <!-- PROJECT CARD -->
                 <Card class="shadow-md transition-shadow hover:shadow-lg">
                     <template #content>
                         <div class="space-y-4">
@@ -131,7 +164,7 @@ const onProjectRowClick = (event: any) => {
                                         <i class="pi pi-briefcase text-xl text-purple-500"></i>
                                         <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Projects</span>
                                     </div>
-                                    <div class="text-4xl font-bold">{{ projectStatistic.total }}</div>
+                                    <div class="text-4xl font-bold">{{ props.stats.projects.total }}</div>
                                 </div>
                                 <div class="rounded-lg bg-purple-50 p-3 dark:bg-purple-900/20">
                                     <i class="pi pi-briefcase text-3xl text-purple-500"></i>
@@ -141,31 +174,30 @@ const onProjectRowClick = (event: any) => {
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>Progress</span>
-                                    <span class="font-semibold"> {{ calcProgress(projectStatistic.completed, projectStatistic.total) }}% </span>
+                                    <span class="font-semibold">{{ props.stats.projects.progress }}%</span>
                                 </div>
-                                <ProgressBar
-                                    :value="calcProgress(projectStatistic.completed, projectStatistic.total)"
-                                    :showValue="false"
-                                    class="h-2"
-                                />
+                                <ProgressBar :value="props.stats.projects.progress" :showValue="false" class="h-2" />
                             </div>
 
-                            <div class="flex items-center gap-4 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <Badge value="" severity="success" class="h-2 w-2 min-w-0 p-0" />
-                                    <span>Completed</span>
-                                    <span class="font-semibold">{{ projectStatistic.completed }}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <Badge value="" severity="warn" class="h-2 w-2 min-w-0 p-0" />
-                                    <span>In Progress</span>
-                                    <span class="font-semibold">{{ projectStatistic.inProgress }}</span>
+                            <!-- Status Breakdown -->
+                            <div class="space-y-2 border-t pt-3 dark:border-gray-700">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <Tag
+                                        v-for="status in projectStatusBreakdown"
+                                        :key="status.name"
+                                        :value="`${status.name} (${status.count})`"
+                                        :severity="status.severity"
+                                        rounded
+                                        class="text-xs"
+                                    />
                                 </div>
                             </div>
                         </div>
                     </template>
                 </Card>
 
+                <!-- MEMBERS CARD -->
                 <Card class="shadow-md transition-shadow hover:shadow-lg">
                     <template #content>
                         <div class="space-y-4">
@@ -210,6 +242,7 @@ const onProjectRowClick = (event: any) => {
                 </Card>
             </div>
 
+            <!-- LATEST PROJECTS -->
             <Card class="shadow-md">
                 <template #title>
                     <div class="flex items-center justify-between">
@@ -221,22 +254,28 @@ const onProjectRowClick = (event: any) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable 
-                        :value="latestProjects" 
-                        stripedRows 
-                        responsiveLayout="scroll" 
-                        class="text-sm cursor-pointer" 
+                    <DataTable
+                        :value="latestProjects"
+                        stripedRows
+                        responsiveLayout="scroll"
+                        class="cursor-pointer text-sm"
                         row-hover
                         @row-click="onProjectRowClick"
                     >
                         <Column field="title" header="Project" style="min-width: 250px">
                             <template #body="{ data }">
                                 <div class="flex items-center gap-3">
-                                    <span class="text-3xl">{{ data.emoji }}</span>
-                                    <span class="font-semibold">{{ data.title }}</span>
+                                    <Emoji v-if="data.emoji?.startsWith(':')" :data="emojiIndex" :emoji="data.emoji" set="google" :size="24" />
+                                    <span v-else class="text-2xl leading-none">
+                                        {{ data.emoji }}
+                                    </span>
+                                    <span class="truncate font-semibold">
+                                        {{ data.title }}
+                                    </span>
                                 </div>
                             </template>
                         </Column>
+
                         <Column field="status" header="Status" style="min-width: 150px">
                             <template #body="{ data }">
                                 <Tag :value="data.status.name" :severity="data.status.severity" rounded class="font-semibold" />
@@ -251,6 +290,7 @@ const onProjectRowClick = (event: any) => {
                 </template>
             </Card>
 
+            <!-- LATEST TASKS -->
             <Card class="shadow-md">
                 <template #title>
                     <div class="flex items-center justify-between">
@@ -262,11 +302,11 @@ const onProjectRowClick = (event: any) => {
                     </div>
                 </template>
                 <template #content>
-                    <DataTable 
-                        :value="latestTasks" 
-                        stripedRows 
-                        responsiveLayout="scroll" 
-                        class="text-sm cursor-pointer" 
+                    <DataTable
+                        :value="latestTasks"
+                        stripedRows
+                        responsiveLayout="scroll"
+                        class="cursor-pointer text-sm"
                         row-hover
                         @row-click="onTaskRowClick"
                     >

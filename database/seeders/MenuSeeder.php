@@ -95,15 +95,15 @@ class MenuSeeder extends Seeder
             'is_active' => true
         ]));
 
-        // project role
-        $service->store(new ValidatedInput([
-            'label' => 'Project Role',
-            'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
-            'route_name' => 'project-role.index',
-            'sequence_number' => 1,
-            'is_active' => true
-        ]));
+        // // project role
+        // $service->store(new ValidatedInput([
+        //     'label' => 'Project Role',
+        //     'parent_uuid' => $master_data->uuid,
+        //     'icon' => 'BookCheck',
+        //     'route_name' => 'project-role.index',
+        //     'sequence_number' => 1,
+        //     'is_active' => true
+        // ]));
 
         // project status
         $service->store(new ValidatedInput([
@@ -130,7 +130,7 @@ class MenuSeeder extends Seeder
             'label' => 'Task Status',
             'parent_uuid' => $master_data->uuid,
             'icon' => 'BookCheck',
-            'route_name' => 'taskstatus.index',
+            'route_name' => 'task-status.index',
             'sequence_number' => 4,
             'is_active' => true
         ]));

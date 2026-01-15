@@ -63,13 +63,8 @@ const destroy = (tag: TagData) => {
         accept: () => {
             router.delete(route('tag.destroy', tag.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Success',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete tag', life: 3000 });
                 },
             });
         },

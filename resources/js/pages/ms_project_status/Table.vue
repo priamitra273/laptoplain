@@ -63,13 +63,8 @@ const destroy = (status: MsProjectStatus) => {
         accept: () => {
             router.delete(route('project-status.destroy', status.id), {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Deleted',
-                        detail: 'Data has been deleted successfully',
-                        life: 3000,
-                    });
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete project status', life: 3000 });
                 },
             });
         },

@@ -11,7 +11,7 @@ use Inertia\Response;
 
 class MsTaskStatusController extends Controller
 {
-    
+
 
     public function index(): Response
     {
@@ -31,14 +31,14 @@ class MsTaskStatusController extends Controller
             'task_statuses' => $msTaskStatuses,
         ]);
     }
-    
+
     public function store(MsTaskStatusStoreRequest $request): RedirectResponse
     {
         MsTaskStatus::create($request->validated());
 
         return redirect()
             ->route('task-status.index')
-            ->with('success', 'Task Status berhasil ditambahkan.');
+            ->with('success', 'Task Status has been successfully added.');
     }
 
     public function update(MsTaskStatusStoreRequest $request, string $encodedId): RedirectResponse
@@ -51,7 +51,7 @@ class MsTaskStatusController extends Controller
 
         return redirect()
             ->route('task-status.index')
-            ->with('success', 'Task Status berhasil diperbarui.');
+            ->with('success', 'Task Status has been successfully updated.');
     }
 
     public function destroy(string $encodedId): RedirectResponse
@@ -64,6 +64,6 @@ class MsTaskStatusController extends Controller
 
         return redirect()
             ->route('task-status.index')
-            ->with('success', 'Task Status berhasil dihapus.');
+            ->with('success', 'Task Status has been successfully deleted.');
     }
 }

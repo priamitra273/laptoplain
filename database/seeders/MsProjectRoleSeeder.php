@@ -16,7 +16,7 @@ class MsProjectRoleSeeder extends Seeder
         
         $roles = [
             [
-                'name' => 'Project Manager',
+                'name' => 'Owner',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -25,41 +25,14 @@ class MsProjectRoleSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Team Lead',
+                'name' => 'Member',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
                 'deleted_by' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ],
-            [
-                'name' => 'Developer',
-                'owned_id' => 1,
-                'created_by' => 1,
-                'updated_by' => null,
-                'deleted_by' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Tester',
-                'owned_id' => 1,
-                'created_by' => 1,
-                'updated_by' => null,
-                'deleted_by' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Stakeholder',
-                'owned_id' => 1,
-                'created_by' => 1,
-                'updated_by' => null,
-                'deleted_by' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+            ]
         ];
 
         MsProjectRole::insert($roles);

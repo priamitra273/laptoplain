@@ -16,7 +16,6 @@ import TabPanel from 'primevue/tabpanel';
 import TabPanels from 'primevue/tabpanels';
 import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
@@ -26,6 +25,7 @@ import MembersTable from './member/Table.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
 
+import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 
 interface Props {
@@ -262,6 +262,7 @@ const taskDialogHeader = computed(() => {
                             <Tab value="Board">Board</Tab>
                             <Tab value="Details">Details</Tab>
                             <Tab value="Team">Team</Tab>
+                            <Tab value="Timeline">Timeline</Tab>
                         </TabList>
                         <TabPanels>
                             <TabPanel value="Board">
@@ -323,6 +324,11 @@ const taskDialogHeader = computed(() => {
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />
+                                </div>
+                            </TabPanel>
+                            <TabPanel value="Timeline">
+                                <div class="py-4">
+                                    <ProjectGanttChart :tasks="props.tasks" />
                                 </div>
                             </TabPanel>
                         </TabPanels>

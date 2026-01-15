@@ -4,6 +4,7 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
+import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
@@ -44,6 +45,7 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             status: t.status,
             priority: t.priority,
             type: t.type,
+            progress: t.progress ?? 0,
             users: t.users || [],
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
@@ -250,12 +252,33 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
+                <Column header="Progress">
+                    <template #body="{ node }">
+                        <div class="flex min-w-[120px] items-center gap-2">
+                            <ProgressBar :value="node.data.progress" :showValue="false" class="h-2 flex-1" />
+                            <span class="text-xs">{{ node.data.progress }}%</span>
+                        </div>
+                    </template>
+                </Column>
+
                 <Column header="Actions">
                     <template #body="{ node }">
                         <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
                         <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
-                        <Button icon="pi pi-pencil" size="small" severity="warning" @click="emit('edit', node.original)" v-if="isMember && hasAccessToEditAndDelete(node.data)" />
-                        <Button icon="pi pi-trash" size="small" severity="danger" @click="remove(node.original)" v-if="isMember && hasAccessToEditAndDelete(node.data)" />
+                        <Button
+                            icon="pi pi-pencil"
+                            size="small"
+                            severity="warning"
+                            @click="emit('edit', node.original)"
+                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                        />
+                        <Button
+                            icon="pi pi-trash"
+                            size="small"
+                            severity="danger"
+                            @click="remove(node.original)"
+                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                        />
                     </template>
                 </Column>
 

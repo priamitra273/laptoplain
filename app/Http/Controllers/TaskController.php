@@ -243,6 +243,10 @@ class TaskController extends Controller
         $isMember = $project->projectMembers
             ->where('user.id', Auth::id())
             ->isNotEmpty();
+        
+        $isTaskMember =$task->users()
+            ->where('user_id', Auth::id())
+            ->exists();
 
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
@@ -260,6 +264,7 @@ class TaskController extends Controller
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isPM' => $isPM,
             'isMember' => $isMember,
+            'isTaskMember' => $isTaskMember,
             'comments' => $task->comments?->toArray() ?? [],
         ];
 

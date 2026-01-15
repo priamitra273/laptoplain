@@ -357,7 +357,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </span>
                     </template>
                     <template #option="slotProps">
-                        <div class="flex w-full">
+                        <div class="flex">
                             <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
                         </div>
                     </template>
@@ -387,7 +387,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </span>
                     </template>
                     <template #option="slotProps">
-                        <div class="flex w-full">
+                        <div class="flex">
                             <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
                         </div>
                     </template>
@@ -417,7 +417,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </span>
                     </template>
                     <template #option="slotProps">
-                        <div class="flex w-full">
+                        <div class="flex">
                             <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="w-full" />
                         </div>
                     </template>

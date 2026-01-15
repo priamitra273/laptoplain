@@ -36,6 +36,7 @@ const props = defineProps<{
     priorities: any[];
     types: any[];
     isMember: boolean;
+    isTaskMember: boolean;
 }>();
 
 const currentUserId = usePage().props.auth.user.id;
@@ -82,11 +83,11 @@ const editValue = ref<any>(null);
 const editingElement = ref<HTMLElement | null>(null);
 
 const startEdit = (field: string, currentValue: any, event?: Event) => {
-    if (!props.isMember) {
+    if (!props.isMember || !props.isTaskMember) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
-            detail: 'You must be a project member to edit this task',
+            detail: 'You must be a project member and assigned to this task to edit it',
             life: 3000,
         });
         return;
@@ -370,7 +371,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'status_id'"
                                             @click="startEdit('status_id', props.task.status_id, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isMember && props.isTaskMember
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -396,7 +397,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'priority_id'"
                                             @click="startEdit('priority_id', props.task.priority_id, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isMember && props.isTaskMember
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -424,7 +425,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'type_id'"
                                             @click="startEdit('type_id', props.task.type_id, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isMember && props.isTaskMember
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -450,7 +451,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'progress'"
                                             @click="startEdit('progress', props.task.progress, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isMember && props.isTaskMember
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',

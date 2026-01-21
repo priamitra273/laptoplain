@@ -13,6 +13,7 @@ import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
+import moment from 'moment';
 import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
@@ -201,7 +202,13 @@ const submit = () => {
 
     if (isEdit.value) {
         param.taskEncoded = props.task?.id;
-        form.put(route(routeName.value, param), {
+        form.transform(function (data) {
+            return {
+                ...data,
+                start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
+                due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
+            };
+        }).put(route(routeName.value, param), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('saved');
@@ -210,10 +217,16 @@ const submit = () => {
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update task', life: 3000 });
-            }
+            },
         });
     } else {
-        form.post(route(routeName.value, param), {
+        form.transform(function (data) {
+            return {
+                ...data,
+                start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
+                due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
+            };
+        }).post(route(routeName.value, param), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('saved');
@@ -222,7 +235,7 @@ const submit = () => {
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to store task', life: 3000 });
-            }
+            },
         });
     }
 };

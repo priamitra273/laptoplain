@@ -54,6 +54,7 @@
         "concurrently": "^9.0.1",
         "emoji-mart-vue-fast": "^15.0.5",
         "highcharts": "^11.4.8",
+        "highcharts-gantt": "^0.1.7",
         "highcharts-vue": "^2.0.1",
         "laravel-vite-plugin": "^1.0",
         "lodash": "^4.17.21",

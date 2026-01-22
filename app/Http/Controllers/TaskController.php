@@ -243,14 +243,14 @@ class TaskController extends Controller
         $isMember = $project->projectMembers
             ->where('user.id', Auth::id())
             ->isNotEmpty();
-        
-        $isTaskMember =$task->users()
+
+        $isTaskMember = $task->users()
             ->where('user_id', Auth::id())
             ->exists();
 
         $isPM = $project->projectMembers
             ->where('user.id', Auth::id())
-            ->where('role.name', 'Project Manager')
+            ->where('role.name', 'Owner')
             ->isNotEmpty();
 
         $data = [

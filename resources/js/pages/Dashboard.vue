@@ -21,13 +21,19 @@ import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
+interface Member {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+}
+
 interface Props {
     projects: Project[];
     tasks: Task[];
     stats: {
         tasks: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
         projects: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
-        members: { total: number; list: { id: number; name: string }[] };
+        members: { total: number; list: Member[] };
     };
 }
 
@@ -220,10 +226,13 @@ const onProjectRowClick = (event: any) => {
                                     <Avatar
                                         v-for="(member, index) in props.stats.members.list.slice(0, 5)"
                                         :key="member.id"
-                                        :label="getInitials(member.name)"
+                                        :image="member.avatar_url || undefined"
+                                        :label="member.avatar_url ? undefined : getInitials(member.name)"
                                         shape="circle"
                                         size="large"
-                                        :style="{ backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }"
+                                        :style="
+                                            member.avatar_url ? {} : { backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }
+                                        "
                                         :title="member.name"
                                         class="border-2 border-white dark:border-gray-800"
                                     />

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -16,9 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasUuid, HasRoles;
-
     use SoftDeletes, InteractsWithMedia, LogUsers;
 
     /**
@@ -56,11 +52,30 @@ class User extends Authenticatable implements HasMedia
         ];
     }
 
+    /**
+     * Register media collections.
+     */
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('avatar')->singleFile();
+        $this->addMediaCollection('avatar')
+            ->singleFile()
+            ->useFallbackUrl('/images/default-avatar.png')
+            ->useFallbackPath(public_path('/images/default-avatar.png'));
     }
 
+    /**
+     * Get avatar URL accessor.
+     */
+    protected function avatarUrl(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn() => $this->getFirstMediaUrl('avatar') ?: '/images/default-avatar.png',
+        );
+    }
+
+    /**
+     * Relationships
+     */
     public function tasks()
     {
         return $this->belongsToMany(Task::class, 'task_users')
@@ -75,4 +90,11 @@ class User extends Authenticatable implements HasMedia
             ->withPivot('is_read')
             ->withTimestamps();
     }
+
+    /**
+     * Append avatar_url to array/JSON serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['avatar_url'];
 }

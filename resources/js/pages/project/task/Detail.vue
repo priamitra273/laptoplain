@@ -11,10 +11,10 @@ import Card from 'primevue/card';
 import Chip from 'primevue/chip';
 import DatePicker from 'primevue/datepicker';
 import Divider from 'primevue/divider';
+import Editor from 'primevue/editor';
 import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import Tag from 'primevue/tag';
-import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
@@ -160,7 +160,6 @@ const autoSave = (field: string, value: any) => {
                     life: 3000,
                 });
             },
-
         },
     );
 };
@@ -173,13 +172,11 @@ const handleSliderChange = (field: string, value: any) => {
     autoSave(field, value);
 };
 
-// PERBAIKAN: Handle click outside to close edit mode
 const handleClickOutside = (event: MouseEvent) => {
     if (!editingField.value) return;
 
     const target = event.target as HTMLElement;
 
-    // Check if click is inside any PrimeVue dropdown/overlay/panel
     const isInsideOverlay =
         target.closest('.p-select-overlay') ||
         target.closest('.p-select-panel') ||
@@ -192,32 +189,26 @@ const handleClickOutside = (event: MouseEvent) => {
         return;
     }
 
-    // Check if click is inside the editing element itself
     if (editingElement.value && editingElement.value.contains(target)) {
         return;
     }
 
-    // Jika klik di luar element editing dan bukan di overlay, tutup edit mode
     cancelEdit();
 };
 
-// Handle Escape key to close edit mode
 const handleEscapeKey = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && editingField.value) {
         cancelEdit();
     }
 };
 
-// PERBAIKAN: Add event listeners with proper timing
 onMounted(() => {
-    // Gunakan setTimeout untuk memastikan DOM sudah siap
     setTimeout(() => {
-        document.addEventListener('click', handleClickOutside, true); // Gunakan capture phase
+        document.addEventListener('click', handleClickOutside, true);
         document.addEventListener('keydown', handleEscapeKey);
     }, 0);
 });
 
-// Remove event listeners on unmount
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside, true);
     document.removeEventListener('keydown', handleEscapeKey);
@@ -226,7 +217,20 @@ onUnmounted(() => {
 const newComment = ref('');
 
 const submitComment = () => {
-    if (!newComment.value.trim()) return;
+    // Check if comment is empty or only contains whitespace/empty HTML tags
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newComment.value;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!textContent.trim()) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Empty Comment',
+            detail: 'Please write a comment before posting.',
+            life: 3000,
+        });
+        return;
+    }
 
     router.post(
         route('comments.store'),
@@ -240,6 +244,12 @@ const submitComment = () => {
             onSuccess: () => {
                 newComment.value = '';
                 router.reload({ only: ['comments'] });
+                toast.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Comment posted successfully.',
+                    life: 3000,
+                });
             },
             onError: () => {
                 toast.add({
@@ -308,7 +318,7 @@ const submitComment = () => {
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <!-- Left Column: Subtasks, Details, Team Members -->
                 <div class="space-y-6">
-                    <!-- Subtasks Card (Moved here) -->
+                    <!-- Subtasks Card -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center justify-between">
@@ -589,7 +599,7 @@ const submitComment = () => {
 
                 <!-- Right Column: Description and Comments -->
                 <div class="space-y-6 lg:col-span-2">
-                    <!-- Description Card (Moved here) -->
+                    <!-- Description Card -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center gap-2">
@@ -620,7 +630,15 @@ const submitComment = () => {
                         <template #content>
                             <Divider class="my-3" />
                             <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
-                                <Textarea v-model="newComment" rows="3" placeholder="Share your thoughts..." class="mb-3 w-full" :autoResize="true" />
+                                <Editor v-model="newComment" editorStyle="height: 200px" class="mb-3">
+                                    <template v-slot:toolbar>
+                                        <span class="ql-formats">
+                                            <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                                            <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                                            <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                                        </span>
+                                    </template>
+                                </Editor>
                                 <div class="flex justify-end">
                                     <Button
                                         label="Post Comment"

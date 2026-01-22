@@ -3,9 +3,9 @@ import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
+import Editor from 'primevue/editor';
 import Menu from 'primevue/menu';
-import Textarea from 'primevue/textarea';
-import Swal from 'sweetalert2';
+import { useConfirm } from 'primevue/useconfirm';
 import { ref } from 'vue';
 import { Comment } from '..';
 
@@ -25,6 +25,8 @@ const editingCommentId = ref<string | null>(null);
 const showAllReplies = ref<{ [key: string]: boolean }>({});
 const REPLY_LIMIT = 0;
 const menu = ref<any>(null);
+
+const confirm = useConfirm();
 
 // Available reactions
 const availableReactions = {
@@ -59,11 +61,17 @@ const setReply = (id: string) => {
 };
 
 const submitReply = (parentId: string) => {
-    if (!replyText.value.trim()) return;
+    // Check if comment is empty or only contains whitespace/empty HTML tags
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = replyText.value;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!textContent.trim()) return;
+
     router.post(
         route('comments.store'),
         {
-            body: replyText.value,
+            body: replyText.value, // Send HTML content
             commentable_type: 'App\\Models\\Task',
             commentable_id: props.taskId,
             parent_id: parentId,
@@ -85,10 +93,16 @@ const startEdit = (comment: any) => {
 };
 
 const updateComment = () => {
-    if (!replyText.value.trim() || editingCommentId.value === null) return;
+    // Check if comment is empty or only contains whitespace/empty HTML tags
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = replyText.value;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!textContent.trim() || editingCommentId.value === null) return;
+
     router.put(
         route('comments.update', { id: editingCommentId.value }),
-        { body: replyText.value },
+        { body: replyText.value }, // Send HTML content
         {
             onSuccess: () => {
                 editingCommentId.value = null;
@@ -99,7 +113,11 @@ const updateComment = () => {
     );
 };
 
-const cancelEdit = () => (editingCommentId.value = null);
+const cancelEdit = () => {
+    editingCommentId.value = null;
+    replyText.value = '';
+};
+
 const cancelReply = () => {
     replyTarget.value = null;
     replyText.value = '';
@@ -107,17 +125,18 @@ const cancelReply = () => {
 
 // Delete comment
 const deleteComment = (id: string) => {
-    Swal.fire({
-        title: 'Delete Comment?',
-        text: 'Are you sure you want to delete this comment?',
-        icon: 'warning',
-        showCancelButton: true,
-    }).then((result) => {
-        if (result.isConfirmed) {
+    confirm.require({
+        message: 'Are you sure you want to delete this comment?',
+        header: 'Delete Comment',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Yes, delete',
+        rejectLabel: 'Cancel',
+        acceptClass: 'p-button-danger',
+        accept: () => {
             router.delete(route('comments.destroy', { id }), {
                 onSuccess: () => router.reload({ only: ['comments'] }),
             });
-        }
+        },
     });
 };
 
@@ -153,6 +172,7 @@ const getMenuItems = (comment: any) => {
 </script>
 
 <template>
+    <ConfirmDialog />
     <div class="w-full">
         <div
             class="group rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
@@ -169,12 +189,15 @@ const getMenuItems = (comment: any) => {
                 <div class="min-w-0 flex-1">
                     <!-- Edit Mode -->
                     <div v-if="editingCommentId === comment.id" class="space-y-2">
-                        <Textarea
-                            v-model="replyText"
-                            rows="2"
-                            class="w-full text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                            auto-resize
-                        />
+                        <Editor v-model="replyText" editorStyle="height: 120px" class="dark:border-gray-600">
+                            <template v-slot:toolbar>
+                                <span class="ql-formats">
+                                    <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                                    <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                                    <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                                </span>
+                            </template>
+                        </Editor>
                         <div class="flex gap-1">
                             <Button
                                 label="Save"
@@ -221,10 +244,11 @@ const getMenuItems = (comment: any) => {
                             <Menu :model="getMenuItems(comment)" :popup="true" ref="menu" />
                         </div>
 
-                        <!-- Body -->
-                        <p class="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
-                            {{ comment.body }}
-                        </p>
+                        <!-- Body with HTML support -->
+                        <div
+                            class="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed text-gray-700 dark:text-gray-300"
+                            v-html="comment.body"
+                        ></div>
 
                         <!-- Reactions -->
                         <div class="flex items-center gap-1 pt-0.5">
@@ -254,13 +278,15 @@ const getMenuItems = (comment: any) => {
                             v-if="replyTarget === comment.id && currentLevel < 1"
                             class="mt-2 space-y-1.5 border-t border-gray-200 pt-2 dark:border-gray-700"
                         >
-                            <Textarea
-                                v-model="replyText"
-                                rows="2"
-                                placeholder="Write a reply..."
-                                class="w-full text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500"
-                                auto-resize
-                            />
+                            <Editor v-model="replyText" editorStyle="height: 120px" class="dark:border-gray-600">
+                                <template v-slot:toolbar>
+                                    <span class="ql-formats">
+                                        <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                                        <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                                        <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                                    </span>
+                                </template>
+                            </Editor>
                             <div class="flex gap-1">
                                 <Button
                                     label="Reply"
@@ -295,14 +321,14 @@ const getMenuItems = (comment: any) => {
                             <button
                                 v-if="!showAllReplies[comment.id] && remainingReplies(comment) > 0"
                                 @click="toggleShowAllReplies(comment.id)"
-                                class="text-xs font-medium transition-colors hover:text-slate-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                class="text-xs font-medium text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                                 View {{ remainingReplies(comment) }} more {{ remainingReplies(comment) === 1 ? 'reply' : 'replies' }}
                             </button>
                             <button
                                 v-else-if="showAllReplies[comment.id]"
                                 @click="toggleShowAllReplies(comment.id)"
-                                class="text-xs font-medium transition-colors hover:text-slate-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                class="text-xs font-medium text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                                 Show less
                             </button>

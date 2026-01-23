@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { Notification } from '@/types';
-import { onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { onBeforeUnmount, onMounted, onUnmounted, provide, ref } from 'vue';
 
 const notifications = ref<Notification[]>([]);
 const unreadCount = ref(0);
@@ -23,10 +23,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => es?.close());
+onUnmounted(() => console.log("unmounted"));
 
 const markAsRead = async (notificationId: string) => {
     try {
-        await axios.post(route('notifications.read', { notification: notificationId }));
+        await axios.post(route('notifications.read', { encoded: notificationId }));
         const notif = notifications.value.find((n) => n.id === notificationId);
         if (notif) {
             notif.is_read = true

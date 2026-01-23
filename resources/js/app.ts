@@ -21,6 +21,8 @@ import FlashToastProvider from './provider/FlashToastProvider.vue';
 
 import HighchartsVue from 'highcharts-vue';
 
+import Highcharts from 'highcharts';
+
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
     interface ImportMetaEnv {
@@ -101,6 +103,12 @@ createInertiaApp({
     },
     progress: {
         color: '#4B5563',
+    },
+});
+
+Highcharts.setOptions({
+    accessibility: {
+        enabled: false,
     },
 });
 

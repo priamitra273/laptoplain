@@ -49,15 +49,18 @@ class ProjectController extends Controller
                 ->toResponse(request())
                 ->setStatusCode(404);
         }
+
         if (!$projectId) {
             return Inertia::render('errors/NotFound')
                 ->toResponse(request())
                 ->setStatusCode(404);
         }
+
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
             'projectMembers.user:id,name,email',
+            'projectMembers.user.media', // Load media for avatars
             'projectMembers.role:id,name',
             'tasks' => function ($query) {
                 $query->withRecursive();
@@ -77,13 +80,24 @@ class ProjectController extends Controller
 
         $projectArr = $project->toArray();
 
+        // Get member user IDs
         $memberUserIds = collect($projectArr['project_members'])
             ->pluck('user.id')
             ->filter()
             ->values();
 
+        // Get available users (not members) with avatars
         $availableUsers = User::whereNotIn('id', $memberUserIds)
-            ->get(['id', 'name'])
+            ->with('media')
+            ->get(['id', 'name', 'email'])
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar_url' => $user->avatar_url,
+                ];
+            })
             ->toArray();
 
         $roles = MsProjectRole::all(['id', 'name'])->toArray();
@@ -93,10 +107,45 @@ class ProjectController extends Controller
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $tags = Tag::select('id', 'name', 'severity')->get();
 
+        // Format assignable users with avatar_url
         $assignableUsers = collect($projectArr['project_members'])
-            ->pluck('user')
+            ->map(function ($member) use ($project) {
+                // Get the full user object with media relation
+                $user = $project->projectMembers
+                    ->where('user.id', $member['user']['id'])
+                    ->first()
+                    ->user;
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar_url' => $user->avatar_url,
+                ];
+            })
             ->unique('id')
-            ->values();
+            ->values()
+            ->toArray();
+
+        // Format members with avatar_url
+        $formattedMembers = collect($projectArr['project_members'])
+            ->map(function ($member) use ($project) {
+                $projectMember = $project->projectMembers
+                    ->where('id', $member['id'])
+                    ->first();
+
+                return [
+                    'id' => $member['id'],
+                    'user' => [
+                        'id' => $projectMember->user->id,
+                        'name' => $projectMember->user->name,
+                        'email' => $projectMember->user->email,
+                        'avatar_url' => $projectMember->user->avatar_url,
+                    ],
+                    'role' => $member['role'],
+                ];
+            })
+            ->toArray();
 
         $currentUser = Auth::user();
         $currentUserId = Auth::id();
@@ -119,15 +168,15 @@ class ProjectController extends Controller
 
         $data = [
             'project' => $projectArr,
-            'members' => $projectArr['project_members'],
+            'members' => $formattedMembers, // Use formatted members with avatar_url
             'roles'   => $roles,
-            'users'   => $availableUsers,
+            'users'   => $availableUsers, // Already includes avatar_url
             'tasks'   => $projectArr['tasks'],
             'taskStatuses' => $statuses->toArray(),
             'taskPriorities' => $priorities->toArray(),
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
-            'assignableUsers' => $assignableUsers->toArray(),
+            'assignableUsers' => $assignableUsers, // Already includes avatar_url
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
             'isMember' => $isMember,

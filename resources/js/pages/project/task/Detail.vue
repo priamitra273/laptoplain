@@ -594,14 +594,21 @@ const submitComment = () => {
                                     <Avatar
                                         v-for="(user, idx) in props.assignedUsers.slice(0, 5)"
                                         :key="user.id"
-                                        :image="user.avatar_url || undefined"
-                                        :label="user.avatar_url ? undefined : getInitials(user.name)"
+                                        :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
+                                        :label="
+                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png' ? getInitials(user.name) : undefined
+                                        "
                                         shape="circle"
                                         size="large"
-                                        :style="user.avatar_url ? {} : { backgroundColor: getUserColor(idx), color: 'white' }"
+                                        :style="
+                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
+                                                : {}
+                                        "
                                         :title="user.name"
                                         class="border-2 border-white shadow-md dark:border-gray-800"
                                     />
+
                                     <Avatar
                                         v-if="props.assignedUsers.length > 5"
                                         :label="`+${props.assignedUsers.length - 5}`"
@@ -617,10 +624,18 @@ const submitComment = () => {
                                         class="flex items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-800"
                                     >
                                         <Avatar
-                                            :image="user.avatar_url || undefined"
-                                            :label="user.avatar_url ? undefined : getInitials(user.name)"
+                                            :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
+                                            :label="
+                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                    ? getInitials(user.name)
+                                                    : undefined
+                                            "
                                             shape="circle"
-                                            :style="user.avatar_url ? {} : { backgroundColor: getUserColor(idx), color: 'white' }"
+                                            :style="
+                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                    ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
+                                                    : {}
+                                            "
                                         />
                                         <span class="text-sm font-medium">{{ user.name }}</span>
                                     </div>

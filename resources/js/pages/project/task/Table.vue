@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
@@ -81,6 +82,25 @@ const paginatedTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     return filteredTasks.value.slice(start, end);
 });
 
+// Check if all tasks are selected
+const isAllSelected = computed(() => {
+    if (!filteredTasks.value.length) return false;
+
+    const allKeys: string[] = [];
+    const collectKeys = (node: TaskFormatted) => {
+        allKeys.push(node.key);
+        if (node.children) node.children.forEach(collectKeys);
+    };
+    filteredTasks.value.forEach(collectKeys);
+
+    return allKeys.every((key) => selectedKey.value[key]?.checked);
+});
+
+// Check if any task is selected
+const hasSelectedTasks = computed(() => {
+    return Object.keys(selectedKey.value).length > 0;
+});
+
 // Reset page when search query changes
 watch([searchQuery], () => {
     currentPage.value = 1;
@@ -116,6 +136,15 @@ const remove = (t: Task) => {
             });
         },
     });
+};
+
+// Toggle Select All
+const toggleSelectAll = () => {
+    if (isAllSelected.value) {
+        clearSelection();
+    } else {
+        selectAll();
+    }
 };
 
 // Select All (all filtered tasks, including children)
@@ -195,20 +224,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
             <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember">
                 <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
                 <Button
-                    label="Select All"
-                    icon="pi pi-check-square"
-                    @click="selectAll"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    variant="outlined"
-                />
-                <Button
-                    label="Clear"
-                    icon="pi pi-times"
-                    severity="secondary"
-                    @click="clearSelection"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                />
-                <Button
+                    v-if="hasSelectedTasks"
                     label="Delete Selected"
                     icon="pi pi-trash"
                     severity="danger"
@@ -227,15 +243,36 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable
-                v-model:selectionKeys="selectedKey"
-                :value="paginatedTasks"
-                selectionMode="checkbox"
-                :propagateSelectionDown="true"
-                :propagateSelectionUp="true"
-                class="min-w-full"
-            >
-                <Column field="title" header="Title" expander />
+            <TreeTable :value="paginatedTasks" class="min-w-full">
+                <!-- Select All Checkbox Column -->
+                <Column :expander="false" style="width: 3rem" v-if="isMember">
+                    <template #header>
+                        <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
+                    </template>
+                    <template #body="{ node }">
+                        <Checkbox
+                            :modelValue="selectedKey[node.key]?.checked"
+                            @update:modelValue="
+                                (value) => {
+                                    if (value) {
+                                        selectedKey[node.key] = { checked: true, partialChecked: false };
+                                    } else {
+                                        delete selectedKey[node.key];
+                                    }
+                                    selectedKey = { ...selectedKey };
+                                }
+                            "
+                            binary
+                        />
+                    </template>
+                </Column>
+
+                <!-- Expander Column -->
+                <Column :expander="true" style="width: 3rem" />
+
+                <!-- Title Column -->
+                <Column field="title" header="Title" />
+
                 <Column header="Status">
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />

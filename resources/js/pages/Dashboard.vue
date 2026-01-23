@@ -226,12 +226,20 @@ const onProjectRowClick = (event: any) => {
                                     <Avatar
                                         v-for="(member, index) in props.stats.members.list.slice(0, 5)"
                                         :key="member.id"
-                                        :image="member.avatar_url || undefined"
-                                        :label="member.avatar_url ? undefined : getInitials(member.name)"
+                                        :image="
+                                            member.avatar_url && member.avatar_url !== '/images/default-avatar.png' ? member.avatar_url : undefined
+                                        "
+                                        :label="
+                                            !member.avatar_url || member.avatar_url === '/images/default-avatar.png'
+                                                ? getInitials(member.name)
+                                                : undefined
+                                        "
                                         shape="circle"
                                         size="large"
                                         :style="
-                                            member.avatar_url ? {} : { backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }
+                                            !member.avatar_url || member.avatar_url === '/images/default-avatar.png'
+                                                ? { backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }
+                                                : {}
                                         "
                                         :title="member.name"
                                         class="border-2 border-white dark:border-gray-800"

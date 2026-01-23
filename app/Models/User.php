@@ -91,6 +91,13 @@ class User extends Authenticatable implements HasMedia
             ->withTimestamps();
     }
 
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'task_users')
+            ->withTrashed();
+    }
+
+
     /**
      * Append avatar_url to array/JSON serialization.
      *

@@ -54,13 +54,6 @@ const goBack = () => {
                     </Link>
                 </p>
             </div>
-
-            <!-- Decorative Elements -->
-            <div class="mt-16 flex items-center justify-center gap-8 text-gray-300 opacity-50 dark:text-gray-700">
-                <i class="pi pi-search text-3xl"></i>
-                <i class="pi pi-question-circle text-3xl"></i>
-                <i class="pi pi-map-marker text-3xl"></i>
-            </div>
         </div>
     </div>
 </template>

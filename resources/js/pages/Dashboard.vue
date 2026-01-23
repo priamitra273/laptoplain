@@ -108,6 +108,8 @@ const onTaskRowClick = (event: any) => {
 const onProjectRowClick = (event: any) => {
     router.visit(route('project.show', event.data.id));
 };
+
+const validMembers = computed(() => props.stats.members.list.filter((member) => member !== null && member !== undefined));
 </script>
 
 <template>
@@ -213,7 +215,7 @@ const onProjectRowClick = (event: any) => {
                                         <i class="pi pi-users text-xl text-green-500"></i>
                                         <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Team Members</span>
                                     </div>
-                                    <div class="text-4xl font-bold">{{ props.stats.members.total }}</div>
+                                    <div class="text-4xl font-bold">{{ validMembers.length }}</div>
                                 </div>
                                 <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
                                     <i class="pi pi-users text-3xl text-green-500"></i>
@@ -222,9 +224,9 @@ const onProjectRowClick = (event: any) => {
 
                             <div class="space-y-3">
                                 <div class="text-sm">Active team members</div>
-                                <AvatarGroup>
+                                <AvatarGroup v-if="validMembers.length > 0">
                                     <Avatar
-                                        v-for="(member, index) in props.stats.members.list.slice(0, 5)"
+                                        v-for="(member, index) in validMembers.slice(0, 5)"
                                         :key="member.id"
                                         :image="
                                             member.avatar_url && member.avatar_url !== '/images/default-avatar.png' ? member.avatar_url : undefined
@@ -245,14 +247,15 @@ const onProjectRowClick = (event: any) => {
                                         class="border-2 border-white dark:border-gray-800"
                                     />
                                     <Avatar
-                                        v-if="props.stats.members.total > 5"
-                                        :label="`+${props.stats.members.total - 5}`"
+                                        v-if="validMembers.length > 5"
+                                        :label="`+${validMembers.length - 5}`"
                                         shape="circle"
                                         size="large"
                                         style="background-color: #64748b; color: white; font-weight: 600"
                                         class="border-2 border-white dark:border-gray-800"
                                     />
                                 </AvatarGroup>
+                                <div v-else class="text-sm text-gray-500">No team members yet</div>
                             </div>
                         </div>
                     </template>

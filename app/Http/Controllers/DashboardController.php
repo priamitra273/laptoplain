@@ -6,6 +6,7 @@ use App\Facades\Sqids;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -14,7 +15,46 @@ class DashboardController extends Controller
     {
         $userId = Auth::id();
 
-        $projects = Project::with([
+        // Get recent projects
+        $projects = $this->getRecentProjects($userId);
+
+        // Get recent tasks
+        $tasks = $this->getRecentTasks($userId);
+
+        // Get statistics
+        $stats = $this->getStatistics($userId);
+
+        // Get team members
+        $members = $this->getTeamMembers($userId);
+
+        $data = [
+            'projects' => $projects,
+            'tasks' => $tasks,
+            'stats' => [
+                'projects' => [
+                    'total' => $stats['totalProjects'],
+                    'progress' => round($stats['avgProjectProgress']),
+                ],
+                'tasks' => [
+                    'total' => $stats['totalTasks'],
+                    'progress' => round($stats['avgTaskProgress']),
+                ],
+                'members' => [
+                    'total' => $members->count(),
+                    'list' => $members->toArray(),
+                ],
+            ],
+        ];
+
+        return Inertia::render('Dashboard', Sqids::rec_encode_ids_in_list($data));
+    }
+
+    /**
+     * Get user's recent projects
+     */
+    private function getRecentProjects(int $userId): array
+    {
+        return Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
             'projectMembers.user:id,name,email',
@@ -23,11 +63,18 @@ class DashboardController extends Controller
             ->whereHas('projectMembers', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
-            ->orderBy('id', 'desc')
+            ->latest('id')
             ->limit(5)
-            ->get();
+            ->get()
+            ->toArray();
+    }
 
-        $tasks = Task::with([
+    /**
+     * Get user's recent tasks
+     */
+    private function getRecentTasks(int $userId): array
+    {
+        return Task::with([
             'project:id,title,emoji',
             'status:id,name,severity',
             'priority:id,name,severity',
@@ -40,56 +87,52 @@ class DashboardController extends Controller
                         $q->where('users.id', $userId);
                     });
             })
-            ->orderBy('id', 'desc')
+            ->latest('id')
             ->limit(5)
             ->get()
             ->map(function ($task) use ($userId) {
                 $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
                 $task->is_created_by_me = $task->created_by == $userId;
                 return $task;
-            });
+            })
+            ->toArray();
+    }
 
-        $avgProjectProgress = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
-            ->avg('progress') ?? 0;
+    /**
+     * Get dashboard statistics
+     */
+    private function getStatistics(int $userId): array
+    {
+        // Optimize queries by combining them
+        $projectStats = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
+            ->selectRaw('COUNT(*) as total, AVG(progress) as avg_progress')
+            ->first();
 
-        $avgTaskProgress = Task::where(function ($q) use ($userId) {
+        $taskStats = Task::where(function ($q) use ($userId) {
             $q->where('created_by', $userId)
                 ->orWhereHas('users', fn($qq) => $qq->where('users.id', $userId));
         })
-            ->avg('progress') ?? 0;
+            ->selectRaw('COUNT(*) as total, AVG(progress) as avg_progress')
+            ->first();
 
-        $totalProjects = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))->count();
-        $totalTasks = Task::where(function ($query) use ($userId) {
-            $query->where('created_by', $userId)
-                ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
-        })->count();
+        return [
+            'totalProjects' => $projectStats->total ?? 0,
+            'avgProjectProgress' => $projectStats->avg_progress ?? 0,
+            'totalTasks' => $taskStats->total ?? 0,
+            'avgTaskProgress' => $taskStats->avg_progress ?? 0,
+        ];
+    }
 
-        $members = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
-            ->with('projectMembers.user')
+    /**
+     * Get unique team members from user's projects
+     */
+    private function getTeamMembers(int $userId)
+    {
+        return Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
+            ->with('projectMembers.user:id,name,email')
             ->get()
             ->flatMap(fn($project) => $project->projectMembers->pluck('user'))
             ->unique('id')
             ->values();
-
-        $data = [
-            'projects' => $projects->toArray(),
-            'tasks' => $tasks->toArray(),
-            'stats' => [
-                'projects' => [
-                    'total' => $totalProjects,
-                    'progress' => round($avgProjectProgress),
-                ],
-                'tasks' => [
-                    'total' => $totalTasks,
-                    'progress' => round($avgTaskProgress),
-                ],
-                'members' => [
-                    'total' => $members->count(),
-                    'list' => $members->toArray(),
-                ],
-            ],
-        ];
-
-        return Inertia::render('Dashboard', Sqids::rec_encode_ids_in_list($data));
     }
 }

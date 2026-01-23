@@ -59,8 +59,11 @@ class ProjectController extends Controller
         $project = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
+            'projectMembers' => function ($query) {
+                $query->whereHas('user'); // Only get members with valid users
+            },
             'projectMembers.user:id,name,email',
-            'projectMembers.user.media', // Load media for avatars
+            'projectMembers.user.media',
             'projectMembers.role:id,name',
             'tasks' => function ($query) {
                 $query->withRecursive();
@@ -80,8 +83,11 @@ class ProjectController extends Controller
 
         $projectArr = $project->toArray();
 
-        // Get member user IDs
+        // Get member user IDs - filter out null users
         $memberUserIds = collect($projectArr['project_members'])
+            ->filter(function ($member) {
+                return isset($member['user']) && !is_null($member['user']);
+            })
             ->pluck('user.id')
             ->filter()
             ->values();
@@ -107,14 +113,22 @@ class ProjectController extends Controller
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $tags = Tag::select('id', 'name', 'severity')->get();
 
-        // Format assignable users with avatar_url
+        // Format assignable users with avatar_url - filter out null users
         $assignableUsers = collect($projectArr['project_members'])
+            ->filter(function ($member) {
+                return isset($member['user']) && !is_null($member['user']);
+            })
             ->map(function ($member) use ($project) {
                 // Get the full user object with media relation
-                $user = $project->projectMembers
-                    ->where('user.id', $member['user']['id'])
-                    ->first()
-                    ->user;
+                $projectMember = $project->projectMembers
+                    ->where('user_id', $member['user']['id'])
+                    ->first();
+
+                if (!$projectMember || !$projectMember->user) {
+                    return null;
+                }
+
+                $user = $projectMember->user;
 
                 return [
                     'id' => $user->id,
@@ -123,20 +137,28 @@ class ProjectController extends Controller
                     'avatar_url' => $user->avatar_url,
                 ];
             })
+            ->filter() // Remove null values
             ->unique('id')
             ->values()
             ->toArray();
 
-        // Format members with avatar_url
+        // Format members with avatar_url - filter out null users
         $formattedMembers = collect($projectArr['project_members'])
+            ->filter(function ($member) {
+                return isset($member['user']) && !is_null($member['user']) && isset($member['role']);
+            })
             ->map(function ($member) use ($project) {
                 $projectMember = $project->projectMembers
                     ->where('id', $member['id'])
                     ->first();
 
+                if (!$projectMember || !$projectMember->user) {
+                    return null;
+                }
+
                 return [
                     'id' => $member['id'],
-                    'is_active' => $member['is_active'],
+                    'is_active' => $member['is_active'] ?? true,
                     'user' => [
                         'id' => $projectMember->user->id,
                         'name' => $projectMember->user->name,
@@ -146,6 +168,8 @@ class ProjectController extends Controller
                     'role' => $member['role'],
                 ];
             })
+            ->filter() // Remove null values
+            ->values()
             ->toArray();
 
         $currentUser = Auth::user();
@@ -153,15 +177,27 @@ class ProjectController extends Controller
         $isAdmin = $currentUser->roles->contains(function ($role) {
             return stripos($role->name, 'admin-') === 0;
         });
+
         $isPM = $project->projectMembers
-            ->where('user.id', $currentUserId)
+            ->filter(function ($member) {
+                return $member->user !== null;
+            })
+            ->where('user_id', $currentUserId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
+
         $isMember = $project->projectMembers
-            ->where('user.id', $currentUserId)
+            ->filter(function ($member) {
+                return $member->user !== null;
+            })
+            ->where('user_id', $currentUserId)
             ->isNotEmpty();
+
         $isOwner = $project->projectMembers
-            ->where('user.id', $currentUserId)
+            ->filter(function ($member) {
+                return $member->user !== null;
+            })
+            ->where('user_id', $currentUserId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
 
@@ -169,15 +205,15 @@ class ProjectController extends Controller
 
         $data = [
             'project' => $projectArr,
-            'members' => $formattedMembers, // Use formatted members with avatar_url
+            'members' => $formattedMembers,
             'roles'   => $roles,
-            'users'   => $availableUsers, // Already includes avatar_url
+            'users'   => $availableUsers,
             'tasks'   => $projectArr['tasks'],
             'taskStatuses' => $statuses->toArray(),
             'taskPriorities' => $priorities->toArray(),
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
-            'assignableUsers' => $assignableUsers, // Already includes avatar_url
+            'assignableUsers' => $assignableUsers,
             'isAdmin' => $isAdmin,
             'isPM' => $isPM,
             'isMember' => $isMember,

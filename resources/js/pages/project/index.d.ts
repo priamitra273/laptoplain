@@ -46,11 +46,11 @@ export interface Task {
 
   project_id: string;
 
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  type?: TaskType;
+  status: TaskStatus;
+  priority: TaskPriority;
+  type: TaskType;
 
-  users?: TaskUser[];
+  users: TaskUser[];
 
   sub_task: Task[];
   sub_task_recursive: Task[];

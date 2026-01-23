@@ -3,6 +3,8 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
 import Paginator from 'primevue/paginator';
 import Select from 'primevue/select';
@@ -250,88 +252,97 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
 
                 <!-- LIST VIEW -->
                 <div v-if="viewMode === 'list'" class="overflow-x-auto">
-                    <table v-if="filteredTasks.length > 0" class="w-full">
-                        <thead class="border-b border-gray-200 dark:border-gray-700">
-                            <tr class="text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
-                                <th class="w-full pb-3 pr-4">Summary</th>
-                                <th class="pb-3 pr-4">Status</th>
-                                <th class="pb-3 pr-4">Priority</th>
-                                <th class="pb-3 pr-4">Type</th>
-                                <th class="pb-3 pr-4">Due Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="task in filteredTasks.slice(first, first + rows)"
-                                :key="task.id"
-                                class="cursor-pointer border-b border-gray-100 transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
-                                @click="router.get(route('task.show', { encoded: task.id }))"
-                            >
-                                <!-- Title & Project -->
-                                <td class="py-3 pr-4">
-                                    <div class="flex max-w-md flex-col gap-1">
-                                        <span class="truncate font-medium text-gray-900 dark:text-white">
+                    <DataTable
+                        v-if="filteredTasks.length > 0"
+                        :value="filteredTasks"
+                        data-key="id"
+                        paginator
+                        :rows="rows"
+                        :first="first"
+                        @page="
+                            (e) => {
+                                first = e.first;
+                                rows = e.rows;
+                            }
+                        "
+                        row-hover
+                        class="p-datatable-sm cursor-pointer"
+                        @row-click="(e) => router.get(route('task.show', { encoded: e.data.id }))"
+                    >
+                        <!-- SUMMARY -->
+                        <Column header="Summary" style="width: 100%">
+                            <template #body="{ data: task }">
+                                <div class="flex max-w-md flex-col gap-1">
+                                    <Link :href="route('task.show', { encoded: task.id })" @click.stop>
+                                        <span class="truncate font-medium text-gray-900 dark:text-white hover:underline">
                                             {{ task.title }}
                                         </span>
-                                        <div v-if="task.project" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                            <i class="pi pi-folder flex-shrink-0 text-xs"></i>
-                                            <Link
-                                                :href="route('project.show', { encoded: task.project.id })"
-                                                class="truncate hover:text-blue-600 hover:underline"
-                                                @click.stop
-                                            >
-                                                {{ task.project.title }}
-                                            </Link>
-                                        </div>
+                                    </Link>
+
+                                    <div v-if="task.project" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <i class="pi pi-folder text-xs"></i>
+                                        <Link
+                                            :href="route('project.show', { encoded: task.project.id })"
+                                            class="truncate hover:text-blue-600 hover:underline"
+                                            @click.stop
+                                        >
+                                            {{ task.project.title }}
+                                        </Link>
                                     </div>
-                                </td>
+                                </div>
+                            </template>
+                        </Column>
 
-                                <!-- Status -->
-                                <td class="py-3 pr-4">
-                                    <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
-                                </td>
+                        <!-- STATUS -->
+                        <Column header="Status">
+                            <template #body="{ data: task }">
+                                <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
+                            </template>
+                        </Column>
 
-                                <!-- Priority -->
-                                <td class="py-3 pr-4">
-                                    <div v-if="task.priority" class="flex items-center gap-2">
-                                        <i
-                                            :class="[
-                                                'pi',
-                                                getPriorityIcon(task.priority),
-                                                task.priority.severity === 'danger'
-                                                    ? 'text-red-500'
-                                                    : task.priority.severity === 'warning'
-                                                      ? 'text-yellow-500'
-                                                      : 'text-gray-500',
-                                            ]"
-                                        ></i>
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">
-                                            {{ task.priority.name }}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                <!-- Type -->
-                                <td class="py-3 pr-4">
-                                    <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
-                                </td>
-
-                                <!-- Due Date -->
-                                <td class="py-3 pr-4">
-                                    <span
+                        <!-- PRIORITY -->
+                        <Column header="Priority">
+                            <template #body="{ data: task }">
+                                <div v-if="task.priority" class="flex items-center gap-2">
+                                    <i
                                         :class="[
-                                            'text-sm',
-                                            isOverdue(task.due_date)
-                                                ? 'font-medium text-red-600 dark:text-red-400'
-                                                : 'text-gray-600 dark:text-gray-400',
+                                            'pi',
+                                            getPriorityIcon(task.priority),
+                                            task.priority.severity === 'danger'
+                                                ? 'text-red-500'
+                                                : task.priority.severity === 'warning'
+                                                  ? 'text-yellow-500'
+                                                  : 'text-gray-500',
                                         ]"
-                                    >
-                                        {{ formatDueDate(task.due_date) }}
+                                    />
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                                        {{ task.priority.name }}
                                     </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                </div>
+                            </template>
+                        </Column>
+
+                        <!-- TYPE -->
+                        <Column header="Type">
+                            <template #body="{ data: task }">
+                                <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
+                            </template>
+                        </Column>
+
+                        <!-- DUE DATE -->
+                        <Column header="Due Date">
+                            <template #body="{ data: task }">
+                                <span
+                                    :class="[
+                                        'text-sm',
+                                        isOverdue(task.due_date) ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400',
+                                    ]"
+                                >
+                                    {{ formatDueDate(task.due_date) }}
+                                </span>
+                            </template>
+                        </Column>
+                    </DataTable>
 
                     <!-- Empty State -->
                     <div v-else class="py-12 text-center">

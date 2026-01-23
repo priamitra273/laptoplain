@@ -150,12 +150,12 @@ export interface Project {
     updated_by: string;
     created_at: string;
     updated_at: string;
-    status?: {
+    status: {
         id: string;
         name: string;
         severity: PrimeSeverity;
     };
-    priority?: {
+    priority: {
         id: string;
         name: string;
         severity: PrimeSeverity;

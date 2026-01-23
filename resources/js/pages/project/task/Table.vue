@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
@@ -263,7 +263,9 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
                 <Column header="Actions">
                     <template #body="{ node }">
-                        <Button icon="pi pi-eye" size="small" severity="secondary" @click="router.visit(route('task.show', node.original))" />
+                        <Link :href="route('task.show', node.original)">
+                            <Button icon="pi pi-eye" size="small" severity="secondary" />
+                        </Link>
                         <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
                         <Button
                             icon="pi pi-pencil"

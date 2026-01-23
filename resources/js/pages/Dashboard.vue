@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import type { BreadcrumbItem, Project } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Task } from './project';
 
@@ -278,9 +278,11 @@ const onProjectRowClick = (event: any) => {
                                     <span v-else class="text-2xl leading-none">
                                         {{ data.emoji }}
                                     </span>
-                                    <span class="truncate font-semibold">
-                                        {{ data.title }}
-                                    </span>
+                                    <Link :href="route('project.show', data.id)" @click.stop>
+                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white">
+                                            {{ data.title }}
+                                        </span>
+                                    </Link>
                                 </div>
                             </template>
                         </Column>
@@ -321,7 +323,11 @@ const onProjectRowClick = (event: any) => {
                     >
                         <Column field="title" header="Task" style="min-width: 250px">
                             <template #body="{ data }">
-                                <div class="font-semibold">{{ data.title }}</div>
+                                <Link :href="route('task.show', data.id)" @click.stop>
+                                    <span class="truncate font-semibold text-gray-900 hover:underline dark:text-white">
+                                        {{ data.title }}
+                                    </span>
+                                </Link>
                             </template>
                         </Column>
                         <Column field="status" header="Status" style="min-width: 150px">

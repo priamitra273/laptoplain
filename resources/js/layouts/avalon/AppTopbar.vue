@@ -1,8 +1,17 @@
-<script setup>
+<script setup lang="ts">
 import { useLayout } from '@/composables/useLayouts';
 import { Link, router } from '@inertiajs/vue3';
-import axios from 'axios';
-import { computed, onMounted, ref } from 'vue';
+import { Ref } from 'vue';
+import { inject, ref } from 'vue';
+import { Notification } from '@/types';
+
+
+interface NotificationStore {
+    notifications: Ref<Notification[]>
+    unreadCount: Ref<number>
+    markAsRead: (notificationId: string) => Promise<void>
+    clearNotifications: () => Promise<void>
+}
 
 const { onMenuToggle, onConfigSidebarToggle } = useLayout();
 
@@ -11,53 +20,33 @@ async function logout() {
     router.post(route('logout'));
 }
 
-// State notifikasi
-const notifications = ref([]);
-const unreadCount = computed(() => notifications.value.filter((n) => !n.pivot.is_read).length);
+const notificationStore: NotificationStore | undefined = inject('notifications');
+
+if (!notificationStore) {
+    throw new Error('NotificationProvider is missing');
+}
+
+const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    clearNotifications,
+} = notificationStore;
+
 const showNotificationDropdown = ref(false);
 const showUserMenu = ref(false);
 
-// Load notifikasi user
-async function loadNotifications() {
-    try {
-        const response = await axios.get(route('notifications.index'));
-        notifications.value = response.data;
-    } catch (error) {
-        console.error(error);
-    }
-}
 
-// Tandai notifikasi sebagai dibaca
-async function markAsRead(notificationId) {
-    try {
-        await axios.post(route('notifications.read', { notification: notificationId }));
-        const notif = notifications.value.find((n) => n.id === notificationId);
-        if (notif) notif.pivot.is_read = true;
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-// Hapus semua notifikasi
-async function clearNotifications() {
-    try {
-        await axios.post(route('notifications.clear'));
-        notifications.value = [];
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-// Handle click notifikasi
-function handleNotificationClick(notificationId) {
+const handleNotificationClick = async (notificationId: string) => {
     markAsRead(notificationId);
     showNotificationDropdown.value = false;
 }
 
-// Load notifications saat mounted
-onMounted(() => {
-    loadNotifications();
-});
+const clear = async () => {
+    await clearNotifications()
+    showNotificationDropdown.value = false
+}
+
 </script>
 
 <template>
@@ -81,7 +70,6 @@ onMounted(() => {
                                 async () => {
                                     showNotificationDropdown = !showNotificationDropdown;
                                     showUserMenu = false;
-                                    if (showNotificationDropdown) await loadNotifications(); // refresh otomatis
                                 }
                             "
                             class="relative p-2 focus:outline-none"
@@ -97,12 +85,12 @@ onMounted(() => {
 
                         <div
                             v-show="showNotificationDropdown"
-                            class="absolute right-0 z-50 mt-2 w-64 rounded-md border border-gray-200 bg-white shadow-lg"
+                            class="absolute right-0 z-50 mt-2 w-96 rounded-md border border-gray-200 bg-white shadow-lg"
                             @click.stop
                         >
                             <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2">
                                 <span class="font-semibold">Notifications</span>
-                                <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clearNotifications">
+                                <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clear">
                                     Clear All
                                 </button>
                             </div>
@@ -111,12 +99,24 @@ onMounted(() => {
                                 <li
                                     v-for="notif in notifications"
                                     :key="notif.id"
-                                    @click="handleNotificationClick(notif.id)"
-                                    class="flex cursor-pointer gap-2 px-4 py-2 hover:bg-gray-100"
-                                    :class="{ 'font-bold': !notif.pivot.is_read }"
+                                    class="flex cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                    :class="{ 'font-bold': !notif.is_read }"
                                 >
-                                    <i class="pi pi-info-circle"></i>
-                                    <span>{{ notif.message }}</span>
+                                    <div 
+                                        class="my-2 relative gap-2 flex flex-row"
+                                        @click="handleNotificationClick(notif.id)"
+                                    >
+                                        <i class="pi pi-info-circle my-auto ml-1 mr-2"></i>
+                                        <span>{{ notif.message }}</span>
+                                    </div>
+                                    <div 
+                                        class="my-2 ml-auto"
+                                        v-if="!notif.message.toLowerCase().includes('delete')"
+                                    >
+                                        <Link :href="route('task.show', notif.task_id)" @click.stop>
+                                            <Button icon="pi pi-arrow-right" rounded aria-label="Filter" size="small" />
+                                        </Link>
+                                    </div>
                                 </li>
 
                                 <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">No notifications</li>

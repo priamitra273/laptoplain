@@ -111,7 +111,6 @@ const openTaskEdit = (task: Task) => {
 const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
-    router.reload({ only: ['members', 'users'] });
 };
 
 const onDialogClosed = () => {

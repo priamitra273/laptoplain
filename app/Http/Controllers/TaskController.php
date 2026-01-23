@@ -171,7 +171,7 @@ class TaskController extends Controller
                 'task_id' => $task->id,
                 'task_status_id' => $task->status_id,
                 'task_type_id' => $task->type_id,
-                'message' => "Task '{$task->title}' Has Been Created And Assigned to You."
+                'message' => "Task '{$task->title}' has been created and assigned to you."
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
@@ -340,7 +340,7 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' Has Been Updated."
+            'message' => "Task '{$task->title}' has been updated."
         ]);
 
         $allUserIds = array_merge(
@@ -419,7 +419,7 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' telah dihapus"
+            'message' => "Task '{$task->title}' has been deleted."
         ]);
 
         $allUserIds = $task->users()->pluck('users.id')->toArray();

@@ -68,7 +68,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/comments/{id}/reaction', [CommentController::class, 'react'])->name('comments.react');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::get('/notifications/stream', [NotificationController::class, 'stream'])->name('notifications.stream');
+    Route::post('/notifications/{encoded}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/clear', [NotificationController::class, 'clearAll'])
         ->name('notifications.clear');
 

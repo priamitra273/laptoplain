@@ -18,6 +18,7 @@ import FocusTrap from 'primevue/focustrap';
 import Toast from 'primevue/toast';
 import ToastService from 'primevue/toastservice';
 import FlashToastProvider from './provider/FlashToastProvider.vue';
+import NotificationProvider from './provider/NotificationProvider.vue';
 
 import HighchartsVue from 'highcharts-vue';
 
@@ -80,8 +81,10 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         createApp({
             render: () =>
-                h(FlashToastProvider, null, {
-                    default: () => h(App, props),
+                h(NotificationProvider, null, {
+                    default: () => h(FlashToastProvider, null, {
+                        default: () => h(App, props),
+                    }),
                 }),
         })
             .use(plugin)

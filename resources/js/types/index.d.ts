@@ -420,3 +420,10 @@ export interface SeverityOption {
     label: string;
     value: PrimeSeverityEnum;
 }
+
+export interface Notification {
+    id: string
+    message: string
+    task_id: string
+    is_read: boolean
+}

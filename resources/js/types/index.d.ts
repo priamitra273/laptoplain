@@ -31,7 +31,7 @@ declare module '@inertiajs/core' {
         name: string;
         quote: { message: string; author: string };
         auth: Auth;
-        flash: {success: string | null; error: string|null}
+        flash: { success: string | null; error: string | null };
         ziggy: Config & { location: string };
     }
 }
@@ -72,7 +72,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    avatar?: string;
+    avatar_url?: string;
     email_verified_at: string | null;
     is_active: boolean;
     created_at: string;

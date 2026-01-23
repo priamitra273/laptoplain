@@ -136,6 +136,7 @@ class ProjectController extends Controller
 
                 return [
                     'id' => $member['id'],
+                    'is_active' => $member['is_active'],
                     'user' => [
                         'id' => $projectMember->user->id,
                         'name' => $projectMember->user->name,

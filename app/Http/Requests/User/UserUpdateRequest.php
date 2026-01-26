@@ -28,7 +28,17 @@ class UserUpdateRequest extends FormRequest
             'role_id' => 'required|numeric|exists:roles,id',
             'is_active' => 'required|boolean',
             'password' => 'nullable|string|min:8',
-            'password_confirmation' => 'confirmed:password'
+            'password_confirmation' => 'confirmed:password',
+            'avatar' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif', 'max:2048'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'avatar.image' => 'The file must be an image.',
+            'avatar.mimes' => 'The avatar must be a file of type: jpeg, jpg, png, gif.',
+            'avatar.max' => 'The avatar must not be greater than 2MB.',
         ];
     }
 }

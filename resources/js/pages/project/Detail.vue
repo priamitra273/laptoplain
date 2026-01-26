@@ -28,6 +28,17 @@ import TaskTable from './task/Table.vue';
 import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 
+interface User {
+    id: string;
+    name: string;
+    email?: string;
+    avatar_url?: string | null;
+}
+
+interface MemberWithAvatar extends ProjectMember {
+    user: User;
+}
+
 interface Props {
     project: {
         id: string;
@@ -42,16 +53,16 @@ interface Props {
         created_at?: string;
         updated_at?: string;
     };
-    members: ProjectMember[];
+    members: MemberWithAvatar[];
     roles: { id: string; name: string }[];
-    users: { id: string; name: string }[];
+    users: User[];
 
     tasks: Task[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     tags: TagData[];
-    assignableUsers: { id: string; name: string; email?: string }[];
+    assignableUsers: User[];
 
     isPM: boolean;
     isAdmin: boolean;
@@ -111,7 +122,6 @@ const openTaskEdit = (task: Task) => {
 const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
-    router.reload({ only: ['members', 'users'] });
 };
 
 const onDialogClosed = () => {
@@ -127,6 +137,20 @@ const formatDate = (date: string | undefined) => {
 const goBack = () => {
     router.visit(route('project.index'));
 };
+
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+const getMemberColor = (index: number) => {
+    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f43f5e'];
+    return colors[index % colors.length];
+};
+
 const formattedMembers = computed(() => {
     return props.assignableUsers.map(
         (user) =>
@@ -136,11 +160,13 @@ const formattedMembers = computed(() => {
                     id: user.id,
                     name: user.name,
                     email: user.email || '',
+                    avatar_url: user.avatar_url,
                 },
                 role: { id: '', name: '' },
-            }) as ProjectMember,
+            }) as MemberWithAvatar,
     );
 });
+
 const taskDialogHeader = computed(() => {
     if (selectedTask.value) {
         return 'Edit Task';
@@ -187,23 +213,38 @@ const taskDialogHeader = computed(() => {
                 <div class="flex items-center gap-2">
                     <AvatarGroup v-if="props.members.length > 0">
                         <Avatar
-                            v-for="member in props.members.slice(0, 3)"
+                            v-for="(member, index) in props.members.slice(0, 3)"
                             :key="member.id"
-                            :label="member.user.name.charAt(0).toUpperCase()"
-                            size="normal"
+                            :image="
+                                member.user.avatar_url && member.user.avatar_url !== '/images/default-avatar.png' ? member.user.avatar_url : undefined
+                            "
+                            :label="
+                                !member.user.avatar_url || member.user.avatar_url === '/images/default-avatar.png'
+                                    ? getInitials(member.user.name)
+                                    : undefined
+                            "
+                            size="large"
                             shape="circle"
-                            class="border-2 border-white dark:border-surface-900"
+                            :style="
+                                !member.user.avatar_url || member.user.avatar_url === '/images/default-avatar.png'
+                                    ? { backgroundColor: getMemberColor(index), color: 'white', fontSize: '1.25rem', fontWeight: '600' }
+                                    : {}
+                            "
+                            :title="member.user.name"
+                            class="border-3 border-white dark:border-surface-900"
                         />
                         <Avatar
                             v-if="props.members.length > 3"
                             :label="`+${props.members.length - 3}`"
-                            size="normal"
+                            size="large"
                             shape="circle"
-                            class="border-2 border-white dark:border-surface-900"
+                            style="background-color: #64748b; color: white; font-size: 1.25rem; font-weight: 600"
+                            class="border-3 border-white dark:border-surface-900"
                         />
                     </AvatarGroup>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <Card class="shadow-sm">
                     <template #content>
@@ -255,6 +296,7 @@ const taskDialogHeader = computed(() => {
                     </template>
                 </Card>
             </div>
+
             <Card class="shadow-sm">
                 <template #content>
                     <Tabs value="Board">
@@ -289,7 +331,6 @@ const taskDialogHeader = computed(() => {
                                         />
                                     </div>
 
-                                    <!-- Sidebar Info -->
                                     <div class="flex flex-col gap-6">
                                         <div>
                                             <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>

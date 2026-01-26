@@ -24,14 +24,19 @@ class TaskController extends Controller
             throw $th;
         }
 
-        $project = Project::with('projectMembers')->find($task->project_id);
+        $project = Project::with(['projectMembers' => function ($query) {
+            $query->whereHas('user'); // Only get members with valid users
+        }, 'projectMembers.user', 'projectMembers.role'])->find($task->project_id);
 
         if (!$project) {
             return false;
         }
 
         $isOwner = $project->projectMembers
-            ->where('user.id', $userId)
+            ->filter(function ($member) {
+                return $member->user !== null && $member->role !== null;
+            })
+            ->where('user_id', $userId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
 
@@ -108,7 +113,9 @@ class TaskController extends Controller
         }
 
         // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers')->find($projectId);
+        $project = Project::with(['projectMembers' => function ($query) {
+            $query->whereHas('user');
+        }])->find($projectId);
 
         if (!$project) {
             return Inertia::render('errors/NotFound')
@@ -171,7 +178,7 @@ class TaskController extends Controller
                 'task_id' => $task->id,
                 'task_status_id' => $task->status_id,
                 'task_type_id' => $task->type_id,
-                'message' => "Task '{$task->title}' Has Been Created And Assigned to You."
+                'message' => "Task '{$task->title}' has been created and assigned to you."
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
@@ -204,6 +211,7 @@ class TaskController extends Controller
             'priority:id,name,severity',
             'type:id,name,severity',
             'users:id,name',
+            'users.media',
             'tags:id,name,severity',
             'subTaskRecursive',
             'subTaskRecursive.status:id,name,severity',
@@ -231,33 +239,71 @@ class TaskController extends Controller
 
         $task->update(['progress' => $task->calculateProgress()]);
 
-        $project = Project::with(['projectMembers.user:id,name,email', 'projectMembers.role:id,name'])
-            ->findOrFail($task->project_id);
+        $project = Project::with([
+            'projectMembers' => function ($query) {
+                $query->whereHas('user'); // Only get members with valid users
+            },
+            'projectMembers.user:id,name,email',
+            'projectMembers.user.media',
+            'projectMembers.role:id,name'
+        ])->findOrFail($task->project_id);
 
+        // Get assignable users with avatar_url - filter out null users
         $assignableUsers = collect($project->projectMembers)
-            ->pluck('user')
+            ->filter(function ($member) {
+                return $member->user !== null;
+            })
+            ->map(function ($member) {
+                return [
+                    'id' => $member->user->id,
+                    'name' => $member->user->name,
+                    'email' => $member->user->email,
+                    'avatar_url' => $member->user->avatar_url,
+                ];
+            })
             ->unique('id')
             ->values()
             ->toArray();
 
         $isMember = $project->projectMembers
-            ->where('user.id', Auth::id())
+            ->filter(function ($member) {
+                return $member->user !== null;
+            })
+            ->where('user_id', Auth::id())
             ->isNotEmpty();
-        
-        $isTaskMember =$task->users()
+
+        $isTaskMember = $task->users()
             ->where('user_id', Auth::id())
             ->exists();
 
         $isPM = $project->projectMembers
-            ->where('user.id', Auth::id())
-            ->where('role.name', 'Project Manager')
+            ->filter(function ($member) {
+                return $member->user !== null && $member->role !== null;
+            })
+            ->where('user_id', Auth::id())
+            ->where('role.name', 'Owner')
             ->isNotEmpty();
+
+        // Format assigned users with avatar_url
+        $assignedUsers = $task->users
+            ->filter(function ($user) {
+                return $user !== null;
+            })
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'avatar_url' => $user->avatar_url ?? null,
+                ];
+            })
+            ->values()
+            ->toArray();
 
         $data = [
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
-            'assignedUsers' => $task->users?->toArray() ?? [],
+            'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
             'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
@@ -340,13 +386,17 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' Has Been Updated."
+            'message' => "Task '{$task->title}' has been updated."
         ]);
 
-        $allUserIds = array_merge(
-            $task->users()->pluck('users.id')->toArray(),
-            $assignUserIds
-        );
+        // Get valid user IDs only (filter out deleted users)
+        $existingUserIds = $task->users()
+            ->whereNotNull('users.id')
+            ->pluck('users.id')
+            ->toArray();
+
+        $allUserIds = array_merge($existingUserIds, $assignUserIds);
+
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
         }
@@ -354,6 +404,7 @@ class TaskController extends Controller
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
         }
+
         if (!empty($unassignUserIds)) {
             $task->users()->detach($unassignUserIds);
         }
@@ -399,30 +450,19 @@ class TaskController extends Controller
             return back()->with('error', 'You have no access to this task');
         }
 
-        // $project = Project::with('projectMembers')->find($task->project_id);
-
-        // if (!$project) {
-        //     return Inertia::render('errors/NotFound')
-        //         ->toResponse(request())
-        //         ->setStatusCode(404);
-        // }
-
-        // $isMember = $project->projectMembers()
-        //     ->where('user_id', Auth::id())
-        //     ->exists();
-
-        // if (!$isMember) {
-        //     return back()->with('error', 'You are not a member of this project');
-        // }
-
         $notification = Notification::create([
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' telah dihapus"
+            'message' => "Task '{$task->title}' has been deleted."
         ]);
 
-        $allUserIds = $task->users()->pluck('users.id')->toArray();
+        // Get valid user IDs only (filter out deleted users)
+        $allUserIds = $task->users()
+            ->whereNotNull('users.id')
+            ->pluck('users.id')
+            ->toArray();
+
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
         }

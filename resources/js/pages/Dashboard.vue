@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import type { BreadcrumbItem, Project } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Task } from './project';
 
@@ -21,13 +21,19 @@ import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
+interface Member {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+}
+
 interface Props {
     projects: Project[];
     tasks: Task[];
     stats: {
         tasks: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
         projects: { total: number; progress: number; byStatus?: Array<{ name: string; count: number; severity: string }> };
-        members: { total: number; list: { id: number; name: string }[] };
+        members: { total: number; list: Member[] };
     };
 }
 
@@ -102,6 +108,8 @@ const onTaskRowClick = (event: any) => {
 const onProjectRowClick = (event: any) => {
     router.visit(route('project.show', event.data.id));
 };
+
+const validMembers = computed(() => props.stats.members.list.filter((member) => member !== null && member !== undefined));
 </script>
 
 <template>
@@ -207,7 +215,7 @@ const onProjectRowClick = (event: any) => {
                                         <i class="pi pi-users text-xl text-green-500"></i>
                                         <span class="text-sm font-semibold uppercase tracking-wide text-gray-500">Team Members</span>
                                     </div>
-                                    <div class="text-4xl font-bold">{{ props.stats.members.total }}</div>
+                                    <div class="text-4xl font-bold">{{ validMembers.length }}</div>
                                 </div>
                                 <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
                                     <i class="pi pi-users text-3xl text-green-500"></i>
@@ -216,26 +224,38 @@ const onProjectRowClick = (event: any) => {
 
                             <div class="space-y-3">
                                 <div class="text-sm">Active team members</div>
-                                <AvatarGroup>
+                                <AvatarGroup v-if="validMembers.length > 0">
                                     <Avatar
-                                        v-for="(member, index) in props.stats.members.list.slice(0, 5)"
+                                        v-for="(member, index) in validMembers.slice(0, 5)"
                                         :key="member.id"
-                                        :label="getInitials(member.name)"
+                                        :image="
+                                            member.avatar_url && member.avatar_url !== '/images/default-avatar.png' ? member.avatar_url : undefined
+                                        "
+                                        :label="
+                                            !member.avatar_url || member.avatar_url === '/images/default-avatar.png'
+                                                ? getInitials(member.name)
+                                                : undefined
+                                        "
                                         shape="circle"
                                         size="large"
-                                        :style="{ backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }"
+                                        :style="
+                                            !member.avatar_url || member.avatar_url === '/images/default-avatar.png'
+                                                ? { backgroundColor: getRandomColor(index), color: 'white', fontWeight: '600' }
+                                                : {}
+                                        "
                                         :title="member.name"
                                         class="border-2 border-white dark:border-gray-800"
                                     />
                                     <Avatar
-                                        v-if="props.stats.members.total > 5"
-                                        :label="`+${props.stats.members.total - 5}`"
+                                        v-if="validMembers.length > 5"
+                                        :label="`+${validMembers.length - 5}`"
                                         shape="circle"
                                         size="large"
                                         style="background-color: #64748b; color: white; font-weight: 600"
                                         class="border-2 border-white dark:border-gray-800"
                                     />
                                 </AvatarGroup>
+                                <div v-else class="text-sm text-gray-500">No team members yet</div>
                             </div>
                         </div>
                     </template>
@@ -269,9 +289,11 @@ const onProjectRowClick = (event: any) => {
                                     <span v-else class="text-2xl leading-none">
                                         {{ data.emoji }}
                                     </span>
-                                    <span class="truncate font-semibold">
-                                        {{ data.title }}
-                                    </span>
+                                    <Link :href="route('project.show', data.id)" @click.stop>
+                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white">
+                                            {{ data.title }}
+                                        </span>
+                                    </Link>
                                 </div>
                             </template>
                         </Column>
@@ -312,7 +334,11 @@ const onProjectRowClick = (event: any) => {
                     >
                         <Column field="title" header="Task" style="min-width: 250px">
                             <template #body="{ data }">
-                                <div class="font-semibold">{{ data.title }}</div>
+                                <Link :href="route('task.show', data.id)" @click.stop>
+                                    <span class="truncate font-semibold text-gray-900 hover:underline dark:text-white">
+                                        {{ data.title }}
+                                    </span>
+                                </Link>
                             </template>
                         </Column>
                         <Column field="status" header="Status" style="min-width: 150px">

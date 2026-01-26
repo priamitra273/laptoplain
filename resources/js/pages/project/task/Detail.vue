@@ -11,10 +11,10 @@ import Card from 'primevue/card';
 import Chip from 'primevue/chip';
 import DatePicker from 'primevue/datepicker';
 import Divider from 'primevue/divider';
+import Editor from 'primevue/editor';
 import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import Tag from 'primevue/tag';
-import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
@@ -26,11 +26,17 @@ const emojiIndex = new EmojiIndex(emojiData);
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
 
+interface User {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+}
+
 const props = defineProps<{
     task: any;
     project: any;
     subTasks: any[];
-    assignedUsers: any[];
+    assignedUsers: User[];
     comments: any[];
     statuses: any[];
     priorities: any[];
@@ -77,6 +83,16 @@ const goToSubTask = (subTaskId: string) => {
         router.visit(route('task.show', { encoded: subTaskId }));
     }
 };
+
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
 const editingField = ref<string | null>(null);
 const editValue = ref<any>(null);
@@ -160,7 +176,6 @@ const autoSave = (field: string, value: any) => {
                     life: 3000,
                 });
             },
-
         },
     );
 };
@@ -173,13 +188,11 @@ const handleSliderChange = (field: string, value: any) => {
     autoSave(field, value);
 };
 
-// PERBAIKAN: Handle click outside to close edit mode
 const handleClickOutside = (event: MouseEvent) => {
     if (!editingField.value) return;
 
     const target = event.target as HTMLElement;
 
-    // Check if click is inside any PrimeVue dropdown/overlay/panel
     const isInsideOverlay =
         target.closest('.p-select-overlay') ||
         target.closest('.p-select-panel') ||
@@ -192,32 +205,26 @@ const handleClickOutside = (event: MouseEvent) => {
         return;
     }
 
-    // Check if click is inside the editing element itself
     if (editingElement.value && editingElement.value.contains(target)) {
         return;
     }
 
-    // Jika klik di luar element editing dan bukan di overlay, tutup edit mode
     cancelEdit();
 };
 
-// Handle Escape key to close edit mode
 const handleEscapeKey = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && editingField.value) {
         cancelEdit();
     }
 };
 
-// PERBAIKAN: Add event listeners with proper timing
 onMounted(() => {
-    // Gunakan setTimeout untuk memastikan DOM sudah siap
     setTimeout(() => {
-        document.addEventListener('click', handleClickOutside, true); // Gunakan capture phase
+        document.addEventListener('click', handleClickOutside, true);
         document.addEventListener('keydown', handleEscapeKey);
     }, 0);
 });
 
-// Remove event listeners on unmount
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside, true);
     document.removeEventListener('keydown', handleEscapeKey);
@@ -226,7 +233,19 @@ onUnmounted(() => {
 const newComment = ref('');
 
 const submitComment = () => {
-    if (!newComment.value.trim()) return;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newComment.value;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!textContent.trim()) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Empty Comment',
+            detail: 'Please write a comment before posting.',
+            life: 3000,
+        });
+        return;
+    }
 
     router.post(
         route('comments.store'),
@@ -240,6 +259,12 @@ const submitComment = () => {
             onSuccess: () => {
                 newComment.value = '';
                 router.reload({ only: ['comments'] });
+                toast.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Comment posted successfully.',
+                    life: 3000,
+                });
             },
             onError: () => {
                 toast.add({
@@ -274,6 +299,7 @@ const submitComment = () => {
                     </Breadcrumb>
                 </template>
             </Card>
+
             <Card
                 class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
             >
@@ -293,11 +319,15 @@ const submitComment = () => {
                                 </span>
                             </div>
                             <div class="flex-1">
-                                <h1 class="mb-1 text-3xl font-bold text-gray-800 dark:text-white">{{ props.task.title }}</h1>
+                                <h1 class="mb-1 text-3xl font-bold text-gray-800 dark:text-white">
+                                    {{ props.task.title }}
+                                </h1>
                                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                                     <i class="pi pi-folder text-blue-500"></i>
                                     <span>Project:</span>
-                                    <span class="font-semibold text-blue-600 dark:text-blue-400">{{ props.project.title }}</span>
+                                    <span class="font-semibold text-blue-600 dark:text-blue-400">
+                                        {{ props.project.title }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -306,9 +336,9 @@ const submitComment = () => {
             </Card>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <!-- Left Column: Subtasks, Details, Team Members -->
+                <!-- Left Column -->
                 <div class="space-y-6">
-                    <!-- Subtasks Card (Moved here) -->
+                    <!-- Subtasks Card -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center justify-between">
@@ -464,9 +494,9 @@ const submitComment = () => {
                                                         :style="{ width: `${props.task.progress}%` }"
                                                     ></div>
                                                 </div>
-                                                <span class="text-sm font-semibold text-green-600 dark:text-green-400"
-                                                    >{{ props.task.progress }}%</span
-                                                >
+                                                <span class="text-sm font-semibold text-green-600 dark:text-green-400">
+                                                    {{ props.task.progress }}%
+                                                </span>
                                             </div>
                                         </div>
                                         <div v-else @click.stop>
@@ -559,27 +589,56 @@ const submitComment = () => {
                         </template>
                         <template #content>
                             <Divider class="my-3" />
-                            <div v-if="props.assignedUsers?.length" class="flex flex-col gap-3">
+                            <div v-if="props.assignedUsers?.length" class="space-y-4">
                                 <AvatarGroup>
                                     <Avatar
                                         v-for="(user, idx) in props.assignedUsers.slice(0, 5)"
                                         :key="user.id"
-                                        :label="user.name.charAt(0).toUpperCase()"
+                                        :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
+                                        :label="
+                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png' ? getInitials(user.name) : undefined
+                                        "
                                         shape="circle"
                                         size="large"
-                                        class="border-2 border-white shadow-md"
-                                        :style="{ backgroundColor: `hsl(${idx * 60}, 70%, 60%)` }"
+                                        :style="
+                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
+                                                : {}
+                                        "
+                                        :title="user.name"
+                                        class="border-2 border-white shadow-md dark:border-gray-800"
                                     />
+
                                     <Avatar
                                         v-if="props.assignedUsers.length > 5"
                                         :label="`+${props.assignedUsers.length - 5}`"
                                         shape="circle"
                                         size="large"
-                                        class="border-2 border-white bg-gray-300 shadow-md"
+                                        class="border-2 border-white bg-gray-300 shadow-md dark:border-gray-800"
                                     />
                                 </AvatarGroup>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ props.assignedUsers.length }} member{{ props.assignedUsers.length > 1 ? 's' : '' }} assigned
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="(user, idx) in props.assignedUsers"
+                                        :key="user.id"
+                                        class="flex items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-800"
+                                    >
+                                        <Avatar
+                                            :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
+                                            :label="
+                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                    ? getInitials(user.name)
+                                                    : undefined
+                                            "
+                                            shape="circle"
+                                            :style="
+                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
+                                                    ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
+                                                    : {}
+                                            "
+                                        />
+                                        <span class="text-sm font-medium">{{ user.name }}</span>
+                                    </div>
                                 </div>
                             </div>
                             <p v-else class="text-sm italic text-gray-400">No members assigned</p>
@@ -587,9 +646,9 @@ const submitComment = () => {
                     </Card>
                 </div>
 
-                <!-- Right Column: Description and Comments -->
+                <!-- Right Column -->
                 <div class="space-y-6 lg:col-span-2">
-                    <!-- Description Card (Moved here) -->
+                    <!-- Description Card -->
                     <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
                         <template #title>
                             <div class="flex items-center gap-2">
@@ -620,7 +679,15 @@ const submitComment = () => {
                         <template #content>
                             <Divider class="my-3" />
                             <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
-                                <Textarea v-model="newComment" rows="3" placeholder="Share your thoughts..." class="mb-3 w-full" :autoResize="true" />
+                                <Editor v-model="newComment" editorStyle="height: 200px" class="mb-3">
+                                    <template v-slot:toolbar>
+                                        <span class="ql-formats">
+                                            <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
+                                            <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
+                                            <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
+                                        </span>
+                                    </template>
+                                </Editor>
                                 <div class="flex justify-end">
                                     <Button
                                         label="Post Comment"

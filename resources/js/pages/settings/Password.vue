@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-// import AppLayout from '@/layouts/AppLayout.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { TransitionRoot } from '@headlessui/vue';
@@ -8,10 +7,9 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { type BreadcrumbItem } from '@/types';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -62,13 +60,13 @@ const updatePassword = () => {
 
                 <form @submit.prevent="updatePassword" class="space-y-6">
                     <div class="grid gap-2">
-                        <Label for="current_password">Current password</Label>
-                        <Input
+                        <label for="current_password" class="text-sm font-medium">Current password</label>
+                        <InputText
                             id="current_password"
                             ref="currentPasswordInput"
                             v-model="form.current_password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="w-full"
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
@@ -76,13 +74,13 @@ const updatePassword = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
-                        <Input
+                        <label for="password" class="text-sm font-medium">New password</label>
+                        <InputText
                             id="password"
                             ref="passwordInput"
                             v-model="form.password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="w-full"
                             autocomplete="new-password"
                             placeholder="New password"
                         />
@@ -90,12 +88,12 @@ const updatePassword = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password_confirmation">Confirm password</Label>
-                        <Input
+                        <label for="password_confirmation" class="text-sm font-medium">Confirm password</label>
+                        <InputText
                             id="password_confirmation"
                             v-model="form.password_confirmation"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="w-full"
                             autocomplete="new-password"
                             placeholder="Confirm password"
                         />
@@ -103,7 +101,7 @@ const updatePassword = () => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save password</Button>
+                        <Button type="submit" label="Save password" :disabled="form.processing" />
 
                         <TransitionRoot
                             :show="form.recentlySuccessful"

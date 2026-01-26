@@ -5,29 +5,18 @@ import { ref } from 'vue';
 // Components
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
 
 const passwordInput = ref<HTMLInputElement | null>(null);
+const visible = ref(false);
 
 const form = useForm({
     password: '',
 });
 
-const deleteUser = (e: Event) => {
-    e.preventDefault();
-
+const deleteUser = () => {
     form.delete(route('profile.destroy'), {
         preserveScroll: true,
         onSuccess: () => closeModal(),
@@ -37,6 +26,7 @@ const deleteUser = (e: Event) => {
 };
 
 const closeModal = () => {
+    visible.value = false;
     form.clearErrors();
     form.reset();
 };
@@ -50,37 +40,44 @@ const closeModal = () => {
                 <p class="font-medium">Warning</p>
                 <p class="text-sm">Please proceed with caution, this cannot be undone.</p>
             </div>
-            <Dialog>
-                <DialogTrigger as-child>
-                    <Button variant="destructive">Delete account</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <form class="space-y-6" @submit="deleteUser">
-                        <DialogHeader class="space-y-3">
-                            <DialogTitle>Are you sure you want to delete your account?</DialogTitle>
-                            <DialogDescription>
-                                Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your
-                                password to confirm you would like to permanently delete your account.
-                            </DialogDescription>
-                        </DialogHeader>
 
+            <Button label="Delete account" severity="danger" @click="visible = true" />
+
+            <Dialog
+                v-model:visible="visible"
+                modal
+                header="Are you sure you want to delete your account?"
+                :style="{ width: '32rem' }"
+                @hide="closeModal"
+            >
+                <template #default>
+                    <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
+                        Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to
+                        confirm you would like to permanently delete your account.
+                    </p>
+
+                    <form @submit.prevent="deleteUser">
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only">Password</Label>
-                            <Input id="password" type="password" name="password" ref="passwordInput" v-model="form.password" placeholder="Password" />
+                            <label for="password" class="sr-only">Password</label>
+                            <InputText
+                                id="password"
+                                v-model="form.password"
+                                type="password"
+                                placeholder="Password"
+                                ref="passwordInput"
+                                class="w-full"
+                            />
                             <InputError :message="form.errors.password" />
                         </div>
-
-                        <DialogFooter class="gap-2">
-                            <DialogClose as-child>
-                                <Button variant="secondary" @click="closeModal"> Cancel </Button>
-                            </DialogClose>
-
-                            <Button variant="destructive" :disabled="form.processing">
-                                <button type="submit">Delete account</button>
-                            </Button>
-                        </DialogFooter>
                     </form>
-                </DialogContent>
+                </template>
+
+                <template #footer>
+                    <div class="flex justify-end gap-2">
+                        <Button label="Cancel" severity="secondary" @click="closeModal" />
+                        <Button label="Delete account" severity="danger" @click="deleteUser" :disabled="form.processing" :loading="form.processing" />
+                    </div>
+                </template>
             </Dialog>
         </div>
     </div>

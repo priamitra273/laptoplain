@@ -31,7 +31,7 @@ declare module '@inertiajs/core' {
         name: string;
         quote: { message: string; author: string };
         auth: Auth;
-        flash: {success: string | null; error: string|null}
+        flash: { success: string | null; error: string | null };
         ziggy: Config & { location: string };
     }
 }
@@ -72,7 +72,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    avatar?: string;
+    avatar_url?: string;
     email_verified_at: string | null;
     is_active: boolean;
     created_at: string;
@@ -150,12 +150,12 @@ export interface Project {
     updated_by: string;
     created_at: string;
     updated_at: string;
-    status?: {
+    status: {
         id: string;
         name: string;
         severity: PrimeSeverity;
     };
-    priority?: {
+    priority: {
         id: string;
         name: string;
         severity: PrimeSeverity;
@@ -419,4 +419,11 @@ export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn
 export interface SeverityOption {
     label: string;
     value: PrimeSeverityEnum;
+}
+
+export interface Notification {
+    id: string
+    message: string
+    task_id: string
+    is_read: boolean
 }

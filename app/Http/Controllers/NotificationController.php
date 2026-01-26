@@ -109,7 +109,7 @@ class NotificationController extends Controller
                     echo "event: notification\n";
                     echo "data: " . json_encode(Sqids::rec_encode_ids_in_list($n)) . "\n\n";
 
-                    $lastId = $n->id;
+                    $lastId = $n['id'];
                     $sentNotification = true;
                 }
 

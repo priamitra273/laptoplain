@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Models\Notification;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
@@ -29,7 +29,7 @@ class NotificationController extends Controller
                     'is_read' => $userPivot['is_read'],
                 ];
             });
-        
+
         return response()->json(Sqids::rec_encode_ids_in_list($notifications));
     }
 
@@ -44,83 +44,63 @@ class NotificationController extends Controller
             ob_implicit_flush(true);
 
             $userId = Auth::id();
-            $lastId = 0;
+            $key = "notifications:user:$userId";
+            $PING_INTERVAL = 30;
+            $lastPing = time();
 
-            // 1️⃣ Initial dump
+            // Initial dump
             $initial = Notification::whereHas(
                 'users',
-                fn($q) =>
-                $q->where('user_id', $userId)
+                fn($q) => $q->where('user_id', $userId)
             )
                 ->with([
-                    'users' => fn($q) => $q->where('user_id', Auth::id())->withPivot('is_read'),
-                    // 'status',
-                    // 'type'
-                ])->latest()->get();
-            
-            $formattedInitial = $initial->map(function ($notification) {
-                return [
-                    'id' => $notification->id,
-                    'message' => $notification->message,
-                    'task_id' => $notification->task_id,
-                    // 'task_status' => $notification->status,
-                    // 'task_type' => $notification->type,
-                    'is_read' => $notification->users->first()->pivot->is_read,
-                ];
-            });
+                    'users' => fn($q) =>
+                    $q->where('user_id', $userId)->withPivot('is_read'),
+                ])
+                ->latest()
+                ->get()
+                ->map(fn($n) => [
+                    'id' => $n->id,
+                    'message' => $n->message,
+                    'task_id' => $n->task_id,
+                    'is_read' => $n->users->first()->pivot->is_read,
+                ]);
+
 
             echo "event: init\n";
-            echo "data: " . json_encode(Sqids::rec_encode_ids_in_list($formattedInitial)) . "\n\n";
+            echo "data: " . json_encode(
+                Sqids::rec_encode_ids_in_list($initial)
+            ) . "\n\n";
             flush();
 
-            $lastId = $initial->max('id') ?? 0;
-
-            // 2️⃣ Stream loop
+            // Loop Redis
             while (!connection_aborted()) {
 
-                $new = Notification::where('id', '>', $lastId)
-                    ->whereHas(
-                        'users',
-                        fn($q) =>
-                        $q->where('user_id', $userId)
-                    )
-                    ->with([
-                        'users' => fn($q) => $q->where('user_id', Auth::id())->withPivot('is_read'),
-                        // 'status',
-                        // 'type'
-                    ])
-                    ->orderBy('id')
-                    ->get();
-                
-                $formattedNew = $new->map(function ($notification) {
-                    return [
-                        'id' => $notification->id,
-                        'message' => $notification->message,
-                        'task_id' => $notification->task_id,
-                        // 'task_status' => $notification->status,
-                        // 'task_type' => $notification->type,
-                        'is_read' => $notification->users->first()->pivot->is_read,
-                    ];
-                });
 
-                $sentNotification = false;
+                // BLOCK max 5 detik
+                $data = Redis::blpop([$key], 5);
 
-                foreach ($formattedNew as $n) {
+
+                if ($data) {
                     echo "event: notification\n";
-                    echo "data: " . json_encode(Sqids::rec_encode_ids_in_list($n)) . "\n\n";
+                    echo "data: {$data[1]}\n\n";
+                    flush();
 
-                    $lastId = $n['id'];
-                    $sentNotification = true;
+
+                    $lastPing = time();
+                    continue;
                 }
 
-                if (! $sentNotification) {
+
+                // heartbeat
+                if (time() - $lastPing >= $PING_INTERVAL) {
                     echo "event: ping\n";
                     echo "data: {}\n\n";
+                    flush();
+
+
+                    $lastPing = time();
                 }
-
-                flush();
-
-                sleep(10); // throttle
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',

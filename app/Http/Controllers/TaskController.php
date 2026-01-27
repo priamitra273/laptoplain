@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redis;
 use Inertia\Inertia;
 
 class TaskController extends Controller
@@ -182,6 +183,20 @@ class TaskController extends Controller
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
+
+                // Payload untuk Redis
+                $payload = [
+                    'id' => Sqids::encode($notification->id),
+                    'message' => $notification->message,
+                    'task_id' => $notification->task_id,
+                    'is_read' => false,
+                ];
+
+                // Push ke user terkait
+                Redis::rpush(
+                    "notifications:user:{$userId}",
+                    json_encode($payload)
+                );
             }
         }
 
@@ -399,6 +414,21 @@ class TaskController extends Controller
 
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
+
+            // Payload untuk Redis
+            $payload = [
+                'id' => Sqids::encode($notification->id),
+                'message' => $notification->message,
+                'task_id' => $notification->task_id,
+                'is_read' => false,
+            ];
+
+
+            // Push ke user terkait
+            Redis::rpush(
+                "notifications:user:{$userId}",
+                json_encode($payload)
+            );
         }
 
         foreach ($assignUserIds as $userId) {
@@ -465,6 +495,21 @@ class TaskController extends Controller
 
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
+
+            // Payload untuk Redis
+            $payload = [
+                'id' => Sqids::encode($notification->id),
+                'message' => $notification->message,
+                'task_id' => $notification->task_id,
+                'is_read' => false,
+            ];
+
+
+            // Push ke user terkait
+            Redis::rpush(
+                "notifications:user:{$userId}",
+                json_encode($payload)
+            );
         }
 
         $task->delete();

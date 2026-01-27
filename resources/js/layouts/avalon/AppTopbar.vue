@@ -39,12 +39,12 @@ const showUserMenu = ref(false);
 
 const handleNotificationClick = async (notificationId: string) => {
     markAsRead(notificationId);
-    showNotificationDropdown.value = false;
+    // showNotificationDropdown.value = false;
 }
 
 const clear = async () => {
-    await clearNotifications()
     showNotificationDropdown.value = false
+    await clearNotifications()
 }
 
 </script>

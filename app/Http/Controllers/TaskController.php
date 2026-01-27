@@ -188,7 +188,7 @@ class TaskController extends Controller
                 $payload = [
                     'id' => Sqids::encode($notification->id),
                     'message' => $notification->message,
-                    'task_id' => $notification->task_id,
+                    'task_id' => Sqids::encode($notification->task_id),
                     'is_read' => false,
                 ];
 
@@ -419,7 +419,7 @@ class TaskController extends Controller
             $payload = [
                 'id' => Sqids::encode($notification->id),
                 'message' => $notification->message,
-                'task_id' => $notification->task_id,
+                'task_id' => Sqids::encode($notification->task_id),
                 'is_read' => false,
             ];
 
@@ -500,7 +500,7 @@ class TaskController extends Controller
             $payload = [
                 'id' => Sqids::encode($notification->id),
                 'message' => $notification->message,
-                'task_id' => $notification->task_id,
+                'task_id' => Sqids::encode($notification->task_id),
                 'is_read' => false,
             ];
 

@@ -54,7 +54,6 @@ export interface Task {
 
     sub_task: Task[];
     sub_task_recursive: Task[];
-    children: Task[];
     tags: Tag[];
 }
 

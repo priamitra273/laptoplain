@@ -372,6 +372,10 @@ class TaskController extends Controller
             $task->tags()->detach($data['remove_tag']);
         }
 
+        if ($task->children()->exists() && isset($data['progress'])) {
+            unset($data['progress']);
+        }
+
         unset(
             $data['assign_users'],
             $data['unassign_users'],

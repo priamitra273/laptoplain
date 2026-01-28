@@ -13,6 +13,7 @@ const props = defineProps<{
     comment: Comment;
     taskId: string;
     level?: number;
+    currentUserId?: number;
 }>();
 
 // Current logged-in user
@@ -27,6 +28,17 @@ const REPLY_LIMIT = 0;
 const menu = ref<any>(null);
 
 const confirm = useConfirm();
+
+// Helper functions for avatar
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+const getUserColor = (userId: number) => `hsl(${(userId * 60) % 360}, 70%, 60%)`;
 
 // Available reactions
 const availableReactions = {
@@ -71,7 +83,7 @@ const submitReply = (parentId: string) => {
     router.post(
         route('comments.store'),
         {
-            body: replyText.value, // Send HTML content
+            body: replyText.value,
             commentable_type: 'App\\Models\\Task',
             commentable_id: props.taskId,
             parent_id: parentId,
@@ -93,7 +105,6 @@ const startEdit = (comment: any) => {
 };
 
 const updateComment = () => {
-    // Check if comment is empty or only contains whitespace/empty HTML tags
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = replyText.value;
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
@@ -102,7 +113,7 @@ const updateComment = () => {
 
     router.put(
         route('comments.update', { id: editingCommentId.value }),
-        { body: replyText.value }, // Send HTML content
+        { body: replyText.value },
         {
             onSuccess: () => {
                 editingCommentId.value = null;
@@ -178,12 +189,29 @@ const getMenuItems = (comment: any) => {
             class="group rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
         >
             <div class="flex gap-2">
-                <!-- Avatar -->
+                <!-- Avatar with image support -->
                 <Avatar
-                    :label="comment.user?.name[0]"
+                    v-if="comment.user?.avatar_url && comment.user.avatar_url !== '/images/default-avatar.png'"
+                    :image="comment.user.avatar_url"
                     size="normal"
-                    class="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm dark:from-blue-600 dark:to-blue-700"
-                    style="width: 28px; height: 28px; font-size: 0.75rem"
+                    shape="circle"
+                    class="flex-shrink-0 border-2 border-white shadow-sm dark:border-gray-800"
+                    style="width: 32px; height: 32px"
+                />
+                <Avatar
+                    v-else
+                    :label="getInitials(comment.user?.name || 'U')"
+                    size="normal"
+                    shape="circle"
+                    class="flex-shrink-0 border-2 border-white text-white shadow-sm dark:border-gray-800"
+                    :style="{
+                        backgroundColor: getUserColor(comment.user?.id || 0),
+                        color: 'white',
+                        fontWeight: '600',
+                        width: '32px',
+                        height: '32px',
+                        fontSize: '0.75rem',
+                    }"
                 />
 
                 <div class="min-w-0 flex-1">
@@ -317,6 +345,7 @@ const getMenuItems = (comment: any) => {
                                 :comment="reply"
                                 :taskId="props.taskId"
                                 :level="currentLevel + 1"
+                                :currentUserId="props.currentUserId"
                             />
                             <button
                                 v-if="!showAllReplies[comment.id] && remainingReplies(comment) > 0"

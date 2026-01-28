@@ -6,6 +6,7 @@ use App\Facades\Sqids;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class NotificationController extends Controller
 {
@@ -75,22 +76,19 @@ class NotificationController extends Controller
 
             // Loop Redis
             while (!connection_aborted()) {
+                $cached = Cache::store('redis')->get($key, []);
 
+                if (!empty($cached)) {
+                    foreach ($cached as $notif) {
+                        echo "event: notification\n";
+                        echo "data: " . json_encode($notif) . "\n\n";
+                    }
 
-                // BLOCK max 5 detik
-                $data = Redis::blpop([$key], 5);
+                    Cache::store('redis')->forget($key);
 
-
-                if ($data) {
-                    echo "event: notification\n";
-                    echo "data: {$data[1]}\n\n";
                     flush();
-
-
                     $lastPing = time();
-                    continue;
                 }
-
 
                 // heartbeat
                 if (time() - $lastPing >= $PING_INTERVAL) {

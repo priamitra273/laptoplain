@@ -12,7 +12,7 @@ use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class TaskController extends Controller
@@ -192,10 +192,14 @@ class TaskController extends Controller
                     'is_read' => false,
                 ];
 
-                // Push ke user terkait
-                Redis::rpush(
-                    "notifications:user:{$userId}",
-                    json_encode($payload)
+                // Simpan ke cache 
+                $key = "notifications:user:$userId";
+                $existing = Cache::store('redis')->get($key, []);
+                $existing[] = $payload; // payload = array notif
+                Cache::store('redis')->put(
+                    $key,
+                    $existing,
+                    now()->addMinutes(1)
                 );
             }
         }
@@ -424,10 +428,14 @@ class TaskController extends Controller
             ];
 
 
-            // Push ke user terkait
-            Redis::rpush(
-                "notifications:user:{$userId}",
-                json_encode($payload)
+            // Simpan ke cache 
+            $key = "notifications:user:$userId";
+            $existing = Cache::store('redis')->get($key, []);
+            $existing[] = $payload; // payload = array notif
+            Cache::store('redis')->put(
+                $key,
+                $existing,
+                now()->addMinutes(1)
             );
         }
 
@@ -505,10 +513,14 @@ class TaskController extends Controller
             ];
 
 
-            // Push ke user terkait
-            Redis::rpush(
-                "notifications:user:{$userId}",
-                json_encode($payload)
+            // Simpan ke cache 
+            $key = "notifications:user:$userId";
+            $existing = Cache::store('redis')->get($key, []);
+            $existing[] = $payload; // payload = array notif
+            Cache::store('redis')->put(
+                $key,
+                $existing,
+                now()->addMinutes(1)
             );
         }
 

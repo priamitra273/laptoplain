@@ -256,7 +256,7 @@ const onProgressChange = (val: number | null) => {
 };
 
 const hasChild = computed(() => {
-    return Boolean(props.task && Array.isArray(props.task.children) && props.task.children.length > 0);
+    return Boolean(props.task && Array.isArray(props.task.sub_task_recursive) && props.task.sub_task_recursive.length > 0);
 });
 
 const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[]) => {

@@ -60,7 +60,7 @@ class ProjectController extends Controller
             'status:id,name,severity',
             'priority:id,name,severity',
             'projectMembers' => function ($query) {
-                $query->whereHas('user'); // Only get members with valid users
+                $query->whereHas('user');
             },
             'projectMembers.user:id,name,email',
             'projectMembers.user.media',
@@ -70,7 +70,7 @@ class ProjectController extends Controller
             },
         ])->find($projectId);
 
-        // If project not found, return 404 page
+
         if (!$project) {
             return Inertia::render('errors/NotFound')
                 ->toResponse(request())

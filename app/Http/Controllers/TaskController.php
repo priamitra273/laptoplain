@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class TaskController extends Controller
@@ -182,6 +183,24 @@ class TaskController extends Controller
             ]);
             foreach ($assignUserIds as $userId) {
                 $notification->users()->attach($userId, ['is_read' => false]);
+
+                // Payload untuk Redis
+                $payload = [
+                    'id' => Sqids::encode($notification->id),
+                    'message' => $notification->message,
+                    'task_id' => Sqids::encode($notification->task_id),
+                    'is_read' => false,
+                ];
+
+                // Simpan ke cache 
+                $key = "notifications:user:$userId";
+                $existing = Cache::store('redis')->get($key, []);
+                $existing[] = $payload; // payload = array notif
+                Cache::store('redis')->put(
+                    $key,
+                    $existing,
+                    now()->addMinutes(1)
+                );
             }
         }
 
@@ -372,6 +391,10 @@ class TaskController extends Controller
             $task->tags()->detach($data['remove_tag']);
         }
 
+        if ($task->children()->exists() && isset($data['progress'])) {
+            unset($data['progress']);
+        }
+
         unset(
             $data['assign_users'],
             $data['unassign_users'],
@@ -399,6 +422,25 @@ class TaskController extends Controller
 
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
+
+            // Payload untuk Redis
+            $payload = [
+                'id' => Sqids::encode($notification->id),
+                'message' => $notification->message,
+                'task_id' => Sqids::encode($notification->task_id),
+                'is_read' => false,
+            ];
+
+
+            // Simpan ke cache 
+            $key = "notifications:user:$userId";
+            $existing = Cache::store('redis')->get($key, []);
+            $existing[] = $payload; // payload = array notif
+            Cache::store('redis')->put(
+                $key,
+                $existing,
+                now()->addMinutes(1)
+            );
         }
 
         foreach ($assignUserIds as $userId) {
@@ -465,6 +507,25 @@ class TaskController extends Controller
 
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
+
+            // Payload untuk Redis
+            $payload = [
+                'id' => Sqids::encode($notification->id),
+                'message' => $notification->message,
+                'task_id' => Sqids::encode($notification->task_id),
+                'is_read' => false,
+            ];
+
+
+            // Simpan ke cache 
+            $key = "notifications:user:$userId";
+            $existing = Cache::store('redis')->get($key, []);
+            $existing[] = $payload; // payload = array notif
+            Cache::store('redis')->put(
+                $key,
+                $existing,
+                now()->addMinutes(1)
+            );
         }
 
         $task->delete();

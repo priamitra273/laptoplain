@@ -26,24 +26,28 @@ onBeforeUnmount(() => es?.close());
 onUnmounted(() => console.log("unmounted"));
 
 const markAsRead = async (notificationId: string) => {
+    const currentCount = unreadCount.value
     try {
+        unreadCount.value--
         await axios.post(route('notifications.read', { encoded: notificationId }));
         const notif = notifications.value.find((n) => n.id === notificationId);
         if (notif) {
             notif.is_read = true
-            unreadCount.value--
         }
     } catch (error) {
+        unreadCount.value = currentCount
         console.error(error);
     }
 }
 
 const clearNotifications = async () => {
+    const currentCount = unreadCount.value
     try {
+        unreadCount.value = 0
         await axios.post(route('notifications.clear'));
         notifications.value = [];
-        unreadCount.value = 0
     } catch (error) {
+        unreadCount.value = currentCount
         console.error(error);
     }
 }

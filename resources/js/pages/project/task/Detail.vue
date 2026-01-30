@@ -45,7 +45,8 @@ const props = defineProps<{
     isTaskMember: boolean;
 }>();
 
-const currentUserId = usePage().props.auth.user.id;
+const currentUserId = computed(() => Number(usePage().props.auth.user.id));
+
 const toast = useToast();
 
 const breadcrumbItems = computed(() => [
@@ -122,6 +123,20 @@ const startEdit = (field: string, currentValue: any, event?: Event) => {
     } else {
         editValue.value = currentValue;
     }
+};
+
+const startEditProgress = (event?: Event) => {
+    if (!canEditProgress.value) {
+        toast.add({
+            severity: 'info',
+            summary: 'Progress Locked',
+            detail: 'Progress otomatis dihitung dari subtask',
+            life: 3000,
+        });
+        return;
+    }
+
+    startEdit('progress', props.task.progress, event);
 };
 
 const cancelEdit = () => {
@@ -229,6 +244,19 @@ onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside, true);
     document.removeEventListener('keydown', handleEscapeKey);
 });
+
+const hasSubTasks = computed(() => {
+    return props.subTasks && props.subTasks.length > 0;
+});
+
+const canEditProgress = computed(() => {
+    return props.isMember && props.isTaskMember && !hasSubTasks.value;
+});
+
+const handleProgressChange = (value: number) => {
+    if (!canEditProgress.value) return;
+    autoSave('progress', value);
+};
 
 const newComment = ref('');
 
@@ -476,39 +504,58 @@ const submitComment = () => {
                                         </div>
                                     </div>
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PROGRESS</p>
+                                        <p class="mb-2 flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            PROGRESS
+                                            <Tag
+                                                v-if="hasSubTasks"
+                                                value="Auto"
+                                                severity="info"
+                                                class="text-[10px]"
+                                                v-tooltip.top="'Progress dihitung otomatis dari subtask'"
+                                            />
+                                        </p>
+
+                                        <!-- DISPLAY MODE -->
                                         <div
                                             v-if="editingField !== 'progress'"
-                                            @click="startEdit('progress', props.task.progress, $event)"
+                                            @click="startEditProgress($event)"
                                             :class="[
-                                                props.isMember && props.isTaskMember
+                                                canEditProgress
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                    : 'cursor-not-allowed opacity-75',
+                                                    : 'cursor-not-allowed opacity-60',
                                                 'rounded p-1 transition-all',
                                             ]"
+                                            v-tooltip.top="canEditProgress ? 'Click to edit progress' : 'Progress otomatis dihitung dari subtask'"
                                         >
                                             <div class="flex items-center gap-2">
                                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                                     <div
                                                         class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
                                                         :style="{ width: `${props.task.progress}%` }"
-                                                    ></div>
+                                                    />
                                                 </div>
-                                                <span class="text-sm font-semibold text-green-600 dark:text-green-400">
+
+                                                <span
+                                                    class="text-sm font-semibold"
+                                                    :class="hasSubTasks ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'"
+                                                >
                                                     {{ props.task.progress }}%
                                                 </span>
                                             </div>
                                         </div>
+
+                                        <!-- EDIT MODE -->
                                         <div v-else @click.stop>
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-3">
                                                 <Slider
                                                     v-model="editValue"
                                                     class="flex-1"
                                                     :min="0"
                                                     :max="100"
-                                                    @slideend="handleSliderChange('progress', editValue)"
+                                                    :disabled="hasSubTasks"
+                                                    @slideend="handleProgressChange(editValue)"
                                                 />
-                                                <span class="w-12 text-right text-sm font-semibold">{{ editValue }}%</span>
+                                                <span class="w-12 text-right text-sm font-semibold"> {{ editValue }}% </span>
                                             </div>
                                         </div>
                                     </div>

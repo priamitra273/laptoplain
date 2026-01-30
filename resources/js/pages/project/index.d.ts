@@ -121,7 +121,7 @@ export interface Comment {
     commentable_id: string;
     user_id: string;
     body: string;
-    reaction: string | null;
+    reaction?: Record<string, string>;
     owned_id: string | null;
 
     created_by: string | null;
@@ -143,6 +143,7 @@ export interface CommentUser {
     uuid: string;
     name: string;
     email: string;
+    avatar_url: string | null;
 
     email_verified_at: string | null;
     is_active: boolean;

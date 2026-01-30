@@ -205,7 +205,7 @@ const getMenuItems = (comment: any) => {
                     shape="circle"
                     class="flex-shrink-0 border-2 border-white text-white shadow-sm dark:border-gray-800"
                     :style="{
-                        backgroundColor: getUserColor(comment.user?.id || 0),
+                        backgroundColor: getUserColor(Number(comment.user?.id) || 0),
                         color: 'white',
                         fontWeight: '600',
                         width: '32px',

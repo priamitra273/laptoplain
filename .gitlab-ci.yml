@@ -46,7 +46,7 @@ build_production:
       "
 
   only:
-    - production
+    - main
   when: on_success
   retry:
     max: 2

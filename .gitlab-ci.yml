@@ -3,6 +3,7 @@ default:
 
 stages:
   - build_development
+  - build_production
 
 build_development:
   stage: build_development

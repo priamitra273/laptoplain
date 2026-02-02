@@ -34,7 +34,7 @@ build_production:
     - prod
   script:
     - ssh gitlab-runner@172.16.2.70 "
-      cd /var/www/Production/itproject/ &&
+      cd /var/www/Production_Gitlab/itproject/ &&
       git reset --hard HEAD &&
       git clean -fd &&
       git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git main && 

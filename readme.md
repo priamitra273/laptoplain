@@ -5,4 +5,4 @@ Requirements:
 - NodeJS 22
 - Composer 2
 - Apache 2
-- 
+- Redis

@@ -150,6 +150,10 @@ class TaskController extends Controller
             $addTagNew[] = $tag->id;
         }
 
+        $taskStatus = MsTaskStatus::find($validated['status_id']);
+        $progress = $taskStatus ? $taskStatus->score : 0; 
+        $validated['progress'] = $progress;
+
         unset($validated['assign_users'], $validated['add_tag']);
 
         $task = Task::create($validated);
@@ -195,7 +199,7 @@ class TaskController extends Controller
                 // Simpan ke cache 
                 $key = "notifications:user:$userId";
                 $existing = Cache::store('redis')->get($key, []);
-                $existing[] = $payload; // payload = array notif
+                $existing[] = $payload;
                 Cache::store('redis')->put(
                     $key,
                     $existing,
@@ -391,6 +395,11 @@ class TaskController extends Controller
             $task->tags()->detach($data['remove_tag']);
         }
 
+        if ($data['status_id'] && $data['status_id'] !== $task->status_id) {
+            $taskStatus = MsTaskStatus::find($data['status_id']);
+            $data['progress'] = $taskStatus ? $taskStatus->score : 0;
+        }
+
         if ($task->children()->exists() && isset($data['progress'])) {
             unset($data['progress']);
         }
@@ -528,7 +537,18 @@ class TaskController extends Controller
             );
         }
 
+        $parent = $task->parent;
+
         $task->delete();
+
+        if ($parent) {
+            $task->parent()->dissociate();
+            if ($parent->children()->exists()) {
+                $parent->update(['progress' => $parent->calculateProgress()]);
+            } else {
+                $parent->update(['progress' => $parent->status->score]);
+            }
+        }
 
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');

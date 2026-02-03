@@ -18,6 +18,7 @@ class MsTaskStatusSeeder extends Seeder
             [
                 'name' => 'To Do',
                 'severity' => 'secondary',
+                'score' => 0,
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -28,6 +29,7 @@ class MsTaskStatusSeeder extends Seeder
             [
                 'name' => 'In Progress',
                 'severity' => 'primary',
+                'score' => 50,
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -38,6 +40,7 @@ class MsTaskStatusSeeder extends Seeder
             [
                 'name' => 'In Review',
                 'severity' => 'warn',
+                'score' => 100,
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -48,6 +51,7 @@ class MsTaskStatusSeeder extends Seeder
             [
                 'name' => 'Completed',
                 'severity' => 'success',
+                'score' => 100,
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -58,6 +62,7 @@ class MsTaskStatusSeeder extends Seeder
             [
                 'name' => 'Blocked',
                 'severity' => 'danger',
+                'score' => 0,
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

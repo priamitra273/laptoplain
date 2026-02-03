@@ -44,7 +44,7 @@ class TaskStoreRequest extends FormRequest
             'start_date' => 'nullable|date',
             'due_date'   => 'nullable|date|after_or_equal:start_date',
 
-            'progress' => 'nullable|numeric|min:0|max:100',
+            // 'progress' => 'nullable|numeric|min:0|max:100',
 
             'sequence_number' => 'nullable|integer',
             'is_archived'     => 'boolean',

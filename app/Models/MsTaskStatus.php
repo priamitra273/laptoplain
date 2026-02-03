@@ -15,10 +15,15 @@ class MsTaskStatus extends Model
     protected $fillable = [
         'name',
         'severity',
+        'score',
         'owned_id',
         'created_by',
         'updated_by',
         'deleted_by',
+    ];
+
+    protected $casts = [
+        'score' => 'integer',
     ];
 
     public function owner()

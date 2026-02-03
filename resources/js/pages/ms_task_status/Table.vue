@@ -121,6 +121,12 @@ watch(visibleForm, (newVal) => {
                     </template>
                 </Column>
 
+                <Column field="score" header="Score" sortable>
+                    <template #body="{ data }">
+                        <span class="font-semibold">{{ data.score }}</span>
+                    </template>
+                </Column>
+
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">
                         {{ moment(data.created_at).format('DD MMM YYYY, HH:mm') }}

@@ -19,6 +19,7 @@ class MsTaskStatusController extends Controller
             'id',
             'name',
             'severity',
+            'score',
             'owned_id',
             'created_by',
             'updated_by',

@@ -130,7 +130,7 @@ const startEditProgress = (event?: Event) => {
         toast.add({
             severity: 'info',
             summary: 'Progress Locked',
-            detail: 'Progress otomatis dihitung dari subtask',
+            detail: 'Progress is locked when subtasks exist',
             life: 3000,
         });
         return;
@@ -506,13 +506,7 @@ const submitComment = () => {
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
                                         <p class="mb-2 flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             PROGRESS
-                                            <Tag
-                                                v-if="hasSubTasks"
-                                                value="Auto"
-                                                severity="info"
-                                                class="text-[10px]"
-                                                v-tooltip.top="'Progress dihitung otomatis dari subtask'"
-                                            />
+                                            <Tag v-if="hasSubTasks" value="Auto" severity="info" class="text-[10px]" />
                                         </p>
 
                                         <!-- DISPLAY MODE -->
@@ -525,7 +519,6 @@ const submitComment = () => {
                                                     : 'cursor-not-allowed opacity-60',
                                                 'rounded p-1 transition-all',
                                             ]"
-                                            v-tooltip.top="canEditProgress ? 'Click to edit progress' : 'Progress otomatis dihitung dari subtask'"
                                         >
                                             <div class="flex items-center gap-2">
                                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">

@@ -7,7 +7,7 @@ import { InertiaForm, useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 interface Props {
     value?: TaskStatus;
@@ -18,6 +18,7 @@ interface TaskStatusForm {
     _method: 'POST' | 'PUT';
     name: string;
     severity: PrimeSeverity | string;
+    score: number;
     [key: string]: any;
 }
 
@@ -34,7 +35,22 @@ const selectedSeverity = ref<SeverityOption | null>(null);
 const form: InertiaForm<TaskStatusForm> = useForm({
     _method: 'POST',
     name: '',
+    score: 0,
     severity: '',
+});
+
+watch(selectedSeverity, (val) => {
+    if (!val) return;
+    if (props.value?.id) return; // 👈 skip saat edit
+
+    const scoreMap: Record<string, number> = {
+        low: 10,
+        info: 20,
+        warning: 30,
+        danger: 50,
+    };
+
+    form.score = scoreMap[val.value] ?? 0;
 });
 
 const toast = useToast();
@@ -61,6 +77,7 @@ const save = () => {
 
 const show = () => {
     form.name = props.value?.name ?? '';
+    form.score = props.value?.score ?? 0;
     selectedSeverity.value = getSeverityByValue(props.value?.severity ?? '');
 };
 
@@ -110,6 +127,12 @@ for (const key in form.data()) {
                     </template>
                 </Select>
                 <InputError :message="form.errors.severity" />
+            </div>
+
+            <div class="col-span-2 flex flex-col gap-2">
+                <Label for="score">Score</Label>
+                <InputNumber v-model="form.score" inputId="score" :min="0" :max="100" placeholder="Enter score" class="w-full" />
+                <InputError :message="form.errors.score" />
             </div>
         </form>
 

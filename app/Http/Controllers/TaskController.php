@@ -412,7 +412,7 @@ class TaskController extends Controller
             'message' => "Task '{$task->title}' has been updated."
         ]);
 
-        // Get valid user IDs only (filter out deleted users)
+
         $existingUserIds = $task->users()
             ->whereNotNull('users.id')
             ->pluck('users.id')
@@ -423,7 +423,7 @@ class TaskController extends Controller
         foreach (array_unique($allUserIds) as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);
 
-            // Payload untuk Redis
+
             $payload = [
                 'id' => Sqids::encode($notification->id),
                 'message' => $notification->message,
@@ -432,7 +432,7 @@ class TaskController extends Controller
             ];
 
 
-            // Simpan ke cache 
+
             $key = "notifications:user:$userId";
             $existing = Cache::store('redis')->get($key, []);
             $existing[] = $payload; // payload = array notif

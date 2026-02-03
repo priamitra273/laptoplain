@@ -27,6 +27,7 @@ class MsTaskStatusStoreRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'severity' => 'required|string|max:50',
+            'score' => 'required|integer|min:0|max:255',
             'owned_id' => 'nullable|integer|exists:users,id'
         ];
     }

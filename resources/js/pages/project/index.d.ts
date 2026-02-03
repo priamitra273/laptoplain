@@ -61,6 +61,7 @@ export interface TaskStatus {
     id: string;
     name: string;
     severity: string;
+    score: number;
 }
 
 export interface TaskPriority {

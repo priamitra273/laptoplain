@@ -92,13 +92,13 @@ class NotificationController extends Controller
 
                 // heartbeat
                 if (time() - $lastPing >= $PING_INTERVAL) {
-                    echo "event: ping\n";
-                    echo "data: {}\n\n";
+                    echo ": ping\n\n";
                     flush();
-
 
                     $lastPing = time();
                 }
+
+                usleep(200_000);
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',

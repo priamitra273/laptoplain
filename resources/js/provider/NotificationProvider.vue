@@ -27,15 +27,18 @@ onUnmounted(() => console.log("unmounted"));
 
 const markAsRead = async (notificationId: string) => {
     const currentCount = unreadCount.value
+    const notif = notifications.value.find((n) => n.id === notificationId);
     try {
         unreadCount.value--
-        await axios.post(route('notifications.read', { encoded: notificationId }));
-        const notif = notifications.value.find((n) => n.id === notificationId);
         if (notif) {
             notif.is_read = true
         }
+        await axios.post(route('notifications.read', { encoded: notificationId }));
     } catch (error) {
         unreadCount.value = currentCount
+        if (notif) {
+            notif.is_read = false
+        }
         console.error(error);
     }
 }

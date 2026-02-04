@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { useLayout } from '@/composables/useLayouts';
-import { Link, router } from '@inertiajs/vue3';
-import { Ref } from 'vue';
-import { inject, ref } from 'vue';
 import { Notification } from '@/types';
-
+import { Link, router } from '@inertiajs/vue3';
+import { inject, Ref, ref } from 'vue';
 
 interface NotificationStore {
-    notifications: Ref<Notification[]>
-    unreadCount: Ref<number>
-    markAsRead: (notificationId: string) => Promise<void>
-    clearNotifications: () => Promise<void>
+    notifications: Ref<Notification[]>;
+    unreadCount: Ref<number>;
+    markAsRead: (notificationId: string) => Promise<void>;
+    clearNotifications: () => Promise<void>;
 }
 
 const { onMenuToggle, onConfigSidebarToggle } = useLayout();
@@ -26,27 +24,24 @@ if (!notificationStore) {
     throw new Error('NotificationProvider is missing');
 }
 
-const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    clearNotifications,
-} = notificationStore;
+const { notifications, unreadCount, markAsRead, clearNotifications } = notificationStore;
 
 const showNotificationDropdown = ref(false);
 const showUserMenu = ref(false);
 
-
-const handleNotificationClick = async (notificationId: string) => {
+const readNotification = async (notificationId: string) => {
     markAsRead(notificationId);
     // showNotificationDropdown.value = false;
-}
+};
 
 const clear = async () => {
-    showNotificationDropdown.value = false
-    await clearNotifications()
-}
+    showNotificationDropdown.value = false;
+    await clearNotifications();
+};
 
+const isDelete = (message: string): boolean => {
+    return message.toLowerCase().includes('delete');
+};
 </script>
 
 <template>
@@ -90,9 +85,7 @@ const clear = async () => {
                         >
                             <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2">
                                 <span class="font-semibold">Notifications</span>
-                                <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clear">
-                                    Clear All
-                                </button>
+                                <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clear">Clear All</button>
                             </div>
 
                             <ul class="m-0 max-h-64 list-none overflow-y-auto p-0">
@@ -102,21 +95,15 @@ const clear = async () => {
                                     class="flex cursor-pointer px-4 py-2 hover:bg-gray-100"
                                     :class="{ 'font-bold': !notif.is_read }"
                                 >
-                                    <div 
-                                        class="my-2 relative gap-2 flex flex-row"
-                                        @click="handleNotificationClick(notif.id)"
+                                    <component
+                                        :is="!isDelete(notif.message) ? Link : 'div'"
+                                        :href="!isDelete(notif.message) ? route('task.show', notif.task_id) : null"
+                                        class="relative my-2 flex cursor-pointer flex-row gap-2"
+                                        @click="readNotification(notif.id)"
                                     >
                                         <i class="pi pi-info-circle my-auto ml-1 mr-2"></i>
                                         <span>{{ notif.message }}</span>
-                                    </div>
-                                    <div 
-                                        class="my-2 ml-auto"
-                                        v-if="!notif.message.toLowerCase().includes('delete')"
-                                    >
-                                        <Link :href="route('task.show', notif.task_id)" @click.stop>
-                                            <Button icon="pi pi-arrow-right" rounded aria-label="Filter" size="small" />
-                                        </Link>
-                                    </div>
+                                    </component>
                                 </li>
 
                                 <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">No notifications</li>

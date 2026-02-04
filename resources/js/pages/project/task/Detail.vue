@@ -3,8 +3,6 @@ import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 
-import Avatar from 'primevue/avatar';
-import AvatarGroup from 'primevue/avatargroup';
 import Breadcrumb from 'primevue/breadcrumb';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
@@ -24,6 +22,7 @@ const emojiIndex = new EmojiIndex(emojiData);
 
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
+import MemberCard from './partials/MemberCard.vue';
 
 interface User {
     id: number;
@@ -556,70 +555,7 @@ const submitComment = () => {
                     </Card>
 
                     <!-- Team Members Card -->
-                    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
-                        <template #title>
-                            <div class="flex items-center gap-2">
-                                <i class="pi pi-users text-green-500"></i>
-                                <h2 class="text-lg font-bold">Team Members</h2>
-                            </div>
-                        </template>
-                        <template #content>
-                            <Divider class="my-3" />
-                            <div v-if="props.assignedUsers?.length" class="space-y-4">
-                                <AvatarGroup>
-                                    <Avatar
-                                        v-for="(user, idx) in props.assignedUsers.slice(0, 5)"
-                                        :key="user.id"
-                                        :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
-                                        :label="
-                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png' ? getInitials(user.name) : undefined
-                                        "
-                                        shape="circle"
-                                        size="large"
-                                        :style="
-                                            !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
-                                                ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
-                                                : {}
-                                        "
-                                        :title="user.name"
-                                        class="border-2 border-white shadow-md dark:border-gray-800"
-                                    />
-
-                                    <Avatar
-                                        v-if="props.assignedUsers.length > 5"
-                                        :label="`+${props.assignedUsers.length - 5}`"
-                                        shape="circle"
-                                        size="large"
-                                        class="border-2 border-white bg-gray-300 shadow-md dark:border-gray-800"
-                                    />
-                                </AvatarGroup>
-                                <div class="space-y-2">
-                                    <div
-                                        v-for="(user, idx) in props.assignedUsers"
-                                        :key="user.id"
-                                        class="flex items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-800"
-                                    >
-                                        <Avatar
-                                            :image="user.avatar_url && user.avatar_url !== '/images/default-avatar.png' ? user.avatar_url : undefined"
-                                            :label="
-                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
-                                                    ? getInitials(user.name)
-                                                    : undefined
-                                            "
-                                            shape="circle"
-                                            :style="
-                                                !user.avatar_url || user.avatar_url === '/images/default-avatar.png'
-                                                    ? { backgroundColor: getUserColor(idx), color: 'white', fontWeight: '600' }
-                                                    : {}
-                                            "
-                                        />
-                                        <span class="text-sm font-medium">{{ user.name }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <p v-else class="text-sm italic text-gray-400">No members assigned</p>
-                        </template>
-                    </Card>
+                    <MemberCard :values="props.assignedUsers" />
                 </div>
 
                 <!-- Right Column -->

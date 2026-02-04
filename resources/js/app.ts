@@ -17,6 +17,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import FocusTrap from 'primevue/focustrap';
 import Toast from 'primevue/toast';
 import ToastService from 'primevue/toastservice';
+import Tooltip from 'primevue/tooltip';
 import FlashToastProvider from './provider/FlashToastProvider.vue';
 import NotificationProvider from './provider/NotificationProvider.vue';
 
@@ -82,9 +83,10 @@ createInertiaApp({
         createApp({
             render: () =>
                 h(NotificationProvider, null, {
-                    default: () => h(FlashToastProvider, null, {
-                        default: () => h(App, props),
-                    }),
+                    default: () =>
+                        h(FlashToastProvider, null, {
+                            default: () => h(App, props),
+                        }),
                 }),
         })
             .use(plugin)
@@ -102,6 +104,7 @@ createInertiaApp({
             .component('Toast', Toast)
             .use(HighchartsVue)
             .directive('focustrap', FocusTrap)
+            .directive('tooltip', Tooltip)
             .mount(el);
     },
     progress: {

@@ -477,7 +477,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     placeholder="Select Archived Status"
                 />
             </div>
-            <!-- <div>
+            <div>
                 <label class="font-semibold">Progress (%)</label>
                 <InputNumber
                     v-model="form.progress_value"
@@ -486,13 +486,13 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     :min="0"
                     :max="100"
                     showButtons
-                    :disabled="hasChild"
+                    disabled
                     @update:modelValue="onProgressChange"
                     :class="{ 'p-invalid': form.errors.progress_value }"
                 />
-
+                <small class="text-muted-color">Progress automatically follows task status </small>
                 <small v-if="form.errors.progress" class="p-error text-red-500">{{ form.errors.progress }}</small>
-            </div> -->
+            </div>
         </div>
 
         <div class="mt-4 flex justify-end gap-2">

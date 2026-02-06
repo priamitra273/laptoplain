@@ -139,6 +139,10 @@ class TaskController extends Controller
 
         $assignUserIds = $validated['assign_users'] ?? [];
 
+        if (!in_array(Auth::id(), $assignUserIds)) {
+            $assignUserIds[] = Auth::id();
+        }
+
         $addTagExist = $validated['add_tag']['exists'] ?? [];
         $addTagNew = [];
         foreach ($validated['add_tag']['new'] ?? [] as $newTag) {
@@ -151,7 +155,7 @@ class TaskController extends Controller
         }
 
         $taskStatus = MsTaskStatus::find($validated['status_id']);
-        $progress = $taskStatus ? $taskStatus->score : 0; 
+        $progress = $taskStatus ? $taskStatus->score : 0;
         $validated['progress'] = $progress;
 
         unset($validated['assign_users'], $validated['add_tag']);

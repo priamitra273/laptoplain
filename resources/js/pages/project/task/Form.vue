@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { InertiaForm, useForm } from '@inertiajs/vue3';
+import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import Editor from 'primevue/editor';
-import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
@@ -71,8 +70,11 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
-const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
-
+const formattedMemberOption = computed<ProjectMemberSimple[]>(() =>
+    props.members
+        .filter((m) => m.user.id !== usePage().props.auth.user.id) // Exclude creator
+        .map((m) => ({ id: m.user.id, name: m.user.name })),
+);
 watch(
     existedMembers,
     (val) => {

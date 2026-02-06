@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
+import moment from 'moment';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
@@ -34,6 +35,12 @@ const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 
+// Format date helper
+const formatDate = (date: string | null | undefined): string => {
+    if (!date) return '-';
+    return moment(date).format('DD MMM YYYY');
+};
+
 // Format tasks for TreeTable
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
@@ -48,6 +55,8 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             type: t.type,
             progress: t.progress ?? 0,
             users: t.users || [],
+            start_date: t.start_date,
+            due_date: t.due_date,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
@@ -243,9 +252,9 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable :value="paginatedTasks" class="min-w-full">
-                <!-- Select All Checkbox Column -->
-                <Column :expander="false" style="width: 3rem" v-if="isMember">
+            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px">
+                <!-- Select All Checkbox Column - FROZEN LEFT -->
+                <Column :expander="false" style="width: 3rem" v-if="isMember" frozen alignFrozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
@@ -267,29 +276,45 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Expander Column -->
-                <Column :expander="true" style="width: 3rem" />
+                <!-- Expander Column - FROZEN LEFT -->
+                <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
 
                 <!-- Title Column -->
-                <Column field="title" header="Title" />
+                <Column field="title" header="Title" style="min-width: 200px" />
 
-                <Column header="Status">
+                <Column header="Status" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
-                <Column header="Priority">
+
+                <Column header="Priority" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
                     </template>
                 </Column>
-                <Column header="Type">
+
+                <Column header="Type" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
                     </template>
                 </Column>
 
-                <Column header="Progress">
+                <!-- Start Date Column -->
+                <Column header="Start Date" style="min-width: 120px">
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.start_date) }}</span>
+                    </template>
+                </Column>
+
+                <!-- Due Date Column -->
+                <Column header="Due Date" style="min-width: 120px">
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.due_date) }}</span>
+                    </template>
+                </Column>
+
+                <Column header="Progress" style="min-width: 150px">
                     <template #body="{ node }">
                         <div class="flex min-w-[120px] items-center gap-2">
                             <ProgressBar :value="node.data.progress" :showValue="false" class="h-2 flex-1" />
@@ -298,26 +323,29 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <Column header="Actions">
+                <!-- Actions Column - FROZEN RIGHT -->
+                <Column header="Actions" frozen alignFrozen="right" style="min-width: 200px">
                     <template #body="{ node }">
-                        <Link :href="route('task.show', node.original)">
-                            <Button icon="pi pi-eye" size="small" severity="secondary" />
-                        </Link>
-                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
-                        <Button
-                            icon="pi pi-pencil"
-                            size="small"
-                            severity="warning"
-                            @click="emit('edit', node.original)"
-                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
-                        />
-                        <Button
-                            icon="pi pi-trash"
-                            size="small"
-                            severity="danger"
-                            @click="remove(node.original)"
-                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
-                        />
+                        <div class="flex gap-1">
+                            <Link :href="route('task.show', node.original)">
+                                <Button icon="pi pi-eye" size="small" severity="secondary" />
+                            </Link>
+                            <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
+                            <Button
+                                icon="pi pi-pencil"
+                                size="small"
+                                severity="warning"
+                                @click="emit('edit', node.original)"
+                                v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                            />
+                            <Button
+                                icon="pi pi-trash"
+                                size="small"
+                                severity="danger"
+                                @click="remove(node.original)"
+                                v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                            />
+                        </div>
                     </template>
                 </Column>
 

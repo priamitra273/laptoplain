@@ -20,6 +20,7 @@ use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskUserController;
@@ -36,7 +37,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+
     $except = ['create', 'show', 'edit'];
+
+    Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
+        ->name('profile.avatar.destroy');
 
     Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
     Route::resource('user', UserController::class)->except('show');

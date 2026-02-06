@@ -9,6 +9,7 @@ interface Props {
     projects: Project[];
     statuses: { id: number; name: string }[];
     priorities: { id: number; name: string }[];
+
     // roles: { id: number; name: string }[];
 }
 

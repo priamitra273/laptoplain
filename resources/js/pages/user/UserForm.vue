@@ -68,7 +68,7 @@ onMounted(() => {
     <Head :title="pageTitle" />
 
     <AppLayout>
-        <form class="flex flex-col gap-6" @submit.prevent="save">
+        <form class="flex flex-col gap-6" autocomplete="off" @submit.prevent="save">
             <Card>
                 <template #content>
                     <Heading title="User Information" description="Please fill the required fields." />

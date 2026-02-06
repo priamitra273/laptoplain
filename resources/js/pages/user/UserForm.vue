@@ -26,6 +26,7 @@ const form: InertiaForm<UserForm> = useForm({
 });
 
 const roles = ref<Role[]>([]);
+const isReadOnly = ref(true);
 
 const save = () => {
     const url = props.user?.uuid ? route('user.update', props.user.uuid) : route('user.store');
@@ -61,6 +62,11 @@ for (const key in form.data()) {
 
 onMounted(() => {
     roles.value = props.roles.filter((item) => item.team_uuid === form.team_uuid);
+
+    // force autofill browser
+    setTimeout(() => {
+        isReadOnly.value = false;
+    }, 100);
 });
 </script>
 
@@ -82,7 +88,14 @@ onMounted(() => {
 
                         <div class="flex flex-col gap-2">
                             <Label for="email">Email</Label>
-                            <InputText v-model="form.email" id="email" class="w-full" placeholder="Enter Email" autocomplete="off" />
+                            <InputText
+                                v-model="form.email"
+                                id="email"
+                                class="w-full"
+                                placeholder="Enter Email"
+                                autocomplete="off"
+                                :readonly="isReadOnly"
+                            />
                             <InputError :message="form.errors.email" />
                         </div>
 
@@ -140,6 +153,7 @@ onMounted(() => {
                                 class="w-full"
                                 input-class="w-full"
                                 autocomplete="off"
+                                :readonly="isReadOnly"
                             />
                             <InputError :message="form.errors.password" />
                         </div>

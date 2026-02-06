@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Http\Requests\Project\ProjectStoreRequest;
+use App\Http\Requests\Project\ProjectUpdateRequest;
 use App\Models\Project;
 use App\Models\MsProjectStatus;
 use App\Models\MsProjectPriority;
@@ -87,7 +88,7 @@ class ProjectController extends Controller
                 ->toResponse(request())
                 ->setStatusCode(404);
         }
-        
+
         $project->update([
             'progress' => $project->calculateProgress()
         ]);
@@ -228,7 +229,9 @@ class ProjectController extends Controller
             'isPM' => $isPM,
             'isMember' => $isMember,
             'isOwner' => $isOwner,
-            'canManageMembers' => $canManageMembers
+            'canManageMembers' => $canManageMembers,
+            'statuses' => $statuses->toArray(),
+            'priorities' => $priorities->toArray(),
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
@@ -263,9 +266,9 @@ class ProjectController extends Controller
         return to_route('project.index')->with('success', 'Project added successfully');
     }
 
-    public function update(ProjectStoreRequest $request, string $encoded)
+    public function update(ProjectUpdateRequest $request, string $encoded)
     {
-        $user = AUth::user();
+        $user = Auth::user();
         $id = Sqids::decode($encoded);
 
         $project = Project::findOrFail($id);
@@ -277,7 +280,14 @@ class ProjectController extends Controller
             'progress' => $project->calculateProgress()
         ]);
 
-        return to_route('project.index')->with('success', 'Project updated successfully');
+        $referer = $request->header('referer');
+        $isFromDetail = $referer && str_contains($referer, '/project/' . $encoded);
+
+
+        if ($isFromDetail) {
+            return to_route('project.show', ['encoded' => $encoded]);
+        }
+        return to_route('project.index');
     }
 
     public function destroy(string $encoded)

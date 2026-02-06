@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'auth' => [
                 'user' => $user,
+                'role' => $request->user() ? $request->user()->getRoleNames()[0] : null,
                 'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
             ],
             'flash' => [

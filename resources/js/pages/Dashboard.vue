@@ -308,6 +308,10 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                 <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
                             </template>
                         </Column>
+                        
+                        <template #empty>
+                            <p class="text-center">No Data Available</p>
+                        </template>
                     </DataTable>
                 </template>
             </Card>
@@ -351,6 +355,10 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                 <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
                             </template>
                         </Column>
+                        
+                        <template #empty>
+                            <p class="text-center">No Data Available</p>
+                        </template>
                     </DataTable>
                 </template>
             </Card>

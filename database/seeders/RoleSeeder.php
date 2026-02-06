@@ -16,13 +16,29 @@ class RoleSeeder extends Seeder
     {
         $role = Role::create([
             'team_id' => 1,
+            'name' => 'superadmin',
+            'guard_name' => 'web',
+            'label' => 'Super Admin',
+            'is_active' => true
+        ]);
+
+        $role->syncPermissions(Permission::all());
+
+        Role::create([
+            'team_id' => 1,
             'name' => 'admin',
             'guard_name' => 'web',
             'label' => 'Admin',
             'is_active' => true
         ]);
-
-        $role->syncPermissions(Permission::all());
+        
+        Role::create([
+            'team_id' => 1,
+            'name' => 'watcher',
+            'guard_name' => 'web',
+            'label' => 'Watcher',
+            'is_active' => true
+        ]);
 
         Role::create([
             'team_id' => 2,

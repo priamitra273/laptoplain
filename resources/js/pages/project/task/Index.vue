@@ -34,7 +34,7 @@ interface Props {
     totalAssigned?: number;
 }
 
-const CurrentUser = usePage().props.auth.user;
+const user = usePage().props.auth.user;
 
 const props = withDefaults(defineProps<Props>(), {
     tasks: () => [],
@@ -169,7 +169,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
     <Head title="Tasks" />
     <AppLayout>
         <div class="space-y-6 p-4">
-            <Heading title="My Task" :description="`Manage and track your work items - ${CurrentUser?.name ?? 'User'}`" />
+            <Heading title="My Task" :description="`Manage and track your work items - ${user?.name ?? 'User'}`" />
             <div class="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <!-- Toolbar -->
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

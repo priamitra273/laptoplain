@@ -21,10 +21,13 @@ class ProjectController extends Controller
 {
     public function index()
     {
+        $user = Auth::user();
+
         $projects = Project::with([
             'status:id,name,severity',
             'priority:id,name,severity'
         ])
+            ->visibleFor($user)
             ->orderByDesc('id')
             ->get();
 
@@ -77,6 +80,14 @@ class ProjectController extends Controller
                 ->setStatusCode(404);
         }
 
+        $currentUser = Auth::user();
+
+        if ($currentUser->cannot('view', $project)) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+        
         $project->update([
             'progress' => $project->calculateProgress()
         ]);
@@ -168,11 +179,10 @@ class ProjectController extends Controller
                     'role' => $member['role'],
                 ];
             })
-            ->filter() // Remove null values
+            ->filter()
             ->values()
             ->toArray();
 
-        $currentUser = Auth::user();
         $currentUserId = Auth::id();
         $isAdmin = $currentUser->roles->contains(function ($role) {
             return stripos($role->name, 'admin-') === 0;
@@ -226,6 +236,10 @@ class ProjectController extends Controller
 
     public function store(ProjectStoreRequest $request)
     {
+        $user = Auth::user();
+        if ($user->cannot('create', Project::class)) {
+            return back()->with('error', 'You do not have permission to create a project.');
+        }
         $project = Project::create($request->validated());
 
         $project->update([
@@ -251,9 +265,13 @@ class ProjectController extends Controller
 
     public function update(ProjectStoreRequest $request, string $encoded)
     {
+        $user = AUth::user();
         $id = Sqids::decode($encoded);
 
         $project = Project::findOrFail($id);
+        if ($user->cannot('update', $project)) {
+            return back()->with('error', 'You do not have permission to update this project.');
+        }
         $project->update($request->validated());
         $project->update([
             'progress' => $project->calculateProgress()
@@ -264,9 +282,14 @@ class ProjectController extends Controller
 
     public function destroy(string $encoded)
     {
+        $user = Auth::user();
         $id = Sqids::decode($encoded);
 
-        Project::findOrFail($id)->delete();
+        $project = Project::findOrFail($id);
+        if ($user->cannot('delete', $project)) {
+            return back()->with('error', 'You do not have permission to delete this project.');
+        }
+        $project->delete();
 
         return to_route('project.index')->with('success', 'Project deleted successfully');
     }

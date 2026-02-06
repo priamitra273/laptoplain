@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { Project } from '@/types';
+import { PrimeSeverity, Project } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
@@ -18,11 +18,24 @@ import ProjectForm from './Form.vue';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
+interface ProjectStatus {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
+interface ProjectPriority {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
 interface Props {
     projects?: Project[];
-    statuses: { id: number; name: string }[];
-    priorities: { id: number; name: string }[];
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
     progresses?: number;
+    hasPermission?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -53,15 +66,18 @@ const items: MenuItem[] = [
         command(event) {
             const data = event.item.data;
             router.visit(route('project.show', { encoded: data.id }));
-        },
+        }
     },
-    {
+];
+
+if (props.hasPermission) {
+    items.push({
         label: 'Delete',
         command(event) {
             confirmDelete(event.item.data);
-        },
-    },
-];
+        }
+    });
+}
 
 const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
     if (data[field] === newValue) return;
@@ -166,7 +182,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button v-if="props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">
@@ -193,7 +209,7 @@ watch(visibleForm, (val) => {
                         <span class="text-2xl">{{ data.emoji || '😀' }}</span>
                     </template>
 
-                    <template #editor="{ data }">
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <div @click.stop class="emoji-picker-wrapper">
                             <Picker
                                 :data="emojiIndex"
@@ -208,7 +224,7 @@ watch(visibleForm, (val) => {
                 </Column>
 
                 <Column field="title" header="Title" sortable :sortOrder="-1">
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" class="w-full" />
                     </template>
                 </Column>
@@ -218,7 +234,7 @@ watch(visibleForm, (val) => {
                         <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <Editor v-model="data[field]" editorStyle="height: 200px">
                             <template #toolbar>
                                 <span class="ql-formats">
@@ -235,7 +251,7 @@ watch(visibleForm, (val) => {
                     <template #body="{ data }">
                         <Tag :value="data.status?.name" :severity="data.status?.severity" />
                     </template>
-                    <template #editor="{ data }">
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <Dropdown v-model="data.status_id" :options="props.statuses" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
@@ -244,7 +260,7 @@ watch(visibleForm, (val) => {
                     <template #body="{ data }">
                         <Tag :value="data.priority?.name" :severity="data.priority?.severity" />
                     </template>
-                    <template #editor="{ data }">
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <Dropdown v-model="data.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
@@ -254,7 +270,7 @@ watch(visibleForm, (val) => {
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
@@ -264,7 +280,7 @@ watch(visibleForm, (val) => {
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>

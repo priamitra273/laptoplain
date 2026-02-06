@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
@@ -173,6 +173,11 @@ const taskDialogHeader = computed(() => {
     }
     return parentTaskId.value ? 'Create Subtask' : 'Create Task';
 });
+
+const hasPermission = (): boolean => {
+    const role = usePage().props.auth.role;
+    return role === 'super-admin-admin' || role === 'admin-admin';
+}
 </script>
 
 <template>
@@ -317,6 +322,7 @@ const taskDialogHeader = computed(() => {
                                         :isPM="props.isPM"
                                         :isMember="props.isMember"
                                         :isOwner="props.isOwner"
+                                        :has-permission="hasPermission()"
                                     />
                                 </div>
                             </TabPanel>

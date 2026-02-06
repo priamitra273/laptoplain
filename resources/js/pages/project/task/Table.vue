@@ -20,6 +20,7 @@ interface Props {
     isPM: boolean;
     isMember: boolean;
     isOwner: boolean;
+    hasPermission?: boolean
 }
 
 const props = defineProps<Props>();
@@ -230,7 +231,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember || hasPermission">
                 <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
                 <Button
                     v-if="hasSelectedTasks"
@@ -254,7 +255,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <div class="overflow-x-auto">
             <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px">
                 <!-- Select All Checkbox Column - FROZEN LEFT -->
-                <Column :expander="false" style="width: 3rem" v-if="isMember" frozen alignFrozen="left">
+                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
@@ -330,20 +331,20 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                             <Link :href="route('task.show', node.original)">
                                 <Button icon="pi pi-eye" size="small" severity="secondary" />
                             </Link>
-                            <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
+                            <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember || hasPermission" />
                             <Button
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
                                 @click="emit('edit', node.original)"
-                                v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
                             <Button
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
                                 @click="remove(node.original)"
-                                v-if="isMember && hasAccessToEditAndDelete(node.data)"
+                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
                         </div>
                     </template>

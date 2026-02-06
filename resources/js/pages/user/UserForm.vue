@@ -82,7 +82,7 @@ onMounted(() => {
 
                         <div class="flex flex-col gap-2">
                             <Label for="email">Email</Label>
-                            <InputText v-model="form.email" id="email" class="w-full" placeholder="Enter Email" />
+                            <InputText v-model="form.email" id="email" class="w-full" placeholder="Enter Email" autocomplete="off" />
                             <InputError :message="form.errors.email" />
                         </div>
 
@@ -133,7 +133,14 @@ onMounted(() => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-2">
                             <Label for="password">Password</Label>
-                            <Password v-model="form.password" input-id="password" class="w-full" input-class="w-full" toggle-mask />
+                            <Password
+                                v-model="form.password"
+                                input-id="password"
+                                toggle-mask
+                                class="w-full"
+                                input-class="w-full"
+                                autocomplete="off"
+                            />
                             <InputError :message="form.errors.password" />
                         </div>
 

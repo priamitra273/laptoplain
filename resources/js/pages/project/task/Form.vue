@@ -123,6 +123,21 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => form.status_id,
+    (newStatusId) => {
+        if (!newStatusId) {
+            form.progress_value = 0;
+            return;
+        }
+
+        const status = props.taskStatuses.find((s) => s.id === newStatusId);
+
+        form.progress_value = status?.score ?? 0;
+    },
+    { immediate: true },
+);
+
 const search = (event: any) => {
     const query = event.query.trim().toLowerCase();
 

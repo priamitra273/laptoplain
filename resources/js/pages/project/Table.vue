@@ -213,7 +213,7 @@ watch(visibleForm, (val) => {
                         <div @click.stop class="emoji-picker-wrapper">
                             <Picker
                                 :data="emojiIndex"
-                                @select="(emoji) => onEmojiSelect(emoji, data)"
+                                @select="(emoji: any) => onEmojiSelect(emoji, data)"
                                 set="native"
                                 :native="true"
                                 title="Pick an emoji"

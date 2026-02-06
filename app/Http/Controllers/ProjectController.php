@@ -120,7 +120,7 @@ class ProjectController extends Controller
 
         $roles = MsProjectRole::all(['id', 'name'])->toArray();
 
-        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $statuses = MsTaskStatus::select('id', 'name', 'severity', 'score')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $tags = Tag::select('id', 'name', 'severity')->get();
@@ -214,6 +214,10 @@ class ProjectController extends Controller
 
         $canManageMembers = $isAdmin || $isPM;
 
+        $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')->get();
+        $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
+
+
         $data = [
             'project' => $projectArr,
             'members' => $formattedMembers,
@@ -230,8 +234,8 @@ class ProjectController extends Controller
             'isMember' => $isMember,
             'isOwner' => $isOwner,
             'canManageMembers' => $canManageMembers,
-            'statuses' => $statuses->toArray(),
-            'priorities' => $priorities->toArray(),
+            'statuses' => $projectStatuses->toArray(),
+            'priorities' => $projectPriorities->toArray(),
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

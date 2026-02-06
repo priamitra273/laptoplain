@@ -233,7 +233,7 @@ const disableEditMode = (field: keyof typeof editMode.value) => {
     editMode.value[field] = false;
 };
 
-// Update project - KIRIM SEMUA DATA seperti Table
+// Update project - sesuai dengan ProjectUpdateRequest di backend
 const updateProject = (newValue: any, field: string, editField?: keyof typeof editMode.value) => {
     if (!canEdit.value) {
         toast.add({
@@ -245,28 +245,33 @@ const updateProject = (newValue: any, field: string, editField?: keyof typeof ed
         return;
     }
 
-    // Prepare payload dengan SEMUA data project
-    let payload: any = { ...localProject.value };
+    // Prepare payload sesuai dengan ProjectUpdateRequest
+    // Backend memerlukan: title, description, emoji, start_date, due_date, status_id, priority_id
+    let payload: any = {
+        title: localProject.value.title,
+        description: localProject.value.description || '',
+        emoji: localProject.value.emoji,
+        start_date: localProject.value.start_date,
+        due_date: localProject.value.due_date,
+        status_id: localProject.value.status_id || localProject.value.status?.id,
+        priority_id: localProject.value.priority_id || localProject.value.priority?.id,
+    };
 
     // Update field yang diubah
     if (field === 'start_date' || field === 'due_date') {
         payload[field] = moment(newValue).format('YYYY-MM-DD');
+    } else if (field === 'status_id' || field === 'priority_id') {
+        payload[field] = newValue;
     } else {
         payload[field] = newValue;
     }
 
-    // Format semua tanggal
-    payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
-    payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
-
-    // Gunakan status_id dan priority_id (bukan object)
-    if (payload.status && typeof payload.status === 'object') {
-        payload.status_id = payload.status.id;
-        delete payload.status;
+    // Format semua tanggal ke format YYYY-MM-DD
+    if (payload.start_date) {
+        payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
     }
-    if (payload.priority && typeof payload.priority === 'object') {
-        payload.priority_id = payload.priority.id;
-        delete payload.priority;
+    if (payload.due_date) {
+        payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
     }
 
     router.put(route('project.update', props.project.id), payload, {
@@ -314,12 +319,16 @@ const onPriorityChange = (event: any) => {
     updateProject(event.value.id, 'priority_id', 'priority');
 };
 
-const onStartDateChange = (value: Date) => {
-    updateProject(value, 'start_date', 'startDate');
+const onStartDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
+    if (value instanceof Date) {
+        updateProject(value, 'start_date', 'startDate');
+    }
 };
 
-const onDueDateChange = (value: Date) => {
-    updateProject(value, 'due_date', 'dueDate');
+const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
+    if (value instanceof Date) {
+        updateProject(value, 'due_date', 'dueDate');
+    }
 };
 
 const onDescriptionBlur = () => {

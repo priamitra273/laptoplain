@@ -25,6 +25,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TaskUserController;
+use Inertia\Inertia;
 
 Route::get('/', fn() => to_route('login'))->name('home');
 
@@ -102,5 +103,7 @@ require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
 
 Route::fallback(function () {
-    abort(404);
+    return Inertia::render('errors/NotFound')
+        ->toResponse(request())
+        ->setStatusCode(404);
 });

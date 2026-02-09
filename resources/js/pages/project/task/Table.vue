@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
+import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
@@ -20,7 +21,7 @@ interface Props {
     isPM: boolean;
     isMember: boolean;
     isOwner: boolean;
-    hasPermission?: boolean
+    hasPermission?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -42,6 +43,18 @@ const formatDate = (date: string | null | undefined): string => {
     return moment(date).format('DD MMM YYYY');
 };
 
+// Get initials for avatar
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+// Get color for avatar
+const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
+
 // Format tasks for TreeTable
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
@@ -58,6 +71,7 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             users: t.users || [],
             start_date: t.start_date,
             due_date: t.due_date,
+            created_by: t.created_by,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
@@ -301,6 +315,35 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
+                <!-- Created By Column -->
+                <Column header="Created By" style="min-width: 150px">
+                    <template #body="{ node }">
+                        <div v-if="node.original.creator" class="flex items-center gap-2">
+                            <Avatar
+                                :image="
+                                    node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
+                                        ? node.original.creator.avatar_url
+                                        : undefined
+                                "
+                                :label="
+                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
+                                        ? getInitials(node.original.creator.name)
+                                        : undefined
+                                "
+                                shape="circle"
+                                size="small"
+                                :style="
+                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
+                                        ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
+                                        : {}
+                                "
+                            />
+                            <span class="text-sm">{{ node.original.creator.name }}</span>
+                        </div>
+                        <span v-else class="text-sm text-gray-400">-</span>
+                    </template>
+                </Column>
+
                 <!-- Start Date Column -->
                 <Column header="Start Date" style="min-width: 120px">
                     <template #body="{ node }">
@@ -331,7 +374,13 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                             <Link :href="route('task.show', node.original)">
                                 <Button icon="pi pi-eye" size="small" severity="secondary" />
                             </Link>
-                            <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember || hasPermission" />
+                            <Button
+                                icon="pi pi-plus"
+                                size="small"
+                                severity="info"
+                                @click="emit('add', node.data.id)"
+                                v-if="isMember || hasPermission"
+                            />
                             <Button
                                 icon="pi pi-pencil"
                                 size="small"

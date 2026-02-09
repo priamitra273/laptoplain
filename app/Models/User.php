@@ -52,6 +52,11 @@ class User extends Authenticatable implements HasMedia
         ];
     }
 
+    public function createdTasks()
+    {
+        return $this->hasMany(Task::class, 'created_by');
+    }
+
     /**
      * Register media collections.
      */

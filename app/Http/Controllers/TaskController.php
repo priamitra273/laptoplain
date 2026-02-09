@@ -24,12 +24,15 @@ class TaskController extends Controller
         $userId = Auth::id();
         $tasks = Task::with([
             'users:id,name',
+            'users.media',
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
             'project:id,title',
             'tags:id,name,severity',
-            'subTaskRecursive'
+            'subTaskRecursive',
+            'creator:id,name', // Add creator relationship
+            'creator.media'
         ])
             ->where(function ($query) use ($userId) {
                 $query->where('created_by', $userId)
@@ -42,6 +45,12 @@ class TaskController extends Controller
             ->map(function ($task) use ($userId) {
                 $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
                 $task->is_created_by_me = $task->created_by == $userId;
+
+                // Format creator with avatar
+                if ($task->creator) {
+                    $task->creator->avatar_url = $task->creator->avatar_url;
+                }
+
                 return $task;
             });
 
@@ -187,6 +196,8 @@ class TaskController extends Controller
             'subTaskRecursive.priority:id,name,severity',
             'subTaskRecursive.type:id,name,severity',
             'subTaskRecursive.users:id,name',
+            'creator:id,name', // Add creator relationship
+            'creator.media',
             'comments' => function ($query) {
                 $query->whereNull('parent_id')
                     ->orderBy('id', 'asc')
@@ -275,12 +286,23 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
+        // Format creator with avatar_url
+        $creator = null;
+        if ($task->creator) {
+            $creator = [
+                'id' => $task->creator->id,
+                'name' => $task->creator->name,
+                'avatar_url' => $task->creator->avatar_url ?? null,
+            ];
+        }
+
         $data = [
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
+            'creator' => $creator, // Add creator to response
             'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),

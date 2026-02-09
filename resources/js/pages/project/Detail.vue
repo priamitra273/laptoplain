@@ -610,28 +610,22 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                                 "
                                             />
                                         </div>
-                                        <div v-else class="flex flex-col gap-2">
-                                            <Editor v-model="localProject.description" editorStyle="height: 200px">
-                                                <template #toolbar>
-                                                    <span class="ql-formats">
-                                                        <button class="ql-bold"></button>
-                                                        <button class="ql-italic"></button>
-                                                        <button class="ql-underline"></button>
-                                                        <button class="ql-list" value="ordered"></button>
-                                                        <button class="ql-list" value="bullet"></button>
-                                                    </span>
-                                                </template>
-                                            </Editor>
-                                            <div class="flex gap-2">
-                                                <Button label="Save" icon="pi pi-check" size="small" @click="onDescriptionBlur" />
-                                                <Button
-                                                    label="Cancel"
-                                                    icon="pi pi-times"
-                                                    size="small"
-                                                    severity="secondary"
-                                                    outlined
-                                                    @click="cancelEdit('description')"
-                                                />
+                                        <div v-else class="relative">
+                                            <!-- Overlay untuk mendeteksi klik di luar -->
+                                            <div class="fixed inset-0 z-10" @click="onDescriptionBlur"></div>
+                                            <!-- Editor wrapper dengan z-index lebih tinggi -->
+                                            <div class="relative z-20" @click.stop>
+                                                <Editor v-model="localProject.description" editorStyle="height: 200px">
+                                                    <template #toolbar>
+                                                        <span class="ql-formats">
+                                                            <button class="ql-bold"></button>
+                                                            <button class="ql-italic"></button>
+                                                            <button class="ql-underline"></button>
+                                                            <button class="ql-list" value="ordered"></button>
+                                                            <button class="ql-list" value="bullet"></button>
+                                                        </span>
+                                                    </template>
+                                                </Editor>
                                             </div>
                                         </div>
                                     </div>

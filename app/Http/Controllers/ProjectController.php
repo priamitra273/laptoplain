@@ -217,13 +217,32 @@ class ProjectController extends Controller
         $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')->get();
         $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
 
+        // Format tasks with creator information
+        $formattedTasks = collect($projectArr['tasks'] ?? [])
+            ->map(function ($task) use ($project) {
+                // Add creator information to each task
+                if (isset($task['creator'])) {
+                    $creator = User::with('media')->find($task['creator']['id']);
+                    if ($creator) {
+                        $task['creator']['avatar_url'] = $creator->avatar_url;
+                    }
+                }
+
+                // Recursively add creator info to subtasks
+                if (isset($task['sub_task_recursive']) && is_array($task['sub_task_recursive'])) {
+                    $task['sub_task_recursive'] = $this->formatSubtasksWithCreator($task['sub_task_recursive']);
+                }
+
+                return $task;
+            })
+            ->toArray();
 
         $data = [
             'project' => $projectArr,
             'members' => $formattedMembers,
             'roles'   => $roles,
             'users'   => $availableUsers,
-            'tasks'   => $projectArr['tasks'],
+            'tasks'   => $formattedTasks,
             'taskStatuses' => $statuses->toArray(),
             'taskPriorities' => $priorities->toArray(),
             'taskTypes' => $types->toArray(),
@@ -239,6 +258,29 @@ class ProjectController extends Controller
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
+    }
+
+    /**
+     * Helper function to recursively format subtasks with creator information
+     */
+    private function formatSubtasksWithCreator(array $subtasks): array
+    {
+        return collect($subtasks)
+            ->map(function ($subtask) {
+                if (isset($subtask['creator'])) {
+                    $creator = User::with('media')->find($subtask['creator']['id']);
+                    if ($creator) {
+                        $subtask['creator']['avatar_url'] = $creator->avatar_url;
+                    }
+                }
+
+                if (isset($subtask['sub_task_recursive']) && is_array($subtask['sub_task_recursive'])) {
+                    $subtask['sub_task_recursive'] = $this->formatSubtasksWithCreator($subtask['sub_task_recursive']);
+                }
+
+                return $subtask;
+            })
+            ->toArray();
     }
 
     public function store(ProjectStoreRequest $request)

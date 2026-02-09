@@ -172,6 +172,8 @@ class Task extends Model
                 'type:id,name,severity',
                 'users:id,name',
                 'tags:id,name,severity',
+                'creator:id,name', // Added creator relationship
+                'creator.media',   // Added creator media relationship
                 'subTaskRecursive' => function ($q) {
                     $q->orderBy('id')->withRecursive();
                 },

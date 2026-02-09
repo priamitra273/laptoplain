@@ -23,6 +23,7 @@ use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TaskUserController;
 
 Route::get('/', fn() => to_route('login'))->name('home');
@@ -89,6 +90,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
+
+    Route::get('/reports/tasks', [TaskReportController::class, 'index'])
+        ->name('reports.tasks.index');
+
+    Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
+        ->name('reports.tasks.export');
 });
 
 require __DIR__ . '/settings.php';

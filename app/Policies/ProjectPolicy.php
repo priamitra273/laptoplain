@@ -21,7 +21,7 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        $allowedRoles = ["superadmin", "admin", "watcher"];
+        $allowedRoles = ["super-admin-admin", "admin-admin", "watcher-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {
@@ -42,7 +42,7 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        $allowedRoles = ["superadmin", "admin"];
+        $allowedRoles = ["super-admin-admin", "admin-admin"];
         $roles = $user->getRoleNames();
 
         return $roles->intersect($allowedRoles)->isNotEmpty();
@@ -53,7 +53,7 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        $allowedRoles = ["superadmin", "admin"];
+        $allowedRoles = ["super-admin-admin", "admin-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {
@@ -74,7 +74,7 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        $allowedRoles = ["superadmin", "admin"];
+        $allowedRoles = ["super-admin-admin", "admin-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {

@@ -19,20 +19,20 @@ class UserSeeder extends Seeder
             'email' => 'superadmin@example.com',
             'password' => Hash::make('12345678')
         ]);
-        $superadmin->assignRole('superadmin');
+        $superadmin->assignRole('super-admin-admin');
         
         $admin = User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('12345678')
         ]);
-        $admin->assignRole('admin');
+        $admin->assignRole('admin-admin');
         
         $watcher = User::factory()->create([
             'name' => 'Watcher',
             'email' => 'watcher@example.com',
             'password' => Hash::make('12345678')
         ]);
-        $watcher->assignRole('watcher');
+        $watcher->assignRole('watcher-admin');
     }
 }

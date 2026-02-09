@@ -52,6 +52,11 @@ class User extends Authenticatable implements HasMedia
         ];
     }
 
+    public function createdTasks()
+    {
+        return $this->hasMany(Task::class, 'created_by');
+    }
+
     /**
      * Register media collections.
      */
@@ -59,8 +64,7 @@ class User extends Authenticatable implements HasMedia
     {
         $this->addMediaCollection('avatar')
             ->singleFile()
-            ->useFallbackUrl('/images/default-avatar.png')
-            ->useFallbackPath(public_path('/images/default-avatar.png'));
+            ->useDisk('public');
     }
 
     /**
@@ -69,7 +73,7 @@ class User extends Authenticatable implements HasMedia
     protected function avatarUrl(): \Illuminate\Database\Eloquent\Casts\Attribute
     {
         return \Illuminate\Database\Eloquent\Casts\Attribute::make(
-            get: fn() => $this->getFirstMediaUrl('avatar') ?: '/images/default-avatar.png',
+            get: fn() => $this->getFirstMediaUrl('avatar') ?: null, // Return null jika tidak ada
         );
     }
 

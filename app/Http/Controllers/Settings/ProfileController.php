@@ -77,4 +77,12 @@ class ProfileController extends Controller
 
         return redirect('/');
     }
+
+    public function destroyAvatar(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $user->clearMediaCollection('avatar');
+
+        return back()->with('status', 'avatar-removed');
+    }
 }

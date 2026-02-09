@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
+use App\Facades\TaskNotification;
 use App\Http\Requests\Task\TaskStoreRequest;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
@@ -11,58 +12,27 @@ use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
+use App\Enums\TaskNotificationType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    private function hasTaskAccess(Task $task): bool
-    {
-        try {
-            $userId = Auth::id();
-        } catch (\Throwable $th) {
-            throw $th;
-        }
-
-        $project = Project::with(['projectMembers' => function ($query) {
-            $query->whereHas('user'); // Only get members with valid users
-        }, 'projectMembers.user', 'projectMembers.role'])->find($task->project_id);
-
-        if (!$project) {
-            return false;
-        }
-
-        $isOwner = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null && $member->role !== null;
-            })
-            ->where('user_id', $userId)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
-
-        if ($isOwner) {
-            return $isOwner;
-        }
-
-        $isMember = $task->users()
-            ->where('user_id', $userId)
-            ->exists();
-
-        return $isMember;
-    }
-
     public function index()
     {
         $userId = Auth::id();
         $tasks = Task::with([
             'users:id,name',
+            'users.media',
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
             'project:id,title',
             'tags:id,name,severity',
-            'subTaskRecursive'
+            'subTaskRecursive',
+            'creator:id,name', // Add creator relationship
+            'creator.media'
         ])
             ->where(function ($query) use ($userId) {
                 $query->where('created_by', $userId)
@@ -75,6 +45,12 @@ class TaskController extends Controller
             ->map(function ($task) use ($userId) {
                 $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
                 $task->is_created_by_me = $task->created_by == $userId;
+
+                // Format creator with avatar
+                if ($task->creator) {
+                    $task->creator->avatar_url = $task->creator->avatar_url;
+                }
+
                 return $task;
             });
 
@@ -124,12 +100,9 @@ class TaskController extends Controller
                 ->setStatusCode(404);
         }
 
-        $isMember = $project->projectMembers()
-            ->where('user_id', Auth::id())
-            ->exists();
-
-        if (!$isMember) {
-            return back()->with('error', 'You are not a member of this project');
+        $user = Auth::user();
+        if ($user->cannot('create', [Task::class, $project])) {
+            return back()->with('error', 'You do not have permission to create a task in this project.');
         }
 
         $validated = $request->validated();
@@ -138,6 +111,10 @@ class TaskController extends Controller
         $validated['created_by'] = Auth::id();
 
         $assignUserIds = $validated['assign_users'] ?? [];
+
+        if (!in_array(Auth::id(), $assignUserIds)) {
+            $assignUserIds[] = Auth::id();
+        }
 
         $addTagExist = $validated['add_tag']['exists'] ?? [];
         $addTagNew = [];
@@ -151,7 +128,7 @@ class TaskController extends Controller
         }
 
         $taskStatus = MsTaskStatus::find($validated['status_id']);
-        $progress = $taskStatus ? $taskStatus->score : 0; 
+        $progress = $taskStatus ? $taskStatus->score : 0;
         $validated['progress'] = $progress;
 
         unset($validated['assign_users'], $validated['add_tag']);
@@ -179,33 +156,11 @@ class TaskController extends Controller
         }
 
         if (!empty($assignUserIds)) {
-            $notification = Notification::create([
-                'task_id' => $task->id,
-                'task_status_id' => $task->status_id,
-                'task_type_id' => $task->type_id,
-                'message' => "Task '{$task->title}' has been created and assigned to you."
-            ]);
-            foreach ($assignUserIds as $userId) {
-                $notification->users()->attach($userId, ['is_read' => false]);
-
-                // Payload untuk Redis
-                $payload = [
-                    'id' => Sqids::encode($notification->id),
-                    'message' => $notification->message,
-                    'task_id' => Sqids::encode($notification->task_id),
-                    'is_read' => false,
-                ];
-
-                // Simpan ke cache 
-                $key = "notifications:user:$userId";
-                $existing = Cache::store('redis')->get($key, []);
-                $existing[] = $payload;
-                Cache::store('redis')->put(
-                    $key,
-                    $existing,
-                    now()->addMinutes(1)
-                );
-            }
+            TaskNotification::createTaskNotification(
+                $task,
+                $assignUserIds,
+                TaskNotificationType::CREATED
+            );
         }
 
         return to_route('project.show', ['encoded' => $encoded])
@@ -241,6 +196,8 @@ class TaskController extends Controller
             'subTaskRecursive.priority:id,name,severity',
             'subTaskRecursive.type:id,name,severity',
             'subTaskRecursive.users:id,name',
+            'creator:id,name', // Add creator relationship
+            'creator.media',
             'comments' => function ($query) {
                 $query->whereNull('parent_id')
                     ->orderBy('id', 'asc')
@@ -255,6 +212,13 @@ class TaskController extends Controller
         ])->find($taskId);
 
         if (!$task) {
+            return Inertia::render('errors/NotFound')
+                ->toResponse(request())
+                ->setStatusCode(404);
+        }
+
+        $user = Auth::user();
+        if ($user->cannot('view', $task)) {
             return Inertia::render('errors/NotFound')
                 ->toResponse(request())
                 ->setStatusCode(404);
@@ -322,12 +286,23 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
+        // Format creator with avatar_url
+        $creator = null;
+        if ($task->creator) {
+            $creator = [
+                'id' => $task->creator->id,
+                'name' => $task->creator->name,
+                'avatar_url' => $task->creator->avatar_url ?? null,
+            ];
+        }
+
         $data = [
             'task' => $task->toArray(),
             'project' => $task->project?->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
+            'creator' => $creator, // Add creator to response
             'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
@@ -364,8 +339,9 @@ class TaskController extends Controller
                 ->setStatusCode(404);
         }
 
-        if (!self::hasTaskAccess($task)) {
-            return back()->with('error', 'You have no access to this task');
+        $user = Auth::user();
+        if ($user->cannot('update', $task)) {
+            return back()->with('error', 'You do not have permission to update this task.');
         }
 
         $data = $request->validated();
@@ -414,14 +390,6 @@ class TaskController extends Controller
 
         $task->update($data);
 
-        $notification = Notification::create([
-            'task_id' => $task->id,
-            'task_status_id' => $task->status_id,
-            'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' has been updated."
-        ]);
-
-
         $existingUserIds = $task->users()
             ->whereNotNull('users.id')
             ->pluck('users.id')
@@ -429,28 +397,11 @@ class TaskController extends Controller
 
         $allUserIds = array_merge($existingUserIds, $assignUserIds);
 
-        foreach (array_unique($allUserIds) as $userId) {
-            $notification->users()->attach($userId, ['is_read' => false]);
-
-
-            $payload = [
-                'id' => Sqids::encode($notification->id),
-                'message' => $notification->message,
-                'task_id' => Sqids::encode($notification->task_id),
-                'is_read' => false,
-            ];
-
-
-
-            $key = "notifications:user:$userId";
-            $existing = Cache::store('redis')->get($key, []);
-            $existing[] = $payload; // payload = array notif
-            Cache::store('redis')->put(
-                $key,
-                $existing,
-                now()->addMinutes(1)
-            );
-        }
+        TaskNotification::createTaskNotification(
+            $task,
+            $allUserIds,
+            TaskNotificationType::UPDATED
+        );
 
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
@@ -497,45 +448,21 @@ class TaskController extends Controller
                 ->setStatusCode(404);
         }
 
-        if (!self::hasTaskAccess($task)) {
-            return back()->with('error', 'You have no access to this task');
+        $user = Auth::user();
+        if ($user->cannot('delete', $task)) {
+            return back()->with('error', 'You do not have permission to delete this task.');
         }
 
-        $notification = Notification::create([
-            'task_id' => $task->id,
-            'task_status_id' => $task->status_id,
-            'task_type_id' => $task->type_id,
-            'message' => "Task '{$task->title}' has been deleted."
-        ]);
-
-        // Get valid user IDs only (filter out deleted users)
         $allUserIds = $task->users()
             ->whereNotNull('users.id')
             ->pluck('users.id')
             ->toArray();
 
-        foreach (array_unique($allUserIds) as $userId) {
-            $notification->users()->attach($userId, ['is_read' => false]);
-
-            // Payload untuk Redis
-            $payload = [
-                'id' => Sqids::encode($notification->id),
-                'message' => $notification->message,
-                'task_id' => Sqids::encode($notification->task_id),
-                'is_read' => false,
-            ];
-
-
-            // Simpan ke cache 
-            $key = "notifications:user:$userId";
-            $existing = Cache::store('redis')->get($key, []);
-            $existing[] = $payload; // payload = array notif
-            Cache::store('redis')->put(
-                $key,
-                $existing,
-                now()->addMinutes(1)
-            );
-        }
+        TaskNotification::createTaskNotification(
+            $task,
+            $allUserIds,
+            TaskNotificationType::DELETED
+        );
 
         $parent = $task->parent;
 

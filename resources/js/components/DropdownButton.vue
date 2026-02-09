@@ -9,7 +9,7 @@ interface Props {
     severity?: string;
     icon?: string;
     menuKey?: string | number;
-    data?: Object
+    data?: Object;
 }
 
 interface DropdownButtonItem extends MenuItem {

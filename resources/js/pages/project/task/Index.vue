@@ -34,7 +34,7 @@ interface Props {
     totalAssigned?: number;
 }
 
-const CurrentUser = usePage().props.auth.user;
+const user = usePage().props.auth.user;
 
 const props = withDefaults(defineProps<Props>(), {
     tasks: () => [],
@@ -169,7 +169,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
     <Head title="Tasks" />
     <AppLayout>
         <div class="space-y-6 p-4">
-            <Heading title="My Task" :description="`Manage and track your work items - ${CurrentUser?.name ?? 'User'}`" />
+            <Heading title="My Task" :description="`Manage and track your work items - ${user?.name ?? 'User'}`" />
             <div class="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <!-- Toolbar -->
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -274,7 +274,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                             <template #body="{ data: task }">
                                 <div class="flex max-w-md flex-col gap-1">
                                     <Link :href="route('task.show', { encoded: task.id })" @click.stop>
-                                        <span class="truncate font-medium text-gray-900 dark:text-white hover:underline">
+                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white">
                                             {{ task.title }}
                                         </span>
                                     </Link>
@@ -353,73 +353,82 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                 </div>
 
                 <!-- BOARD VIEW -->
-                <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div v-else>
                     <template v-if="filteredTasks.length > 0">
-                        <div
-                            v-for="task in filteredTasks.slice(first, first + rows)"
-                            :key="task.id"
-                            class="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
-                            @click="router.get(route('task.show', { encoded: task.id }))"
-                        >
-                            <!-- Header -->
-                            <div class="mb-3 flex items-start justify-between">
-                                <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
-                            </div>
-
-                            <!-- Title -->
-                            <h3
-                                class="mb-2 block w-full overflow-hidden truncate text-ellipsis text-base font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{ task.title }}
-                            </h3>
-
-                            <!-- Project -->
-                            <div v-if="task.project" class="mb-3 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                <i class="pi pi-folder text-xs"></i>
-                                <Link
-                                    :href="route('project.show', { encoded: task.project.id })"
-                                    class="hover:text-blue-600 hover:underline"
-                                    @click.stop
+                        <div class="flex flex-col gap-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div
+                                    v-for="task in filteredTasks.slice(first, first + rows)"
+                                    :key="task.id"
+                                    class="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+                                    @click="router.get(route('task.show', { encoded: task.id }))"
                                 >
-                                    {{ task.project.title }}
-                                </Link>
-                            </div>
-
-                            <!-- Meta Info -->
-                            <div class="mb-3 flex flex-wrap items-center gap-2">
-                                <div v-if="task.priority" class="flex items-center gap-1">
-                                    <i
-                                        :class="[
-                                            'pi',
-                                            getPriorityIcon(task.priority),
-                                            'text-xs',
-                                            task.priority.severity === 'danger'
-                                                ? 'text-red-500'
-                                                : task.priority.severity === 'warning'
-                                                  ? 'text-yellow-500'
-                                                  : 'text-gray-500',
-                                        ]"
-                                    ></i>
-                                    <span class="text-xs text-gray-600 dark:text-gray-400">
-                                        {{ task.priority.name }}
-                                    </span>
+                                    <!-- Header -->
+                                    <div class="mb-3 flex items-start justify-between">
+                                        <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
+                                    </div>
+        
+                                    <!-- Title -->
+                                    <h3
+                                        class="mb-2 block w-full overflow-hidden truncate text-ellipsis text-base font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        {{ task.title }}
+                                    </h3>
+        
+                                    <!-- Project -->
+                                    <div v-if="task.project" class="mb-3 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <i class="pi pi-folder text-xs"></i>
+                                        <Link
+                                            :href="route('project.show', { encoded: task.project.id })"
+                                            class="hover:text-blue-600 hover:underline"
+                                            @click.stop
+                                        >
+                                            {{ task.project.title }}
+                                        </Link>
+                                    </div>
+        
+                                    <!-- Meta Info -->
+                                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                                        <div v-if="task.priority" class="flex items-center gap-1">
+                                            <i
+                                                :class="[
+                                                    'pi',
+                                                    getPriorityIcon(task.priority),
+                                                    'text-xs',
+                                                    task.priority.severity === 'danger'
+                                                        ? 'text-red-500'
+                                                        : task.priority.severity === 'warning'
+                                                          ? 'text-yellow-500'
+                                                          : 'text-gray-500',
+                                                ]"
+                                            ></i>
+                                            <span class="text-xs text-gray-600 dark:text-gray-400">
+                                                {{ task.priority.name }}
+                                            </span>
+                                        </div>
+                                        <span class="text-gray-300 dark:text-gray-600">•</span>
+                                        <span
+                                            :class="[
+                                                'text-xs',
+                                                isOverdue(task.due_date) ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400',
+                                            ]"
+                                        >
+                                            {{ formatDueDate(task.due_date) }}
+                                        </span>
+                                    </div>
+        
+                                    <!-- Type & Badges -->
+                                    <div class="flex flex-wrap gap-1">
+                                        <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
+                                        <Tag v-if="task.is_assigned" value="Assigned" severity="info" class="text-xs" />
+                                        <Tag v-if="task.is_created_by_me" value="Created by me" severity="success" class="text-xs" />
+                                    </div>
                                 </div>
-                                <span class="text-gray-300 dark:text-gray-600">•</span>
-                                <span
-                                    :class="[
-                                        'text-xs',
-                                        isOverdue(task.due_date) ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400',
-                                    ]"
-                                >
-                                    {{ formatDueDate(task.due_date) }}
-                                </span>
                             </div>
-
-                            <!-- Type & Badges -->
-                            <div class="flex flex-wrap gap-1">
-                                <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
-                                <Tag v-if="task.is_assigned" value="Assigned" severity="info" class="text-xs" />
-                                <Tag v-if="task.is_created_by_me" value="Created by me" severity="success" class="text-xs" />
+    
+                            <!-- Paginator -->
+                            <div v-if="filteredTasks.length > rows" class="flex justify-center border-t border-gray-200 pt-4 dark:border-gray-700">
+                                <Paginator :first="first" :rows="rows" :totalRecords="filteredTasks.length" @page="(e) => (first = e.first)" />
                             </div>
                         </div>
                     </template>
@@ -430,11 +439,6 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                         <p class="text-lg font-medium text-gray-600 dark:text-gray-400">No tasks found</p>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Try adjusting your filters or search query</p>
                     </div>
-                </div>
-
-                <!-- Paginator -->
-                <div v-if="filteredTasks.length > rows" class="flex justify-center border-t border-gray-200 pt-4 dark:border-gray-700">
-                    <Paginator :first="first" :rows="rows" :totalRecords="filteredTasks.length" @page="(e) => (first = e.first)" />
                 </div>
             </div>
         </div>

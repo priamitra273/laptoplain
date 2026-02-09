@@ -124,4 +124,18 @@ class Project extends Model
 
         return round($total / $count, 2);
     }
+
+    public function scopeVisibleFor($query, User $user)
+    {
+        $allowedRoles = ["super-admin-admin", "admin-admin", "watcher-admin"];
+        $roles = $user->getRoleNames();
+
+        if ($roles->intersect($allowedRoles)->isNotEmpty()) {
+            return $query;
+        }
+
+        return $query->whereHas('projectMembers', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
+    }
 }

@@ -9,8 +9,11 @@ export interface SidebarMenuItem {
     items?: MenuItem[] | null; // sub-items are optional as well
 }
 
+export type UserRoles = 'super-admin-admin' | 'admin-admin' | 'watcher-admin' | 'user-user';
+
 export interface Auth {
     user: User;
+    role: UserRoles | null;
     menu: SidebarMenuItem[];
 }
 

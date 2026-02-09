@@ -20,9 +20,12 @@ use App\Http\Controllers\MsTaskStatusController;
 use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TaskUserController;
+use Inertia\Inertia;
 
 Route::get('/', fn() => to_route('login'))->name('home');
 
@@ -36,7 +39,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+
     $except = ['create', 'show', 'edit'];
+
+    Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
+        ->name('profile.avatar.destroy');
 
     Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
     Route::resource('user', UserController::class)->except('show');
@@ -84,11 +91,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
+
+    Route::get('/reports/tasks', [TaskReportController::class, 'index'])
+        ->name('reports.tasks.index');
+
+    Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
+        ->name('reports.tasks.export');
 });
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
 
 Route::fallback(function () {
-    abort(404);
+    return Inertia::render('errors/NotFound')
+        ->toResponse(request())
+        ->setStatusCode(404);
 });

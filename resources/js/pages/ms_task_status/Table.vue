@@ -15,6 +15,7 @@ import TaskStatusForm from './Form.vue';
 
 interface Props {
     task_statuses?: TaskStatus[];
+    hasPermission?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,7 +89,7 @@ watch(visibleForm, (newVal) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Status" raised @click="visibleForm = true">
+            <Button label="Add Task Status" raised @click="visibleForm = true" v-if="hasPermission">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -133,7 +134,7 @@ watch(visibleForm, (newVal) => {
                     </template>
                 </Column>
 
-                <Column header="Actions">
+                <Column header="Actions" v-if="hasPermission">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" />
                     </template>

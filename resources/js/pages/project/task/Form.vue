@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { InertiaForm, useForm } from '@inertiajs/vue3';
+import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import Editor from 'primevue/editor';
-import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
@@ -71,8 +70,11 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
-const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
-
+const formattedMemberOption = computed<ProjectMemberSimple[]>(() =>
+    props.members
+        .filter((m) => m.user.id !== usePage().props.auth.user.id) // Exclude creator
+        .map((m) => ({ id: m.user.id, name: m.user.name })),
+);
 watch(
     existedMembers,
     (val) => {
@@ -117,6 +119,21 @@ watch(
                 severity: t.severity ?? '',
             }));
         }
+    },
+    { immediate: true },
+);
+
+watch(
+    () => form.status_id,
+    (newStatusId) => {
+        if (!newStatusId) {
+            form.progress_value = 0;
+            return;
+        }
+
+        const status = props.taskStatuses.find((s) => s.id === newStatusId);
+
+        form.progress_value = status?.score ?? 0;
     },
     { immediate: true },
 );
@@ -475,7 +492,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     placeholder="Select Archived Status"
                 />
             </div>
-            <!-- <div>
+            <div>
                 <label class="font-semibold">Progress (%)</label>
                 <InputNumber
                     v-model="form.progress_value"
@@ -484,13 +501,13 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     :min="0"
                     :max="100"
                     showButtons
-                    :disabled="hasChild"
+                    disabled
                     @update:modelValue="onProgressChange"
                     :class="{ 'p-invalid': form.errors.progress_value }"
                 />
-
+                <small class="text-muted-color">Progress automatically follows task status </small>
                 <small v-if="form.errors.progress" class="p-error text-red-500">{{ form.errors.progress }}</small>
-            </div> -->
+            </div>
         </div>
 
         <div class="mt-4 flex justify-end gap-2">

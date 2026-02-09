@@ -125,5 +125,6 @@ return [
 
     'aliases' => [
         'Sqids' => App\Facades\Sqids::class,
+        'TaskNotification' => App\Facades\TaskNotification::class,
     ],
 ];

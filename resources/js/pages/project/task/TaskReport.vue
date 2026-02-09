@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import moment from 'moment';
@@ -296,13 +297,10 @@ const toggleFilters = () => {
     <AppLayout>
         <div class="flex flex-col gap-6 pb-8">
             <!-- Header -->
+            <Heading title="Task Report" description="Manange all tasks in the system" />
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Task Report</h1>
-                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Comprehensive task overview with advanced filtering</p>
-                        </div>
                         <div class="flex flex-wrap gap-2">
                             <Button
                                 :label="showFilters ? 'Hide Filters' : 'Show Filters'"

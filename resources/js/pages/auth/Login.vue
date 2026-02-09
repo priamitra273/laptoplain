@@ -107,6 +107,11 @@ const submit = () => {
                             <Button type="submit" label="Log in" class="w-full" :loading="form.processing"
                                 :disabled="form.processing" />
                         </div>
+
+                        <div class="text-center text-sm text-surface-600">
+                            Don't have an account?
+                            <TextLink :href="route('register')" class="font-medium text-primary hover:underline"> Sign up </TextLink>
+                        </div>
                     </div>
                 </form>
             </div>

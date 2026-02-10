@@ -283,7 +283,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                         <i class="pi pi-folder text-xs"></i>
                                         <Link
                                             :href="route('project.show', { encoded: task.project.id })"
-                                            class="truncate hover:text-blue-600 hover:underline"
+                                            class="truncate hover:text-blue-600"
                                             @click.stop
                                         >
                                             {{ task.project.title }}
@@ -367,14 +367,14 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                     <div class="mb-3 flex items-start justify-between">
                                         <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
                                     </div>
-        
+
                                     <!-- Title -->
                                     <h3
                                         class="mb-2 block w-full overflow-hidden truncate text-ellipsis text-base font-semibold text-gray-900 dark:text-white"
                                     >
                                         {{ task.title }}
                                     </h3>
-        
+
                                     <!-- Project -->
                                     <div v-if="task.project" class="mb-3 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                         <i class="pi pi-folder text-xs"></i>
@@ -386,7 +386,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                             {{ task.project.title }}
                                         </Link>
                                     </div>
-        
+
                                     <!-- Meta Info -->
                                     <div class="mb-3 flex flex-wrap items-center gap-2">
                                         <div v-if="task.priority" class="flex items-center gap-1">
@@ -410,13 +410,15 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                         <span
                                             :class="[
                                                 'text-xs',
-                                                isOverdue(task.due_date) ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400',
+                                                isOverdue(task.due_date)
+                                                    ? 'font-medium text-red-600 dark:text-red-400'
+                                                    : 'text-gray-600 dark:text-gray-400',
                                             ]"
                                         >
                                             {{ formatDueDate(task.due_date) }}
                                         </span>
                                     </div>
-        
+
                                     <!-- Type & Badges -->
                                     <div class="flex flex-wrap gap-1">
                                         <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
@@ -425,7 +427,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                     </div>
                                 </div>
                             </div>
-    
+
                             <!-- Paginator -->
                             <div v-if="filteredTasks.length > rows" class="flex justify-center border-t border-gray-200 pt-4 dark:border-gray-700">
                                 <Paginator :first="first" :rows="rows" :totalRecords="filteredTasks.length" @page="(e) => (first = e.first)" />

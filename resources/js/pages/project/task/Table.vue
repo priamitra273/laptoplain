@@ -6,6 +6,7 @@ import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Paginator from 'primevue/paginator';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
@@ -36,6 +37,11 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
+
+// Filter refs
+const selectedStatuses = ref<string[]>([]);
+const selectedPriorities = ref<string[]>([]);
+const selectedTypes = ref<string[]>([]);
 
 // Format date helper
 const formatDate = (date: string | null | undefined): string => {
@@ -77,7 +83,72 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
-// Filter and sort tasks based on search query (newest first)
+// Get unique options for filters
+const statusOptions = computed(() => {
+    const statuses = new Map();
+    const collectStatuses = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.status) {
+                statuses.set(task.status.name, task.status);
+            }
+            if (task.sub_task_recursive) {
+                collectStatuses(task.sub_task_recursive);
+            }
+        });
+    };
+    collectStatuses(props.tasks);
+    return Array.from(statuses.values());
+});
+
+const priorityOptions = computed(() => {
+    const priorities = new Map();
+    const collectPriorities = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.priority) {
+                priorities.set(task.priority.name, task.priority);
+            }
+            if (task.sub_task_recursive) {
+                collectPriorities(task.sub_task_recursive);
+            }
+        });
+    };
+    collectPriorities(props.tasks);
+    return Array.from(priorities.values());
+});
+
+const typeOptions = computed(() => {
+    const types = new Map();
+    const collectTypes = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.type) {
+                types.set(task.type.name, task.type);
+            }
+            if (task.sub_task_recursive) {
+                collectTypes(task.sub_task_recursive);
+            }
+        });
+    };
+    collectTypes(props.tasks);
+    return Array.from(types.values());
+});
+
+// Filter tasks recursively
+const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
+    // Check if current task matches
+    const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
+    const matchesStatus = selectedStatuses.value.length === 0 || selectedStatuses.value.includes(task.data.status?.name);
+    const matchesPriority = selectedPriorities.value.length === 0 || selectedPriorities.value.includes(task.data.priority?.name);
+    const matchesType = selectedTypes.value.length === 0 || selectedTypes.value.includes(task.data.type?.name);
+
+    const currentMatches = matchesSearch && matchesStatus && matchesPriority && matchesType;
+
+    // Check if any children match
+    const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
+
+    return currentMatches || hasMatchingChildren;
+};
+
+// Filter and sort tasks based on search query and filters (newest first)
 const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     let tasks = formatTasks(props.tasks);
 
@@ -88,14 +159,11 @@ const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
         return dateB - dateA; // Descending order (newest first)
     });
 
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        tasks = tasks.filter(
-            (task) =>
-                task.data.title.toLowerCase().includes(query) ||
-                (task.children && task.children.some((child) => child.data.title.toLowerCase().includes(query))),
-        );
-    }
+    const query = searchQuery.value.toLowerCase();
+
+    // Apply filters
+    tasks = tasks.filter((task) => filterTaskRecursive(task, query));
+
     return tasks;
 });
 
@@ -125,14 +193,27 @@ const hasSelectedTasks = computed(() => {
     return Object.keys(selectedKey.value).length > 0;
 });
 
-// Reset page when search query changes
-watch([searchQuery], () => {
+// Check if any filter is active
+const hasActiveFilters = computed(() => {
+    return searchQuery.value !== '' || selectedStatuses.value.length > 0 || selectedPriorities.value.length > 0 || selectedTypes.value.length > 0;
+});
+
+// Reset page when search query or filters change
+watch([searchQuery, selectedStatuses, selectedPriorities, selectedTypes], () => {
     currentPage.value = 1;
 });
 
 const onPageChange = (event: { page: number; rows: number }) => {
     currentPage.value = event.page + 1;
     itemsPerPage.value = event.rows;
+};
+
+// Clear all filters
+const clearFilters = () => {
+    searchQuery.value = '';
+    selectedStatuses.value = [];
+    selectedPriorities.value = [];
+    selectedTypes.value = [];
 };
 
 const confirm = useConfirm();
@@ -259,10 +340,72 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
             </div>
         </div>
 
-        <!-- Search input -->
-        <div class="mb-4 w-full">
-            <label class="mb-2 block text-sm font-medium">Search</label>
-            <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+        <!-- Filters Section -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <!-- Search input -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Search</label>
+                <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+            </div>
+
+            <!-- Status Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Status</label>
+                <MultiSelect
+                    v-model="selectedStatuses"
+                    :options="statusOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Status"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                </MultiSelect>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Priority</label>
+                <MultiSelect
+                    v-model="selectedPriorities"
+                    :options="priorityOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Priority"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                </MultiSelect>
+            </div>
+
+            <!-- Type Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Type</label>
+                <MultiSelect
+                    v-model="selectedTypes"
+                    :options="typeOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Type"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                </MultiSelect>
+            </div>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <div v-if="hasActiveFilters" class="flex justify-end">
+            <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
         </div>
 
         <!-- TreeTable container scrollable for mobile -->
@@ -360,10 +503,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
                 <Column header="Progress" style="min-width: 150px">
                     <template #body="{ node }">
-                        <div class="flex min-w-[120px] items-center gap-2">
-                            <ProgressBar :value="node.data.progress" :showValue="false" class="h-2 flex-1" />
-                            <span class="text-xs">{{ node.data.progress }}%</span>
-                        </div>
+                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
                     </template>
                 </Column>
 

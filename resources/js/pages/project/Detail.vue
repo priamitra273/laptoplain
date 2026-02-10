@@ -21,7 +21,7 @@ import TabPanels from 'primevue/tabpanels';
 import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
@@ -107,6 +107,16 @@ const localProject = ref({ ...props.project });
 
 let emojiIndex = new EmojiIndex(emojiData);
 
+// Refs untuk click outside detection
+const titleInputRef = ref<HTMLElement | null>(null);
+const statusDropdownRef = ref<HTMLElement | null>(null);
+const priorityDropdownRef = ref<HTMLElement | null>(null);
+const startDatePickerRef = ref<HTMLElement | null>(null);
+const dueDatePickerRef = ref<HTMLElement | null>(null);
+
+// Event listeners storage
+const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
+
 // Watch for props changes
 watch(
     () => props.project,
@@ -115,6 +125,108 @@ watch(
     },
     { deep: true },
 );
+
+// Handler untuk click outside
+const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) => {
+    // Remove existing listener if any
+    const existingListener = clickOutsideListeners.get(field);
+    if (existingListener) {
+        document.removeEventListener('click', existingListener);
+    }
+
+    // Create new listener
+    const listener = (event: MouseEvent) => {
+        const element = elementRef.value;
+        const target = event.target as Node;
+
+        if (!element) return;
+
+        // Check if element has $el property (PrimeVue component)
+        const domElement = element.$el || element;
+
+        if (domElement && !domElement.contains(target)) {
+            cancelEdit(field);
+        }
+    };
+
+    // Store and add listener
+    clickOutsideListeners.set(field, listener);
+    setTimeout(() => {
+        document.addEventListener('click', listener);
+    }, 100);
+};
+
+const removeClickOutside = (field: keyof typeof editMode.value) => {
+    const listener = clickOutsideListeners.get(field);
+    if (listener) {
+        document.removeEventListener('click', listener);
+        clickOutsideListeners.delete(field);
+    }
+};
+
+// Watch untuk menambahkan event listener ketika edit mode aktif
+watch(
+    () => editMode.value.title,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('title', titleInputRef);
+        } else {
+            removeClickOutside('title');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.status,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('status', statusDropdownRef);
+        } else {
+            removeClickOutside('status');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.priority,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('priority', priorityDropdownRef);
+        } else {
+            removeClickOutside('priority');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.startDate,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('startDate', startDatePickerRef);
+        } else {
+            removeClickOutside('startDate');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.dueDate,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('dueDate', dueDatePickerRef);
+        } else {
+            removeClickOutside('dueDate');
+        }
+    },
+);
+
+// Cleanup on unmount
+onUnmounted(() => {
+    clickOutsideListeners.forEach((listener) => {
+        document.removeEventListener('click', listener);
+    });
+    clickOutsideListeners.clear();
+});
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: ProjectMember) => {
@@ -379,7 +491,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 {{ props.project.title }}
                             </h1>
                         </div>
-                        <div v-else class="flex items-center gap-2">
+                        <div v-else class="flex items-center gap-2" ref="titleInputRef" @click.stop>
                             <InputText
                                 v-model="localProject.title"
                                 class="text-2xl font-semibold"
@@ -445,23 +557,24 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                     class="w-fit"
                                 />
                             </div>
-                            <Dropdown
-                                v-else
-                                v-model="localProject.status"
-                                :options="props.statuses"
-                                optionLabel="name"
-                                placeholder="Select Status"
-                                @change="onStatusChange"
-                                class="w-full"
-                                autofocus
-                            >
-                                <template #value="slotProps">
-                                    <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'" />
-                                </template>
-                                <template #option="slotProps">
-                                    <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'" />
-                                </template>
-                            </Dropdown>
+                            <div v-else ref="statusDropdownRef" @click.stop>
+                                <Dropdown
+                                    v-model="localProject.status"
+                                    :options="props.statuses"
+                                    optionLabel="name"
+                                    placeholder="Select Status"
+                                    @change="onStatusChange"
+                                    class="w-full"
+                                    autofocus
+                                >
+                                    <template #value="slotProps">
+                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'" />
+                                    </template>
+                                    <template #option="slotProps">
+                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'" />
+                                    </template>
+                                </Dropdown>
+                            </div>
                         </div>
                     </template>
                 </Card>
@@ -478,23 +591,24 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                     class="w-fit"
                                 />
                             </div>
-                            <Dropdown
-                                v-else
-                                v-model="localProject.priority"
-                                :options="props.priorities"
-                                optionLabel="name"
-                                placeholder="Select Priority"
-                                @change="onPriorityChange"
-                                class="w-full"
-                                autofocus
-                            >
-                                <template #value="slotProps">
-                                    <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'" />
-                                </template>
-                                <template #option="slotProps">
-                                    <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'" />
-                                </template>
-                            </Dropdown>
+                            <div v-else ref="priorityDropdownRef" @click.stop>
+                                <Dropdown
+                                    v-model="localProject.priority"
+                                    :options="props.priorities"
+                                    optionLabel="name"
+                                    placeholder="Select Priority"
+                                    @change="onPriorityChange"
+                                    class="w-full"
+                                    autofocus
+                                >
+                                    <template #value="slotProps">
+                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'" />
+                                    </template>
+                                    <template #option="slotProps">
+                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'" />
+                                    </template>
+                                </Dropdown>
+                            </div>
                         </div>
                     </template>
                 </Card>
@@ -521,28 +635,30 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 </div>
                             </div>
                             <div v-else class="flex flex-col gap-2">
-                                <DatePicker
-                                    v-if="editMode.startDate"
-                                    :modelValue="new Date(localProject.start_date || '')"
-                                    @update:modelValue="onStartDateChange"
-                                    dateFormat="dd M yy"
-                                    placeholder="Start Date"
-                                    class="w-full text-sm"
-                                    autofocus
-                                />
+                                <div v-if="editMode.startDate" ref="startDatePickerRef" @click.stop>
+                                    <DatePicker
+                                        :modelValue="new Date(localProject.start_date || '')"
+                                        @update:modelValue="onStartDateChange"
+                                        dateFormat="dd M yy"
+                                        placeholder="Start Date"
+                                        class="w-full text-sm"
+                                        autofocus
+                                    />
+                                </div>
                                 <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
                                     Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
                                 </div>
 
-                                <DatePicker
-                                    v-if="editMode.dueDate"
-                                    :modelValue="new Date(localProject.due_date || '')"
-                                    @update:modelValue="onDueDateChange"
-                                    dateFormat="dd M yy"
-                                    placeholder="Due Date"
-                                    class="w-full text-sm"
-                                    autofocus
-                                />
+                                <div v-if="editMode.dueDate" ref="dueDatePickerRef" @click.stop>
+                                    <DatePicker
+                                        :modelValue="new Date(localProject.due_date || '')"
+                                        @update:modelValue="onDueDateChange"
+                                        dateFormat="dd M yy"
+                                        placeholder="Due Date"
+                                        class="w-full text-sm"
+                                        autofocus
+                                    />
+                                </div>
                                 <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
                                     Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
                                 </div>

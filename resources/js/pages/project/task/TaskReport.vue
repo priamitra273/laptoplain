@@ -41,12 +41,12 @@ interface Type {
 }
 
 interface Project {
-    id: number;
+    id: string; // Encoded ID
     title: string;
 }
 
 interface Task {
-    id: string;
+    id: string; // Encoded ID
     title: string;
     summary: string;
     creator: Creator | null;
@@ -77,25 +77,34 @@ interface PaginatedTasks {
     to: number;
 }
 
+interface Filters {
+    names?: string[] | string;
+    statuses?: string[] | string;
+    priorities?: string[] | string;
+    types?: string[] | string;
+    start_date_from?: string;
+    start_date_to?: string;
+    due_date_from?: string;
+    due_date_to?: string;
+    search?: string;
+}
+
 interface Props {
     tasks: PaginatedTasks;
-    filters: {
-        names?: string[] | string;
-        statuses?: string[] | string;
-        priorities?: string[] | string;
-        types?: string[] | string;
-        start_date_from?: string;
-        start_date_to?: string;
-        due_date_from?: string;
-        due_date_to?: string;
-        search?: string;
-    };
+    filters: Filters;
     filterOptions: FilterOptions;
 }
 
+// ============================================================================
+// PROPS
+// ============================================================================
+
 const props = defineProps<Props>();
 
-// Filter states
+// ============================================================================
+// STATE
+// ============================================================================
+
 const selectedCreators = ref<number[]>([]);
 const selectedStatuses = ref<number[]>([]);
 const selectedPriorities = ref<number[]>([]);
@@ -107,50 +116,35 @@ const dueDateTo = ref<Date | null>(null);
 const searchQuery = ref<string>('');
 const showFilters = ref<boolean>(false);
 
-// Initialize filters from props
-const initializeFilters = () => {
-    if (props.filters.names) {
-        selectedCreators.value = Array.isArray(props.filters.names) ? props.filters.names.map(Number) : props.filters.names.split(',').map(Number);
-    }
-    if (props.filters.statuses) {
-        selectedStatuses.value = Array.isArray(props.filters.statuses)
-            ? props.filters.statuses.map(Number)
-            : props.filters.statuses.split(',').map(Number);
-    }
-    if (props.filters.priorities) {
-        selectedPriorities.value = Array.isArray(props.filters.priorities)
-            ? props.filters.priorities.map(Number)
-            : props.filters.priorities.split(',').map(Number);
-    }
-    if (props.filters.types) {
-        selectedTypes.value = Array.isArray(props.filters.types) ? props.filters.types.map(Number) : props.filters.types.split(',').map(Number);
-    }
-    if (props.filters.start_date_from) {
-        startDateFrom.value = new Date(props.filters.start_date_from);
-    }
-    if (props.filters.start_date_to) {
-        startDateTo.value = new Date(props.filters.start_date_to);
-    }
-    if (props.filters.due_date_from) {
-        dueDateFrom.value = new Date(props.filters.due_date_from);
-    }
-    if (props.filters.due_date_to) {
-        dueDateTo.value = new Date(props.filters.due_date_to);
-    }
-    if (props.filters.search) {
-        searchQuery.value = props.filters.search;
-    }
+// ============================================================================
+// NAVIGATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Navigate to task detail page
+ * @param encodedTaskId - Already encoded task ID from backend
+ */
+const navigateToTask = (encodedTaskId: string) => {
+    router.visit(route('task.show', { encoded: encodedTaskId }));
 };
 
-initializeFilters();
+/**
+ * Navigate to project detail page
+ * @param encodedProjectId - Already encoded project ID from backend
+ */
+const navigateToProject = (encodedProjectId: string) => {
+    router.visit(route('project.show', { encoded: encodedProjectId }));
+};
 
-// Format date helper
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 const formatDate = (date: string | null): string => {
     if (!date) return '-';
     return moment(date).format('DD MMM YYYY');
 };
 
-// Get initials for avatar
 const getInitials = (name: string): string => {
     return name
         .split(' ')
@@ -160,117 +154,38 @@ const getInitials = (name: string): string => {
         .slice(0, 2);
 };
 
-// Get color for avatar
 const getUserColor = (index: number): string => {
     return `hsl(${index * 60}, 70%, 60%)`;
 };
 
-// Apply filters
-const applyFilters = () => {
-    const filterParams: any = {};
-
-    if (selectedCreators.value.length > 0) {
-        filterParams.names = selectedCreators.value;
-    }
-    if (selectedStatuses.value.length > 0) {
-        filterParams.statuses = selectedStatuses.value;
-    }
-    if (selectedPriorities.value.length > 0) {
-        filterParams.priorities = selectedPriorities.value;
-    }
-    if (selectedTypes.value.length > 0) {
-        filterParams.types = selectedTypes.value;
-    }
-    if (startDateFrom.value) {
-        filterParams.start_date_from = moment(startDateFrom.value).format('YYYY-MM-DD');
-    }
-    if (startDateTo.value) {
-        filterParams.start_date_to = moment(startDateTo.value).format('YYYY-MM-DD');
-    }
-    if (dueDateFrom.value) {
-        filterParams.due_date_from = moment(dueDateFrom.value).format('YYYY-MM-DD');
-    }
-    if (dueDateTo.value) {
-        filterParams.due_date_to = moment(dueDateTo.value).format('YYYY-MM-DD');
-    }
-    if (searchQuery.value) {
-        filterParams.search = searchQuery.value;
-    }
-
-    router.get(route('reports.tasks.index'), filterParams, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+const parseFilterValue = (value: string[] | string): number[] => {
+    return Array.isArray(value) ? value.map(Number) : value.split(',').map(Number);
 };
 
-// Clear all filters
-const clearFilters = () => {
-    selectedCreators.value = [];
-    selectedStatuses.value = [];
-    selectedPriorities.value = [];
-    selectedTypes.value = [];
-    startDateFrom.value = null;
-    startDateTo.value = null;
-    dueDateFrom.value = null;
-    dueDateTo.value = null;
-    searchQuery.value = '';
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
 
-    router.get(
-        route('reports.tasks.index'),
-        {},
-        {
-            preserveState: true,
-            preserveScroll: true,
-        },
-    );
+const initializeFilters = () => {
+    const { filters } = props;
+
+    if (filters.names) selectedCreators.value = parseFilterValue(filters.names);
+    if (filters.statuses) selectedStatuses.value = parseFilterValue(filters.statuses);
+    if (filters.priorities) selectedPriorities.value = parseFilterValue(filters.priorities);
+    if (filters.types) selectedTypes.value = parseFilterValue(filters.types);
+    if (filters.start_date_from) startDateFrom.value = new Date(filters.start_date_from);
+    if (filters.start_date_to) startDateTo.value = new Date(filters.start_date_to);
+    if (filters.due_date_from) dueDateFrom.value = new Date(filters.due_date_from);
+    if (filters.due_date_to) dueDateTo.value = new Date(filters.due_date_to);
+    if (filters.search) searchQuery.value = filters.search;
 };
 
-// Export to CSV
-const exportReport = () => {
-    const filterParams: any = {};
+initializeFilters();
 
-    if (selectedCreators.value.length > 0) {
-        filterParams.names = selectedCreators.value.join(',');
-    }
-    if (selectedStatuses.value.length > 0) {
-        filterParams.statuses = selectedStatuses.value.join(',');
-    }
-    if (selectedPriorities.value.length > 0) {
-        filterParams.priorities = selectedPriorities.value.join(',');
-    }
-    if (selectedTypes.value.length > 0) {
-        filterParams.types = selectedTypes.value.join(',');
-    }
-    if (startDateFrom.value) {
-        filterParams.start_date_from = moment(startDateFrom.value).format('YYYY-MM-DD');
-    }
-    if (startDateTo.value) {
-        filterParams.start_date_to = moment(startDateTo.value).format('YYYY-MM-DD');
-    }
-    if (dueDateFrom.value) {
-        filterParams.due_date_from = moment(dueDateFrom.value).format('YYYY-MM-DD');
-    }
-    if (dueDateTo.value) {
-        filterParams.due_date_to = moment(dueDateTo.value).format('YYYY-MM-DD');
-    }
-    if (searchQuery.value) {
-        filterParams.search = searchQuery.value;
-    }
+// ============================================================================
+// COMPUTED
+// ============================================================================
 
-    const queryString = new URLSearchParams(filterParams).toString();
-    window.open(route('reports.tasks.export') + '?' + queryString, '_blank');
-};
-
-// Pagination
-const onPageChange = (event: any) => {
-    const filterParams = { ...props.filters, page: event.page + 1, per_page: event.rows };
-    router.get(route('reports.tasks.index'), filterParams, {
-        preserveState: true,
-        preserveScroll: true,
-    });
-};
-
-// Check if any filter is active
 const hasActiveFilters = computed(() => {
     return (
         selectedCreators.value.length > 0 ||
@@ -285,9 +200,77 @@ const hasActiveFilters = computed(() => {
     );
 });
 
-// Toggle filters panel
+const activeFilterCount = computed(() => {
+    return Object.keys(props.filters).length;
+});
+
+const buildFilterParams = (): Record<string, any> => {
+    const params: Record<string, any> = {};
+
+    if (selectedCreators.value.length > 0) params.names = selectedCreators.value;
+    if (selectedStatuses.value.length > 0) params.statuses = selectedStatuses.value;
+    if (selectedPriorities.value.length > 0) params.priorities = selectedPriorities.value;
+    if (selectedTypes.value.length > 0) params.types = selectedTypes.value;
+    if (startDateFrom.value) params.start_date_from = moment(startDateFrom.value).format('YYYY-MM-DD');
+    if (startDateTo.value) params.start_date_to = moment(startDateTo.value).format('YYYY-MM-DD');
+    if (dueDateFrom.value) params.due_date_from = moment(dueDateFrom.value).format('YYYY-MM-DD');
+    if (dueDateTo.value) params.due_date_to = moment(dueDateTo.value).format('YYYY-MM-DD');
+    if (searchQuery.value) params.search = searchQuery.value;
+
+    return params;
+};
+
+const navigateWithFilters = (params: Record<string, any> = {}) => {
+    router.get(route('reports.tasks.index'), params, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const applyFilters = () => {
+    navigateWithFilters(buildFilterParams());
+};
+
+const clearFilters = () => {
+    selectedCreators.value = [];
+    selectedStatuses.value = [];
+    selectedPriorities.value = [];
+    selectedTypes.value = [];
+    startDateFrom.value = null;
+    startDateTo.value = null;
+    dueDateFrom.value = null;
+    dueDateTo.value = null;
+    searchQuery.value = '';
+
+    navigateWithFilters();
+};
+
 const toggleFilters = () => {
     showFilters.value = !showFilters.value;
+};
+
+const exportReport = () => {
+    const params = buildFilterParams();
+    const queryString = new URLSearchParams(
+        Object.entries(params).reduce(
+            (acc, [key, value]) => {
+                acc[key] = Array.isArray(value) ? value.join(',') : value;
+                return acc;
+            },
+            {} as Record<string, string>,
+        ),
+    ).toString();
+
+    window.open(`${route('reports.tasks.export')}?${queryString}`, '_blank');
+};
+
+const onPageChange = (event: any) => {
+    const params = {
+        ...props.filters,
+        page: event.page + 1,
+        per_page: event.rows,
+    };
+    navigateWithFilters(params);
 };
 </script>
 
@@ -297,7 +280,7 @@ const toggleFilters = () => {
     <AppLayout>
         <div class="flex flex-col gap-6 pb-8">
             <!-- Header -->
-            <Heading title="Task Report" description="Manange all tasks in the system" />
+            <Heading title="Task Report" description="Manage and track all tasks in your project." />
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -305,11 +288,11 @@ const toggleFilters = () => {
                             <Button
                                 :label="showFilters ? 'Hide Filters' : 'Show Filters'"
                                 :icon="showFilters ? 'pi pi-times' : 'pi pi-filter'"
-                                @click="toggleFilters"
                                 :severity="hasActiveFilters ? 'primary' : 'secondary'"
-                                :badge="hasActiveFilters ? String(Object.keys(props.filters).length) : undefined"
+                                :badge="hasActiveFilters ? String(activeFilterCount) : undefined"
+                                @click="toggleFilters"
                             />
-                            <Button label="Export CSV" icon="pi pi-download" @click="exportReport" severity="success" />
+                            <!-- <Button label="Export CSV" icon="pi pi-download" severity="success" @click="exportReport" /> -->
                         </div>
                     </div>
                 </template>
@@ -327,10 +310,10 @@ const toggleFilters = () => {
                             v-if="hasActiveFilters"
                             label="Clear All"
                             icon="pi pi-filter-slash"
-                            @click="clearFilters"
                             severity="danger"
                             text
                             size="small"
+                            @click="clearFilters"
                         />
                     </div>
                 </template>
@@ -341,7 +324,7 @@ const toggleFilters = () => {
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Creator Name</label>
                             <MultiSelect
                                 v-model="selectedCreators"
-                                :options="props.filterOptions.creators"
+                                :options="filterOptions.creators"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select creators"
@@ -375,7 +358,7 @@ const toggleFilters = () => {
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                             <MultiSelect
                                 v-model="selectedStatuses"
-                                :options="props.filterOptions.statuses"
+                                :options="filterOptions.statuses"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select statuses"
@@ -393,7 +376,7 @@ const toggleFilters = () => {
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
                             <MultiSelect
                                 v-model="selectedPriorities"
-                                :options="props.filterOptions.priorities"
+                                :options="filterOptions.priorities"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select priorities"
@@ -411,7 +394,7 @@ const toggleFilters = () => {
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
                             <MultiSelect
                                 v-model="selectedTypes"
-                                :options="props.filterOptions.types"
+                                :options="filterOptions.types"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select types"
@@ -424,7 +407,7 @@ const toggleFilters = () => {
                             </MultiSelect>
                         </div>
 
-                        <!-- Start Date Range -->
+                        <!-- Date Filters -->
                         <div class="flex flex-col gap-2">
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date From</label>
                             <DatePicker v-model="startDateFrom" dateFormat="dd M yy" placeholder="Select date" showIcon class="w-full" />
@@ -435,7 +418,6 @@ const toggleFilters = () => {
                             <DatePicker v-model="startDateTo" dateFormat="dd M yy" placeholder="Select date" showIcon class="w-full" />
                         </div>
 
-                        <!-- Due Date Range -->
                         <div class="flex flex-col gap-2">
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Due Date From</label>
                             <DatePicker v-model="dueDateFrom" dateFormat="dd M yy" placeholder="Select date" showIcon class="w-full" />
@@ -454,8 +436,8 @@ const toggleFilters = () => {
                     </div>
 
                     <div class="mt-6 flex justify-end gap-2">
-                        <Button label="Clear" @click="clearFilters" severity="secondary" outlined />
-                        <Button label="Apply Filters" @click="applyFilters" icon="pi pi-check" />
+                        <Button label="Clear" severity="secondary" outlined @click="clearFilters" />
+                        <Button label="Apply Filters" icon="pi pi-check" @click="applyFilters" />
                     </div>
                 </template>
             </Card>
@@ -463,8 +445,8 @@ const toggleFilters = () => {
             <!-- Data Table -->
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
-                    <DataTable :value="props.tasks.data" stripedRows class="rounded-lg" :rows="props.tasks.per_page" responsiveLayout="scroll">
-                        <!-- Creator Name Column -->
+                    <DataTable :value="tasks.data" stripedRows class="rounded-lg" :rows="tasks.per_page" responsiveLayout="scroll">
+                        <!-- Creator Column -->
                         <Column field="creator.name" header="Name" style="min-width: 200px">
                             <template #body="{ data }">
                                 <div v-if="data.creator" class="flex items-center gap-3">
@@ -489,18 +471,31 @@ const toggleFilters = () => {
                                     />
                                     <div>
                                         <p class="font-semibold">{{ data.creator.name }}</p>
-                                        <p class="text-xs text-gray-500">{{ data.project?.title || '-' }}</p>
+                                        <!-- Clickable Project Title -->
+                                        <p
+                                            v-if="data.project"
+                                            @click.stop="navigateToProject(data.project.id)"
+                                            class="cursor-pointer text-xs text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                        >
+                                            {{ data.project.title }}
+                                        </p>
+                                        <p v-else class="text-xs text-gray-500">-</p>
                                     </div>
                                 </div>
                                 <span v-else class="text-gray-400">-</span>
                             </template>
                         </Column>
 
-                        <!-- Summary Column -->
+                        <!-- Summary Column - Clickable Task -->
                         <Column field="summary" header="Summary" style="min-width: 300px">
                             <template #body="{ data }">
-                                <div>
-                                    <p class="mb-1 font-semibold text-gray-800 dark:text-white">{{ data.title }}</p>
+                                <div
+                                    @click="navigateToTask(data.id)"
+                                    class="-m-2 cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                                >
+                                    <p class="text-dark mb-1 font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300">
+                                        {{ data.title }}
+                                    </p>
                                     <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.summary }}</p>
                                 </div>
                             </template>
@@ -557,22 +552,20 @@ const toggleFilters = () => {
                     <!-- Pagination -->
                     <div class="mt-4">
                         <Paginator
-                            :rows="props.tasks.per_page"
-                            :totalRecords="props.tasks.total"
+                            :rows="tasks.per_page"
+                            :totalRecords="tasks.total"
                             :rowsPerPageOptions="[10, 25, 50, 100]"
+                            :first="(tasks.current_page - 1) * tasks.per_page"
                             @page="onPageChange"
-                            :first="(props.tasks.current_page - 1) * props.tasks.per_page"
                         />
                     </div>
 
                     <!-- Stats -->
                     <div class="mt-4 flex items-center justify-between border-t pt-4">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                            Showing {{ props.tasks.from }} to {{ props.tasks.to }} of {{ props.tasks.total }} tasks
-                        </p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Showing {{ tasks.from }} to {{ tasks.to }} of {{ tasks.total }} tasks</p>
                         <div v-if="hasActiveFilters" class="flex items-center gap-2">
                             <i class="pi pi-filter text-blue-500"></i>
-                            <span class="text-sm font-medium text-blue-600"> {{ Object.keys(props.filters).length }} filter(s) active </span>
+                            <span class="text-sm font-medium text-blue-600">{{ activeFilterCount }} filter(s) active</span>
                         </div>
                     </div>
                 </template>

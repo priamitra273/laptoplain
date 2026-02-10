@@ -66,7 +66,7 @@ const items: MenuItem[] = [
         command(event) {
             const data = event.item.data;
             router.visit(route('project.show', { encoded: data.id }));
-        }
+        },
     },
 ];
 
@@ -75,7 +75,7 @@ if (props.hasPermission) {
         label: 'Delete',
         command(event) {
             confirmDelete(event.item.data);
-        }
+        },
     });
 }
 
@@ -167,6 +167,14 @@ const onEmojiSelect = (emoji: any, data: any) => {
     });
 };
 
+const currentPage = ref(0);
+const rowsPerPage = ref(10);
+
+const onPage = (event: any) => {
+    currentPage.value = event.page;
+    rowsPerPage.value = event.rows;
+};
+
 watch(visibleForm, (val) => {
     if (!val) selected.value = undefined;
 });
@@ -199,9 +207,12 @@ watch(visibleForm, (val) => {
                 striped-rows
                 row-hover
                 :closeOnEscape="false"
+                @page="onPage"
             >
                 <Column header="No" class="w-12 text-center">
-                    <template #body="{ index }">{{ index + 1 }}</template>
+                    <template #body="{ index }">
+                        {{ currentPage * rowsPerPage + index + 1 }}
+                    </template>
                 </Column>
 
                 <Column field="emoji" header="Emoji" class="w-20">

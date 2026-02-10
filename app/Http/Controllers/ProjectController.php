@@ -17,6 +17,7 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ProjectController extends Controller
 {
@@ -49,15 +50,11 @@ class ProjectController extends Controller
         try {
             $projectId = Sqids::decode($encoded);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         if (!$projectId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $project = Project::with([
@@ -76,17 +73,13 @@ class ProjectController extends Controller
 
 
         if (!$project) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $currentUser = Auth::user();
 
         if ($currentUser->cannot('view', $project)) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $project->update([

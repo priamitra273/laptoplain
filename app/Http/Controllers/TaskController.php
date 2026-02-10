@@ -16,6 +16,7 @@ use App\Enums\TaskNotificationType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TaskController extends Controller
 {
@@ -78,15 +79,11 @@ class TaskController extends Controller
         try {
             $projectId = Sqids::decode($encoded);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Project not found.');
         }
 
         if (!$projectId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Project not found.');
         }
 
         // Validasi: Cek apakah user adalah anggota project
@@ -95,9 +92,7 @@ class TaskController extends Controller
         }])->find($projectId);
 
         if (!$project) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Project not found.');
         }
 
         $user = Auth::user();
@@ -172,15 +167,11 @@ class TaskController extends Controller
         try {
             $taskId = Sqids::decode($encoded);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         if (!$taskId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $task = Task::with([
@@ -212,16 +203,12 @@ class TaskController extends Controller
         ])->find($taskId);
 
         if (!$task) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $user = Auth::user();
         if ($user->cannot('view', $task)) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
         $task->update(['progress' => $task->calculateProgress()]);
@@ -320,23 +307,17 @@ class TaskController extends Controller
         try {
             $taskId = Sqids::decode($taskEncoded);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         if (!$taskId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         $task = Task::find($taskId);
 
         if (!$task) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         $user = Auth::user();
@@ -429,23 +410,17 @@ class TaskController extends Controller
             $projectId = Sqids::decode($encoded);
             $taskId = Sqids::decode($taskEncoded);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         if (!$projectId || !$taskId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         $task = Task::find($taskId);
 
         if (!$task) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            return back()->with('error', 'Task not found.');
         }
 
         $user = Auth::user();

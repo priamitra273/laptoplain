@@ -26,6 +26,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TaskUserController;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 Route::get('/', fn() => to_route('login'))->name('home');
 
@@ -36,38 +37,57 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route::get('dashboard/{any}', fn() => abort(404))
     //     ->where('any', '.*');
 
-    Route::get('dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
+    Route::middleware('route.permission')->group(function () {
+        $except = ['create', 'show', 'edit'];
+        Route::get('dashboard', [DashboardController::class, 'index'])
+            ->name('dashboard');
 
+        Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
+        Route::resource('user', UserController::class)->except('show');
+        Route::resource('team', TeamController::class)->except($except)->whereUuid('team');
+        Route::resource('role', RoleController::class);
 
-    $except = ['create', 'show', 'edit'];
+        Route::resource('project-status', MsProjectStatusController::class)->except($except);
+        Route::resource('project-priority', MsProjectPriorityController::class)->except($except);
+        Route::resource('project-role', MsProjectRoleController::class)->except($except);
+
+        Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
+        Route::resource('task-status', MsTaskStatusController::class)->except($except);
+        Route::resource('task-type', MsTaskTypeController::class)->except($except);
+
+        Route::resource('tag', TagController::class)->except($except);
+
+        Route::resource('project', ProjectController::class)
+            ->except(['create', 'edit', 'show']);
+
+        Route::get('project/{encoded}', [ProjectController::class, 'show'])
+            ->name('project.show');
+
+        Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
+        Route::get('task', [TaskController::class, 'index'])->name('task.index');
+
+        Route::prefix('project/{projectEncoded}')
+            ->name('project.')
+            ->group(function () {
+                Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
+                Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
+                Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
+
+                Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+                Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
+                Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+            });
+
+        Route::get('/reports/tasks', [TaskReportController::class, 'index'])
+            ->name('reports.tasks.index');
+
+        Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
+            ->name('reports.tasks.export');
+    });
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->name('profile.avatar.destroy');
 
-    Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
-    Route::resource('user', UserController::class)->except('show');
-    Route::resource('team', TeamController::class)->except($except)->whereUuid('team');
-    Route::resource('role', RoleController::class);
-
-    Route::resource('project-status', MsProjectStatusController::class)->except($except);
-    Route::resource('project-priority', MsProjectPriorityController::class)->except($except);
-    Route::resource('project-role', MsProjectRoleController::class)->except($except);
-
-    Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
-    Route::resource('task-status', MsTaskStatusController::class)->except($except);
-    Route::resource('task-type', MsTaskTypeController::class)->except($except);
-
-    Route::resource('tag', TagController::class)->except($except);
-
-    Route::resource('project', ProjectController::class)
-        ->except(['create', 'edit', 'show']);
-
-    Route::get('project/{encoded}', [ProjectController::class, 'show'])
-        ->name('project.show');
-
-    Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
-    Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
@@ -79,31 +99,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/{encoded}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/clear', [NotificationController::class, 'clearAll'])
         ->name('notifications.clear');
-
-    Route::prefix('project/{projectEncoded}')
-        ->name('project.')
-        ->group(function () {
-            Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
-            Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
-            Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
-
-            Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
-            Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
-            Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
-        });
-
-    Route::get('/reports/tasks', [TaskReportController::class, 'index'])
-        ->name('reports.tasks.index');
-
-    Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
-        ->name('reports.tasks.export');
 });
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
 
 Route::fallback(function () {
-    return Inertia::render('errors/NotFound')
-        ->toResponse(request())
-        ->setStatusCode(404);
+    throw new NotFoundHttpException(404);
 });

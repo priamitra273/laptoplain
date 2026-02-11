@@ -113,7 +113,7 @@ const onHideDrawer = () => {
     form.icon = '';
     form.route_name = '';
     form.sequence_number = 1;
-    form.is_active = false;
+    form.is_active = true;
 };
 
 const onShowDrawer = () => {

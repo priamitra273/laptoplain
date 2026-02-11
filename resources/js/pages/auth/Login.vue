@@ -7,6 +7,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
 
 defineProps<{
     status?: string;
@@ -88,12 +89,14 @@ const submit = () => {
                         <!-- Password -->
                         <div class="text-left">
                             <label for="password" class="mb-2 block text-sm font-medium text-surface-600"> Password </label>
-                            <InputText
+                            <Password
                                 id="password"
                                 v-model="form.password"
-                                type="password"
                                 placeholder="••••••••"
+                                :toggleMask="true"
+                                :feedback="false"
                                 class="w-full"
+                                inputClass="w-full"
                                 required
                                 autocomplete="current-password"
                                 :invalid="!!form.errors.password"

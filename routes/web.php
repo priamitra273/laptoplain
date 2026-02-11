@@ -66,17 +66,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
-        Route::prefix('project/{projectEncoded}')
-            ->name('project.')
-            ->group(function () {
-                Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
-                Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
-                Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
-
-                Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
-                Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
-                Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
-            });
 
         Route::get('/reports/tasks', [TaskReportController::class, 'index'])
             ->name('reports.tasks.index');
@@ -84,6 +73,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
             ->name('reports.tasks.export');
     });
+    Route::prefix('project/{projectEncoded}')
+        ->name('project.')
+        ->group(function () {
+            Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
+            Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
+            Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
+
+            Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+            Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
+            Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+        });
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->name('profile.avatar.destroy');

@@ -85,13 +85,15 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
 
 // Get unique options for filters
 const statusOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
     const statuses = new Map();
     const collectStatuses = (tasks: Task[]) => {
         tasks.forEach((task) => {
             if (task.status) {
                 statuses.set(task.status.name, task.status);
             }
-            if (task.sub_task_recursive) {
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
                 collectStatuses(task.sub_task_recursive);
             }
         });
@@ -101,13 +103,15 @@ const statusOptions = computed(() => {
 });
 
 const priorityOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
     const priorities = new Map();
     const collectPriorities = (tasks: Task[]) => {
         tasks.forEach((task) => {
             if (task.priority) {
                 priorities.set(task.priority.name, task.priority);
             }
-            if (task.sub_task_recursive) {
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
                 collectPriorities(task.sub_task_recursive);
             }
         });
@@ -117,13 +121,15 @@ const priorityOptions = computed(() => {
 });
 
 const typeOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
     const types = new Map();
     const collectTypes = (tasks: Task[]) => {
         tasks.forEach((task) => {
             if (task.type) {
                 types.set(task.type.name, task.type);
             }
-            if (task.sub_task_recursive) {
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
                 collectTypes(task.sub_task_recursive);
             }
         });
@@ -136,9 +142,18 @@ const typeOptions = computed(() => {
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
     // Check if current task matches
     const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
-    const matchesStatus = selectedStatuses.value.length === 0 || selectedStatuses.value.includes(task.data.status?.name);
-    const matchesPriority = selectedPriorities.value.length === 0 || selectedPriorities.value.includes(task.data.priority?.name);
-    const matchesType = selectedTypes.value.length === 0 || selectedTypes.value.includes(task.data.type?.name);
+    const matchesStatus =
+        !selectedStatuses.value ||
+        selectedStatuses.value.length === 0 ||
+        (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
+
+    const matchesPriority =
+        !selectedPriorities.value ||
+        selectedPriorities.value.length === 0 ||
+        (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
+
+    const matchesType =
+        !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
 
     const currentMatches = matchesSearch && matchesStatus && matchesPriority && matchesType;
 
@@ -150,6 +165,8 @@ const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
 
 // Filter and sort tasks based on search query and filters (newest first)
 const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
     let tasks = formatTasks(props.tasks);
 
     // Sort by created_at or updated_at (newest first)
@@ -195,7 +212,12 @@ const hasSelectedTasks = computed(() => {
 
 // Check if any filter is active
 const hasActiveFilters = computed(() => {
-    return searchQuery.value !== '' || selectedStatuses.value.length > 0 || selectedPriorities.value.length > 0 || selectedTypes.value.length > 0;
+    return (
+        searchQuery.value !== '' ||
+        (selectedStatuses.value && selectedStatuses.value.length > 0) ||
+        (selectedPriorities.value && selectedPriorities.value.length > 0) ||
+        (selectedTypes.value && selectedTypes.value.length > 0)
+    );
 });
 
 // Reset page when search query or filters change
@@ -213,6 +235,19 @@ const clearFilters = () => {
     searchQuery.value = '';
     selectedStatuses.value = [];
     selectedPriorities.value = [];
+    selectedTypes.value = [];
+};
+
+// Handle clear for individual filters
+const handleClearStatuses = () => {
+    selectedStatuses.value = [];
+};
+
+const handleClearPriorities = () => {
+    selectedPriorities.value = [];
+};
+
+const handleClearTypes = () => {
     selectedTypes.value = [];
 };
 
@@ -359,9 +394,16 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     placeholder="Select Status"
                     class="w-full"
                     :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearStatuses"
                 >
                     <template #option="slotProps">
                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
                     </template>
                 </MultiSelect>
             </div>
@@ -377,9 +419,16 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     placeholder="Select Priority"
                     class="w-full"
                     :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearPriorities"
                 >
                     <template #option="slotProps">
                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
                     </template>
                 </MultiSelect>
             </div>
@@ -395,9 +444,16 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     placeholder="Select Type"
                     class="w-full"
                     :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearTypes"
                 >
                     <template #option="slotProps">
                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
                     </template>
                 </MultiSelect>
             </div>

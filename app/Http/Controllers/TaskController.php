@@ -419,6 +419,21 @@ class TaskController extends Controller
 
         $task = Task::find($taskId);
 
+        foreach ($task->subTaskRecursive as $subTask) {
+            $allUserIds = $subTask->users()
+                ->whereNotNull('users.id')
+                ->pluck('users.id')
+                ->toArray();
+
+            TaskNotification::createTaskNotification(
+                $subTask,
+                $allUserIds,
+                TaskNotificationType::DELETED
+            );
+
+            $subTask->delete();
+        }
+
         if (!$task) {
             return back()->with('error', 'Task not found.');
         }

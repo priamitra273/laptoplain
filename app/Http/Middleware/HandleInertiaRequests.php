@@ -42,11 +42,7 @@ class HandleInertiaRequests extends Middleware
             ->orderBy('sequence_number')
             ->get();
         
-        if ($request->user()) {
-            $user = Sqids::rec_encode_ids_in_list($request->user()->toArray());
-        } else {
-            $user = null;
-        }
+        $user = $request->user();
 
         return [
             ...parent::share($request),
@@ -56,8 +52,8 @@ class HandleInertiaRequests extends Middleware
                 'author' => trim($author),
             ],
             'auth' => [
-                'user' => $user,
-                'role' => $request->user() ? $request->user()->getRoleNames()[0] : null,
+                'user' => $user ? Sqids::rec_encode_ids_in_list($user->toArray()) : null,
+                'role' => $user ? $user->getRoleNames()[0] : null,
                 'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
             ],
             'flash' => [

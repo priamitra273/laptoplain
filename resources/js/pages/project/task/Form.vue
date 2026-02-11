@@ -70,18 +70,39 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
+const authUser = computed(() => usePage().props.auth.user)
+
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() =>
-    props.members
-        .filter((m) => m.user.id !== usePage().props.auth.user.id) // Exclude creator
-        .map((m) => ({ id: m.user.id, name: m.user.name })),
+    props.members.map((m) => ({ id: m.user.id, name: m.user.name })),
 );
+
 watch(
     existedMembers,
     (val) => {
-        selectedMembers.value = val;
+        const members = [...val]
+
+        if (!authUser.value) {
+            selectedMembers.value = members
+            return
+        }
+
+        const authExistsInOptions = formattedMemberOption.value
+            .some(m => m.id === authUser.value.id)
+
+        const authExistsInMembers = members
+            .some(m => m.id === authUser.value.id)
+
+        if (authExistsInOptions && !authExistsInMembers) {
+            members.push({
+                id: authUser.value.id,
+                name: authUser.value.name
+            })
+        }
+
+        selectedMembers.value = members
     },
-    { immediate: true },
-);
+    { immediate: true }
+)
 
 const form: InertiaForm<Form> = useForm({
     _method: props?.task ? 'PUT' : 'POST',

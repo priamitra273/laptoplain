@@ -99,6 +99,11 @@ class Project extends Model
         $this->attributes['progress'] = round(min(max($value, 0), 100), 2);
     }
 
+    public function allTasks()
+    {
+        return $this->hasMany(Task::class, 'project_id');
+    }
+
     public function tasks()
     {
         return $this->hasMany(Task::class, 'project_id')

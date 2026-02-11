@@ -19,10 +19,8 @@ import { Task, TaskFormatted, TaskFormattedData, TaskUser } from '..';
 interface Props {
     projectId: string;
     tasks: Task[];
-    isPM: boolean;
     isMember: boolean;
-    isOwner: boolean;
-    hasPermission?: boolean;
+    hasPermission: boolean;
 }
 
 const props = defineProps<Props>();
@@ -347,7 +345,7 @@ const removeSelected = () => {
 };
 
 const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
-    if (props.isOwner) return true;
+    if (props.hasPermission) return true;
 
     const taskUsers: TaskUser[] = task.users || [];
     const isMember = taskUsers.some((tu) => tu.id === currentUser.id);

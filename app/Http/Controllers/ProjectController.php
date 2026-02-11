@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
+use App\Facades\TaskNotification;
 use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Http\Requests\Project\ProjectUpdateRequest;
 use App\Models\Project;
@@ -178,17 +180,6 @@ class ProjectController extends Controller
             ->toArray();
 
         $currentUserId = Auth::id();
-        $isAdmin = $currentUser->roles->contains(function ($role) {
-            return stripos($role->name, 'admin-') === 0;
-        });
-
-        $isPM = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->where('user_id', $currentUserId)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
 
         $isMember = $project->projectMembers
             ->filter(function ($member) {
@@ -204,8 +195,6 @@ class ProjectController extends Controller
             ->where('user_id', $currentUserId)
             ->where('role.name', 'Owner')
             ->isNotEmpty();
-
-        $canManageMembers = $isAdmin || $isPM;
 
         $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')->get();
         $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
@@ -241,11 +230,8 @@ class ProjectController extends Controller
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers,
-            'isAdmin' => $isAdmin,
-            'isPM' => $isPM,
             'isMember' => $isMember,
             'isOwner' => $isOwner,
-            'canManageMembers' => $canManageMembers,
             'statuses' => $projectStatuses->toArray(),
             'priorities' => $projectPriorities->toArray(),
         ];
@@ -338,7 +324,21 @@ class ProjectController extends Controller
         if ($user->cannot('delete', $project)) {
             return back()->with('error', 'You do not have permission to delete this project.');
         }
+        $project->allTasks()
+            ->with('users')
+            ->chunkById(100, function ($tasks) {
+                foreach ($tasks as $task) {
+                    TaskNotification::createTaskNotification(
+                        $task,
+                        $task->users->pluck('id')->toArray(),
+                        TaskNotificationType::DELETED
+                    );
+                }
+            });
+
+        $project->allTasks()->delete();
         $project->delete();
+
 
         return to_route('project.index')->with('success', 'Project deleted successfully');
     }

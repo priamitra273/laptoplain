@@ -70,11 +70,8 @@ interface Props {
     tags: TagData[];
     assignableUsers: User[];
 
-    isPM: boolean;
-    isAdmin: boolean;
     isMember: boolean;
     isOwner: boolean;
-    canManageMembers: boolean;
 
     statuses?: { id: string; name: string; severity?: string }[];
     priorities?: { id: string; name: string; severity?: string }[];
@@ -235,7 +232,7 @@ const openEdit = (member: ProjectMember) => {
 };
 
 const openTaskAdd = (parentId: string | null) => {
-    if (!props.isMember) {
+    if (!props.isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -249,7 +246,7 @@ const openTaskAdd = (parentId: string | null) => {
 };
 
 const openTaskEdit = (task: Task) => {
-    if (!props.isMember) {
+    if (!props.isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -323,7 +320,7 @@ const hasPermission = (): boolean => {
 };
 
 const canEdit = computed(() => {
-    return props.isPM || props.isOwner || props.isAdmin;
+    return props.isOwner || hasPermission();
 });
 
 // Enable edit mode for a field
@@ -694,14 +691,12 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                             <TabPanel value="Board">
                                 <div class="py-4">
                                     <TaskTable
-                                        :projectId="props.project.id"
-                                        :tasks="props.tasks"
+                                        :projectId="project.id"
+                                        :tasks="tasks"
                                         @add="openTaskAdd"
                                         @edit="openTaskEdit"
-                                        :isPM="props.isPM"
-                                        :isMember="props.isMember"
-                                        :isOwner="props.isOwner"
-                                        :has-permission="hasPermission()"
+                                        :isMember="isMember"
+                                        :has-permission="isOwner || hasPermission()"
                                     />
                                 </div>
                             </TabPanel>
@@ -775,8 +770,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                         :members="props.members"
                                         :roles="props.roles"
                                         :users="props.users"
-                                        :isPM="props.isPM"
-                                        :isAdmin="props.isAdmin"
+                                        :hasPermission="isOwner || hasPermission()"
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />

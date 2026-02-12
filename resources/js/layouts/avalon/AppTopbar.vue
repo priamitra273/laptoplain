@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { useLayout } from '@/composables/useLayouts';
 import { Notification } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
-import { inject, Ref, ref } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { computed, inject, Ref, ref, watch } from 'vue';
 
 interface NotificationStore {
-    notifications: Ref<Notification[]>;
-    unreadCount: Ref<number>;
-    markAsRead: (notificationId: string) => Promise<void>;
-    clearNotifications: () => Promise<void>;
+    notifications: Ref<Notification[]>
+    unreadCount: Ref<number>
+    markAsRead: (notificationId: string) => Promise<void>
+    clearNotifications: () => Promise<void>
+    connect: () => void
+    disconnect: () => void
 }
 
 const { onMenuToggle, onConfigSidebarToggle } = useLayout();
+
+const page = usePage()
+const user = computed(() => page.props.auth?.user ?? null)
 
 // Logout
 async function logout() {
@@ -24,7 +29,7 @@ if (!notificationStore) {
     throw new Error('NotificationProvider is missing');
 }
 
-const { notifications, unreadCount, markAsRead, clearNotifications } = notificationStore;
+const { notifications, unreadCount, markAsRead, clearNotifications, connect, disconnect } = notificationStore;
 
 const showNotificationDropdown = ref(false);
 const showUserMenu = ref(false);
@@ -42,6 +47,16 @@ const clear = async () => {
 const isDelete = (message: string): boolean => {
     return message.toLowerCase().includes('delete');
 };
+
+watch(user, (newUser) => {
+    if (!notifications) return
+
+    if (newUser) {
+        connect()
+    } else {
+        disconnect()
+    }
+}, { immediate: true })
 </script>
 
 <template>

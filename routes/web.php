@@ -63,9 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('project/{encoded}', [ProjectController::class, 'show'])
             ->name('project.show');
 
-        Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
-
 
         Route::get('/reports/tasks', [TaskReportController::class, 'index'])
             ->name('reports.tasks.index');
@@ -73,6 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
             ->name('reports.tasks.export');
     });
+    Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
         ->group(function () {

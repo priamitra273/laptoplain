@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Role;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RoleStoreRequest extends FormRequest
 {
@@ -23,10 +25,16 @@ class RoleStoreRequest extends FormRequest
     {
         return [
             'label' => 'required|string|max:255',
-            'team_uuid' => 'required|string|exists:App\Models\Team,uuid',
+            'team_uuid' => [
+                'required',
+                'uuid',
+                Rule::exists('teams', 'uuid')
+                    ->whereNull('deleted_at')
+                    ->when(! Auth::user()->is_super_admin, fn ($q) => $q->where('name', '!=', 'Admin')),
+            ],
             'is_active' => 'required|boolean',
             'permissions' => 'required|array|min:1',
-            'permissions.*' => 'required|string|exists:permissions,name'
+            'permissions.*' => 'required|string|exists:permissions,name',
         ];
     }
 
@@ -34,7 +42,7 @@ class RoleStoreRequest extends FormRequest
     {
         return [
             'team_uuid' => 'team',
-            'label' => 'role name'
+            'label' => 'role name',
         ];
     }
 }

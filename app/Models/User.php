@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,8 +15,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasMedia
 {
-    use HasFactory, Notifiable, HasUuid, HasRoles;
-    use SoftDeletes, InteractsWithMedia, LogUsers;
+    use HasFactory, HasRoles, HasUuid, Notifiable;
+    use InteractsWithMedia, LogUsers, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +27,7 @@ class User extends Authenticatable implements HasMedia
         'name',
         'email',
         'password',
-        'is_active'
+        'is_active',
     ];
 
     /**
@@ -70,11 +71,18 @@ class User extends Authenticatable implements HasMedia
     /**
      * Get avatar URL accessor.
      */
-    protected function avatarUrl(): \Illuminate\Database\Eloquent\Casts\Attribute
+    protected function avatarUrl(): Attribute
     {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
-            get: fn() => $this->getFirstMediaUrl('avatar') ?: null, // Return null jika tidak ada
+        return Attribute::make(
+            get: fn () => $this->getFirstMediaUrl('avatar') ?: null, // Return null jika tidak ada
         );
+    }
+
+    protected function isSuperAdmin(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->roles()->where('name', 'like', 'super-admin-%')->exists();
+        });
     }
 
     /**
@@ -100,7 +108,6 @@ class User extends Authenticatable implements HasMedia
         return $this->belongsToMany(User::class, 'task_users')
             ->withTrashed();
     }
-
 
     /**
      * Append avatar_url to array/JSON serialization.

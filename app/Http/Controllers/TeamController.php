@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Team\TeamStoreRequest;
 use App\Models\Team;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Ramsey\Uuid\Guid\Guid;
 
 class TeamController extends Controller
 {
@@ -14,10 +13,12 @@ class TeamController extends Controller
      */
     public function index()
     {
-        $team = Team::select('uuid', 'name', 'created_at', 'updated_at')->get();
+        $team = Team::select('uuid', 'name', 'created_at', 'updated_at')
+            ->filterByUserRole()
+            ->get();
 
         return Inertia::render('team/Team', [
-            'teams' => $team
+            'teams' => $team,
         ]);
     }
 
@@ -32,12 +33,8 @@ class TeamController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(TeamStoreRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255'
-        ]);
-
         Team::create(['name' => $request->name]);
 
         return redirect()->route('team.index');
@@ -62,12 +59,8 @@ class TeamController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Team $team)
+    public function update(TeamStoreRequest $request, Team $team)
     {
-        $request->validate([
-            'name' => 'required|string|max:255'
-        ]);
-
         $team->update(['name' => $request->name]);
 
         return redirect()->route('team.index');
@@ -78,6 +71,8 @@ class TeamController extends Controller
      */
     public function destroy(Team $team)
     {
+        abort_if($team->name == 'Admin', 404);
+
         $team->delete();
 
         return redirect()->route('team.index');

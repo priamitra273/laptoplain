@@ -9,7 +9,6 @@ use App\Http\Resources\User\UserListResource;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Ramsey\Uuid\Guid\Guid;
@@ -21,10 +20,12 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('roles.team')->get();
+        $users = User::with('roles.team')->whereRelation('roles.team', function ($q) {
+            return $q->filterByUserRole();
+        })->get();
 
         return Inertia::render('user/User', [
-            'users' => UserListResource::collection($users)->resolve()
+            'users' => UserListResource::collection($users)->resolve(),
         ]);
     }
 
@@ -33,12 +34,12 @@ class UserController extends Controller
      */
     public function create()
     {
-        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->get();
-        $roles = Role::all();
+        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
+        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
 
         return Inertia::render('user/UserForm', [
             'teams' => $teams,
-            'roles' => RoleResource::collection($roles)->resolve()
+            'roles' => RoleResource::collection($roles)->resolve(),
         ]);
     }
 
@@ -73,14 +74,14 @@ class UserController extends Controller
     public function edit(string $id)
     {
         $user = $this->getByUuid($id);
-        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->get();
-        $roles = Role::all();
+        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
+        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
 
         return Inertia::render('user/UserForm', [
             'pageTitle' => 'Edit User',
             'user' => (new UserListResource($user))->resolve(),
             'teams' => $teams,
-            'roles' => RoleResource::collection($roles)->resolve()
+            'roles' => RoleResource::collection($roles)->resolve(),
         ]);
 
     }
@@ -119,7 +120,7 @@ class UserController extends Controller
 
     protected function getByUuid(string $uuid): User
     {
-        if (!Guid::isValid($uuid)) {
+        if (! Guid::isValid($uuid)) {
             abort(404);
         }
 

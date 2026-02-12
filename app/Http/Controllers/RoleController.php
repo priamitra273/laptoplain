@@ -10,24 +10,31 @@ use App\Models\Menu;
 use App\Models\Role;
 use App\Models\Team;
 use App\Services\MenuService;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class RoleController extends Controller
 {
     public function __construct(
         protected MenuService $menu_service
-    ){}
+    ) {}
 
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $roles = Role::all();
+        $query = Role::query();
+
+        if (! Auth::user()->is_super_admin) {
+            $query = $query->whereRelation('team', 'name', '!=', 'Admin');
+        }
+
+        $roles = $query->get();
 
         return Inertia::render('role/Role', [
             // using "resolve" to avoid wrapping
-            'roles' => RoleListResource::collection($roles)->resolve()
+            'roles' => RoleListResource::collection($roles)->resolve(),
         ]);
     }
 
@@ -36,7 +43,7 @@ class RoleController extends Controller
      */
     public function create()
     {
-        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->get();
+        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
         $menu = Menu::whereNull('parent_id')->orderBy('sequence_number')->get();
         $total_menu = Menu::count();
 
@@ -49,7 +56,7 @@ class RoleController extends Controller
             'menu' => MenuNestedResource::collection($menu)->resolve(),
 
             'menu_permissions' => $menu_permissions,
-            'total_menu' => $total_menu
+            'total_menu' => $total_menu,
         ]);
     }
 
@@ -61,11 +68,11 @@ class RoleController extends Controller
         $team = Team::findByUuid($request->team_uuid);
 
         $role = Role::create([
-            'name' => str($request->label .'-'. $team->name)->slug(),
+            'name' => str($request->label.'-'.$team->name)->slug(),
             'guard_name' => 'web',
             'label' => $request->label,
             'team_id' => $team->id,
-            'is_active' => $request->is_active
+            'is_active' => $request->is_active,
         ]);
 
         $role->syncPermissions($request->permissions);
@@ -88,12 +95,12 @@ class RoleController extends Controller
     {
         $data = new RoleResource($role);
 
-        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->get();
+        $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
         $menu = Menu::whereNull('parent_id')->orderBy('sequence_number')->get();
         $total_menu = Menu::count();
 
         $menu_permissions = $this->menu_service->getMenuPermissions('menus.uuid', 'menus.label', 'p.name', 'route_name');
-        
+
         return Inertia::render('role/RoleForm', [
             'pageTitle' => 'Edit Role',
             'role' => $data->resolve(),
@@ -103,7 +110,7 @@ class RoleController extends Controller
             'menu' => MenuNestedResource::collection($menu)->resolve(),
 
             'menu_permissions' => $menu_permissions,
-            'total_menu' => $total_menu
+            'total_menu' => $total_menu,
         ]);
     }
 
@@ -113,12 +120,12 @@ class RoleController extends Controller
     public function update(RoleStoreRequest $request, Role $role)
     {
         $team = Team::findByUuid($request->team_uuid);
-        
+
         $role->update([
-            'name' => str($request->label .'-'. $team->name)->slug(),
+            'name' => str($request->label.'-'.$team->name)->slug(),
             'label' => $request->label,
             'team_id' => Team::findByUuid($request->team_uuid)->id,
-            'is_active' => $request->is_active
+            'is_active' => $request->is_active,
         ]);
 
         $role->syncPermissions($request->permissions);

@@ -98,6 +98,7 @@ const destroy = (user: UserList) => {
                 </Column>
 
                 <Column field="team_name" header="Team"></Column>
+                <Column field="role_label" header="Role"></Column>
                 <Column field="name" header="Name"></Column>
                 <Column field="email" header="Email"></Column>
 

@@ -21,7 +21,7 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin", "watcher-admin"];
+        $allowedRoles = ["super-admin-admin", "watcher-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {

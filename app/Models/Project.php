@@ -132,7 +132,7 @@ class Project extends Model
 
     public function scopeVisibleFor($query, User $user)
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin", "watcher-admin"];
+        $allowedRoles = ["super-admin-admin", "watcher-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {

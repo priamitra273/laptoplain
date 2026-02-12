@@ -22,7 +22,7 @@ class TaskPolicy
      */
     public function view(User $user, Task $task): bool
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin", "watcher-admin"];
+        $allowedRoles = ["super-admin-admin", "watcher-admin"];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {

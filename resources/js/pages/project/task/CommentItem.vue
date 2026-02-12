@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Editor from 'primevue/editor';
 import Menu from 'primevue/menu';
 import { useConfirm } from 'primevue/useconfirm';
-import { ref } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { ref, watch } from 'vue';
 import { Comment } from '..';
 
 const props = defineProps<{
@@ -28,6 +30,30 @@ const REPLY_LIMIT = 0;
 const menu = ref<any>(null);
 
 const confirm = useConfirm();
+const toast = useToast();
+
+// Function to normalize reactions object (ensure all keys are strings)
+const normalizeReactions = (reactions: any) => {
+    if (!reactions) return {};
+
+    const normalized: { [key: string]: string } = {};
+    for (const [key, value] of Object.entries(reactions)) {
+        normalized[String(key)] = value as string;
+    }
+    return normalized;
+};
+
+// Reactive local state for reactions - initialize with normalized data
+const localReactions = ref<{ [key: string]: string }>(normalizeReactions(props.comment.reaction));
+
+// Watch for changes in props.comment.reaction to sync localReactions
+watch(
+    () => props.comment.reaction,
+    (newReactions) => {
+        localReactions.value = normalizeReactions(newReactions);
+    },
+    { deep: true, immediate: true },
+);
 
 // Helper functions for avatar
 const getInitials = (name: string) =>
@@ -49,21 +75,60 @@ const availableReactions = {
     angry: '😡',
 };
 
+// Get current user ID as string (for consistent comparison)
+const getCurrentUserId = () => {
+    return String(CurrentUser.id);
+};
+
 // Count reactions
 const countReactions = (reactionType: string) => {
-    if (!props.comment.reaction) return 0;
-    return Object.values(props.comment.reaction).filter((r) => r === reactionType).length;
+    if (!localReactions.value) return 0;
+    return Object.values(localReactions.value).filter((r) => r === reactionType).length;
 };
 
 // Check if current user reacted
 const hasReacted = (reactionType: string) => {
-    if (!props.comment.reaction) return false;
-    return props.comment.reaction[CurrentUser.id] === reactionType;
+    if (!localReactions.value) return false;
+    const userId = getCurrentUserId();
+    return localReactions.value[userId] === reactionType;
 };
 
 // React to comment
-const reactToComment = (reaction: string) => {
-    router.post(route('comments.react', { id: props.comment.id }), { reaction }, { onSuccess: () => router.reload({ only: ['comments'] }) });
+const reactToComment = async (reaction: string) => {
+    try {
+        const userId = getCurrentUserId();
+        const previousReactions = { ...localReactions.value };
+
+        // Optimistic update
+        if (localReactions.value[userId] === reaction) {
+            delete localReactions.value[userId];
+        } else {
+            localReactions.value[userId] = reaction;
+        }
+
+        // Send request to server
+        const response = await axios.post(route('comments.react', { id: props.comment.id }), {
+            reaction,
+        });
+
+        // Update with server data
+        if (response.data.success) {
+            localReactions.value = normalizeReactions(response.data.reactions);
+        }
+    } catch (error) {
+        // Rollback on error
+        const previousReactions = { ...localReactions.value };
+        localReactions.value = previousReactions;
+
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to update reaction',
+            life: 3000,
+        });
+
+        console.error('Failed to react:', error);
+    }
 };
 
 // Reply methods
@@ -73,7 +138,6 @@ const setReply = (id: string) => {
 };
 
 const submitReply = (parentId: string) => {
-    // Check if comment is empty or only contains whitespace/empty HTML tags
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = replyText.value;
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
@@ -183,7 +247,6 @@ const getMenuItems = (comment: any) => {
 </script>
 
 <template>
-    <ConfirmDialog />
     <div class="w-full">
         <div
             class="group rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"

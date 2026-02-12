@@ -283,6 +283,7 @@ const submitComment = () => {
     <Head :title="`Task Detail - ${props.task.title}`" />
 
     <AppLayout>
+        <ConfirmDialog />
         <div class="flex flex-col gap-6 pb-8">
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>

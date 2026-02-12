@@ -1,11 +1,47 @@
-<script setup>
+<script setup lang="ts">
 import { useLayout } from '@/composables/useLayouts';
+import { Notification } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
+import { inject, Ref, ref } from 'vue';
+
+interface NotificationStore {
+    notifications: Ref<Notification[]>;
+    unreadCount: Ref<number>;
+    markAsRead: (notificationId: string) => Promise<void>;
+    clearNotifications: () => Promise<void>;
+}
+
 const { onMenuToggle, onConfigSidebarToggle } = useLayout();
 
+// Logout
 async function logout() {
     router.post(route('logout'));
 }
+
+const notificationStore: NotificationStore | undefined = inject('notifications');
+
+if (!notificationStore) {
+    throw new Error('NotificationProvider is missing');
+}
+
+const { notifications, unreadCount, markAsRead, clearNotifications } = notificationStore;
+
+const showNotificationDropdown = ref(false);
+const showUserMenu = ref(false);
+
+const readNotification = async (notificationId: string) => {
+    markAsRead(notificationId);
+    // showNotificationDropdown.value = false;
+};
+
+const clear = async () => {
+    showNotificationDropdown.value = false;
+    await clearNotifications();
+};
+
+const isDelete = (message: string): boolean => {
+    return message.toLowerCase().includes('delete');
+};
 </script>
 
 <template>
@@ -22,117 +58,87 @@ async function logout() {
         <div class="layout-topbar-end">
             <div class="layout-topbar-actions-end">
                 <ul class="layout-topbar-items">
-                    <!-- <li class="layout-topbar-search">
-                        <input type="text" placeholder="Search" />
-                        <i class="pi-fw pi pi-search"></i>
-                    </li> -->
-
-                    <li>
+                    <!-- Notification Bell -->
+                    <li class="relative">
                         <button
-                            v-styleclass="{
-                                selector: '@next',
-                                enterFromClass: 'hidden',
-                                enterActiveClass: 'animate-scalein',
-                                leaveToClass: 'hidden',
-                                leaveActiveClass: 'animate-fadeout',
-                                hideOnOutsideClick: true,
-                            }"
+                            @click="
+                                async () => {
+                                    showNotificationDropdown = !showNotificationDropdown;
+                                    showUserMenu = false;
+                                }
+                            "
+                            class="relative p-2 focus:outline-none"
                         >
-                            <i class="pi pi-bell"></i>
+                            <i class="pi pi-bell text-xl"></i>
+                            <span
+                                v-if="unreadCount > 0"
+                                class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                            >
+                                {{ unreadCount }}
+                            </span>
                         </button>
-                        <div class="hidden">
-                            <ul class="m-0 list-none p-0">
-                                <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
-                                        <i class="pi pi-fw pi-sliders-h text-lg"></i>
-                                        <span>Pending tasks</span>
-                                    </a>
+
+                        <div
+                            v-show="showNotificationDropdown"
+                            class="absolute right-0 z-50 mt-2 w-96 rounded-md border border-gray-200 bg-white shadow-lg"
+                            @click.stop
+                        >
+                            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2">
+                                <span class="font-semibold">Notifications</span>
+                                <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clear">Clear All</button>
+                            </div>
+
+                            <ul class="m-0 max-h-64 list-none overflow-y-auto p-0">
+                                <li
+                                    v-for="notif in notifications"
+                                    :key="notif.id"
+                                    class="flex cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                    :class="{ 'font-bold': !notif.is_read }"
+                                >
+                                    <component
+                                        :is="!isDelete(notif.message) ? Link : 'div'"
+                                        :href="!isDelete(notif.message) ? route('task.show', notif.task_id) : null"
+                                        class="relative my-2 flex cursor-pointer flex-row gap-2"
+                                        @click="readNotification(notif.id)"
+                                    >
+                                        <i class="pi pi-info-circle my-auto ml-1 mr-2"></i>
+                                        <span>{{ notif.message }}</span>
+                                    </component>
                                 </li>
-                                <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
-                                        <i class="pi pi-fw pi-calendar text-lg"></i>
-                                        <span>Meeting today at 3pm</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
-                                        <i class="pi pi-fw pi-download text-lg"></i>
-                                        <span>Download documents</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
-                                        <i class="pi pi-fw pi-bookmark text-lg"></i>
-                                        <span>Book flight</span>
-                                    </a>
-                                </li>
+
+                                <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">No notifications</li>
                             </ul>
                         </div>
                     </li>
 
-                    <!-- <li>
-                        <button type="button" v-styleclass="{ selector: '@next', enterFromClass: 'hidden', enterActiveClass: 'animate-scalein', leaveToClass: 'hidden', leaveActiveClass: 'animate-fadeout', hideOnOutsideClick: true }">
-                            <i class="pi pi-envelope"></i>
-                        </button>
-                        <div class="hidden">
-                            <ul class="list-none p-0 m-0 flex flex-col text-color">
-                                <li>
-                                    <a class="cursor-pointer flex items-center px-4 py-2 gap-4 hover:text-primary">
-                                        <img src="/storage/layout/images/avatar/avatar5.png" class="w-12 h-12" />
-                                        <span>Give me a call</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="cursor-pointer flex items-center px-4 py-2 gap-4 hover:text-primary">
-                                        <img src="/storage/layout/images/avatar/avatar1.png" class="w-12 h-12" />
-                                        <span>Sales reports attached</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="cursor-pointer flex items-center px-4 py-2 gap-4 hover:text-primary">
-                                        <img src="/storage/layout/images/avatar/avatar2.png" class="w-12 h-12" />
-                                        <span>About your invoice</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="cursor-pointer flex items-center px-4 py-2 gap-4 hover:text-primary">
-                                        <img src="/storage/layout/images/avatar/avatar3.png" class="w-12 h-12" />
-                                        <span>Meeting today at 10pm</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="cursor-pointer flex items-center px-4 py-2 gap-4 hover:text-primary">
-                                        <img src="/storage/layout/images/avatar/avatar4.png" class="w-12 h-12" />
-                                        <span>Out of office</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li> -->
-
-                    <li>
+                    <!-- User Menu -->
+                    <li class="relative">
                         <button
-                            v-styleclass="{
-                                selector: '@next',
-                                enterFromClass: 'hidden',
-                                enterActiveClass: 'animate-scalein',
-                                leaveToClass: 'hidden',
-                                leaveActiveClass: 'animate-fadeout',
-                                hideOnOutsideClick: true,
-                            }"
+                            @click="
+                                () => {
+                                    showUserMenu = !showUserMenu;
+                                    showNotificationDropdown = false;
+                                }
+                            "
+                            class="p-2 focus:outline-none"
                         >
                             <i class="pi pi-user"></i>
                         </button>
-                        <div class="hidden">
+
+                        <div
+                            v-show="showUserMenu"
+                            class="absolute right-0 z-50 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg"
+                            @click.stop
+                        >
                             <ul class="m-0 list-none p-0">
                                 <li>
-                                    <Link href="settings" class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary">
+                                    <Link href="/settings" class="flex cursor-pointer gap-2 px-4 py-2 hover:text-primary">
                                         <i class="pi pi-fw pi-sliders-h text-lg"></i>
                                         <span>Settings</span>
                                     </Link>
                                 </li>
                                 <li>
-                                    <a class="flex cursor-pointer gap-2 px-4 py-2 text-color hover:text-primary" @click="logout">
+                                    <a class="flex cursor-pointer gap-2 px-4 py-2 hover:text-primary" @click="logout">
                                         <i class="pi pi-fw pi-sign-out text-lg"></i>
                                         <span>Logout</span>
                                     </a>

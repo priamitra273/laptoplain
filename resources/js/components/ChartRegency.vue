@@ -1,73 +1,75 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Project } from '@/types';
-import { Chart } from "highcharts-vue";
 import Highcharts from 'highcharts';
-import exportingInit from 'highcharts/modules/exporting'
-import A11yInit from 'highcharts/modules/accessibility'
-import loadMap from "highcharts/modules/map";
+import { Chart } from 'highcharts-vue';
+import A11yInit from 'highcharts/modules/accessibility';
+import exportingInit from 'highcharts/modules/exporting';
+import loadMap from 'highcharts/modules/map';
+import { computed } from 'vue';
 
-exportingInit(Highcharts)
+exportingInit(Highcharts);
 A11yInit(Highcharts);
-loadMap(Highcharts)
+loadMap(Highcharts);
 
 interface HighchartsChartOptions extends Highcharts.ChartOptions {
     custom: {
         [key: string]: any;
-    }
+    };
 }
 
 interface MapValue {
-    data: (string | number)[],
-    geojson: Highcharts.GeoJSON
+    data: (string | number)[];
+    geojson: Highcharts.GeoJSON;
 }
 
 interface Props {
-    project: Project,
-    value?: MapValue
+    project: Project;
+    value?: MapValue;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 const options = computed(() => {
     return {
         chart: {
-            map: props.value?.geojson ?? {}
+            map: props.value?.geojson ?? {},
         },
 
         title: {
-            text: 'Area Overview'
+            text: 'Area Overview',
         },
 
         credits: false,
 
         accessibility: {
-            typeDescription: 'Map of Jakarta.'
+            typeDescription: 'Map of Jakarta.',
         },
 
         mapNavigation: {
             enabled: true,
             buttonOptions: {
-                verticalAlign: 'bottom'
-            }
+                verticalAlign: 'bottom',
+            },
         },
 
         colorAxis: {
-            tickPixelInterval: 100
+            tickPixelInterval: 100,
         },
 
-        series: [{
-            data: props.value?.data ?? [],
-            keys: ['code', 'value'],
-            joinBy: 'code',
-            name: 'Total CCTV',
-            dataLabels: {
-                enabled: true,
-                format: '{point.properties.code}'
-            }
-        }]
-    }
-})
+        series: [
+            {
+                data: props.value?.data ?? [],
+                keys: ['code', 'value'],
+                joinBy: 'code',
+                name: 'Total CCTV',
+                dataLabels: {
+                    enabled: true,
+                    format: '{point.properties.code}',
+                },
+            },
+        ],
+    };
+});
 </script>
 
 <template>

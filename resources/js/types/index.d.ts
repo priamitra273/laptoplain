@@ -1,4 +1,4 @@
-import type { PageProps } from '@inertiajs/core';
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 import type { LucideIcon } from 'lucide-vue-next';
 import type { Config } from 'ziggy-js';
 
@@ -9,8 +9,11 @@ export interface SidebarMenuItem {
     items?: MenuItem[] | null; // sub-items are optional as well
 }
 
+export type UserRoles = 'super-admin-admin' | 'admin-admin' | 'watcher-admin' | 'user-user';
+
 export interface Auth {
     user: User;
+    role: UserRoles | null;
     menu: SidebarMenuItem[];
 }
 
@@ -26,7 +29,17 @@ export interface NavItem {
     isActive?: boolean;
 }
 
-export interface SharedData extends PageProps {
+declare module '@inertiajs/core' {
+    export interface PageProps extends InertiaPageProps {
+        name: string;
+        quote: { message: string; author: string };
+        auth: Auth;
+        flash: { success: string | null; error: string | null };
+        ziggy: Config & { location: string };
+    }
+}
+
+export interface SharedData extends InertiaPageProps {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
@@ -59,10 +72,10 @@ export interface Pagination {
 }
 
 export interface User {
-    id: number;
+    id: string;
     name: string;
     email: string;
-    avatar?: string;
+    avatar_url?: string;
     email_verified_at: string | null;
     is_active: boolean;
     created_at: string;
@@ -123,14 +136,104 @@ export interface Role {
 }
 
 export interface Project {
-    uuid: string;
-    name: string;
+    id: number;
+    encoded: string;
+    emoji: string;
+    title: string;
+    description: string;
     start_date: string;
-    finish_date: string;
-    plan_site: number;
-    plan_cctv: number;
-    created_at?: string;
-    updated_at?: string;
+    due_date: string;
+    progress: number;
+    sequence_number: number;
+    status_id: number;
+    priority_id: number;
+    owner_id: number;
+    owned_id: number;
+    created_by: string;
+    updated_by: string;
+    created_at: string;
+    updated_at: string;
+    status: {
+        id: string;
+        name: string;
+        severity: PrimeSeverity;
+    };
+    priority: {
+        id: string;
+        name: string;
+        severity: PrimeSeverity;
+    };
+    // owner?: User;
+    project_members: {
+        id: string;
+        user_id: string;
+        role_id: string;
+        user: {
+            name: string;
+        };
+        role: {
+            name: string;
+        };
+    }[];
+}
+
+export interface Tag {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskType {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskStatus {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface ProjectPriority {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface ProjectRole {
+    id: number;
+    name: string;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskPriority {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
 }
 
 export interface AnalyticServer {
@@ -265,14 +368,65 @@ export interface Progress {
     analytic_config: WorkProgress;
 }
 
-export interface Statistic {
-    uuid: string;
+export interface TaskStatistic {
+    totalTasks: number;
+    completed: number;
+    inProgress: number;
+    notStarted: number;
+}
+
+export interface MsProjectStatus {
+    id: number;
     name: string;
-    plan_site: number;
-    plan_cctv: number;
-    start_date: string;
-    finish_date: string;
-    progress: Progress;
+    severity: PrimeSeverity;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsProjectPriority {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsTaskStatus {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+}
+
+export interface MsTaskType {
+    id: number;
+    name: string;
+    severity: PrimeSeverity;
+    owned_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
+
+export interface SeverityOption {
+    label: string;
+    value: PrimeSeverityEnum;
+}
+
+export interface Notification {
+    id: string
+    message: string
+    task_id: string
+    is_read: boolean
+}

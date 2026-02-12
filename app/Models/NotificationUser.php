@@ -17,17 +17,13 @@ class NotificationUser extends Model
         'is_read',
     ];
 
-    /**
-     * Relasi ke Notification
-     */
+
     public function notification()
     {
         return $this->belongsTo(Notification::class, 'notification_id');
     }
 
-    /**
-     * Relasi ke User
-     */
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

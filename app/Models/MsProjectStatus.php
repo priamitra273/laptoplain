@@ -27,6 +27,11 @@ class MsProjectStatus extends Model
         'owned_id' => 'integer'
     ];
 
+     public function getRouteKeyName()
+    {
+        return 'id';
+    }
+
     public function owned(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owned_id');

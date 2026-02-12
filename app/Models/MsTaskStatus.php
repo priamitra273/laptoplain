@@ -15,39 +15,35 @@ class MsTaskStatus extends Model
     protected $fillable = [
         'name',
         'severity',
+        'score',
         'owned_id',
         'created_by',
         'updated_by',
         'deleted_by',
     ];
 
-    /**
-     * Relasi ke user (owner)
-     */
+    protected $casts = [
+        'score' => 'integer',
+    ];
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owned_id');
     }
 
-    /**
-     * Relasi ke user pembuat
-     */
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Relasi ke user pengubah
-     */
+
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /**
-     * Relasi ke user penghapus
-     */
+
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');

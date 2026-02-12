@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'aliases' => [
+        'Sqids' => App\Facades\Sqids::class,
+        'TaskNotification' => App\Facades\TaskNotification::class,
+    ],
 ];

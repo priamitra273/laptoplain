@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogUsers;
 
     protected $table = 'tasks';
 
@@ -32,81 +33,84 @@ class Task extends Model
         'project_id',
     ];
 
-    /**
-     * Relasi ke user (owner)
-     */
+    // protected $appends = ['sub_task'];
+    protected $hidden = ['children'];
+
+    public static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (Task $task) {
+
+            if (! $task->isForceDeleting()) {
+                foreach ($task->children as $child) {
+                    $child->delete();
+                }
+            }
+
+            if ($task->isForceDeleting()) {
+                foreach ($task->children()->withTrashed()->get() as $child) {
+                    $child->forceDelete();
+                }
+            }
+        });
+
+        static::restoring(function (Task $task) {
+            foreach ($task->children()->onlyTrashed()->get() as $child) {
+                $child->restore();
+            }
+        });
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owned_id');
     }
 
-    /**
-     * Relasi ke parent task (jika task ini sub-task)
-     */
     public function parent()
     {
         return $this->belongsTo(Task::class, 'parent_id');
     }
 
-    /**
-     * Relasi ke child tasks
-     */
+
     public function children()
     {
         return $this->hasMany(Task::class, 'parent_id');
     }
 
-    /**
-     * Relasi ke status task
-     */
     public function status()
     {
         return $this->belongsTo(MsTaskStatus::class, 'status_id');
     }
 
-    /**
-     * Relasi ke prioritas task
-     */
     public function priority()
     {
         return $this->belongsTo(MsTaskPriority::class, 'priority_id');
     }
 
-    /**
-     * Relasi ke tipe task
-     */
+
     public function type()
     {
         return $this->belongsTo(MsTaskType::class, 'type_id');
     }
 
-    /**
-     * Relasi ke user pembuat
-     */
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Relasi ke user pengubah
-     */
+
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /**
-     * Relasi ke user penghapus
-     */
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
-    /**
-     * Relasi ke project
-     */
     public function project()
     {
         return $this->belongsTo(Project::class, 'project_id');
@@ -115,10 +119,22 @@ class Task extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'task_users')
-                    ->withTimestamps()
-                    ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
-                    ->using(TaskUser::class);
+            ->withTimestamps()
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+            ->using(TaskUser::class)
+            ->wherePivotNull('deleted_at');
     }
+
+    public function usersWithTrashed()
+    {
+        return $this->belongsToMany(User::class, 'task_users')
+            ->withTimestamps()
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by'])
+            ->using(TaskUser::class)
+            ->withPivot('deleted_at')
+            ->withTrashed();
+    }
+
 
     public function comments()
     {
@@ -134,6 +150,57 @@ class Task extends Model
             'model_id',
             'tag_id'
         )->withTimestamps()
-         ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+    }
+
+    public function subTaskRecursive()
+    {
+        return $this->children()->with('subTaskRecursive');
+    }
+
+    public function getSubTaskAttribute()
+    {
+        return $this->subTaskRecursive;
+    }
+
+    public function scopeWithRecursive($query)
+    {
+        $query->orderBy('id')
+            ->with([
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'type:id,name,severity',
+                'users:id,name',
+                'tags:id,name,severity',
+                'creator:id,name', // Added creator relationship
+                'creator.media',   // Added creator media relationship
+                'subTaskRecursive' => function ($q) {
+                    $q->orderBy('id')->withRecursive();
+                },
+            ]);
+    }
+
+    public function calculateProgress(): float
+    {
+        $avg = $this->children()->avg('progress');
+
+        return round($avg ?? (float) $this->progress, 2);
+    }
+
+    public function assignUser($userId)
+    {
+        $pivot = TaskUser::withTrashed()
+            ->where('task_id', $this->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($pivot) {
+            if ($pivot->trashed()) {
+                $pivot->restore();
+            }
+            return $pivot;
+        }
+
+        return $this->users()->attach($userId);
     }
 }

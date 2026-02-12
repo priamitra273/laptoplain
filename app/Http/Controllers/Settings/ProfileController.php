@@ -29,15 +29,29 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        // Fill basic profile data
+        $user->fill($request->validated());
+
+        // Handle avatar upload using Spatie Media Library
+        if ($request->hasFile('avatar')) {
+            // Clear existing avatar (singleFile collection will auto-replace)
+            $user->clearMediaCollection('avatar');
+
+            // Add new avatar
+            $user->addMediaFromRequest('avatar')
+                ->toMediaCollection('avatar');
         }
 
-        $request->user()->save();
+        // Reset email verification if email changed
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
 
-        return to_route('profile.edit');
+        $user->save();
+
+        return to_route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
@@ -51,6 +65,9 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        // Clear media (Spatie will handle deletion)
+        $user->clearMediaCollection('avatar');
+
         Auth::logout();
 
         $user->delete();
@@ -59,5 +76,13 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    public function destroyAvatar(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $user->clearMediaCollection('avatar');
+
+        return back()->with('status', 'avatar-removed');
     }
 }

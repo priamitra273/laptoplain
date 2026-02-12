@@ -10,11 +10,11 @@ build_development:
   tags:
     - dev
   script:
-    - ssh gitlab-runner@172.16.2.145 "
-      cd /var/www/Development/balitower/mis-cctv/ &&
+    - ssh gitlab-runner@172.16.4.70 "
+      cd /var/www/Development_Gitlab/devitproject/ &&
       git reset --hard HEAD &&
       git clean -fd &&
-      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/rnd/mis-cctv.git development && 
+      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git development && 
       composer install &&
       npm install &&
       npm run build
@@ -34,11 +34,11 @@ build_production:
   tags:
     - prod
   script:
-    - ssh gitlab-runner@172.16.2.146 "
-      cd /var/www/Production/e-smarteye/mis.e-smarteye.com &&
+    - ssh gitlab-runner@172.16.2.70 "
+      cd /var/www/Production_Gitlab/itproject/ &&
       git reset --hard HEAD &&
       git clean -fd &&
-      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/rnd/mis-cctv.git main && 
+      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git main && 
       composer install &&
       php artisan migrate --force &&
       npm install &&

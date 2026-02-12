@@ -17,8 +17,13 @@ import ConfirmationService from 'primevue/confirmationservice';
 import FocusTrap from 'primevue/focustrap';
 import Toast from 'primevue/toast';
 import ToastService from 'primevue/toastservice';
+import Tooltip from 'primevue/tooltip';
+import FlashToastProvider from './provider/FlashToastProvider.vue';
+import NotificationProvider from './provider/NotificationProvider.vue';
 
 import HighchartsVue from 'highcharts-vue';
+
+import Highcharts from 'highcharts';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -75,7 +80,15 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+        createApp({
+            render: () =>
+                h(NotificationProvider, null, {
+                    default: () =>
+                        h(FlashToastProvider, null, {
+                            default: () => h(App, props),
+                        }),
+                }),
+        })
             .use(plugin)
             .use(ZiggyVue)
             .use(ToastService)
@@ -91,10 +104,17 @@ createInertiaApp({
             .component('Toast', Toast)
             .use(HighchartsVue)
             .directive('focustrap', FocusTrap)
+            .directive('tooltip', Tooltip)
             .mount(el);
     },
     progress: {
         color: '#4B5563',
+    },
+});
+
+Highcharts.setOptions({
+    accessibility: {
+        enabled: false,
     },
 });
 

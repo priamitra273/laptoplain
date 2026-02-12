@@ -14,49 +14,36 @@ class Tag extends Model
 
     protected $fillable = [
         'name',
-        'severities',
+        'severity',
         'owned_id',
         'created_by',
         'updated_by',
         'deleted_by',
     ];
 
-    /**
-     * Relasi ke user (owner)
-     */
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owned_id');
     }
 
-    /**
-     * Relasi ke user pembuat
-     */
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Relasi ke user pengubah
-     */
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /**
-     * Relasi ke user penghapus
-     */
+
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
-    /**
-     * Relasi polymorphic ke semua model yang bisa diberi tag.
-     * Menggunakan tabel pivot 'taggables'
-     */
     public function taggables()
     {
         return $this->morphedByMany(
@@ -66,6 +53,17 @@ class Tag extends Model
             'tag_id',
             'model_id'
         )->withTimestamps()
-         ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
+    }
+
+    public function tasks()
+    {
+        return $this->morphedByMany(
+            Task::class,
+            'model',
+            'taggables',
+            'tag_id',
+            'model_id'
+        );
     }
 }

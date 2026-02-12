@@ -14,11 +14,25 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::factory()->create([
+        $superadmin = User::factory()->create([
+            'name' => 'Super Admin',
+            'email' => 'superadmin@example.com',
+            'password' => Hash::make('12345678')
+        ]);
+        $superadmin->assignRole('super-admin-admin');
+        
+        $admin = User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('12345678')
         ]);
-        $user->assignRole('admin-it');
+        $admin->assignRole('admin-admin');
+        
+        $watcher = User::factory()->create([
+            'name' => 'Watcher',
+            'email' => 'watcher@example.com',
+            'password' => Hash::make('12345678')
+        ]);
+        $watcher->assignRole('watcher-admin');
     }
 }

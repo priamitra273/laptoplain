@@ -87,7 +87,6 @@ const transformTasks = (tasks: TaskNode[], parentId: string | null = null): any[
 
 const ganttData = computed(() => {
     const data = transformTasks(props.tasks);
-    console.log('Gantt Data:', data);
     return data;
 });
 
@@ -95,7 +94,6 @@ const hasTasks = computed(() => props.tasks && props.tasks.length > 0);
 
 const renderChart = () => {
     if (!chartRef.value) {
-        console.log('Chart ref not available');
         return;
     }
 
@@ -107,11 +105,8 @@ const renderChart = () => {
 
     // Don't render chart if no tasks
     if (!hasTasks.value) {
-        console.log('No tasks available');
         return;
     }
-
-    console.log('Rendering chart with data:', ganttData.value);
 
     try {
         chartInstance.value = Highcharts.ganttChart(chartRef.value, {
@@ -127,7 +122,7 @@ const renderChart = () => {
                 // uniqueNames: true,
             },
             navigator: {
-                enabled:true,
+                enabled: true,
             },
             scrollbar: {
                 enabled: true,
@@ -171,17 +166,12 @@ const renderChart = () => {
                 },
             ],
         });
-
-        console.log('Chart rendered successfully');
-    } catch (error) {
-        console.error('Error rendering Gantt chart:', error);
-    }
+    } catch (error) {}
 };
 
 let themeCleanup: (() => void) | null = null;
 
 onMounted(() => {
-    console.log('Component mounted, tasks:', props.tasks);
     applyHighchartsTheme();
 
     // Delay rendering untuk memastikan DOM ready
@@ -208,7 +198,6 @@ onUnmounted(() => {
 watch(
     () => props.tasks,
     (newTasks) => {
-        console.log('Tasks changed:', newTasks);
         renderChart();
     },
     { deep: true },

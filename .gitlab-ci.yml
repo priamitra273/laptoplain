@@ -17,7 +17,8 @@ build_development:
       git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git development && 
       composer install &&
       npm install &&
-      npm run build
+      npm run build &&
+      php artisan optimize
       "
 
   only:
@@ -42,7 +43,8 @@ build_production:
       composer install &&
       php artisan migrate --force &&
       npm install &&
-      npm run build
+      npm run build &&
+      php artisan optimize
       "
 
   only:

@@ -670,8 +670,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                         <div class="flex flex-col gap-2">
                             <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
                             <div class="flex items-center gap-2">
-                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="false" />
-                                <span class="text-sm font-semibold text-surface-700 dark:text-surface-300"> {{ props.project.progress }}% </span>
+                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="true" />
                             </div>
                         </div>
                     </template>
@@ -802,7 +801,21 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
             />
         </Dialog>
 
-        <Dialog v-model:visible="visibleTaskAdd" :header="taskDialogHeader" @hide="onDialogClosed" modal class="w-[600px]">
+        <Dialog
+            v-model:visible="visibleTaskAdd"
+            :header="taskDialogHeader"
+            modal
+            scrollable
+            maximizable
+            @hide="onDialogClosed"
+            :style="{ width: '70rem' }"
+            :contentStyle="{ maxHeight: '75vh' }"
+            :breakpoints="{
+                '1200px': '80vw',
+                '960px': '90vw',
+                '640px': '100vw',
+            }"
+        >
             <TaskForm
                 :projectId="props.project.id"
                 :parentId="parentTaskId"

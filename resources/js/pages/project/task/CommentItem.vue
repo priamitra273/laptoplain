@@ -274,7 +274,7 @@ const getMenuItems = (comment: any) => {
 
                         <!-- Body with HTML support -->
                         <div
-                            class="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed text-gray-700 dark:text-gray-300"
+                            class="prose prose-sm dark:prose-invert overflow-wrap-anywhere max-w-none break-words text-xs leading-relaxed text-gray-700 dark:text-gray-300"
                             v-html="comment.body"
                         ></div>
 

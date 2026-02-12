@@ -70,39 +70,35 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
-const authUser = computed(() => usePage().props.auth.user)
+const authUser = computed(() => usePage().props.auth.user);
 
-const formattedMemberOption = computed<ProjectMemberSimple[]>(() =>
-    props.members.map((m) => ({ id: m.user.id, name: m.user.name })),
-);
+const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
 
 watch(
     existedMembers,
     (val) => {
-        const members = [...val]
+        const members = [...val];
 
         if (!authUser.value) {
-            selectedMembers.value = members
-            return
+            selectedMembers.value = members;
+            return;
         }
 
-        const authExistsInOptions = formattedMemberOption.value
-            .some(m => m.id === authUser.value.id)
+        const authExistsInOptions = formattedMemberOption.value.some((m) => m.id === authUser.value.id);
 
-        const authExistsInMembers = members
-            .some(m => m.id === authUser.value.id)
+        const authExistsInMembers = members.some((m) => m.id === authUser.value.id);
 
         if (authExistsInOptions && !authExistsInMembers) {
             members.push({
                 id: authUser.value.id,
-                name: authUser.value.name
-            })
+                name: authUser.value.name,
+            });
         }
 
-        selectedMembers.value = members
+        selectedMembers.value = members;
     },
-    { immediate: true }
-)
+    { immediate: true },
+);
 
 const form: InertiaForm<Form> = useForm({
     _method: props?.task ? 'PUT' : 'POST',
@@ -533,7 +529,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
-            <Button v-if="!isEdit" label="Create Task" @click="submit" />
+            <Button v-if="!isEdit" label="Create Task" @click="submit" icon=" pi pi-save" />
             <Button v-else label="Update Task" severity="warning" @click="submit" />
         </div>
 

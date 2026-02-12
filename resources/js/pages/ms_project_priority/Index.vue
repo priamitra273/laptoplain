@@ -3,8 +3,6 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { ProjectPriority } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
-import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
 import ProjectPriorityTable from './Table.vue';
 
 interface Props {
@@ -29,8 +27,5 @@ const hasPermission = (): boolean => {
             <Heading title="Project Priority" description="Manage master data project priority" />
             <ProjectPriorityTable :project_priorities="props.project_priorities" :has-permission="hasPermission()" />
         </div>
-
-        <Toast />
-        <ConfirmDialog />
     </AppLayout>
 </template>

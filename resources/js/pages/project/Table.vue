@@ -316,6 +316,4 @@ watch(visibleForm, (val) => {
     </div>
 
     <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" />
-    <ConfirmDialog />
-    <Toast />
 </template>

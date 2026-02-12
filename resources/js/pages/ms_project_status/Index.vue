@@ -3,8 +3,6 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { MsProjectStatus } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
-import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
 import ProjectStatusTable from './Table.vue';
 
 interface Props {
@@ -30,7 +28,5 @@ const hasPermission = (): boolean => {
 
             <ProjectStatusTable :statuses="props.statuses" :has-permission="hasPermission()" />
         </div>
-        <Toast />
-        <ConfirmDialog />
     </AppLayout>
 </template>

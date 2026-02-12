@@ -55,8 +55,6 @@ const save = () => {
 </script>
 
 <template>
-    <Toast />
-
     <div class="flex flex-col gap-4">
         <AutoComplete
             v-model="selectedUser"

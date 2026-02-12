@@ -3,8 +3,6 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { TaskPriority } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
-import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
 import TaskPriorityTable from './Table.vue';
 
 interface Props {
@@ -29,7 +27,5 @@ const hasPermission = (): boolean => {
             <Heading title="Task Priority" description="Manage master data task priority" />
             <TaskPriorityTable :task_priorities="props.task_priorities" :has-permission="hasPermission()" />
         </div>
-        <Toast />
-        <ConfirmDialog />
     </AppLayout>
 </template>

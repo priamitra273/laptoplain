@@ -8,7 +8,6 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
@@ -532,7 +531,5 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <Button v-if="!isEdit" label="Create Task" @click="submit" icon=" pi pi-save" :loading="form.processing" :disabled="form.processing" />
             <Button v-else label="Update Task" severity="warning" @click="submit" :loading="form.processing" :disabled="form.processing" />
         </div>
-
-        <Toast />
     </div>
 </template>

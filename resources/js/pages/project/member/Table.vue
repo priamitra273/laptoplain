@@ -2,7 +2,6 @@
 import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
-import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -54,12 +53,6 @@ const remove = (member: ProjectMember) => {
 </script>
 
 <template>
-    <!-- ConfirmDialog Global -->
-    <ConfirmDialog />
-
-    <!-- Toast -->
-    <Toast />
-
     <div class="mb-4 flex items-center justify-between">
         <h3 class="text-lg font-semibold">Members</h3>
         <!-- Hanya tampilkan tombol Add Member jika isPM atau isAdmin true -->

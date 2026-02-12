@@ -201,6 +201,7 @@ export interface TaskStatus {
     id: number;
     name: string;
     severity: PrimeSeverity;
+    score: number;
     owned_id: number;
     created_by?: string;
     updated_by?: string;

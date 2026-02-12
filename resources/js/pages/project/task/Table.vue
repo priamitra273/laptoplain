@@ -29,6 +29,8 @@ const emit = defineEmits<{
     (e: 'edit', task: Task): void;
 }>();
 
+const deleteLoading = ref(false)
+
 const currentUser = usePage().props.auth.user;
 
 const currentPage = ref(1);
@@ -254,6 +256,7 @@ const toast = useToast();
 
 // Remove single task
 const remove = (t: Task) => {
+    deleteLoading.value = true
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -264,15 +267,10 @@ const remove = (t: Task) => {
         accept: () => {
             router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
                 preserveScroll: true,
-            });
-
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Task removed successfully',
-                life: 3000,
+                onFinish: () => deleteLoading.value = false,
             });
         },
+        reject: () => deleteLoading.value = false,
     });
 };
 
@@ -572,6 +570,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-plus"
                                 size="small"
                                 severity="info"
+                                :disabled="deleteLoading"
                                 @click="emit('add', node.data.id)"
                                 v-if="isMember || hasPermission"
                             />
@@ -579,6 +578,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
+                                :disabled="deleteLoading"
                                 @click="emit('edit', node.original)"
                                 v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
@@ -586,6 +586,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
+                                :disabled="deleteLoading"
                                 @click="remove(node.original)"
                                 v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />

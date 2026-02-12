@@ -44,6 +44,7 @@ const props = defineProps<{
     creator?: User;
 }>();
 
+const commentLoading = ref(false)
 const currentUserId = computed(() => Number(usePage().props.auth.user.id));
 
 const toast = useToast();
@@ -227,6 +228,8 @@ const hasSubTasks = computed(() => {
 const newComment = ref('');
 
 const submitComment = () => {
+    commentLoading.value = true
+
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = newComment.value;
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
@@ -259,6 +262,7 @@ const submitComment = () => {
                     detail: 'Comment posted successfully.',
                     life: 3000,
                 });
+                commentLoading.value = false
             },
             onError: () => {
                 toast.add({
@@ -267,7 +271,9 @@ const submitComment = () => {
                     detail: 'Failed to post comment. Please try again.',
                     life: 3000,
                 });
+                commentLoading.value = false
             },
+            onFinish: () => commentLoading.value = false
         },
     );
 };
@@ -640,7 +646,8 @@ const submitComment = () => {
                                         label="Post Comment"
                                         icon="pi pi-send"
                                         @click="submitComment"
-                                        :disabled="!newComment.trim()"
+                                        :disabled="!newComment.trim() || commentLoading"
+                                        :loading="commentLoading"
                                         class="shadow-md"
                                     />
                                 </div>

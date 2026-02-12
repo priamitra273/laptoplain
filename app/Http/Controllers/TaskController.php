@@ -151,11 +151,15 @@ class TaskController extends Controller
         }
 
         if (!empty($assignUserIds)) {
-            TaskNotification::createTaskNotification(
-                $task,
-                $assignUserIds,
-                TaskNotificationType::CREATED
-            );
+            try {
+                TaskNotification::createTaskNotification(
+                    $task,
+                    $assignUserIds,
+                    TaskNotificationType::CREATED
+                );
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
         }
 
         return to_route('project.show', ['encoded' => $encoded])
@@ -166,43 +170,35 @@ class TaskController extends Controller
     {
         try {
             $taskId = Sqids::decode($encoded);
+
+            $task = Task::with([
+                'project:id,title,emoji',
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'type:id,name,severity',
+                'users:id,name',
+                'users.media',
+                'tags:id,name,severity',
+                'subTaskRecursive',
+                'subTaskRecursive.status:id,name,severity',
+                'subTaskRecursive.priority:id,name,severity',
+                'subTaskRecursive.type:id,name,severity',
+                'subTaskRecursive.users:id,name',
+                'creator:id,name', // Add creator relationship
+                'creator.media',
+                'comments' => function ($query) {
+                    $query->whereNull('parent_id')
+                        ->orderBy('id', 'asc')
+                        ->with([
+                            'user',
+                            'replies' => function ($q) {
+                                $q->orderBy('id', 'asc');
+                            },
+                            'replies.user'
+                        ]);
+                }
+            ])->findOrFail($taskId);
         } catch (\Exception $e) {
-            throw new NotFoundHttpException(404);
-        }
-
-        if (!$taskId) {
-            throw new NotFoundHttpException(404);
-        }
-
-        $task = Task::with([
-            'project:id,title,emoji',
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'type:id,name,severity',
-            'users:id,name',
-            'users.media',
-            'tags:id,name,severity',
-            'subTaskRecursive',
-            'subTaskRecursive.status:id,name,severity',
-            'subTaskRecursive.priority:id,name,severity',
-            'subTaskRecursive.type:id,name,severity',
-            'subTaskRecursive.users:id,name',
-            'creator:id,name', // Add creator relationship
-            'creator.media',
-            'comments' => function ($query) {
-                $query->whereNull('parent_id')
-                    ->orderBy('id', 'asc')
-                    ->with([
-                        'user',
-                        'replies' => function ($q) {
-                            $q->orderBy('id', 'asc');
-                        },
-                        'replies.user'
-                    ]);
-            }
-        ])->find($taskId);
-
-        if (!$task) {
             throw new NotFoundHttpException(404);
         }
 
@@ -306,17 +302,8 @@ class TaskController extends Controller
     {
         try {
             $taskId = Sqids::decode($taskEncoded);
+            $task = Task::findOrFail($taskId);
         } catch (\Exception $e) {
-            return back()->with('error', 'Task not found.');
-        }
-
-        if (!$taskId) {
-            return back()->with('error', 'Task not found.');
-        }
-
-        $task = Task::find($taskId);
-
-        if (!$task) {
             return back()->with('error', 'Task not found.');
         }
 
@@ -378,11 +365,6 @@ class TaskController extends Controller
 
         $allUserIds = array_merge($existingUserIds, $assignUserIds);
 
-        TaskNotification::createTaskNotification(
-            $task,
-            $allUserIds,
-            TaskNotificationType::UPDATED
-        );
 
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
@@ -401,6 +383,15 @@ class TaskController extends Controller
             }
         }
 
+        try {
+            TaskNotification::createTaskNotification(
+                $task,
+                $allUserIds,
+                TaskNotificationType::UPDATED
+            );
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
         return back()->with('success', 'Task updated successfully');
     }
 
@@ -409,15 +400,11 @@ class TaskController extends Controller
         try {
             $projectId = Sqids::decode($encoded);
             $taskId = Sqids::decode($taskEncoded);
+            $task = Task::findOrFail($taskId);
         } catch (\Exception $e) {
             return back()->with('error', 'Task not found.');
         }
 
-        if (!$projectId || !$taskId) {
-            return back()->with('error', 'Task not found.');
-        }
-
-        $task = Task::find($taskId);
 
         foreach ($task->subTaskRecursive as $subTask) {
             $allUserIds = $subTask->users()
@@ -432,10 +419,6 @@ class TaskController extends Controller
             );
 
             $subTask->delete();
-        }
-
-        if (!$task) {
-            return back()->with('error', 'Task not found.');
         }
 
         $user = Auth::user();

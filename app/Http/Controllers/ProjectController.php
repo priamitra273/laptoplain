@@ -51,35 +51,24 @@ class ProjectController extends Controller
     {
         try {
             $projectId = Sqids::decode($encoded);
+            $project = Project::with([
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'projectMembers' => function ($query) {
+                    $query->whereHas('user');
+                },
+                'projectMembers.user:id,name,email',
+                'projectMembers.user.media',
+                'projectMembers.role:id,name',
+                'tasks' => function ($query) {
+                    $query->withRecursive();
+                },
+            ])->findOrFail($projectId);
         } catch (\Exception $e) {
             throw new NotFoundHttpException(404);
         }
 
-        if (!$projectId) {
-            throw new NotFoundHttpException(404);
-        }
-
-        $project = Project::with([
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'projectMembers' => function ($query) {
-                $query->whereHas('user');
-            },
-            'projectMembers.user:id,name,email',
-            'projectMembers.user.media',
-            'projectMembers.role:id,name',
-            'tasks' => function ($query) {
-                $query->withRecursive();
-            },
-        ])->find($projectId);
-
-
-        if (!$project) {
-            throw new NotFoundHttpException(404);
-        }
-
         $currentUser = Auth::user();
-
         if ($currentUser->cannot('view', $project)) {
             throw new NotFoundHttpException(404);
         }
@@ -294,9 +283,14 @@ class ProjectController extends Controller
     public function update(ProjectUpdateRequest $request, string $encoded)
     {
         $user = Auth::user();
-        $id = Sqids::decode($encoded);
+        try {
+            $id = Sqids::decode($encoded);
+    
+            $project = Project::findOrFail($id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Project not found.');
+        }
 
-        $project = Project::findOrFail($id);
         if ($user->cannot('update', $project)) {
             return back()->with('error', 'You do not have permission to update this project.');
         }
@@ -318,9 +312,13 @@ class ProjectController extends Controller
     public function destroy(string $encoded)
     {
         $user = Auth::user();
-        $id = Sqids::decode($encoded);
-
-        $project = Project::findOrFail($id);
+        try {
+            $id = Sqids::decode($encoded);
+    
+            $project = Project::findOrFail($id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Project not found.');
+        }
         if ($user->cannot('delete', $project)) {
             return back()->with('error', 'You do not have permission to delete this project.');
         }

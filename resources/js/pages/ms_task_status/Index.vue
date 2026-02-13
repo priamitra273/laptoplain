@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const hasPermission = (): boolean => {
     const role = usePage().props.auth.role;
-    return role === 'super-admin-admin' || role === 'admin-admin';
+    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
 }
 </script>
 

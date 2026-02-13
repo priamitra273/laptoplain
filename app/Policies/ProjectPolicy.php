@@ -21,10 +21,19 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        $allowedRoles = ["super-admin-admin", "watcher-admin"];
+        $allowedRoles = ["super-admin-", "watcher-"];
         $roles = $user->getRoleNames();
 
-        if ($roles->intersect($allowedRoles)->isNotEmpty()) {
+        $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
+            foreach ($allowedRoles as $prefix) {
+                if (str_starts_with($role, $prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if ($hasAllowedRole) {
             return true;
         }
         
@@ -42,10 +51,19 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin"];
+        $allowedRoles = ["super-admin-", "admin-"];
         $roles = $user->getRoleNames();
 
-        return $roles->intersect($allowedRoles)->isNotEmpty();
+        $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
+            foreach ($allowedRoles as $prefix) {
+                if (str_starts_with($role, $prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        return $hasAllowedRole;
     }
 
     /**
@@ -53,10 +71,19 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin"];
+        $allowedRoles = ["super-admin-", "admin-"];
         $roles = $user->getRoleNames();
 
-        if ($roles->intersect($allowedRoles)->isNotEmpty()) {
+        $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
+            foreach ($allowedRoles as $prefix) {
+                if (str_starts_with($role, $prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if ($hasAllowedRole) {
             return true;
         }
         
@@ -74,10 +101,19 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        $allowedRoles = ["super-admin-admin", "admin-admin"];
+        $allowedRoles = ["super-admin-", "admin-"];
         $roles = $user->getRoleNames();
 
-        if ($roles->intersect($allowedRoles)->isNotEmpty()) {
+        $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
+            foreach ($allowedRoles as $prefix) {
+                if (str_starts_with($role, $prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if ($hasAllowedRole) {
             return true;
         }
 

@@ -59,6 +59,7 @@ const filters = ref({
 
 const visibleForm = ref<boolean>(false);
 const selected = ref<Project | undefined>(undefined);
+const showEmojiPicker = ref<{ [key: string]: boolean }>({});
 
 const projects = computed(() => {
     return props.projects.map((project) => {
@@ -180,6 +181,12 @@ const onEmojiSelect = (emoji: any, data: any) => {
         newValue: emojiNative,
         field: 'emoji',
     });
+
+    showEmojiPicker.value[data.id] = false;
+};
+
+const toggleEmojiPicker = (dataId: string) => {
+    showEmojiPicker.value[dataId] = !showEmojiPicker.value[dataId];
 };
 
 const currentPage = ref(0);
@@ -218,7 +225,7 @@ watch(visibleForm, (val) => {
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 25, 50]"
-                :globalFilterFields="['title', 'description']"
+                :globalFilterFields="['project_no', 'title', 'description']"
                 striped-rows
                 row-hover
                 removable-sort
@@ -232,28 +239,42 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column field="emoji" header="Emoji" class="w-20">
+                <Column field="project_no" header="Project No" sortable class="w-32">
                     <template #body="{ data }">
-                        <span class="text-2xl">{{ data.emoji || '😀' }}</span>
-                    </template>
-
-                    <template v-if="props.hasPermission" #editor="{ data }">
-                        <div @click.stop class="emoji-picker-wrapper">
-                            <Picker
-                                :data="emojiIndex"
-                                @select="(emoji: any) => onEmojiSelect(emoji, data)"
-                                set="native"
-                                :native="true"
-                                title="Pick an emoji"
-                                emoji="point_up"
-                            />
-                        </div>
+                        <span class="font-mono text-sm">
+                            {{ data.project_no ?? '-' }}
+                        </span>
                     </template>
                 </Column>
 
+                <!-- Kolom Title dengan Emoji -->
                 <Column field="title" header="Title" sortable :sortOrder="-1">
+                    <template #body="{ data }">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">{{ data.emoji || '😀' }}</span>
+                            <span>{{ data.title }}</span>
+                        </div>
+                    </template>
+
                     <template v-if="props.hasPermission" #editor="{ data, field }">
-                        <InputText v-model="data[field]" class="w-full" />
+                        <div class="flex w-full items-center gap-2">
+                            <div class="relative">
+                                <button type="button" @click.stop="toggleEmojiPicker(data.id)" class="rounded px-2 py-1 text-2xl hover:bg-gray-100">
+                                    {{ data.emoji || '😀' }}
+                                </button>
+                                <div v-if="showEmojiPicker[data.id]" @click.stop class="absolute left-0 top-full z-50 mt-1">
+                                    <Picker
+                                        :data="emojiIndex"
+                                        @select="(emoji: any) => onEmojiSelect(emoji, data)"
+                                        set="native"
+                                        :native="true"
+                                        title="Pick an emoji"
+                                        emoji="point_up"
+                                    />
+                                </div>
+                            </div>
+                            <InputText v-model="data[field]" class="flex-1" />
+                        </div>
                     </template>
                 </Column>
 
@@ -362,7 +383,6 @@ watch(visibleForm, (val) => {
 
                 <Column header="Action">
                     <template #body="{ data }">
-                        <!-- <DropdownButton :items="items" :data="data" /> -->
                         <div class="flex gap-2">
                             <Button
                                 icon="pi pi-pencil"

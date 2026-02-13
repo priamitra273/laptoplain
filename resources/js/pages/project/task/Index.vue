@@ -58,6 +58,12 @@ const filterType = ref<string | null>(null);
 // View mode
 const viewMode = ref<'list' | 'board'>('list');
 
+// Truncate text helper
+const truncateText = (text: string, maxLength: number = 50) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
+
 // Format tanggal
 const formatDueDate = (date?: string) => {
     if (!date) return '-';
@@ -270,23 +276,24 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                         @row-click="(e) => router.get(route('task.show', { encoded: e.data.id }))"
                     >
                         <!-- SUMMARY -->
-                        <Column header="Summary" style="width: 100%">
+                        <Column header="Summary" style="width: 35%">
                             <template #body="{ data: task }">
-                                <div class="flex max-w-md flex-col gap-1">
+                                <div class="flex flex-col gap-1">
                                     <Link :href="route('task.show', { encoded: task.id })" @click.stop>
-                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white">
-                                            {{ task.title }}
+                                        <span class="font-medium text-gray-900 hover:underline dark:text-white" :title="task.title">
+                                            {{ truncateText(task.title, 50) }}
                                         </span>
                                     </Link>
 
                                     <div v-if="task.project" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                        <i class="pi pi-folder text-xs"></i>
+                                        <i class="pi pi-folder flex-shrink-0 text-xs"></i>
                                         <Link
                                             :href="route('project.show', { encoded: task.project.id })"
-                                            class="truncate hover:text-blue-600"
+                                            class="hover:text-blue-600"
                                             @click.stop
+                                            :title="task.project.title"
                                         >
-                                            {{ task.project.title }}
+                                            {{ truncateText(task.project.title, 20) }}
                                         </Link>
                                     </div>
                                 </div>
@@ -294,14 +301,14 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                         </Column>
 
                         <!-- STATUS -->
-                        <Column header="Status">
+                        <Column header="Status" style="width: 15%">
                             <template #body="{ data: task }">
                                 <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
                             </template>
                         </Column>
 
                         <!-- PRIORITY -->
-                        <Column header="Priority">
+                        <Column header="Priority" style="width: 15%">
                             <template #body="{ data: task }">
                                 <div v-if="task.priority" class="flex items-center gap-2">
                                     <i
@@ -323,14 +330,14 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                         </Column>
 
                         <!-- TYPE -->
-                        <Column header="Type">
+                        <Column header="Type" style="width: 15%">
                             <template #body="{ data: task }">
                                 <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
                             </template>
                         </Column>
 
                         <!-- DUE DATE -->
-                        <Column header="Due Date">
+                        <Column header="Due Date" style="width: 20%">
                             <template #body="{ data: task }">
                                 <span
                                     :class="[

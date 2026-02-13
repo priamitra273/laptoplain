@@ -7,6 +7,8 @@ import AppConfig from './AppConfig.vue';
 import AppFooter from './AppFooter.vue';
 import AppSidebar from './AppSidebar.vue';
 import AppTopbar from './AppTopbar.vue';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
 
 const { layoutConfig, layoutState, watchSidebarActive, unbindOutsideClickListener } = useLayout();
 
@@ -57,7 +59,8 @@ const containerClass = computed(() => {
         </div>
 
         <AppConfig />
-        <Toast></Toast>
+        <Toast />
+        <ConfirmDialog />
         <div class="layout-mask"></div>
     </div>
 </template>

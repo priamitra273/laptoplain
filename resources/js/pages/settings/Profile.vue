@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -10,6 +10,7 @@ import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
 import FileUpload from 'primevue/fileupload';
 import InlineMessage from 'primevue/inlinemessage';
 import InputText from 'primevue/inputtext';
@@ -39,6 +40,8 @@ const form = useForm({
 });
 
 const previewImage = ref<string | null>(user.avatar_url || null);
+const showDeleteDialog = ref(false);
+const deletingAvatar = ref(false);
 
 const onFileSelect = (event: any) => {
     const file = event.files[0];
@@ -72,6 +75,30 @@ const submit = () => {
 const avatarLabel = computed(() => {
     return user.name?.charAt(0).toUpperCase() || 'U';
 });
+
+const confirmDeleteAvatar = () => {
+    showDeleteDialog.value = true;
+};
+
+const deleteAvatar = () => {
+    deletingAvatar.value = true;
+
+    router.delete(route('profile.avatar.destroy'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            previewImage.value = null;
+            deletingAvatar.value = false;
+            showDeleteDialog.value = false;
+        },
+        onError: () => {
+            deletingAvatar.value = false;
+        },
+    });
+};
+
+const cancelDelete = () => {
+    showDeleteDialog.value = false;
+};
 </script>
 
 <template>
@@ -109,6 +136,16 @@ const avatarLabel = computed(() => {
                                 />
 
                                 <Button v-if="form.avatar" type="button" severity="secondary" size="small" @click="removeImage" label="Remove" />
+
+                                <!-- Tombol delete untuk avatar yang sudah tersimpan -->
+                                <Button
+                                    v-else-if="user.avatar_url"
+                                    type="button"
+                                    severity="danger"
+                                    size="small"
+                                    @click="confirmDeleteAvatar"
+                                    label="Delete Avatar"
+                                />
                             </div>
                         </div>
 
@@ -179,6 +216,30 @@ const avatarLabel = computed(() => {
             </div>
 
             <DeleteUser />
+
+            <!-- Delete Avatar Confirmation Dialog -->
+            <Dialog
+                v-model:visible="showDeleteDialog"
+                modal
+                header="Delete Avatar"
+                :style="{ width: '450px' }"
+                :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+            >
+                <div class="flex items-start gap-4">
+                    <i class="pi pi-exclamation-triangle text-4xl text-orange-500"></i>
+                    <div>
+                        <p class="mb-2">Are you sure you want to delete your profile picture?</p>
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">
+                            This action cannot be undone. Your avatar will be replaced with your initials.
+                        </p>
+                    </div>
+                </div>
+
+                <template #footer>
+                    <Button label="Cancel" severity="secondary" @click="cancelDelete" :disabled="deletingAvatar" />
+                    <Button label="Delete" severity="danger" @click="deleteAvatar" :loading="deletingAvatar" />
+                </template>
+            </Dialog>
         </SettingsLayout>
     </AppLayout>
 </template>

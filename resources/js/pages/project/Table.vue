@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { Project } from '@/types';
+import { PrimeSeverity, Project } from '@/types';
 import { router } from '@inertiajs/vue3';
-import { FilterMatchMode } from '@primevue/core/api';
+import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
+// @ts-ignore
 import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
@@ -13,16 +13,29 @@ import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ProjectForm from './Form.vue';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
+interface ProjectStatus {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
+interface ProjectPriority {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
 interface Props {
     projects?: Project[];
-    statuses: { id: number; name: string }[];
-    priorities: { id: number; name: string }[];
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
     progresses?: number;
+    hasPermission?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -37,10 +50,25 @@ const confirm = useConfirm();
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    status_id: { value: null, matchMode: FilterMatchMode.IN },
+    priority_id: { value: null, matchMode: FilterMatchMode.IN },
+    start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+    due_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+    progress: { value: [0, 100], matchMode: FilterMatchMode.BETWEEN },
 });
 
 const visibleForm = ref<boolean>(false);
 const selected = ref<Project | undefined>(undefined);
+
+const projects = computed(() => {
+    return props.projects.map((project) => {
+        return {
+            ...project,
+            start_date: moment(project.start_date).toDate(),
+            due_date: moment(project.due_date).toDate(),
+        };
+    });
+});
 
 const goToCreate = () => {
     selected.value = undefined;
@@ -55,13 +83,16 @@ const items: MenuItem[] = [
             router.visit(route('project.show', { encoded: data.id }));
         },
     },
-    {
+];
+
+if (props.hasPermission) {
+    items.push({
         label: 'Delete',
         command(event) {
             confirmDelete(event.item.data);
         },
-    },
-];
+    });
+}
 
 const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
     if (data[field] === newValue) return;
@@ -151,6 +182,14 @@ const onEmojiSelect = (emoji: any, data: any) => {
     });
 };
 
+const currentPage = ref(0);
+const rowsPerPage = ref(10);
+
+const onPage = (event: any) => {
+    currentPage.value = event.page;
+    rowsPerPage.value = event.rows;
+};
+
 watch(visibleForm, (val) => {
     if (!val) selected.value = undefined;
 });
@@ -166,7 +205,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button v-if="props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">
@@ -175,17 +214,22 @@ watch(visibleForm, (val) => {
                 v-model:filters="filters"
                 data-key="id"
                 editMode="cell"
-                @cell-edit-complete="onCellEditComplete"
+                filter-display="menu"
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 25, 50]"
                 :globalFilterFields="['title', 'description']"
                 striped-rows
                 row-hover
+                removable-sort
                 :closeOnEscape="false"
+                @page="onPage"
+                @cell-edit-complete="onCellEditComplete"
             >
                 <Column header="No" class="w-12 text-center">
-                    <template #body="{ index }">{{ index + 1 }}</template>
+                    <template #body="{ index }">
+                        {{ currentPage * rowsPerPage + index + 1 }}
+                    </template>
                 </Column>
 
                 <Column field="emoji" header="Emoji" class="w-20">
@@ -193,11 +237,11 @@ watch(visibleForm, (val) => {
                         <span class="text-2xl">{{ data.emoji || '😀' }}</span>
                     </template>
 
-                    <template #editor="{ data }">
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <div @click.stop class="emoji-picker-wrapper">
                             <Picker
                                 :data="emojiIndex"
-                                @select="(emoji) => onEmojiSelect(emoji, data)"
+                                @select="(emoji: any) => onEmojiSelect(emoji, data)"
                                 set="native"
                                 :native="true"
                                 title="Pick an emoji"
@@ -208,7 +252,7 @@ watch(visibleForm, (val) => {
                 </Column>
 
                 <Column field="title" header="Title" sortable :sortOrder="-1">
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" class="w-full" />
                     </template>
                 </Column>
@@ -218,7 +262,7 @@ watch(visibleForm, (val) => {
                         <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <Editor v-model="data[field]" editorStyle="height: 200px">
                             <template #toolbar>
                                 <span class="ql-formats">
@@ -231,53 +275,103 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column field="status_id" header="Status">
+                <Column field="status_id" header="Status" sortable filter-field="status_id" :show-filter-match-modes="false" style="width: 4rem">
                     <template #body="{ data }">
                         <Tag :value="data.status?.name" :severity="data.status?.severity" />
                     </template>
-                    <template #editor="{ data }">
+
+                    <template #filter="{ filterModel }">
+                        <MultiSelect v-model="filterModel.value" :options="props.statuses" option-label="name" option-value="id" placeholder="Any">
+                            <template #option="{ option }">
+                                <Tag :value="option.name" :severity="option.severity" />
+                            </template>
+                        </MultiSelect>
+                    </template>
+
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <Dropdown v-model="data.status_id" :options="props.statuses" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="priority_id" header="Priority">
+                <Column
+                    field="priority_id"
+                    header="Priority"
+                    sortable
+                    filter-field="priority_id"
+                    :show-filter-match-modes="false"
+                    style="width: 4rem"
+                >
                     <template #body="{ data }">
                         <Tag :value="data.priority?.name" :severity="data.priority?.severity" />
                     </template>
-                    <template #editor="{ data }">
+
+                    <template #filter="{ filterModel }">
+                        <MultiSelect v-model="filterModel.value" :options="props.priorities" option-label="name" option-value="id" placeholder="Any">
+                            <template #option="{ option }">
+                                <Tag :value="option.name" :severity="option.severity" />
+                            </template>
+                        </MultiSelect>
+                    </template>
+
+                    <template v-if="props.hasPermission" #editor="{ data }">
                         <Dropdown v-model="data.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="start_date" header="Start">
+                <Column field="start_date" header="Start" sortable filter-field="start_date" data-type="date">
                     <template #body="{ data }">
                         {{ moment(data.start_date).format('YYYY-MM-DD') }}
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template #filter="{ filterModel }">
+                        <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-mm-dd" />
+                    </template>
+
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="due_date" header="Due">
+                <Column field="due_date" header="Due" sortable filter-field="due_date" data-type="date">
                     <template #body="{ data }">
                         {{ moment(data.due_date).format('YYYY-MM-DD') }}
                     </template>
 
-                    <template #editor="{ data, field }">
+                    <template #filter="{ filterModel }">
+                        <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-mm-dd" />
+                    </template>
+
+                    <template v-if="props.hasPermission" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
 
-                <Column field="progress" header="Progress">
+                <Column field="progress" header="Progress" sortable :show-filter-match-modes="false">
                     <template #body="{ data }">
                         <ProgressBar :value="data.progress" :showValue="true" />
+                    </template>
+
+                    <template #filter="{ filterModel }">
+                        <Slider v-model="filterModel.value" range class="m-4"></Slider>
+                        <div class="flex items-center justify-between px-2">
+                            <span>{{ filterModel.value ? filterModel.value[0] : 0 }}</span>
+                            <span>{{ filterModel.value ? filterModel.value[1] : 100 }}</span>
+                        </div>
                     </template>
                 </Column>
 
                 <Column header="Action">
                     <template #body="{ data }">
-                        <DropdownButton :items="items" :data="data" />
+                        <!-- <DropdownButton :items="items" :data="data" /> -->
+                        <div class="flex gap-2">
+                            <Button
+                                icon="pi pi-pencil"
+                                size="small"
+                                @click="router.visit(route('project.show', { encoded: data.id }))"
+                                v-tooltip.bottom="'View Details'"
+                            />
+                            <Button icon="pi pi-trash" size="small" severity="danger" @click="confirmDelete(data)" v-tooltip.bottom="'Delete'" />
+                        </div>
                     </template>
                 </Column>
 
@@ -289,6 +383,4 @@ watch(visibleForm, (val) => {
     </div>
 
     <ProjectForm v-model:visible="visibleForm" :value="selected" :statuses="props.statuses" :priorities="props.priorities" />
-    <ConfirmDialog />
-    <Toast />
 </template>

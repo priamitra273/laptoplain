@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
@@ -8,7 +8,11 @@ import Avatar from 'primevue/avatar';
 import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import DatePicker from 'primevue/datepicker';
 import Dialog from 'primevue/dialog';
+import Dropdown from 'primevue/dropdown';
+import Editor from 'primevue/editor';
+import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
 import Tab from 'primevue/tab';
 import TabList from 'primevue/tablist';
@@ -17,7 +21,7 @@ import TabPanels from 'primevue/tabpanels';
 import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
@@ -50,6 +54,8 @@ interface Props {
         due_date?: string;
         status?: { id: string; name: string; severity?: string };
         priority?: { id: string; name: string; severity?: string };
+        status_id?: string;
+        priority_id?: string;
         created_at?: string;
         updated_at?: string;
     };
@@ -64,11 +70,11 @@ interface Props {
     tags: TagData[];
     assignableUsers: User[];
 
-    isPM: boolean;
-    isAdmin: boolean;
     isMember: boolean;
     isOwner: boolean;
-    canManageMembers: boolean;
+
+    statuses?: { id: string; name: string; severity?: string }[];
+    priorities?: { id: string; name: string; severity?: string }[];
 }
 
 const props = defineProps<Props>();
@@ -83,7 +89,141 @@ const selectedTask = ref<Task | null>(null);
 
 const parentTaskId = ref<string | null>(null);
 
+// Edit mode states
+const editMode = ref({
+    title: false,
+    status: false,
+    priority: false,
+    startDate: false,
+    dueDate: false,
+    description: false,
+});
+
+// Local state for editable fields
+const localProject = ref({ ...props.project });
+
 let emojiIndex = new EmojiIndex(emojiData);
+
+// Refs untuk click outside detection
+const titleInputRef = ref<HTMLElement | null>(null);
+const statusDropdownRef = ref<HTMLElement | null>(null);
+const priorityDropdownRef = ref<HTMLElement | null>(null);
+const startDatePickerRef = ref<HTMLElement | null>(null);
+const dueDatePickerRef = ref<HTMLElement | null>(null);
+
+// Event listeners storage
+const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
+
+// Watch for props changes
+watch(
+    () => props.project,
+    (newProject) => {
+        localProject.value = { ...newProject };
+    },
+    { deep: true },
+);
+
+// Handler untuk click outside
+const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) => {
+    // Remove existing listener if any
+    const existingListener = clickOutsideListeners.get(field);
+    if (existingListener) {
+        document.removeEventListener('click', existingListener);
+    }
+
+    // Create new listener
+    const listener = (event: MouseEvent) => {
+        const element = elementRef.value;
+        const target = event.target as Node;
+
+        if (!element) return;
+
+        // Check if element has $el property (PrimeVue component)
+        const domElement = element.$el || element;
+
+        if (domElement && !domElement.contains(target)) {
+            cancelEdit(field);
+        }
+    };
+
+    // Store and add listener
+    clickOutsideListeners.set(field, listener);
+    setTimeout(() => {
+        document.addEventListener('click', listener);
+    }, 100);
+};
+
+const removeClickOutside = (field: keyof typeof editMode.value) => {
+    const listener = clickOutsideListeners.get(field);
+    if (listener) {
+        document.removeEventListener('click', listener);
+        clickOutsideListeners.delete(field);
+    }
+};
+
+// Watch untuk menambahkan event listener ketika edit mode aktif
+watch(
+    () => editMode.value.title,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('title', titleInputRef);
+        } else {
+            removeClickOutside('title');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.status,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('status', statusDropdownRef);
+        } else {
+            removeClickOutside('status');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.priority,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('priority', priorityDropdownRef);
+        } else {
+            removeClickOutside('priority');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.startDate,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('startDate', startDatePickerRef);
+        } else {
+            removeClickOutside('startDate');
+        }
+    },
+);
+
+watch(
+    () => editMode.value.dueDate,
+    (isActive) => {
+        if (isActive) {
+            setupClickOutside('dueDate', dueDatePickerRef);
+        } else {
+            removeClickOutside('dueDate');
+        }
+    },
+);
+
+// Cleanup on unmount
+onUnmounted(() => {
+    clickOutsideListeners.forEach((listener) => {
+        document.removeEventListener('click', listener);
+    });
+    clickOutsideListeners.clear();
+});
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: ProjectMember) => {
@@ -92,7 +232,7 @@ const openEdit = (member: ProjectMember) => {
 };
 
 const openTaskAdd = (parentId: string | null) => {
-    if (!props.isMember) {
+    if (!props.isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -106,7 +246,7 @@ const openTaskAdd = (parentId: string | null) => {
 };
 
 const openTaskEdit = (task: Task) => {
-    if (!props.isMember) {
+    if (!props.isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -173,6 +313,145 @@ const taskDialogHeader = computed(() => {
     }
     return parentTaskId.value ? 'Create Subtask' : 'Create Task';
 });
+
+const hasPermission = (): boolean => {
+    const role = usePage().props.auth.role;
+    return role === 'super-admin-admin' || role === 'admin-admin';
+};
+
+const canEdit = computed(() => {
+    return props.isOwner || hasPermission();
+});
+
+// Enable edit mode for a field
+const enableEditMode = (field: keyof typeof editMode.value) => {
+    if (!canEdit.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You do not have permission to edit this project',
+            life: 3000,
+        });
+        return;
+    }
+    editMode.value[field] = true;
+};
+
+// Disable edit mode for a field
+const disableEditMode = (field: keyof typeof editMode.value) => {
+    editMode.value[field] = false;
+};
+
+// Update project - sesuai dengan ProjectUpdateRequest di backend
+const updateProject = (newValue: any, field: string, editField?: keyof typeof editMode.value) => {
+    if (!canEdit.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Access Denied',
+            detail: 'You do not have permission to edit this project',
+            life: 3000,
+        });
+        return;
+    }
+
+    // Prepare payload sesuai dengan ProjectUpdateRequest
+    // Backend memerlukan: title, description, emoji, start_date, due_date, status_id, priority_id
+    let payload: any = {
+        title: localProject.value.title,
+        description: localProject.value.description || '',
+        emoji: localProject.value.emoji,
+        start_date: localProject.value.start_date,
+        due_date: localProject.value.due_date,
+        status_id: localProject.value.status_id || localProject.value.status?.id,
+        priority_id: localProject.value.priority_id || localProject.value.priority?.id,
+    };
+
+    // Update field yang diubah
+    if (field === 'start_date' || field === 'due_date') {
+        payload[field] = moment(newValue).format('YYYY-MM-DD');
+    } else if (field === 'status_id' || field === 'priority_id') {
+        payload[field] = newValue;
+    } else {
+        payload[field] = newValue;
+    }
+
+    // Format semua tanggal ke format YYYY-MM-DD
+    if (payload.start_date) {
+        payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
+    }
+    if (payload.due_date) {
+        payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
+    }
+
+    router.put(route('project.update', props.project.id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            if (editField) {
+                disableEditMode(editField);
+            }
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Project updated successfully',
+                life: 3000,
+            });
+        },
+        onError: (errors) => {
+            console.error('Update errors:', errors);
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: errors[Object.keys(errors)[0]] || 'Failed to update project',
+                life: 3000,
+            });
+        },
+    });
+};
+
+// Update handlers
+const onTitleBlur = () => {
+    if (localProject.value.title !== props.project.title) {
+        updateProject(localProject.value.title, 'title', 'title');
+    } else {
+        disableEditMode('title');
+    }
+};
+
+const onStatusChange = (event: any) => {
+    localProject.value.status_id = event.value.id;
+    updateProject(event.value.id, 'status_id', 'status');
+};
+
+const onPriorityChange = (event: any) => {
+    localProject.value.priority_id = event.value.id;
+    updateProject(event.value.id, 'priority_id', 'priority');
+};
+
+const onStartDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
+    if (value instanceof Date) {
+        updateProject(value, 'start_date', 'startDate');
+    }
+};
+
+const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
+    if (value instanceof Date) {
+        updateProject(value, 'due_date', 'dueDate');
+    }
+};
+
+const onDescriptionBlur = () => {
+    if (localProject.value.description !== props.project.description) {
+        updateProject(localProject.value.description, 'description', 'description');
+    } else {
+        disableEditMode('description');
+    }
+};
+
+const cancelEdit = (field: keyof typeof editMode.value) => {
+    localProject.value = { ...props.project };
+    disableEditMode(field);
+};
 </script>
 
 <template>
@@ -198,10 +477,27 @@ const taskDialogHeader = computed(() => {
                         :size="36"
                     ></Emoji>
                     <span v-else class="text-4xl">{{ props.project?.emoji }}</span>
-                    <div>
-                        <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
-                            {{ props.project.title }}
-                        </h1>
+                    <div class="flex-1">
+                        <!-- Editable Title -->
+                        <div
+                            v-if="!editMode.title"
+                            @click="enableEditMode('title')"
+                            :class="canEdit ? '-mx-2 -my-1 cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
+                        >
+                            <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
+                                {{ props.project.title }}
+                            </h1>
+                        </div>
+                        <div v-else class="flex items-center gap-2" ref="titleInputRef" @click.stop>
+                            <InputText
+                                v-model="localProject.title"
+                                class="text-2xl font-semibold"
+                                @blur="onTitleBlur"
+                                @keyup.enter="onTitleBlur"
+                                @keyup.escape="cancelEdit('title')"
+                                autofocus
+                            />
+                        </div>
                         <p class="text-sm text-surface-600 dark:text-surface-400">
                             Software project
                             <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"> <i class="pi pi-check-circle"></i> Member </span>
@@ -246,51 +542,135 @@ const taskDialogHeader = computed(() => {
             </div>
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <!-- Status Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
                             <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Status</span>
-                            <Tag
-                                :value="props.project.status?.name || 'In Progress'"
-                                :severity="props.project.status?.severity || 'info'"
-                                class="w-fit"
-                            />
-                        </div>
-                    </template>
-                </Card>
-
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Priority</span>
-                            <Tag
-                                :value="props.project.priority?.name || 'Medium'"
-                                :severity="props.project.priority?.severity || 'warning'"
-                                class="w-fit"
-                            />
-                        </div>
-                    </template>
-                </Card>
-
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Timeline</span>
-                            <div class="text-sm text-surface-700 dark:text-surface-300">
-                                {{ moment(props.project.start_date).format('MMM DD') }} -
-                                {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
+                            <div v-if="!editMode.status" @click="enableEditMode('status')" :class="canEdit ? 'cursor-pointer' : ''">
+                                <Tag
+                                    :value="props.project.status?.name || 'In Progress'"
+                                    :severity="props.project.status?.severity || 'info'"
+                                    class="w-fit"
+                                />
+                            </div>
+                            <div v-else ref="statusDropdownRef" @click.stop>
+                                <Dropdown
+                                    v-model="localProject.status"
+                                    :options="props.statuses"
+                                    optionLabel="name"
+                                    placeholder="Select Status"
+                                    @change="onStatusChange"
+                                    class="w-full"
+                                    autofocus
+                                >
+                                    <template #value="slotProps">
+                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'" />
+                                    </template>
+                                    <template #option="slotProps">
+                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'" />
+                                    </template>
+                                </Dropdown>
                             </div>
                         </div>
                     </template>
                 </Card>
 
+                <!-- Priority Card -->
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Priority</span>
+                            <div v-if="!editMode.priority" @click="enableEditMode('priority')" :class="canEdit ? 'cursor-pointer' : ''">
+                                <Tag
+                                    :value="props.project.priority?.name || 'Medium'"
+                                    :severity="props.project.priority?.severity || 'warning'"
+                                    class="w-fit"
+                                />
+                            </div>
+                            <div v-else ref="priorityDropdownRef" @click.stop>
+                                <Dropdown
+                                    v-model="localProject.priority"
+                                    :options="props.priorities"
+                                    optionLabel="name"
+                                    placeholder="Select Priority"
+                                    @change="onPriorityChange"
+                                    class="w-full"
+                                    autofocus
+                                >
+                                    <template #value="slotProps">
+                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'" />
+                                    </template>
+                                    <template #option="slotProps">
+                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'" />
+                                    </template>
+                                </Dropdown>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Timeline Card -->
+                <Card class="shadow-sm">
+                    <template #content>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Timeline</span>
+                            <div v-if="!editMode.startDate && !editMode.dueDate" class="flex flex-col gap-2">
+                                <div
+                                    @click="enableEditMode('startDate')"
+                                    :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
+                                    class="text-sm text-surface-700 dark:text-surface-300"
+                                >
+                                    Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
+                                </div>
+                                <div
+                                    @click="enableEditMode('dueDate')"
+                                    :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
+                                    class="text-sm text-surface-700 dark:text-surface-300"
+                                >
+                                    Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
+                                </div>
+                            </div>
+                            <div v-else class="flex flex-col gap-2">
+                                <div v-if="editMode.startDate" ref="startDatePickerRef" @click.stop>
+                                    <DatePicker
+                                        :modelValue="new Date(localProject.start_date || '')"
+                                        @update:modelValue="onStartDateChange"
+                                        dateFormat="dd M yy"
+                                        placeholder="Start Date"
+                                        class="w-full text-sm"
+                                        autofocus
+                                    />
+                                </div>
+                                <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
+                                    Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
+                                </div>
+
+                                <div v-if="editMode.dueDate" ref="dueDatePickerRef" @click.stop>
+                                    <DatePicker
+                                        :modelValue="new Date(localProject.due_date || '')"
+                                        @update:modelValue="onDueDateChange"
+                                        dateFormat="dd M yy"
+                                        placeholder="Due Date"
+                                        class="w-full text-sm"
+                                        autofocus
+                                    />
+                                </div>
+                                <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
+                                    Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Progress Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
                             <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
                             <div class="flex items-center gap-2">
-                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="false" />
-                                <span class="text-sm font-semibold text-surface-700 dark:text-surface-300"> {{ props.project.progress }}% </span>
+                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="true" />
                             </div>
                         </div>
                     </template>
@@ -310,13 +690,12 @@ const taskDialogHeader = computed(() => {
                             <TabPanel value="Board">
                                 <div class="py-4">
                                     <TaskTable
-                                        :projectId="props.project.id"
-                                        :tasks="props.tasks"
+                                        :projectId="project.id"
+                                        :tasks="tasks"
                                         @add="openTaskAdd"
                                         @edit="openTaskEdit"
-                                        :isPM="props.isPM"
-                                        :isMember="props.isMember"
-                                        :isOwner="props.isOwner"
+                                        :isMember="isMember"
+                                        :has-permission="isOwner || hasPermission()"
                                     />
                                 </div>
                             </TabPanel>
@@ -324,11 +703,41 @@ const taskDialogHeader = computed(() => {
                             <TabPanel value="Details">
                                 <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
                                     <div class="lg:col-span-2">
-                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
+                                        <div class="mb-3 flex items-center justify-between">
+                                            <h3 class="text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
+                                        </div>
+                                        <!-- Editable Description -->
                                         <div
-                                            class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
-                                            v-html="props.project.description || '<p class=\'text-surface-500 italic\'>No description provided</p>'"
-                                        />
+                                            v-if="!editMode.description"
+                                            @click="enableEditMode('description')"
+                                            :class="canEdit ? 'cursor-pointer rounded p-2 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
+                                        >
+                                            <div
+                                                class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
+                                                v-html="
+                                                    props.project.description ||
+                                                    '<p class=\'text-surface-500 italic\'>No description provided. Click to add.</p>'
+                                                "
+                                            />
+                                        </div>
+                                        <div v-else class="relative">
+                                            <!-- Overlay untuk mendeteksi klik di luar -->
+                                            <div class="fixed inset-0 z-10" @click="onDescriptionBlur"></div>
+                                            <!-- Editor wrapper dengan z-index lebih tinggi -->
+                                            <div class="relative z-20" @click.stop>
+                                                <Editor v-model="localProject.description" editorStyle="height: 200px">
+                                                    <template #toolbar>
+                                                        <span class="ql-formats">
+                                                            <button class="ql-bold"></button>
+                                                            <button class="ql-italic"></button>
+                                                            <button class="ql-underline"></button>
+                                                            <button class="ql-list" value="ordered"></button>
+                                                            <button class="ql-list" value="bullet"></button>
+                                                        </span>
+                                                    </template>
+                                                </Editor>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="flex flex-col gap-6">
@@ -360,8 +769,7 @@ const taskDialogHeader = computed(() => {
                                         :members="props.members"
                                         :roles="props.roles"
                                         :users="props.users"
-                                        :isPM="props.isPM"
-                                        :isAdmin="props.isAdmin"
+                                        :hasPermission="isOwner || hasPermission()"
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />
@@ -393,7 +801,21 @@ const taskDialogHeader = computed(() => {
             />
         </Dialog>
 
-        <Dialog v-model:visible="visibleTaskAdd" :header="taskDialogHeader" @hide="onDialogClosed" modal class="w-[600px]">
+        <Dialog
+            v-model:visible="visibleTaskAdd"
+            :header="taskDialogHeader"
+            modal
+            scrollable
+            maximizable
+            @hide="onDialogClosed"
+            :style="{ width: '70rem' }"
+            :contentStyle="{ maxHeight: '75vh' }"
+            :breakpoints="{
+                '1200px': '80vw',
+                '960px': '90vw',
+                '640px': '100vw',
+            }"
+        >
             <TaskForm
                 :projectId="props.project.id"
                 :parentId="parentTaskId"

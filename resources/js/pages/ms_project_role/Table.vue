@@ -13,6 +13,7 @@ import ProjectRoleForm from './Form.vue';
 
 interface Props {
     project_roles?: ProjectRole[];
+    hasPermission?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -85,7 +86,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Project Role" raised @click="visibleForm = true">
+            <Button label="Add Project Role" raised @click="visibleForm = true" v-if="hasPermission">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -118,7 +119,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Actions" style="width: 10%">
+                <Column header="Actions" style="width: 10%" v-if="hasPermission">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

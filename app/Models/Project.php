@@ -99,6 +99,11 @@ class Project extends Model
         $this->attributes['progress'] = round(min(max($value, 0), 100), 2);
     }
 
+    public function allTasks()
+    {
+        return $this->hasMany(Task::class, 'project_id');
+    }
+
     public function tasks()
     {
         return $this->hasMany(Task::class, 'project_id')
@@ -123,5 +128,19 @@ class Project extends Model
         }
 
         return round($total / $count, 2);
+    }
+
+    public function scopeVisibleFor($query, User $user)
+    {
+        $allowedRoles = ["super-admin-admin", "watcher-admin"];
+        $roles = $user->getRoleNames();
+
+        if ($roles->intersect($allowedRoles)->isNotEmpty()) {
+            return $query;
+        }
+
+        return $query->whereHas('projectMembers', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
     }
 }

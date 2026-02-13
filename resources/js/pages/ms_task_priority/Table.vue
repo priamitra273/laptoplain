@@ -86,7 +86,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Priority" raised @click="visibleForm = true">
+            <Button label="Add Task Priority" raised @click="visibleForm = true" v-if="hasPermission">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -124,7 +124,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action" style="width: 10%">
+                <Column header="Action" style="width: 10%" v-if="hasPermission">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\SqidsService;
+use App\Services\TaskNotificationService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -14,6 +15,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton('sqids', function ($app) {
             return new SqidsService();
+        });
+        $this->app->singleton('task_notification', function ($app) {
+            return new TaskNotificationService();
         });
     }
 

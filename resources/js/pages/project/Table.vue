@@ -57,6 +57,7 @@ const filters = ref({
     progress: { value: [0, 100], matchMode: FilterMatchMode.BETWEEN },
 });
 
+const deleteLoading = ref(false)
 const visibleForm = ref<boolean>(false);
 const selected = ref<Project | undefined>(undefined);
 
@@ -114,6 +115,7 @@ const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: an
 };
 
 const confirmDelete = (project: Project) => {
+    deleteLoading.value = true
     confirm.require({
         message: `Are you sure you want to delete "${project.title}"?`,
         header: 'Confirm Deletion',
@@ -127,8 +129,10 @@ const confirmDelete = (project: Project) => {
                 onError: () => {
                     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete project', life: 3000 });
                 },
+                onFinish: () => (deleteLoading.value = false),
             });
         },
+        reject: () => (deleteLoading.value = false),
     });
 };
 
@@ -225,6 +229,8 @@ watch(visibleForm, (val) => {
                 :closeOnEscape="false"
                 @page="onPage"
                 @cell-edit-complete="onCellEditComplete"
+                scrollable
+                scrollHeight="flex"
             >
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">
@@ -368,17 +374,26 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column header="Action">
+                <Column header="Action" frozen alignFrozen="right" style="min-width: 100px">
                     <template #body="{ data }">
                         <!-- <DropdownButton :items="items" :data="data" /> -->
                         <div class="flex gap-2">
                             <Button
-                                icon="pi pi-pencil"
+                                icon="pi pi-eye"
+                                severity="secondary"
                                 size="small"
+                                :disabled="deleteLoading"
                                 @click="router.visit(route('project.show', { encoded: data.id }))"
                                 v-tooltip.bottom="'View Details'"
                             />
-                            <Button icon="pi pi-trash" size="small" severity="danger" @click="confirmDelete(data)" v-tooltip.bottom="'Delete'" />
+                            <Button 
+                                icon="pi pi-trash" 
+                                severity="danger" 
+                                size="small" 
+                                :disabled="deleteLoading"
+                                @click="confirmDelete(data)" 
+                                v-tooltip.bottom="'Delete'" 
+                            />
                         </div>
                     </template>
                 </Column>

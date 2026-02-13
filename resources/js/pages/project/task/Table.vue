@@ -28,7 +28,7 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
-    (e: 'edit', task: Task): void;
+    (e: 'edit', task: Task, parentId: string | null): void;
 }>();
 
 const deleteLoading = ref(false);
@@ -69,6 +69,7 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
         original: t,
         data: {
             id: t.id,
+            parent_id: t.parent_id,
             title: t.title,
             status: t.status,
             priority: t.priority,
@@ -202,6 +203,9 @@ const remove = (t: Task) => {
         accept: () => {
             router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
                 preserveScroll: true,
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
+                },
                 onFinish: () => (deleteLoading.value = false),
             });
         },
@@ -520,7 +524,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 size="small"
                                 severity="warning"
                                 :disabled="deleteLoading"
-                                @click="emit('edit', node.original)"
+                                @click="emit('edit', node.original, node.data.parent_id)"
                                 v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
                             <Button

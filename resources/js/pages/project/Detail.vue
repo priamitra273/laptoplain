@@ -245,7 +245,7 @@ const openTaskAdd = (parentId: string | null) => {
     visibleTaskAdd.value = true;
 };
 
-const openTaskEdit = (task: Task) => {
+const openTaskEdit = (task: Task, parentId: string | null) => {
     if (!props.isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
@@ -255,6 +255,7 @@ const openTaskEdit = (task: Task) => {
         });
         return;
     }
+    parentTaskId.value = parentId;
     selectedTask.value = task;
     visibleTaskAdd.value = true;
 };

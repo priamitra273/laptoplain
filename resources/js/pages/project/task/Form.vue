@@ -18,6 +18,7 @@ interface Props {
     parentId: string | null;
     projectId: string;
     task: Task | null;
+    tasks: Task[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
@@ -56,6 +57,11 @@ interface ProjectMemberSimple {
     name: string;
 }
 
+interface ParentOption {
+    id: string;
+    title: string;
+}
+
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
@@ -72,6 +78,71 @@ const selectedMembers = ref<ProjectMemberSimple[]>([]);
 const authUser = computed(() => usePage().props.auth.user);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
+
+const flattenTasks = (tasks: Task[]): ParentOption[] => {
+    const result: ParentOption[] = [];
+
+    const traverse = (items: Task[]) => {
+        for (const item of items) {
+            result.push({
+                id: item.id,
+                title: item.title,
+            });
+
+            if (item.sub_task_recursive?.length) {
+                traverse(item.sub_task_recursive);
+            }
+        }
+    };
+
+    traverse(tasks);
+    return result;
+};
+
+const descendantIds = computed<string[]>(() => {
+    if (!props.task) return [];
+
+    const collect = (items: Task[]): string[] => {
+        let ids: string[] = [];
+
+        for (const t of items) {
+            ids.push(t.id);
+
+            if (t.sub_task_recursive?.length) {
+                ids = ids.concat(collect(t.sub_task_recursive));
+            }
+        }
+
+        return ids;
+    };
+
+    return collect(props.task.sub_task_recursive ?? []);
+});
+
+const parentTaskOptions = computed<ParentOption[]>(() => {
+    const flat = flattenTasks(props.tasks);
+
+    if (!props.task) return flat;
+
+    return flat.filter((t) => {
+        const isSelf = t.id === props.task!.id;
+        const isDescendant = descendantIds.value.includes(t.id);
+
+        return !isSelf && !isDescendant;
+    });
+});
+
+const parentSelectOptions = computed(() => {
+    return [{ id: null, title: '— No Parent —' }, ...parentTaskOptions.value];
+});
+
+const getParentLabel = computed<string>(() => {
+    if (!form.parent_id) return '— No Parent —';
+
+    const found = parentSelectOptions.value.find((opt) => opt.id === form.parent_id);
+
+    return found?.title ?? '— No Parent —';
+});
 
 watch(
     existedMembers,
@@ -288,10 +359,6 @@ const onProgressChange = (val: number | null) => {
     }
 };
 
-const hasChild = computed(() => {
-    return Boolean(props.task && Array.isArray(props.task.sub_task_recursive) && props.task.sub_task_recursive.length > 0);
-});
-
 const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[]) => {
     return options.find((option) => option.id === id) || null;
 };
@@ -354,6 +421,23 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             />
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
         </div>
+
+        <div v-if="isEdit" class="flex flex-col">
+            <label class="font-semibold">Parent Task</label>
+            <Select
+                v-model="form.parent_id"
+                :options="parentSelectOptions"
+                optionLabel="title"
+                optionValue="id"
+                placeholder="Select Parent Task"
+                class="w-full"
+            >
+                <template #value>
+                    <span>{{ getParentLabel }}</span>
+                </template>
+            </Select>
+        </div>
+
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Start Date</label>

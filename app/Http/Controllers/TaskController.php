@@ -353,7 +353,6 @@ class TaskController extends Controller
             $data['unassign_users'],
             $data['add_tag'],
             $data['remove_tag'],
-            $data['parent_id']
         );
 
         $task->update($data);

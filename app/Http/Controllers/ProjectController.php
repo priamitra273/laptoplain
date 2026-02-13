@@ -7,29 +7,35 @@ use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Http\Requests\Project\ProjectUpdateRequest;
-use App\Models\Project;
-use App\Models\MsProjectStatus;
 use App\Models\MsProjectPriority;
 use App\Models\MsProjectRole;
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Tag;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ProjectController extends Controller
 {
+    protected const TASK_STATUS_COMPLETED = [
+        'COMPLETED',
+        'FINISHED',
+    ];
+
     public function index()
     {
         $user = Auth::user();
 
         $projects = Project::with([
             'status:id,name,severity',
-            'priority:id,name,severity'
+            'priority:id,name,severity',
         ])
             ->visibleFor($user)
             ->orderByDesc('id')
@@ -39,8 +45,8 @@ class ProjectController extends Controller
         $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
 
         $response = [
-            'projects'   => $projects->toArray(),
-            'statuses'   => $statuses->toArray(),
+            'projects' => $projects->toArray(),
+            'statuses' => $statuses->toArray(),
             'priorities' => $priorities->toArray(),
         ];
 
@@ -74,7 +80,7 @@ class ProjectController extends Controller
         }
 
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
         $projectArr = $project->toArray();
@@ -82,7 +88,7 @@ class ProjectController extends Controller
         // Get member user IDs - filter out null users
         $memberUserIds = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']);
+                return isset($member['user']) && ! is_null($member['user']);
             })
             ->pluck('user.id')
             ->filter()
@@ -112,7 +118,7 @@ class ProjectController extends Controller
         // Format assignable users with avatar_url - filter out null users
         $assignableUsers = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']);
+                return isset($member['user']) && ! is_null($member['user']);
             })
             ->map(function ($member) use ($project) {
                 // Get the full user object with media relation
@@ -120,7 +126,7 @@ class ProjectController extends Controller
                     ->where('user_id', $member['user']['id'])
                     ->first();
 
-                if (!$projectMember || !$projectMember->user) {
+                if (! $projectMember || ! $projectMember->user) {
                     return null;
                 }
 
@@ -141,14 +147,14 @@ class ProjectController extends Controller
         // Format members with avatar_url - filter out null users
         $formattedMembers = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']) && isset($member['role']);
+                return isset($member['user']) && ! is_null($member['user']) && isset($member['role']);
             })
             ->map(function ($member) use ($project) {
                 $projectMember = $project->projectMembers
                     ->where('id', $member['id'])
                     ->first();
 
-                if (!$projectMember || !$projectMember->user) {
+                if (! $projectMember || ! $projectMember->user) {
                     return null;
                 }
 
@@ -190,7 +196,7 @@ class ProjectController extends Controller
 
         // Format tasks with creator information
         $formattedTasks = collect($projectArr['tasks'] ?? [])
-            ->map(function ($task) use ($project) {
+            ->map(function ($task) {
                 // Add creator information to each task
                 if (isset($task['creator'])) {
                     $creator = User::with('media')->find($task['creator']['id']);
@@ -204,6 +210,13 @@ class ProjectController extends Controller
                     $task['sub_task_recursive'] = $this->formatSubtasksWithCreator($task['sub_task_recursive']);
                 }
 
+                $is_completed = in_array(strtoupper($task['status']['name']), self::TASK_STATUS_COMPLETED);
+
+                $task['completed_at'] = $is_completed ? $task['updated_at'] : null;
+                $task['is_overdue'] = $is_completed
+                    ? Carbon::parse($task['updated_at'])->isAfter(Carbon::parse($task['due_date'])->endOfDay())
+                    : Carbon::parse($task['due_date'])->endOfDay()->isPast();
+
                 return $task;
             })
             ->toArray();
@@ -211,9 +224,9 @@ class ProjectController extends Controller
         $data = [
             'project' => $projectArr,
             'members' => $formattedMembers,
-            'roles'   => $roles,
-            'users'   => $availableUsers,
-            'tasks'   => $formattedTasks,
+            'roles' => $roles,
+            'users' => $availableUsers,
+            'tasks' => $formattedTasks,
             'taskStatuses' => $statuses->toArray(),
             'taskPriorities' => $priorities->toArray(),
             'taskTypes' => $types->toArray(),
@@ -260,7 +273,7 @@ class ProjectController extends Controller
         $project = Project::create($request->validated());
 
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
         $projectId = $project->id;
@@ -271,10 +284,10 @@ class ProjectController extends Controller
             'project_id' => $projectId,
             'user_id' => $userId,
             'project_role_id' => $projectRoleId,
-            'owned_id' => $request["owned_id"],
-            'created_by' => $request["created_by"],
-            'updated_by' => $request["updated_by"],
-            'is_active' => true
+            'owned_id' => $request['owned_id'],
+            'created_by' => $request['created_by'],
+            'updated_by' => $request['updated_by'],
+            'is_active' => true,
         ]);
 
         return to_route('project.index')->with('success', 'Project added successfully');
@@ -285,7 +298,7 @@ class ProjectController extends Controller
         $user = Auth::user();
         try {
             $id = Sqids::decode($encoded);
-    
+
             $project = Project::findOrFail($id);
         } catch (\Exception $e) {
             return back()->with('error', 'Project not found.');
@@ -296,16 +309,16 @@ class ProjectController extends Controller
         }
         $project->update($request->validated());
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
         $referer = $request->header('referer');
-        $isFromDetail = $referer && str_contains($referer, '/project/' . $encoded);
-
+        $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);
 
         if ($isFromDetail) {
             return to_route('project.show', ['encoded' => $encoded]);
         }
+
         return to_route('project.index');
     }
 
@@ -314,7 +327,7 @@ class ProjectController extends Controller
         $user = Auth::user();
         try {
             $id = Sqids::decode($encoded);
-    
+
             $project = Project::findOrFail($id);
         } catch (\Exception $e) {
             return back()->with('error', 'Project not found.');
@@ -336,7 +349,6 @@ class ProjectController extends Controller
 
         $project->allTasks()->delete();
         $project->delete();
-
 
         return to_route('project.index')->with('success', 'Project deleted successfully');
     }

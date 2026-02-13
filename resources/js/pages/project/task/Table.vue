@@ -29,7 +29,7 @@ const emit = defineEmits<{
     (e: 'edit', task: Task): void;
 }>();
 
-const deleteLoading = ref(false)
+const deleteLoading = ref(false);
 
 const currentUser = usePage().props.auth.user;
 
@@ -73,11 +73,13 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             status: t.status,
             priority: t.priority,
             type: t.type,
-            progress: t.progress ?? 0,
+            progress: Number(t.progress) ?? 0,
             users: t.users || [],
             start_date: t.start_date,
             due_date: t.due_date,
             created_by: t.created_by,
+            completed_at: t.completed_at,
+            is_overdue: t.is_overdue,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
@@ -256,7 +258,7 @@ const toast = useToast();
 
 // Remove single task
 const remove = (t: Task) => {
-    deleteLoading.value = true
+    deleteLoading.value = true;
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -267,10 +269,10 @@ const remove = (t: Task) => {
         accept: () => {
             router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
                 preserveScroll: true,
-                onFinish: () => deleteLoading.value = false,
+                onFinish: () => (deleteLoading.value = false),
             });
         },
-        reject: () => deleteLoading.value = false,
+        reject: () => (deleteLoading.value = false),
     });
 };
 
@@ -462,7 +464,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px">
+            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
                 <!-- Select All Checkbox Column - FROZEN LEFT -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
@@ -490,23 +492,49 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
 
                 <!-- Title Column -->
-                <Column field="title" header="Title" style="min-width: 200px" />
+                <Column field="title" header="Title" style="min-width: 200px" sortable />
 
-                <Column header="Status" style="min-width: 120px">
+                <Column field="status.name" header="Status" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
 
-                <Column header="Priority" style="min-width: 120px">
+                <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
                     </template>
                 </Column>
 
-                <Column header="Type" style="min-width: 120px">
+                <Column field="type.name" header="Type" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
+                    </template>
+                </Column>
+
+                <!-- Start Date Column -->
+                <Column field="start_date" header="Start Date" style="min-width: 120px" sortable>
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.start_date) }}</span>
+                    </template>
+                </Column>
+
+                <!-- Due Date Column -->
+                <Column field="due_date" header="Due Date" style="min-width: 120px" sortable>
+                    <template #body="{ node }">
+                        <span :class="{ 'text-red-500': node.data.is_overdue }">{{ formatDate(node.data.due_date) }}</span>
+                    </template>
+                </Column>
+
+                <Column field="completed_at" header="Complete Date" style="min-width: 120px" sortable>
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.completed_at) }}</span>
+                    </template>
+                </Column>
+
+                <Column field="progress" header="Progress" style="min-width: 150px" sortable>
+                    <template #body="{ node }">
+                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
                     </template>
                 </Column>
 
@@ -536,26 +564,6 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                             <span class="text-sm">{{ node.original.creator.name }}</span>
                         </div>
                         <span v-else class="text-sm text-gray-400">-</span>
-                    </template>
-                </Column>
-
-                <!-- Start Date Column -->
-                <Column header="Start Date" style="min-width: 120px">
-                    <template #body="{ node }">
-                        <span>{{ formatDate(node.data.start_date) }}</span>
-                    </template>
-                </Column>
-
-                <!-- Due Date Column -->
-                <Column header="Due Date" style="min-width: 120px">
-                    <template #body="{ node }">
-                        <span>{{ formatDate(node.data.due_date) }}</span>
-                    </template>
-                </Column>
-
-                <Column header="Progress" style="min-width: 150px">
-                    <template #body="{ node }">
-                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
                     </template>
                 </Column>
 

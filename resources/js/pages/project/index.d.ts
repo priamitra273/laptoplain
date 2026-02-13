@@ -43,6 +43,8 @@ export interface Task {
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
+    completed_at: string | null;
+    is_overdue: boolean;
 
     project_id: string;
 
@@ -109,11 +111,18 @@ export interface TaskFormatted {
 }
 
 export interface TaskFormattedData {
+    id: string;
     title: string;
     status?: TaskStatus;
     priority?: TaskPriority;
     type?: TaskType;
     users: TaskUser[];
+    progress: number;
+    start_date: string;
+    due_date: string;
+    created_by: string | null;
+    completed_at: string | null;
+    is_overdue: boolean;
 }
 
 export interface Comment {

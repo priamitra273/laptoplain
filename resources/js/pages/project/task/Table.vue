@@ -7,20 +7,22 @@ import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
-import Paginator from 'primevue/paginator';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ComputedRef, ref, watch } from 'vue';
-import { Task, TaskFormatted, TaskFormattedData, TaskUser } from '..';
+import { computed, ComputedRef, ref } from 'vue';
+import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
 
 interface Props {
     projectId: string;
     tasks: Task[];
     isMember: boolean;
     hasPermission: boolean;
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    taskTypes: TaskType[];
 }
 
 const props = defineProps<Props>();
@@ -33,8 +35,6 @@ const deleteLoading = ref(false);
 
 const currentUser = usePage().props.auth.user;
 
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 
@@ -73,72 +73,20 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             status: t.status,
             priority: t.priority,
             type: t.type,
-            progress: Number(t.progress) ?? 0,
+            progress: t.progress ?? 0,
             users: t.users || [],
             start_date: t.start_date,
             due_date: t.due_date,
             created_by: t.created_by,
-            completed_at: t.completed_at,
-            is_overdue: t.is_overdue,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
 };
 
-// Get unique options for filters
-const statusOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const statuses = new Map();
-    const collectStatuses = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.status) {
-                statuses.set(task.status.name, task.status);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectStatuses(task.sub_task_recursive);
-            }
-        });
-    };
-    collectStatuses(props.tasks);
-    return Array.from(statuses.values());
-});
-
-const priorityOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const priorities = new Map();
-    const collectPriorities = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.priority) {
-                priorities.set(task.priority.name, task.priority);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectPriorities(task.sub_task_recursive);
-            }
-        });
-    };
-    collectPriorities(props.tasks);
-    return Array.from(priorities.values());
-});
-
-const typeOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const types = new Map();
-    const collectTypes = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.type) {
-                types.set(task.type.name, task.type);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectTypes(task.sub_task_recursive);
-            }
-        });
-    };
-    collectTypes(props.tasks);
-    return Array.from(types.values());
-});
+// Get filter options from master data (props) - show all available options
+const statusOptions = computed(() => props.taskStatuses ?? []);
+const priorityOptions = computed(() => props.taskPriorities ?? []);
+const typeOptions = computed(() => props.taskTypes ?? []);
 
 // Filter tasks recursively
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
@@ -186,13 +134,6 @@ const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     return tasks;
 });
 
-// Paginate tasks
-const paginatedTasks: ComputedRef<TaskFormatted[]> = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return filteredTasks.value.slice(start, end);
-});
-
 // Check if all tasks are selected
 const isAllSelected = computed(() => {
     if (!filteredTasks.value.length) return false;
@@ -221,16 +162,6 @@ const hasActiveFilters = computed(() => {
         (selectedTypes.value && selectedTypes.value.length > 0)
     );
 });
-
-// Reset page when search query or filters change
-watch([searchQuery, selectedStatuses, selectedPriorities, selectedTypes], () => {
-    currentPage.value = 1;
-});
-
-const onPageChange = (event: { page: number; rows: number }) => {
-    currentPage.value = event.page + 1;
-    itemsPerPage.value = event.rows;
-};
 
 // Clear all filters
 const clearFilters = () => {
@@ -464,7 +395,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
+            <TreeTable :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px">
                 <!-- Select All Checkbox Column - FROZEN LEFT -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
@@ -492,49 +423,23 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
 
                 <!-- Title Column -->
-                <Column field="title" header="Title" style="min-width: 200px" sortable />
+                <Column field="title" header="Title" style="min-width: 200px" />
 
-                <Column field="status.name" header="Status" style="min-width: 120px" sortable>
+                <Column header="Status" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
 
-                <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
+                <Column header="Priority" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
                     </template>
                 </Column>
 
-                <Column field="type.name" header="Type" style="min-width: 120px" sortable>
+                <Column header="Type" style="min-width: 120px">
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
-                    </template>
-                </Column>
-
-                <!-- Start Date Column -->
-                <Column field="start_date" header="Start Date" style="min-width: 120px" sortable>
-                    <template #body="{ node }">
-                        <span>{{ formatDate(node.data.start_date) }}</span>
-                    </template>
-                </Column>
-
-                <!-- Due Date Column -->
-                <Column field="due_date" header="Due Date" style="min-width: 120px" sortable>
-                    <template #body="{ node }">
-                        <span :class="{ 'text-red-500': node.data.is_overdue }">{{ formatDate(node.data.due_date) }}</span>
-                    </template>
-                </Column>
-
-                <Column field="completed_at" header="Complete Date" style="min-width: 120px" sortable>
-                    <template #body="{ node }">
-                        <span>{{ formatDate(node.data.completed_at) }}</span>
-                    </template>
-                </Column>
-
-                <Column field="progress" header="Progress" style="min-width: 150px" sortable>
-                    <template #body="{ node }">
-                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
                     </template>
                 </Column>
 
@@ -564,6 +469,26 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                             <span class="text-sm">{{ node.original.creator.name }}</span>
                         </div>
                         <span v-else class="text-sm text-gray-400">-</span>
+                    </template>
+                </Column>
+
+                <!-- Start Date Column -->
+                <Column header="Start Date" style="min-width: 120px">
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.start_date) }}</span>
+                    </template>
+                </Column>
+
+                <!-- Due Date Column -->
+                <Column header="Due Date" style="min-width: 120px">
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.due_date) }}</span>
+                    </template>
+                </Column>
+
+                <Column header="Progress" style="min-width: 150px">
+                    <template #body="{ node }">
+                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
                     </template>
                 </Column>
 
@@ -607,8 +532,5 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </template>
             </TreeTable>
         </div>
-
-        <!-- Pagination -->
-        <Paginator :rows="itemsPerPage" :totalRecords="filteredTasks.length" :rowsPerPageOptions="[10, 25, 50]" @page="onPageChange" />
     </div>
 </template>

@@ -218,7 +218,7 @@ watch(visibleForm, (val) => {
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 25, 50]"
-                :globalFilterFields="['title', 'description']"
+                :globalFilterFields="['project_no', 'title', 'description']"
                 striped-rows
                 row-hover
                 removable-sort
@@ -229,6 +229,14 @@ watch(visibleForm, (val) => {
                 <Column header="No" class="w-12 text-center">
                     <template #body="{ index }">
                         {{ currentPage * rowsPerPage + index + 1 }}
+                    </template>
+                </Column>
+
+                <Column field="project_no" header="Project No" sortable class="w-32">
+                    <template #body="{ data }">
+                        <span class="font-mono text-sm">
+                            {{ data.project_no ?? '-' }}
+                        </span>
                     </template>
                 </Column>
 

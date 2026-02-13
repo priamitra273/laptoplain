@@ -9,6 +9,7 @@ use App\Models\MsProjectPriority;
 use App\Models\MsProjectStatus;
 use App\Models\ProjectMember;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class Project extends Model
 {
@@ -17,6 +18,7 @@ class Project extends Model
     protected $table = 'projects';
 
     protected $fillable = [
+        'project_no',
         'status_id',
         'priority_id',
         'owner_id',
@@ -46,6 +48,34 @@ class Project extends Model
         'owner',
         'owned',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($project) {
+            if (!empty($project->project_no)) {
+                return;
+            }
+
+            DB::transaction(function () use ($project) {
+                $year = now()->format('y');
+
+                $lastProject = DB::table('projects')
+                    ->where('project_no', 'like', "IT{$year}%")
+                    ->orderBy('project_no', 'desc')
+                    ->lockForUpdate()
+                    ->first();
+
+                $sequence = $lastProject
+                    ? ((int) substr($lastProject->project_no, -3) + 1)
+                    : 1;
+
+                $project->project_no = 'IT'
+                    . $year
+                    . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+            });
+        });
+    }
+
 
     public function status()
     {

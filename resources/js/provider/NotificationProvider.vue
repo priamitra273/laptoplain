@@ -1,29 +1,42 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { Notification } from '@/types';
-import { onBeforeUnmount, onMounted, onUnmounted, provide, ref } from 'vue';
+import { onBeforeUnmount, onMounted, provide, ref } from 'vue';
 
 const notifications = ref<Notification[]>([]);
 const unreadCount = ref(0);
 let es: EventSource | null = null;
 
-onMounted(() => {
-    es = new EventSource('/notifications/stream');
+onBeforeUnmount(() => es?.close());
+
+const connect = () => {
+    if (es) return
+
+    es = new EventSource('/notifications/stream')
 
     es.addEventListener('init', (e) => {
         notifications.value = JSON.parse(e.data);
         unreadCount.value = notifications.value.filter((n) => !n.is_read).length;
-    });
+    })
 
     es.addEventListener('notification', (e) => {
         const n = JSON.parse(e.data);
         notifications.value.unshift(n);
         unreadCount.value++;
-    });
-});
+    })
 
-onBeforeUnmount(() => es?.close());
-onUnmounted(() => console.log("unmounted"));
+    es.onerror = () => {
+        es?.close()
+        es = null
+    }
+}
+
+const disconnect = () => {
+    es?.close()
+    es = null
+    notifications.value = []
+    unreadCount.value = 0
+}
 
 const markAsRead = async (notificationId: string) => {
     const currentCount = unreadCount.value
@@ -59,7 +72,9 @@ provide('notifications', {
     notifications,
     unreadCount,
     markAsRead,
-    clearNotifications
+    clearNotifications,
+    connect,
+    disconnect
 });
 </script>
 

@@ -2,9 +2,7 @@
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { ProjectPriority } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
+import { Head, usePage } from '@inertiajs/vue3';
 import ProjectPriorityTable from './Table.vue';
 
 interface Props {
@@ -14,6 +12,11 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     project_priorities: () => [],
 });
+
+const hasPermission = (): boolean => {
+    const role = usePage().props.auth.role;
+    return role === 'super-admin-admin' || role === 'admin-admin';
+}
 </script>
 
 <template>
@@ -22,10 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
     <AppLayout>
         <div class="flex flex-col gap-6">
             <Heading title="Project Priority" description="Manage master data project priority" />
-            <ProjectPriorityTable :project_priorities="props.project_priorities" />
+            <ProjectPriorityTable :project_priorities="props.project_priorities" :has-permission="hasPermission()" />
         </div>
-
-        <Toast />
-        <ConfirmDialog />
     </AppLayout>
 </template>

@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
-            
+
             $table->foreignId('owned_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('tasks')->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained('ms_task_statuses')->nullOnDelete();
             $table->foreignId('priority_id')->nullable()->constrained('ms_task_priorities')->nullOnDelete();
             $table->foreignId('type_id')->nullable()->constrained('ms_task_types')->nullOnDelete();
-            
-            
+
+
             $table->date('start_date')->nullable();
             $table->date('due_date')->nullable();
             $table->string('emoji', 100)->nullable();
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->double('progress')->default(0);
             $table->integer('sequence_number')->nullable();
             $table->boolean('is_archived')->default(false);
-            
+
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->string('deleted_by')->nullable();

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckRoutePermission;
 use App\Http\Middleware\EnsureUuidIsValid;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -26,7 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'validate.uuid' => EnsureUuidIsValid::class
+            'validate.uuid' => EnsureUuidIsValid::class,
+            'route.permission' => CheckRoutePermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

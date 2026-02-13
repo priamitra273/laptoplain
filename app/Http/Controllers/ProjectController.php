@@ -2,29 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
+use App\Facades\TaskNotification;
 use App\Http\Requests\Project\ProjectStoreRequest;
-use App\Models\Project;
-use App\Models\MsProjectStatus;
+use App\Http\Requests\Project\ProjectUpdateRequest;
 use App\Models\MsProjectPriority;
 use App\Models\MsProjectRole;
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
+use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Tag;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ProjectController extends Controller
 {
+    protected const TASK_STATUS_COMPLETED = [
+        'COMPLETED',
+        'FINISHED',
+    ];
+
     public function index()
     {
+        $user = Auth::user();
+
         $projects = Project::with([
             'status:id,name,severity',
-            'priority:id,name,severity'
+            'priority:id,name,severity',
         ])
+            ->visibleFor($user)
             ->orderByDesc('id')
             ->get();
 
@@ -32,8 +45,8 @@ class ProjectController extends Controller
         $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
 
         $response = [
-            'projects'   => $projects->toArray(),
-            'statuses'   => $statuses->toArray(),
+            'projects' => $projects->toArray(),
+            'statuses' => $statuses->toArray(),
             'priorities' => $priorities->toArray(),
         ];
 
@@ -44,41 +57,30 @@ class ProjectController extends Controller
     {
         try {
             $projectId = Sqids::decode($encoded);
+            $project = Project::with([
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'projectMembers' => function ($query) {
+                    $query->whereHas('user');
+                },
+                'projectMembers.user:id,name,email',
+                'projectMembers.user.media',
+                'projectMembers.role:id,name',
+                'tasks' => function ($query) {
+                    $query->withRecursive();
+                },
+            ])->findOrFail($projectId);
         } catch (\Exception $e) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+            throw new NotFoundHttpException(404);
         }
 
-        if (!$projectId) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
-        }
-
-        $project = Project::with([
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'projectMembers' => function ($query) {
-                $query->whereHas('user');
-            },
-            'projectMembers.user:id,name,email',
-            'projectMembers.user.media',
-            'projectMembers.role:id,name',
-            'tasks' => function ($query) {
-                $query->withRecursive();
-            },
-        ])->find($projectId);
-
-
-        if (!$project) {
-            return Inertia::render('errors/NotFound')
-                ->toResponse(request())
-                ->setStatusCode(404);
+        $currentUser = Auth::user();
+        if ($currentUser->cannot('view', $project)) {
+            throw new NotFoundHttpException(404);
         }
 
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
         $projectArr = $project->toArray();
@@ -86,7 +88,7 @@ class ProjectController extends Controller
         // Get member user IDs - filter out null users
         $memberUserIds = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']);
+                return isset($member['user']) && ! is_null($member['user']);
             })
             ->pluck('user.id')
             ->filter()
@@ -108,7 +110,7 @@ class ProjectController extends Controller
 
         $roles = MsProjectRole::all(['id', 'name'])->toArray();
 
-        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $statuses = MsTaskStatus::select('id', 'name', 'severity', 'score')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $tags = Tag::select('id', 'name', 'severity')->get();
@@ -116,7 +118,7 @@ class ProjectController extends Controller
         // Format assignable users with avatar_url - filter out null users
         $assignableUsers = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']);
+                return isset($member['user']) && ! is_null($member['user']);
             })
             ->map(function ($member) use ($project) {
                 // Get the full user object with media relation
@@ -124,7 +126,7 @@ class ProjectController extends Controller
                     ->where('user_id', $member['user']['id'])
                     ->first();
 
-                if (!$projectMember || !$projectMember->user) {
+                if (! $projectMember || ! $projectMember->user) {
                     return null;
                 }
 
@@ -145,14 +147,14 @@ class ProjectController extends Controller
         // Format members with avatar_url - filter out null users
         $formattedMembers = collect($projectArr['project_members'])
             ->filter(function ($member) {
-                return isset($member['user']) && !is_null($member['user']) && isset($member['role']);
+                return isset($member['user']) && ! is_null($member['user']) && isset($member['role']);
             })
             ->map(function ($member) use ($project) {
                 $projectMember = $project->projectMembers
                     ->where('id', $member['id'])
                     ->first();
 
-                if (!$projectMember || !$projectMember->user) {
+                if (! $projectMember || ! $projectMember->user) {
                     return null;
                 }
 
@@ -168,23 +170,11 @@ class ProjectController extends Controller
                     'role' => $member['role'],
                 ];
             })
-            ->filter() // Remove null values
+            ->filter()
             ->values()
             ->toArray();
 
-        $currentUser = Auth::user();
         $currentUserId = Auth::id();
-        $isAdmin = $currentUser->roles->contains(function ($role) {
-            return stripos($role->name, 'admin-') === 0;
-        });
-
-        $isPM = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->where('user_id', $currentUserId)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
 
         $isMember = $project->projectMembers
             ->filter(function ($member) {
@@ -201,35 +191,89 @@ class ProjectController extends Controller
             ->where('role.name', 'Owner')
             ->isNotEmpty();
 
-        $canManageMembers = $isAdmin || $isPM;
+        $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')->get();
+        $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
+
+        // Format tasks with creator information
+        $formattedTasks = collect($projectArr['tasks'] ?? [])
+            ->map(function ($task) {
+                // Add creator information to each task
+                if (isset($task['creator'])) {
+                    $creator = User::with('media')->find($task['creator']['id']);
+                    if ($creator) {
+                        $task['creator']['avatar_url'] = $creator->avatar_url;
+                    }
+                }
+
+                // Recursively add creator info to subtasks
+                if (isset($task['sub_task_recursive']) && is_array($task['sub_task_recursive'])) {
+                    $task['sub_task_recursive'] = $this->formatSubtasksWithCreator($task['sub_task_recursive']);
+                }
+
+                $is_completed = in_array(strtoupper($task['status']['name']), self::TASK_STATUS_COMPLETED);
+
+                $task['completed_at'] = $is_completed ? $task['updated_at'] : null;
+                $task['is_overdue'] = $is_completed
+                    ? Carbon::parse($task['updated_at'])->isAfter(Carbon::parse($task['due_date'])->endOfDay())
+                    : Carbon::parse($task['due_date'])->endOfDay()->isPast();
+
+                return $task;
+            })
+            ->toArray();
 
         $data = [
             'project' => $projectArr,
             'members' => $formattedMembers,
-            'roles'   => $roles,
-            'users'   => $availableUsers,
-            'tasks'   => $projectArr['tasks'],
+            'roles' => $roles,
+            'users' => $availableUsers,
+            'tasks' => $formattedTasks,
             'taskStatuses' => $statuses->toArray(),
             'taskPriorities' => $priorities->toArray(),
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers,
-            'isAdmin' => $isAdmin,
-            'isPM' => $isPM,
             'isMember' => $isMember,
             'isOwner' => $isOwner,
-            'canManageMembers' => $canManageMembers
+            'statuses' => $projectStatuses->toArray(),
+            'priorities' => $projectPriorities->toArray(),
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
+    /**
+     * Helper function to recursively format subtasks with creator information
+     */
+    private function formatSubtasksWithCreator(array $subtasks): array
+    {
+        return collect($subtasks)
+            ->map(function ($subtask) {
+                if (isset($subtask['creator'])) {
+                    $creator = User::with('media')->find($subtask['creator']['id']);
+                    if ($creator) {
+                        $subtask['creator']['avatar_url'] = $creator->avatar_url;
+                    }
+                }
+
+                if (isset($subtask['sub_task_recursive']) && is_array($subtask['sub_task_recursive'])) {
+                    $subtask['sub_task_recursive'] = $this->formatSubtasksWithCreator($subtask['sub_task_recursive']);
+                }
+
+                return $subtask;
+            })
+            ->toArray();
+    }
+
     public function store(ProjectStoreRequest $request)
     {
+        $user = Auth::user();
+        if ($user->cannot('create', Project::class)) {
+            return back()->with('error', 'You do not have permission to create a project.');
+        }
         $project = Project::create($request->validated());
 
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
         $projectId = $project->id;
@@ -240,33 +284,71 @@ class ProjectController extends Controller
             'project_id' => $projectId,
             'user_id' => $userId,
             'project_role_id' => $projectRoleId,
-            'owned_id' => $request["owned_id"],
-            'created_by' => $request["created_by"],
-            'updated_by' => $request["updated_by"],
-            'is_active' => true
+            'owned_id' => $request['owned_id'],
+            'created_by' => $request['created_by'],
+            'updated_by' => $request['updated_by'],
+            'is_active' => true,
         ]);
 
         return to_route('project.index')->with('success', 'Project added successfully');
     }
 
-    public function update(ProjectStoreRequest $request, string $encoded)
+    public function update(ProjectUpdateRequest $request, string $encoded)
     {
-        $id = Sqids::decode($encoded);
+        $user = Auth::user();
+        try {
+            $id = Sqids::decode($encoded);
 
-        $project = Project::findOrFail($id);
+            $project = Project::findOrFail($id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Project not found.');
+        }
+
+        if ($user->cannot('update', $project)) {
+            return back()->with('error', 'You do not have permission to update this project.');
+        }
         $project->update($request->validated());
         $project->update([
-            'progress' => $project->calculateProgress()
+            'progress' => $project->calculateProgress(),
         ]);
 
-        return to_route('project.index')->with('success', 'Project updated successfully');
+        $referer = $request->header('referer');
+        $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);
+
+        if ($isFromDetail) {
+            return to_route('project.show', ['encoded' => $encoded]);
+        }
+
+        return to_route('project.index');
     }
 
     public function destroy(string $encoded)
     {
-        $id = Sqids::decode($encoded);
+        $user = Auth::user();
+        try {
+            $id = Sqids::decode($encoded);
 
-        Project::findOrFail($id)->delete();
+            $project = Project::findOrFail($id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Project not found.');
+        }
+        if ($user->cannot('delete', $project)) {
+            return back()->with('error', 'You do not have permission to delete this project.');
+        }
+        $project->allTasks()
+            ->with('users')
+            ->chunkById(100, function ($tasks) {
+                foreach ($tasks as $task) {
+                    TaskNotification::createTaskNotification(
+                        $task,
+                        $task->users->pluck('id')->toArray(),
+                        TaskNotificationType::DELETED
+                    );
+                }
+            });
+
+        $project->allTasks()->delete();
+        $project->delete();
 
         return to_route('project.index')->with('success', 'Project deleted successfully');
     }

@@ -86,6 +86,16 @@ class CommentController extends Controller
             'updated_by' => $userId,
         ]);
 
-        return back();
+        // Manual encode keys (user IDs) dari reactions
+        $encodedReactions = [];
+        foreach ($reactions as $uid => $reactionType) {
+            $encodedUserId = Sqids::encode($uid);
+            $encodedReactions[$encodedUserId] = $reactionType;
+        }
+
+        return response()->json([
+            'success' => true,
+            'reactions' => $encodedReactions,
+        ]);
     }
 }

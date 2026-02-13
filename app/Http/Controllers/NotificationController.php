@@ -49,7 +49,6 @@ class NotificationController extends Controller
             $PING_INTERVAL = 30;
             $lastPing = time();
 
-            // Initial dump
             $initial = Notification::whereHas(
                 'users',
                 fn($q) => $q->where('user_id', $userId)
@@ -74,7 +73,6 @@ class NotificationController extends Controller
             ) . "\n\n";
             flush();
 
-            // Loop Redis
             while (!connection_aborted()) {
                 $cached = Cache::store('redis')->get($key, []);
 
@@ -90,7 +88,6 @@ class NotificationController extends Controller
                     $lastPing = time();
                 }
 
-                // heartbeat
                 if (time() - $lastPing >= $PING_INTERVAL) {
                     echo ": ping\n\n";
                     flush();

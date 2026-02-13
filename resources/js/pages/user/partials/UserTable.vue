@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link, router } from '@inertiajs/vue3'
-import { FilterMatchMode } from '@primevue/core/api';
-import Icon from '@/components/Icon.vue';
-import moment from 'moment';
 import DropdownButton from '@/components/DropdownButton.vue';
+import Icon from '@/components/Icon.vue';
 import { UserList } from '@/types';
+import { Link, router } from '@inertiajs/vue3';
+import { FilterMatchMode } from '@primevue/core/api';
+import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
-import Swal from 'sweetalert2'
+import Swal from 'sweetalert2';
+import { ref } from 'vue';
 
 interface Props {
-    users: UserList[]
+    users: UserList[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    users: () => []
-})
+    users: () => [],
+});
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -25,15 +25,15 @@ const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            router.visit(route('user.edit', event.item.menuKey))
+            router.visit(route('user.edit', event.item.menuKey));
         },
     },
     {
         label: 'Delete',
         command(event) {
-            destroy(event.item.data)
+            destroy(event.item.data);
         },
-    }
+    },
 ];
 
 const destroy = (user: UserList) => {
@@ -45,19 +45,18 @@ const destroy = (user: UserList) => {
         confirmButtonText: 'Delete',
         cancelButtonText: `Cancel`,
         customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300'
-        }
+            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
+        },
     }).then(async (result) => {
         if (result.isConfirmed) {
             router.delete(route('user.destroy', user.uuid), {
                 onSuccess() {
-                    Swal.fire('Success', 'Success delete data', 'success')
-                }
-            })
+                    Swal.fire('Success', 'Success delete data', 'success');
+                },
+            });
         }
     });
 };
-
 </script>
 
 <template>
@@ -81,8 +80,17 @@ const destroy = (user: UserList) => {
 
         <!-- Datatable -->
         <div class="card overflow-hidden">
-            <DataTable :value="users" v-model:filters="filters" data-key="id" paginator :rows="25"
-                :rowsPerPageOptions="[25, 50, 100]" :globalFilterFields="['name', 'team_name']" striped-rows row-hover>
+            <DataTable
+                :value="users"
+                v-model:filters="filters"
+                data-key="id"
+                paginator
+                :rows="25"
+                :rowsPerPageOptions="[25, 50, 100]"
+                :globalFilterFields="['name', 'team_name', 'email']"
+                striped-rows
+                row-hover
+            >
                 <Column header="No">
                     <template #body="{ index }">
                         {{ index + 1 }}
@@ -90,6 +98,7 @@ const destroy = (user: UserList) => {
                 </Column>
 
                 <Column field="team_name" header="Team"></Column>
+                <Column field="role_label" header="Role"></Column>
                 <Column field="name" header="Name"></Column>
                 <Column field="email" header="Email"></Column>
 
@@ -112,9 +121,7 @@ const destroy = (user: UserList) => {
                 </Column>
 
                 <template #empty>
-                    <p class="text-center">
-                        No Data
-                    </p>
+                    <p class="text-center">No Data</p>
                 </template>
             </DataTable>
         </div>

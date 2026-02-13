@@ -41,8 +41,10 @@ const props = defineProps<{
     types: any[];
     isMember: boolean;
     isTaskMember: boolean;
+    creator?: User;
 }>();
 
+const commentLoading = ref(false)
 const currentUserId = computed(() => Number(usePage().props.auth.user.id));
 
 const toast = useToast();
@@ -70,6 +72,7 @@ const breadcrumbHome = {
 };
 
 const formatDate = (date?: string) => (date ? moment(date).format('DD MMM YYYY') : '-');
+const formatDateTime = (date?: string) => (date ? moment(date).format('DD MMM YYYY HH:mm') : '-');
 
 const goToProject = () => {
     if (props.project?.id) {
@@ -225,6 +228,8 @@ const hasSubTasks = computed(() => {
 const newComment = ref('');
 
 const submitComment = () => {
+    commentLoading.value = true
+
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = newComment.value;
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
@@ -257,6 +262,7 @@ const submitComment = () => {
                     detail: 'Comment posted successfully.',
                     life: 3000,
                 });
+                commentLoading.value = false
             },
             onError: () => {
                 toast.add({
@@ -265,7 +271,9 @@ const submitComment = () => {
                     detail: 'Failed to post comment. Please try again.',
                     life: 3000,
                 });
+                commentLoading.value = false
             },
+            onFinish: () => commentLoading.value = false
         },
     );
 };
@@ -386,6 +394,39 @@ const submitComment = () => {
                         <template #content>
                             <Divider class="my-3" />
                             <div class="space-y-4">
+                                <!-- Created By Section -->
+                                <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                                    <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <i class="pi pi-user mr-1 text-indigo-500"></i>CREATED BY
+                                    </p>
+                                    <div v-if="props.creator" class="flex items-center gap-2">
+                                        <Avatar
+                                            :image="
+                                                props.creator.avatar_url && props.creator.avatar_url !== '/images/default-avatar.png'
+                                                    ? props.creator.avatar_url
+                                                    : undefined
+                                            "
+                                            :label="
+                                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
+                                                    ? getInitials(props.creator.name)
+                                                    : undefined
+                                            "
+                                            shape="circle"
+                                            size="normal"
+                                            :style="
+                                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
+                                                    ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
+                                                    : {}
+                                            "
+                                        />
+                                        <div>
+                                            <p class="text-sm font-semibold">{{ props.creator.name }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDateTime(props.task.created_at) }}</p>
+                                        </div>
+                                    </div>
+                                    <p v-else class="text-sm italic text-gray-400">Unknown</p>
+                                </div>
+
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">STATUS</p>
@@ -605,7 +646,8 @@ const submitComment = () => {
                                         label="Post Comment"
                                         icon="pi pi-send"
                                         @click="submitComment"
-                                        :disabled="!newComment.trim()"
+                                        :disabled="!newComment.trim() || commentLoading"
+                                        :loading="commentLoading"
                                         class="shadow-md"
                                     />
                                 </div>

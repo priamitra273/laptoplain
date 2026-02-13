@@ -2,7 +2,6 @@
 import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
-import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -13,8 +12,7 @@ interface Props {
     members: ProjectMember[];
     roles: { id: string; name: string }[];
     users: { id: string; name: string }[];
-    isPM: boolean;
-    isAdmin: boolean;
+    hasPermission: boolean;
 }
 
 const props = defineProps<Props>();
@@ -55,16 +53,10 @@ const remove = (member: ProjectMember) => {
 </script>
 
 <template>
-    <!-- ConfirmDialog Global -->
-    <ConfirmDialog />
-
-    <!-- Toast -->
-    <Toast />
-
     <div class="mb-4 flex items-center justify-between">
         <h3 class="text-lg font-semibold">Members</h3>
         <!-- Hanya tampilkan tombol Add Member jika isPM atau isAdmin true -->
-        <Button v-if="props.isPM || props.isAdmin" label="Add Member" icon="pi pi-plus" @click="emit('add')" />
+        <Button v-if="props.hasPermission" label="Add Member" icon="pi pi-plus" @click="emit('add')" />
     </div>
 
     <div class="w-full overflow-x-auto">
@@ -98,7 +90,7 @@ const remove = (member: ProjectMember) => {
             </Column>
 
             <!-- Hanya tampilkan kolom Action jika isPM atau isAdmin true -->
-            <Column v-if="props.isPM || props.isAdmin" header="Action" class="w-28 text-center">
+            <Column v-if="props.hasPermission" header="Action" class="w-28 text-center">
                 <template #body="{ data }">
                     <div class="flex items-center justify-center gap-1">
                         <Button icon="pi pi-pencil" size="small" text @click="emit('edit', data)" />

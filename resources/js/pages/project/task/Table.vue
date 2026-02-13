@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
+import moment from 'moment';
+import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Paginator from 'primevue/paginator';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
@@ -16,9 +19,8 @@ import { Task, TaskFormatted, TaskFormattedData, TaskUser } from '..';
 interface Props {
     projectId: string;
     tasks: Task[];
-    isPM: boolean;
     isMember: boolean;
-    isOwner: boolean;
+    hasPermission: boolean;
 }
 
 const props = defineProps<Props>();
@@ -27,12 +29,37 @@ const emit = defineEmits<{
     (e: 'edit', task: Task): void;
 }>();
 
+const deleteLoading = ref(false);
+
 const currentUser = usePage().props.auth.user;
 
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
+
+// Filter refs
+const selectedStatuses = ref<string[]>([]);
+const selectedPriorities = ref<string[]>([]);
+const selectedTypes = ref<string[]>([]);
+
+// Format date helper
+const formatDate = (date: string | null | undefined): string => {
+    if (!date) return '-';
+    return moment(date).format('DD MMM YYYY');
+};
+
+// Get initials for avatar
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+// Get color for avatar
+const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
 // Format tasks for TreeTable
 const formatTasks = (list?: Task[]): TaskFormatted[] => {
@@ -46,15 +73,102 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             status: t.status,
             priority: t.priority,
             type: t.type,
-            progress: t.progress ?? 0,
+            progress: Number(t.progress) ?? 0,
             users: t.users || [],
+            start_date: t.start_date,
+            due_date: t.due_date,
+            created_by: t.created_by,
+            completed_at: t.completed_at,
+            is_overdue: t.is_overdue,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
     }));
 };
 
-// Filter and sort tasks based on search query (newest first)
+// Get unique options for filters
+const statusOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
+    const statuses = new Map();
+    const collectStatuses = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.status) {
+                statuses.set(task.status.name, task.status);
+            }
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
+                collectStatuses(task.sub_task_recursive);
+            }
+        });
+    };
+    collectStatuses(props.tasks);
+    return Array.from(statuses.values());
+});
+
+const priorityOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
+    const priorities = new Map();
+    const collectPriorities = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.priority) {
+                priorities.set(task.priority.name, task.priority);
+            }
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
+                collectPriorities(task.sub_task_recursive);
+            }
+        });
+    };
+    collectPriorities(props.tasks);
+    return Array.from(priorities.values());
+});
+
+const typeOptions = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
+    const types = new Map();
+    const collectTypes = (tasks: Task[]) => {
+        tasks.forEach((task) => {
+            if (task.type) {
+                types.set(task.type.name, task.type);
+            }
+            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
+                collectTypes(task.sub_task_recursive);
+            }
+        });
+    };
+    collectTypes(props.tasks);
+    return Array.from(types.values());
+});
+
+// Filter tasks recursively
+const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
+    // Check if current task matches
+    const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
+    const matchesStatus =
+        !selectedStatuses.value ||
+        selectedStatuses.value.length === 0 ||
+        (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
+
+    const matchesPriority =
+        !selectedPriorities.value ||
+        selectedPriorities.value.length === 0 ||
+        (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
+
+    const matchesType =
+        !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
+
+    const currentMatches = matchesSearch && matchesStatus && matchesPriority && matchesType;
+
+    // Check if any children match
+    const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
+
+    return currentMatches || hasMatchingChildren;
+};
+
+// Filter and sort tasks based on search query and filters (newest first)
 const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
+    if (!props.tasks || !Array.isArray(props.tasks)) return [];
+
     let tasks = formatTasks(props.tasks);
 
     // Sort by created_at or updated_at (newest first)
@@ -64,14 +178,11 @@ const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
         return dateB - dateA; // Descending order (newest first)
     });
 
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        tasks = tasks.filter(
-            (task) =>
-                task.data.title.toLowerCase().includes(query) ||
-                (task.children && task.children.some((child) => child.data.title.toLowerCase().includes(query))),
-        );
-    }
+    const query = searchQuery.value.toLowerCase();
+
+    // Apply filters
+    tasks = tasks.filter((task) => filterTaskRecursive(task, query));
+
     return tasks;
 });
 
@@ -101,8 +212,18 @@ const hasSelectedTasks = computed(() => {
     return Object.keys(selectedKey.value).length > 0;
 });
 
-// Reset page when search query changes
-watch([searchQuery], () => {
+// Check if any filter is active
+const hasActiveFilters = computed(() => {
+    return (
+        searchQuery.value !== '' ||
+        (selectedStatuses.value && selectedStatuses.value.length > 0) ||
+        (selectedPriorities.value && selectedPriorities.value.length > 0) ||
+        (selectedTypes.value && selectedTypes.value.length > 0)
+    );
+});
+
+// Reset page when search query or filters change
+watch([searchQuery, selectedStatuses, selectedPriorities, selectedTypes], () => {
     currentPage.value = 1;
 });
 
@@ -111,11 +232,33 @@ const onPageChange = (event: { page: number; rows: number }) => {
     itemsPerPage.value = event.rows;
 };
 
+// Clear all filters
+const clearFilters = () => {
+    searchQuery.value = '';
+    selectedStatuses.value = [];
+    selectedPriorities.value = [];
+    selectedTypes.value = [];
+};
+
+// Handle clear for individual filters
+const handleClearStatuses = () => {
+    selectedStatuses.value = [];
+};
+
+const handleClearPriorities = () => {
+    selectedPriorities.value = [];
+};
+
+const handleClearTypes = () => {
+    selectedTypes.value = [];
+};
+
 const confirm = useConfirm();
 const toast = useToast();
 
 // Remove single task
 const remove = (t: Task) => {
+    deleteLoading.value = true;
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -126,15 +269,10 @@ const remove = (t: Task) => {
         accept: () => {
             router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
                 preserveScroll: true,
-            });
-
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Task removed successfully',
-                life: 3000,
+                onFinish: () => (deleteLoading.value = false),
             });
         },
+        reject: () => (deleteLoading.value = false),
     });
 };
 
@@ -207,7 +345,7 @@ const removeSelected = () => {
 };
 
 const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
-    if (props.isOwner) return true;
+    if (props.hasPermission) return true;
 
     const taskUsers: TaskUser[] = task.users || [];
     const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
@@ -221,7 +359,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember || hasPermission">
                 <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
                 <Button
                     v-if="hasSelectedTasks"
@@ -235,17 +373,100 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
             </div>
         </div>
 
-        <!-- Search input -->
-        <div class="mb-4 w-full">
-            <label class="mb-2 block text-sm font-medium">Search</label>
-            <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+        <!-- Filters Section -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <!-- Search input -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Search</label>
+                <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+            </div>
+
+            <!-- Status Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Status</label>
+                <MultiSelect
+                    v-model="selectedStatuses"
+                    :options="statusOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Status"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearStatuses"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
+                    </template>
+                </MultiSelect>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Priority</label>
+                <MultiSelect
+                    v-model="selectedPriorities"
+                    :options="priorityOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Priority"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearPriorities"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
+                    </template>
+                </MultiSelect>
+            </div>
+
+            <!-- Type Filter -->
+            <div class="w-full">
+                <label class="mb-2 block text-sm font-medium">Type</label>
+                <MultiSelect
+                    v-model="selectedTypes"
+                    :options="typeOptions"
+                    optionLabel="name"
+                    optionValue="name"
+                    placeholder="Select Type"
+                    class="w-full"
+                    :maxSelectedLabels="2"
+                    showClear
+                    @clear="handleClearTypes"
+                >
+                    <template #option="slotProps">
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                    </template>
+                    <template #header>
+                        <div class="flex items-center gap-2 px-3 py-2">
+                            <span class="font-semibold">Select All</span>
+                        </div>
+                    </template>
+                </MultiSelect>
+            </div>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <div v-if="hasActiveFilters" class="flex justify-end">
+            <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
         </div>
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable :value="paginatedTasks" class="min-w-full">
-                <!-- Select All Checkbox Column -->
-                <Column :expander="false" style="width: 3rem" v-if="isMember">
+            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
+                <!-- Select All Checkbox Column - FROZEN LEFT -->
+                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
@@ -267,57 +488,117 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Expander Column -->
-                <Column :expander="true" style="width: 3rem" />
+                <!-- Expander Column - FROZEN LEFT -->
+                <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
 
                 <!-- Title Column -->
-                <Column field="title" header="Title" />
+                <Column field="title" header="Title" style="min-width: 200px" sortable />
 
-                <Column header="Status">
+                <Column field="status.name" header="Status" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
-                <Column header="Priority">
+
+                <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
                     </template>
                 </Column>
-                <Column header="Type">
+
+                <Column field="type.name" header="Type" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
                     </template>
                 </Column>
 
-                <Column header="Progress">
+                <!-- Start Date Column -->
+                <Column field="start_date" header="Start Date" style="min-width: 120px" sortable>
                     <template #body="{ node }">
-                        <div class="flex min-w-[120px] items-center gap-2">
-                            <ProgressBar :value="node.data.progress" :showValue="false" class="h-2 flex-1" />
-                            <span class="text-xs">{{ node.data.progress }}%</span>
-                        </div>
+                        <span>{{ formatDate(node.data.start_date) }}</span>
                     </template>
                 </Column>
 
-                <Column header="Actions">
+                <!-- Due Date Column -->
+                <Column field="due_date" header="Due Date" style="min-width: 120px" sortable>
                     <template #body="{ node }">
-                        <Link :href="route('task.show', node.original)">
-                            <Button icon="pi pi-eye" size="small" severity="secondary" />
-                        </Link>
-                        <Button icon="pi pi-plus" size="small" severity="info" @click="emit('add', node.data.id)" v-if="isMember" />
-                        <Button
-                            icon="pi pi-pencil"
-                            size="small"
-                            severity="warning"
-                            @click="emit('edit', node.original)"
-                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
-                        />
-                        <Button
-                            icon="pi pi-trash"
-                            size="small"
-                            severity="danger"
-                            @click="remove(node.original)"
-                            v-if="isMember && hasAccessToEditAndDelete(node.data)"
-                        />
+                        <span :class="{ 'text-red-500': node.data.is_overdue }">{{ formatDate(node.data.due_date) }}</span>
+                    </template>
+                </Column>
+
+                <Column field="completed_at" header="Complete Date" style="min-width: 120px" sortable>
+                    <template #body="{ node }">
+                        <span>{{ formatDate(node.data.completed_at) }}</span>
+                    </template>
+                </Column>
+
+                <Column field="progress" header="Progress" style="min-width: 150px" sortable>
+                    <template #body="{ node }">
+                        <ProgressBar :value="node.data.progress" :showValue="true" class="min-w-[120px]" />
+                    </template>
+                </Column>
+
+                <!-- Created By Column -->
+                <Column header="Created By" style="min-width: 150px">
+                    <template #body="{ node }">
+                        <div v-if="node.original.creator" class="flex items-center gap-2">
+                            <Avatar
+                                :image="
+                                    node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
+                                        ? node.original.creator.avatar_url
+                                        : undefined
+                                "
+                                :label="
+                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
+                                        ? getInitials(node.original.creator.name)
+                                        : undefined
+                                "
+                                shape="circle"
+                                size="small"
+                                :style="
+                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
+                                        ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
+                                        : {}
+                                "
+                            />
+                            <span class="text-sm">{{ node.original.creator.name }}</span>
+                        </div>
+                        <span v-else class="text-sm text-gray-400">-</span>
+                    </template>
+                </Column>
+
+                <!-- Actions Column - FROZEN RIGHT -->
+                <Column header="Actions" frozen alignFrozen="right" style="min-width: 200px">
+                    <template #body="{ node }">
+                        <div class="flex gap-1">
+                            <Link :href="route('task.show', node.original)">
+                                <Button icon="pi pi-eye" size="small" severity="secondary" />
+                            </Link>
+                            <Button
+                                icon="pi pi-plus"
+                                size="small"
+                                severity="info"
+                                :disabled="deleteLoading"
+                                @click="emit('add', node.data.id)"
+                                v-if="isMember || hasPermission"
+                            />
+                            <Button
+                                icon="pi pi-pencil"
+                                size="small"
+                                severity="warning"
+                                :disabled="deleteLoading"
+                                @click="emit('edit', node.original)"
+                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
+                            />
+                            <Button
+                                icon="pi pi-trash"
+                                size="small"
+                                severity="danger"
+                                :disabled="deleteLoading"
+                                @click="remove(node.original)"
+                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
+                            />
+                        </div>
                     </template>
                 </Column>
 

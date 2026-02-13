@@ -3,7 +3,6 @@ import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import InputError from '@/components/InputError.vue';
 import Select from 'primevue/select';
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import type { ProjectMember } from '..';
 
@@ -62,7 +61,5 @@ const save = () => {
             <Button label="Cancel" severity="secondary" @click="emit('close')" />
             <Button label="Save" icon="pi pi-check" @click="save" />
         </div>
-
-        <Toast />
     </div>
 </template>

@@ -529,7 +529,15 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
             <Button v-if="!isEdit" label="Create Task" @click="submit" icon=" pi pi-save" :loading="form.processing" :disabled="form.processing" />
-            <Button v-else label="Update Task" severity="warning" @click="submit" :loading="form.processing" :disabled="form.processing" />
+            <Button
+                v-else
+                label="Update Task"
+                severity="warning"
+                @click="submit"
+                :loading="form.processing"
+                :disabled="form.processing"
+                icon="pi pi-save"
+            />
         </div>
     </div>
 </template>

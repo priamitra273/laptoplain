@@ -7,20 +7,22 @@ import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
-import Paginator from 'primevue/paginator';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ComputedRef, ref, watch } from 'vue';
-import { Task, TaskFormatted, TaskFormattedData, TaskUser } from '..';
+import { computed, ComputedRef, ref } from 'vue';
+import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
 
 interface Props {
     projectId: string;
     tasks: Task[];
     isMember: boolean;
     hasPermission: boolean;
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    taskTypes: TaskType[];
 }
 
 const props = defineProps<Props>();
@@ -33,8 +35,6 @@ const deleteLoading = ref(false);
 
 const currentUser = usePage().props.auth.user;
 
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 
@@ -85,60 +85,10 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
     }));
 };
 
-// Get unique options for filters
-const statusOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const statuses = new Map();
-    const collectStatuses = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.status) {
-                statuses.set(task.status.name, task.status);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectStatuses(task.sub_task_recursive);
-            }
-        });
-    };
-    collectStatuses(props.tasks);
-    return Array.from(statuses.values());
-});
-
-const priorityOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const priorities = new Map();
-    const collectPriorities = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.priority) {
-                priorities.set(task.priority.name, task.priority);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectPriorities(task.sub_task_recursive);
-            }
-        });
-    };
-    collectPriorities(props.tasks);
-    return Array.from(priorities.values());
-});
-
-const typeOptions = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
-    const types = new Map();
-    const collectTypes = (tasks: Task[]) => {
-        tasks.forEach((task) => {
-            if (task.type) {
-                types.set(task.type.name, task.type);
-            }
-            if (task.sub_task_recursive && Array.isArray(task.sub_task_recursive)) {
-                collectTypes(task.sub_task_recursive);
-            }
-        });
-    };
-    collectTypes(props.tasks);
-    return Array.from(types.values());
-});
+// Get filter options from master data (props) - show all available options
+const statusOptions = computed(() => props.taskStatuses ?? []);
+const priorityOptions = computed(() => props.taskPriorities ?? []);
+const typeOptions = computed(() => props.taskTypes ?? []);
 
 // Filter tasks recursively
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
@@ -186,13 +136,6 @@ const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     return tasks;
 });
 
-// Paginate tasks
-const paginatedTasks: ComputedRef<TaskFormatted[]> = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return filteredTasks.value.slice(start, end);
-});
-
 // Check if all tasks are selected
 const isAllSelected = computed(() => {
     if (!filteredTasks.value.length) return false;
@@ -221,16 +164,6 @@ const hasActiveFilters = computed(() => {
         (selectedTypes.value && selectedTypes.value.length > 0)
     );
 });
-
-// Reset page when search query or filters change
-watch([searchQuery, selectedStatuses, selectedPriorities, selectedTypes], () => {
-    currentPage.value = 1;
-});
-
-const onPageChange = (event: { page: number; rows: number }) => {
-    currentPage.value = event.page + 1;
-    itemsPerPage.value = event.rows;
-};
 
 // Clear all filters
 const clearFilters = () => {
@@ -464,7 +397,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable container scrollable for mobile -->
         <div class="overflow-x-auto">
-            <TreeTable :value="paginatedTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
+            <TreeTable :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
                 <!-- Select All Checkbox Column - FROZEN LEFT -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
@@ -607,8 +540,5 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </template>
             </TreeTable>
         </div>
-
-        <!-- Pagination -->
-        <Paginator :rows="itemsPerPage" :totalRecords="filteredTasks.length" :rowsPerPageOptions="[10, 25, 50]" @page="onPageChange" />
     </div>
 </template>

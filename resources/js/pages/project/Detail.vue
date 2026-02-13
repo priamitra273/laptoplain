@@ -696,6 +696,9 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                         @edit="openTaskEdit"
                                         :isMember="isMember"
                                         :has-permission="isOwner || hasPermission()"
+                                        :taskStatuses="taskStatuses"
+                                        :taskPriorities="taskPriorities"
+                                        :taskTypes="taskTypes"
                                     />
                                 </div>
                             </TabPanel>

@@ -47,19 +47,20 @@ const transformTasks = (tasks: TaskNode[], parentId: string | null = null): any[
             node.start = new Date(t.start_date).getTime();
         }
         if (t.due_date) {
-            // Tambahkan 1 hari ke end date agar inklusif
+            // Tambahkan 1 hari ke end date agar inklusif dan terlihat sebagai bar
             const endDate = new Date(t.due_date);
             endDate.setDate(endDate.getDate() + 1);
             node.end = endDate.getTime();
         }
 
+        // HAPUS BAGIAN INI - tidak lagi membuat milestone untuk task 1 hari
         // Check if milestone (start date == due date di input asli)
-        if (t.start_date && t.due_date && t.start_date === t.due_date) {
-            node.milestone = true;
-            // Untuk milestone, gunakan start date saja
-            node.start = new Date(t.start_date).getTime();
-            delete node.end;
-        }
+        // if (t.start_date && t.due_date && t.start_date === t.due_date) {
+        //     node.milestone = true;
+        //     // Untuk milestone, gunakan start date saja
+        //     node.start = new Date(t.start_date).getTime();
+        //     delete node.end;
+        // }
 
         // Progress
         if (t.progress !== undefined && t.progress !== null) {
@@ -141,7 +142,7 @@ const renderChart = () => {
                         tooltip += `Start: ${startDate.toISOString().split('T')[0]}<br/>`;
                     }
 
-                    if (point.end && !point.milestone) {
+                    if (point.end) {
                         // Kurangi 1 hari untuk menampilkan tanggal due date asli
                         const endDate = new Date(point.end);
                         endDate.setDate(endDate.getDate() - 1);

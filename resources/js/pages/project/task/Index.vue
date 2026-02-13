@@ -59,7 +59,7 @@ const filterType = ref<string | null>(null);
 const viewMode = ref<'list' | 'board'>('list');
 
 // Truncate text helper
-const truncateText = (text: string, maxLength: number = 15) => {
+const truncateText = (text: string, maxLength: number = 50) => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 };
@@ -281,7 +281,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                                 <div class="flex flex-col gap-1">
                                     <Link :href="route('task.show', { encoded: task.id })" @click.stop>
                                         <span class="font-medium text-gray-900 hover:underline dark:text-white" :title="task.title">
-                                            {{ truncateText(task.title, 15) }}
+                                            {{ truncateText(task.title, 50) }}
                                         </span>
                                     </Link>
 

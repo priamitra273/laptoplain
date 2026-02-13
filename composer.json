@@ -19,6 +19,8 @@
         "spatie/laravel-medialibrary": "^11.12",
         "spatie/laravel-permission": "^6.16",
         "sqids/sqids": "^0.5.0",
+        "symfony/http-client": "^7.4",
+        "symfony/mailgun-mailer": "^7.4",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {

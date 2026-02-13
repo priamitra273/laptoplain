@@ -34,6 +34,10 @@ class CheckRoutePermission
             throw new NotFoundHttpException(404);
         }
 
+        if ($user->roles()->where('name', 'like', 'super-admin-%')->exists()) {
+            return $next($request);
+        }
+
         $permission = $this->mapRouteToPermission($routeName);
 
         if (!$permission) {

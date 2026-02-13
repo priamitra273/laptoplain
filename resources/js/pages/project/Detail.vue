@@ -316,7 +316,7 @@ const taskDialogHeader = computed(() => {
 
 const hasPermission = (): boolean => {
     const role = usePage().props.auth.role;
-    return role === 'super-admin-admin' || role === 'admin-admin';
+    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
 };
 
 const canEdit = computed(() => {
@@ -823,6 +823,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                 :projectId="props.project.id"
                 :parentId="parentTaskId"
                 :task="selectedTask"
+                :tasks="tasks"
                 :taskTypes="props.taskTypes"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"

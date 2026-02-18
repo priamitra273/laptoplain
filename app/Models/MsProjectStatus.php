@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityProjectStatus;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MsProjectStatus extends Model
 {
-    use SoftDeletes, LogUsers;
+    use SoftDeletes, LogUsers, LogsActivityProjectStatus;
 
     protected $table = 'ms_project_statuses';
 
@@ -27,7 +28,7 @@ class MsProjectStatus extends Model
         'owned_id' => 'integer'
     ];
 
-     public function getRouteKeyName()
+    public function getRouteKeyName()
     {
         return 'id';
     }

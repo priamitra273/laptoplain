@@ -61,8 +61,8 @@ const getInitials = (name: string) =>
 // Get color for avatar
 const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
-// Format tasks for TreeTable
-const formatTasks = (list?: Task[]): TaskFormatted[] => {
+// Format tasks for TreeTable — now accepts a `level` parameter for indentation
+const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
         key: t.id,
@@ -81,8 +81,9 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             created_by: t.created_by,
             completed_at: t.completed_at,
             is_overdue: t.is_overdue,
+            level,
         },
-        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
+        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive, level + 1) : [],
     }));
 };
 
@@ -435,8 +436,16 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <!-- Expander Column - FROZEN LEFT -->
                 <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
 
-                <!-- Title Column -->
-                <Column field="title" header="Title" style="min-width: 200px" sortable />
+                <!-- Title Column with indentation based on level -->
+                <Column field="title" header="Title" style="min-width: 200px" sortable>
+                    <template #body="{ node }">
+                        <div class="flex items-center gap-1" :style="{ paddingLeft: `${(node.data.level ?? 0) * 1.5}rem` }">
+                            <!-- Visual indent indicator for child tasks -->
+                            <span v-if="node.data.level > 0" class="shrink-0 select-none text-gray-400" style="font-size: 0.75rem">↳</span>
+                            <span>{{ node.data.title }}</span>
+                        </div>
+                    </template>
+                </Column>
 
                 <Column field="status.name" header="Status" style="min-width: 120px" sortable>
                     <template #body="{ node }">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityProjectRole;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MsProjectRole extends Model
 {
-    use SoftDeletes, LogUsers;
+    use SoftDeletes, LogUsers, LogsActivityProjectRole;
 
     protected $table = 'ms_project_roles';
 

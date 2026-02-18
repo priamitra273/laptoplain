@@ -58,6 +58,7 @@ interface Props {
         priority_id?: string;
         created_at?: string;
         updated_at?: string;
+        project_members: ProjectMember[];
     };
     members: MemberWithAvatar[];
     roles: { id: string; name: string }[];
@@ -70,9 +71,6 @@ interface Props {
     tags: TagData[];
     assignableUsers: User[];
 
-    isMember: boolean;
-    isOwner: boolean;
-
     statuses?: { id: string; name: string; severity?: string }[];
     priorities?: { id: string; name: string; severity?: string }[];
 }
@@ -80,6 +78,18 @@ interface Props {
 const props = defineProps<Props>();
 
 const toast = useToast();
+
+const page = usePage();
+const authUser = computed(() => page.props.auth?.user);
+const isMember = computed(() => {
+    if (!authUser.value) return false;
+    return props.project.project_members.some((member) => member.user.id === authUser.value.id);
+});
+const isOwner = computed(() => {
+    if (!authUser.value) return false;
+
+    return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
+});
 
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
@@ -232,7 +242,7 @@ const openEdit = (member: ProjectMember) => {
 };
 
 const openTaskAdd = (parentId: string | null) => {
-    if (!props.isMember && !hasPermission()) {
+    if (!isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -246,7 +256,7 @@ const openTaskAdd = (parentId: string | null) => {
 };
 
 const openTaskEdit = (task: Task, parentId: string | null) => {
-    if (!props.isMember && !hasPermission()) {
+    if (!isMember && !hasPermission()) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -317,11 +327,11 @@ const taskDialogHeader = computed(() => {
 
 const hasPermission = (): boolean => {
     const role = usePage().props.auth.role;
-    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
+    return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
 };
 
 const canEdit = computed(() => {
-    return props.isOwner || hasPermission();
+    return isOwner || hasPermission();
 });
 
 // Enable edit mode for a field
@@ -556,7 +566,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 />
                             </div>
                             <div v-else ref="statusDropdownRef" @click.stop>
-                                <Dropdown
+                                <Select
                                     v-model="localProject.status"
                                     :options="props.statuses"
                                     optionLabel="name"
@@ -571,7 +581,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                     <template #option="slotProps">
                                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'" />
                                     </template>
-                                </Dropdown>
+                                </Select>
                             </div>
                         </div>
                     </template>
@@ -831,7 +841,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                 :tags="props.tags"
                 :editTask="selectedTask"
                 :members="formattedMembers"
-                :isMember="props.isMember"
+                :isMember="isMember"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;

@@ -210,9 +210,6 @@ class TaskController extends Controller
         $task->update(['progress' => $task->calculateProgress()]);
 
         $project = Project::with([
-            'projectMembers' => function ($query) {
-                $query->whereHas('user'); // Only get members with valid users
-            },
             'projectMembers.user:id,name,email',
             'projectMembers.user.media',
             'projectMembers.role:id,name'
@@ -281,7 +278,7 @@ class TaskController extends Controller
 
         $data = [
             'task' => $task->toArray(),
-            'project' => $task->project?->toArray(),
+            'project' => $project->toArray(),
             'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,

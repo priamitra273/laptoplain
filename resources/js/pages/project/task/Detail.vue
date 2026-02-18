@@ -23,6 +23,7 @@ const emojiIndex = new EmojiIndex(emojiData);
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
 import MemberCard from './partials/MemberCard.vue';
+import { ProjectMember, Task } from '..';
 
 interface User {
     id: number;
@@ -31,9 +32,24 @@ interface User {
 }
 
 const props = defineProps<{
-    task: any;
-    project: any;
-    subTasks: any[];
+    task: Task;
+    project: {
+        id: string;
+        title: string;
+        description?: string;
+        emoji: string;
+        progress: number;
+        start_date?: string;
+        due_date?: string;
+        status?: { id: string; name: string; severity?: string };
+        priority?: { id: string; name: string; severity?: string };
+        status_id?: string;
+        priority_id?: string;
+        created_at?: string;
+        updated_at?: string;
+        project_members: ProjectMember[];
+    };
+    subTasks: Task[];
     assignedUsers: User[];
     comments: any[];
     statuses: any[];
@@ -71,6 +87,18 @@ const breadcrumbHome = {
     command: () => router.visit(route('dashboard')),
 };
 
+const page = usePage();
+const authUser = computed(() => page.props.auth?.user);
+const hasPermission = (): boolean => {
+    const role = usePage().props.auth.role;
+    return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
+};
+const isOwner = computed(() => {
+    if (!authUser.value) return false;
+
+    return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
+});
+
 const formatDate = (date?: string) => (date ? moment(date).format('DD MMM YYYY') : '-');
 const formatDateTime = (date?: string) => (date ? moment(date).format('DD MMM YYYY HH:mm') : '-');
 
@@ -101,7 +129,7 @@ const editValue = ref<any>(null);
 const editingElement = ref<HTMLElement | null>(null);
 
 const startEdit = (field: string, currentValue: any, event?: Event) => {
-    if (!props.isMember || !props.isTaskMember) {
+    if (!props.isTaskMember && (!hasPermission() || !isOwner.value)) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -434,7 +462,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'status_id'"
                                             @click="startEdit('status_id', props.task.status_id, $event)"
                                             :class="[
-                                                props.isMember && props.isTaskMember
+                                                props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -460,7 +488,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'priority_id'"
                                             @click="startEdit('priority_id', props.task.priority_id, $event)"
                                             :class="[
-                                                props.isMember && props.isTaskMember
+                                                props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -488,7 +516,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'type_id'"
                                             @click="startEdit('type_id', props.task.type_id, $event)"
                                             :class="[
-                                                props.isMember && props.isTaskMember
+                                                props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -538,7 +566,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'start_date'"
                                             @click="startEdit('start_date', props.task.start_date, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
@@ -564,7 +592,7 @@ const submitComment = () => {
                                             v-if="editingField !== 'due_date'"
                                             @click="startEdit('due_date', props.task.due_date, $event)"
                                             :class="[
-                                                props.isMember
+                                                props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',

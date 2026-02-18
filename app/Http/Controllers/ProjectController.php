@@ -174,23 +174,6 @@ class ProjectController extends Controller
             ->values()
             ->toArray();
 
-        $currentUserId = Auth::id();
-
-        $isMember = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->where('user_id', $currentUserId)
-            ->isNotEmpty();
-
-        $isOwner = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->where('user_id', $currentUserId)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
-
         $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')->get();
         $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
 
@@ -232,8 +215,6 @@ class ProjectController extends Controller
             'taskTypes' => $types->toArray(),
             'tags' => $tags->toArray(),
             'assignableUsers' => $assignableUsers,
-            'isMember' => $isMember,
-            'isOwner' => $isOwner,
             'statuses' => $projectStatuses->toArray(),
             'priorities' => $projectPriorities->toArray(),
         ];

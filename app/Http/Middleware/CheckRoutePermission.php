@@ -34,7 +34,7 @@ class CheckRoutePermission
             throw new NotFoundHttpException(404);
         }
 
-        if ($user->roles()->where('name', 'like', 'super-admin-%')->exists()) {
+        if ($user->getRoleNames()->contains(fn($role) => str_starts_with($role, 'super-admin-'))) {
             return $next($request);
         }
 

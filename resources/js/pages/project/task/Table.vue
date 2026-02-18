@@ -296,8 +296,14 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember || hasPermission">
-                <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+                <Button 
+                    label="Add Task" 
+                    icon="pi pi-plus" 
+                    @click="emit('add', null)" 
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0" 
+                    :disabled="!isMember && !hasPermission" 
+                />
                 <Button
                     v-if="hasSelectedTasks"
                     label="Delete Selected"
@@ -306,6 +312,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     @click="removeSelected"
                     class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
                     variant="outlined"
+                    :disabled="!isMember && !hasPermission" 
                 />
             </div>
         </div>
@@ -515,25 +522,22 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-plus"
                                 size="small"
                                 severity="info"
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || (!isMember && !hasPermission)"
                                 @click="emit('add', node.data.id)"
-                                v-if="isMember || hasPermission"
                             />
                             <Button
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
-                                :disabled="deleteLoading"
-                                @click="emit('edit', node.original, node.data.parent_id)"
-                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
+                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
+                                @click="emit('edit', node.original, node.data.parent_id)""
                             />
                             <Button
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="remove(node.original)"
-                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
                         </div>
                     </template>

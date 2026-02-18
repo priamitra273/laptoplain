@@ -216,7 +216,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button v-if="props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button :disabled="!props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">
@@ -402,7 +402,7 @@ watch(visibleForm, (val) => {
                                 icon="pi pi-trash" 
                                 severity="danger" 
                                 size="small" 
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || !hasPermission"
                                 @click="confirmDelete(data)" 
                                 v-tooltip.bottom="'Delete'" 
                             />

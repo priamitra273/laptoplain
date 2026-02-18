@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
+import { can } from '@/lib/utils';
 import { PrimeSeverity, Project } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -216,7 +217,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button :disabled="!props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button v-if="can('project.create')" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">

@@ -15,6 +15,7 @@ export interface Auth {
     user: User;
     role: UserRoles | null;
     menu: SidebarMenuItem[];
+    permissions: string[];
 }
 
 export interface BreadcrumbItem {
@@ -426,8 +427,8 @@ export interface SeverityOption {
 }
 
 export interface Notification {
-    id: string
-    message: string
-    task_id: string
-    is_read: boolean
+    id: string;
+    message: string;
+    task_id: string;
+    is_read: boolean;
 }

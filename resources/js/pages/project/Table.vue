@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
+import { can } from '@/lib/utils';
 import { PrimeSeverity, Project } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -57,7 +58,7 @@ const filters = ref({
     progress: { value: [0, 100], matchMode: FilterMatchMode.BETWEEN },
 });
 
-const deleteLoading = ref(false)
+const deleteLoading = ref(false);
 const visibleForm = ref<boolean>(false);
 const selected = ref<Project | undefined>(undefined);
 const showEmojiPicker = ref<{ [key: string]: boolean }>({});
@@ -116,7 +117,7 @@ const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: an
 };
 
 const confirmDelete = (project: Project) => {
-    deleteLoading.value = true
+    deleteLoading.value = true;
     confirm.require({
         message: `Are you sure you want to delete "${project.title}"?`,
         header: 'Confirm Deletion',
@@ -216,7 +217,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button :disabled="!props.hasPermission" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button v-if="can('project.create')" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">
@@ -398,13 +399,13 @@ watch(visibleForm, (val) => {
                                 @click="router.visit(route('project.show', { encoded: data.id }))"
                                 v-tooltip.bottom="'View Details'"
                             />
-                            <Button 
-                                icon="pi pi-trash" 
-                                severity="danger" 
-                                size="small" 
+                            <Button
+                                icon="pi pi-trash"
+                                severity="danger"
+                                size="small"
                                 :disabled="deleteLoading || !hasPermission"
-                                @click="confirmDelete(data)" 
-                                v-tooltip.bottom="'Delete'" 
+                                @click="confirmDelete(data)"
+                                v-tooltip.bottom="'Delete'"
                             />
                         </div>
                     </template>

@@ -41,7 +41,7 @@ class HandleInertiaRequests extends Middleware
             ->whereNull('parent_id')
             ->orderBy('sequence_number')
             ->get();
-        
+
         $user = $request->user();
 
         return [
@@ -55,10 +55,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? Sqids::rec_encode_ids_in_list($user->toArray()) : null,
                 'role' => $user ? $user->getRoleNames()[0] : null,
                 'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
+                'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
             ],
             'flash' => [
-                'success' => fn() => $request->session()->get('success'),
-                'error'   => fn() => $request->session()->get('error'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

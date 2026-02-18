@@ -9,11 +9,12 @@ use App\Models\MsProjectPriority;
 use App\Models\MsProjectStatus;
 use App\Models\ProjectMember;
 use App\Models\User;
+use App\Traits\LogsActivityProject;
 use Illuminate\Support\Facades\DB;
 
 class Project extends Model
 {
-    use SoftDeletes, LogUsers;
+    use SoftDeletes, LogUsers, LogsActivityProject;
 
     protected $table = 'projects';
 

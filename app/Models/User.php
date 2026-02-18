@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityUser;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasMedia
 {
     use HasFactory, HasRoles, HasUuid, Notifiable;
-    use InteractsWithMedia, LogUsers, SoftDeletes;
+    use InteractsWithMedia, LogUsers, SoftDeletes, LogsActivityUser;
 
     /**
      * The attributes that are mass assignable.
@@ -74,7 +75,7 @@ class User extends Authenticatable implements HasMedia
     protected function avatarUrl(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->getFirstMediaUrl('avatar') ?: null, // Return null jika tidak ada
+            get: fn() => $this->getFirstMediaUrl('avatar') ?: null, // Return null jika tidak ada
         );
     }
 

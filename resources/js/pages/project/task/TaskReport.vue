@@ -140,6 +140,11 @@ const navigateToProject = (encodedProjectId: string) => {
 // UTILITY FUNCTIONS
 // ============================================================================
 
+const truncateText = (text: string | null, length: number = 15): string => {
+    if (!text) return '-';
+    return text.length > length ? text.slice(0, length) + '...' : text;
+};
+
 const formatDate = (date: string | null): string => {
     if (!date) return '-';
     return moment(date).format('DD MMM YYYY');
@@ -494,9 +499,9 @@ const onPageChange = (event: any) => {
                                     class="-m-2 cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <p class="text-dark mb-1 font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300">
-                                        {{ data.title }}
+                                        {{ truncateText(data.title, 15) }}
                                     </p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.summary }}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ truncateText(data.summary, 15) }}</p>
                                 </div>
                             </template>
                         </Column>

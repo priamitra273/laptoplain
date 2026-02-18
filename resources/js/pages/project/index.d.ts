@@ -166,3 +166,24 @@ export interface CommentUser {
     updated_at: string;
     deleted_at: string | null;
 }
+
+export interface Comment {
+    id: string
+    commentable_type: string
+    commentable_id: string
+    user_id: string
+    body: string
+    reaction: unknown[]
+    owned_id: string
+    created_by: string | null
+    updated_by: string | null
+    deleted_by: string | null
+    created_at: string
+    updated_at: string
+    deleted_at: string | null
+    parent_id: string | null
+
+    user: User
+    replies: Comment[]
+}
+

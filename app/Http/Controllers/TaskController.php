@@ -232,24 +232,9 @@ class TaskController extends Controller
             ->values()
             ->toArray();
 
-        $isMember = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->where('user_id', Auth::id())
-            ->isNotEmpty();
-
         $isTaskMember = $task->users()
             ->where('user_id', Auth::id())
             ->exists();
-
-        $isPM = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null && $member->role !== null;
-            })
-            ->where('user_id', Auth::id())
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
 
         // Format assigned users with avatar_url
         $assignedUsers = $task->users
@@ -279,15 +264,12 @@ class TaskController extends Controller
         $data = [
             'task' => $task->toArray(),
             'project' => $project->toArray(),
-            'subTasks' => $task->subTaskRecursive?->toArray() ?? [],
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
             'creator' => $creator, // Add creator to response
             'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
-            'isPM' => $isPM,
-            'isMember' => $isMember,
             'isTaskMember' => $isTaskMember,
             'comments' => $task->comments?->toArray() ?? [],
         ];

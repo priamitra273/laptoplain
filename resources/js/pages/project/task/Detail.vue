@@ -23,7 +23,7 @@ const emojiIndex = new EmojiIndex(emojiData);
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CommentItem from './CommentItem.vue';
 import MemberCard from './partials/MemberCard.vue';
-import { ProjectMember, Task } from '..';
+import { Comment, ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface User {
     id: number;
@@ -31,7 +31,20 @@ interface User {
     avatar_url?: string | null;
 }
 
-const props = defineProps<{
+interface TaskForm {
+    status_id: string
+    priority_id: string
+    type_id: string
+    start_date: string | null
+    due_date: string | null
+    progress_value: number
+
+    [key: string]: any;
+}
+
+type TaskFormField = keyof TaskForm
+
+interface Props {
     task: Task;
     project: {
         id: string;
@@ -49,16 +62,17 @@ const props = defineProps<{
         updated_at?: string;
         project_members: ProjectMember[];
     };
-    subTasks: Task[];
     assignedUsers: User[];
-    comments: any[];
-    statuses: any[];
-    priorities: any[];
-    types: any[];
-    isMember: boolean;
+    comments: Comment[];
+    statuses: TaskStatus[];
+    priorities: TaskPriority[];
+    types: TaskType[];
+    
     isTaskMember: boolean;
     creator?: User;
-}>();
+}
+
+const props = defineProps<Props>();
 
 const commentLoading = ref(false)
 const currentUserId = computed(() => Number(usePage().props.auth.user.id));
@@ -169,12 +183,16 @@ const getFieldLabel = (field: string): string => {
     return labels[field] || field;
 };
 
-const form = useForm({
-    ...props.task,
+const form = useForm<TaskForm>({
+    status_id: props.task.status_id,
+    priority_id: props.task.priority_id,
+    type_id: props.task.type_id,
+    start_date: props.task.start_date,
+    due_date: props.task.due_date,
     progress_value: props.task.progress,
 });
 
-const autoSave = (field: string, value: any) => {
+const autoSave = (field: TaskFormField, value: any) => {
     let valueToSave = value;
 
     if (field === 'start_date' || field === 'due_date') {
@@ -191,11 +209,15 @@ const autoSave = (field: string, value: any) => {
         {
             preserveScroll: true,
             preserveState: true,
+            onSuccess: () => {
+                cancelEdit()
+                handleClickOutside(new MouseEvent('click'))
+            },
             onError: () => {
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
-                    detail: `Failed to update ${getFieldLabel(field)}. Please try again.`,
+                    detail: `Failed to update ${getFieldLabel(field as string)}. Please try again.`,
                     life: 3000,
                 });
             },
@@ -250,7 +272,7 @@ onUnmounted(() => {
 });
 
 const hasSubTasks = computed(() => {
-    return props.subTasks && props.subTasks.length > 0;
+    return props.task.sub_task_recursive.length > 0;
 });
 
 const newComment = ref('');
@@ -374,14 +396,14 @@ const submitComment = () => {
                                     <i class="pi pi-list text-indigo-500"></i>
                                     <h2 class="text-lg font-bold">Subtasks</h2>
                                 </div>
-                                <Chip v-if="props.subTasks.length" :label="`${props.subTasks.length}`" class="bg-indigo-100 text-indigo-700" />
+                                <Chip v-if="props.task.sub_task_recursive.length" :label="`${props.task.sub_task_recursive.length}`" class="bg-indigo-100 text-indigo-700" />
                             </div>
                         </template>
                         <template #content>
                             <Divider class="my-3" />
-                            <div v-if="props.subTasks.length" class="space-y-3">
+                            <div v-if="props.task.sub_task_recursive.length" class="space-y-3">
                                 <div
-                                    v-for="subTask in props.subTasks"
+                                    v-for="subTask in props.task.sub_task_recursive"
                                     :key="subTask.id"
                                     @click="goToSubTask(subTask.id)"
                                     class="group cursor-pointer rounded-xl border-2 border-gray-100 bg-white p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-600"

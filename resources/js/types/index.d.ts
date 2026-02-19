@@ -89,6 +89,7 @@ export interface UserList extends User {
     team_name: string;
     role_id: number;
     role_label: string;
+    created_by: string;
 }
 
 export interface Menu {

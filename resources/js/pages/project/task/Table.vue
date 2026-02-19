@@ -441,7 +441,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     <template #body="{ node }">
                         <div class="flex items-center gap-1" :style="{ paddingLeft: `${(node.data.level ?? 0) * 1.5}rem` }">
                             <!-- Visual indent indicator for child tasks -->
-                            <span v-if="node.data.level > 0" class="shrink-0 select-none text-gray-400" style="font-size: 0.75rem">↳</span>
+                            <span v-if="node.data.level > 0" class="shrink-0 select-none text-gray-400" style="font-size: 0.75rem"></span>
                             <span>{{ node.data.title }}</span>
                         </div>
                     </template>

@@ -433,18 +433,8 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Expander Column - FROZEN LEFT -->
-                <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
-
                 <!-- Title Column with indentation based on level -->
-                <Column field="title" header="Title" style="min-width: 200px" sortable>
-                    <template #body="{ node }">
-                        <div class="flex items-center gap-1" :style="{ paddingLeft: `${(node.data.level ?? 0) * 1.5}rem` }">
-                            <!-- Visual indent indicator for child tasks -->
-                            <span v-if="node.data.level > 0" class="shrink-0 select-none text-gray-400" style="font-size: 0.75rem"></span>
-                            <span>{{ node.data.title }}</span>
-                        </div>
-                    </template>
+                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 200px" >
                 </Column>
 
                 <Column field="status.name" header="Status" style="min-width: 120px" sortable>
@@ -521,7 +511,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Actions Column - FROZEN RIGHT -->
-                <Column header="Actions" frozen alignFrozen="right" style="min-width: 200px">
+                <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
                             <Link :href="route('task.show', node.original)">

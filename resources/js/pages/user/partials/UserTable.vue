@@ -127,6 +127,8 @@ const destroy = (user: UserList) => {
                     </template>
                 </Column>
 
+                <Column field="created_by" header="Created By"></Column>
+
                 <Column v-if="can('user.update') || can('users.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />

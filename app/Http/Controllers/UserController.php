@@ -9,6 +9,7 @@ use App\Http\Resources\User\UserListResource;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Ramsey\Uuid\Guid\Guid;
@@ -35,7 +36,7 @@ class UserController extends Controller
     public function create()
     {
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
-        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
+        $roles = Role::whereRelation('team', fn($q) => $q->filterByUserRole())->get();
 
         return Inertia::render('user/UserForm', [
             'teams' => $teams,
@@ -53,6 +54,7 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'is_active' => $request->is_active,
+            'created_by' => Auth::id()
         ]);
 
         $user->syncRoles($request->role_id);
@@ -75,7 +77,7 @@ class UserController extends Controller
     {
         $user = $this->getByUuid($id);
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
-        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
+        $roles = Role::whereRelation('team', fn($q) => $q->filterByUserRole())->get();
 
         return Inertia::render('user/UserForm', [
             'pageTitle' => 'Edit User',
@@ -83,7 +85,6 @@ class UserController extends Controller
             'teams' => $teams,
             'roles' => RoleResource::collection($roles)->resolve(),
         ]);
-
     }
 
     /**

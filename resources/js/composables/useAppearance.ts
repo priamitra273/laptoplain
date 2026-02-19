@@ -2,6 +2,15 @@ import { onMounted, ref } from 'vue';
 
 type Appearance = 'light' | 'dark' | 'system';
 
+export function resolveAppearance(value: Appearance): 'light' | 'dark' {
+    if (value === 'system') {
+        if (typeof window === 'undefined') return 'light';
+        const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+        return mediaQueryList.matches ? 'dark' : 'light';
+    }
+    return value;
+}
+
 export function updateTheme(value: Appearance) {
     if (typeof window === 'undefined') {
         return;
@@ -54,37 +63,46 @@ export function initializeTheme() {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
+    // Initialize theme from saved preference or default to system
     const savedAppearance = getStoredAppearance();
-    updateTheme(savedAppearance || 'light');
+    updateTheme(savedAppearance || 'system');
 
-    // Set up system theme change listener...
+    // Set up system theme change listener
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
 export function useAppearance() {
-    const appearance = ref<Appearance>('light');
+    const appearance = ref<'light' | 'dark'>('light');
 
     onMounted(() => {
         initializeTheme();
 
         const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
 
-        if (savedAppearance) {
-            appearance.value = savedAppearance;
-        }
+        // Resolve 'system' ke nilai aktual dark/light
+        appearance.value = resolveAppearance(savedAppearance || 'system');
+
+        // Listen perubahan system theme secara real-time
+        mediaQuery()?.addEventListener('change', () => {
+            const currentAppearance = getStoredAppearance();
+
+            // Hanya update jika preference-nya 'system' atau belum di-set
+            if (currentAppearance === 'system' || !currentAppearance) {
+                appearance.value = resolveAppearance('system');
+            }
+        });
     });
 
     function updateAppearance(value: Appearance) {
-        appearance.value = value;
-
-        // Store in localStorage for client-side persistence...
+        // Simpan preferensi asli ke localStorage dan cookie (bisa 'system')
         localStorage.setItem('appearance', value);
-
-        // Store in cookie for SSR...
         setCookie('appearance', value);
 
+        // Apply theme ke DOM
         updateTheme(value);
+
+        // appearance.value selalu resolved ke 'dark' | 'light'
+        appearance.value = resolveAppearance(value);
     }
 
     return {

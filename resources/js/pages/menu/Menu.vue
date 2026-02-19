@@ -14,6 +14,7 @@ import Swal from 'sweetalert2';
 import { FilterMatchMode } from '@primevue/core/api';
 
 import 'sweetalert2/dist/sweetalert2.min.css';
+import { can } from '@/lib/utils';
 
 interface Props {
     menu?: Menu[];
@@ -30,21 +31,26 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('menu.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             selectedMenu.value = props.menu?.find((item) => item.uuid === event.item.menuKey)
             visible.value = true;
         },
-    },
-    {
+    })
+}
+
+if (can('menu.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data)
         },
-    }
-];
+    })
+}
 
 const destroy = (menu: Menu) => {
     Swal.fire({
@@ -99,7 +105,7 @@ watch(visible, (newValue: Boolean) => {
                         </InputIcon>
                     </IconField>
 
-                    <Button label="Add Menu" raised @click="visible = true">
+                    <Button label="Add Menu" raised @click="visible = true" :disabled="!can('menu.create')" >
                         <template #icon>
                             <Icon name="Plus" />
                         </template>
@@ -135,7 +141,7 @@ watch(visible, (newValue: Boolean) => {
                             </template>
                         </Column>
 
-                        <Column>
+                        <Column v-if="can('menu.update') || can('menu.delete')">
                             <template #body="{ data }">
                                 <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />
                             </template>

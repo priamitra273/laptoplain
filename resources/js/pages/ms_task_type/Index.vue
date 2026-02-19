@@ -13,10 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
     task_types: () => [],
 });
 
-const hasPermission = (): boolean => {
-    const role = usePage().props.auth.role;
-    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
-}
 </script>
 
 <template>
@@ -25,7 +21,7 @@ const hasPermission = (): boolean => {
     <AppLayout>
         <div class="flex flex-col gap-6">
             <Heading title="Task Type" description="Manage master data task type" />
-            <TaskTypeTable :task_types="props.task_types" :has-permission="hasPermission()" />
+            <TaskTypeTable :task_types="props.task_types" />
         </div>
     </AppLayout>
 </template>

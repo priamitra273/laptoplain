@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
+import { can } from '@/lib/utils';
 import { UserList } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -21,20 +22,25 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('user.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             router.visit(route('user.edit', event.item.menuKey));
         },
-    },
-    {
+    });
+}
+
+if (can('user.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data);
         },
-    },
-];
+    });
+}
 
 const destroy = (user: UserList) => {
     Swal.fire({
@@ -70,11 +76,18 @@ const destroy = (user: UserList) => {
                 </InputIcon>
             </IconField>
 
-            <Button raised as-child v-slot="slotProps">
-                <Link :href="route('user.create')" :class="slotProps.class">
+            <Link v-if="can('user.create')" :href="route('user.create')">
+                <Button label="Add User" raised>
+                    <template #icon>
+                        <Icon name="plus" />
+                    </template>
+                </Button>
+            </Link>
+
+            <Button v-else label="Add User" raised disabled>
+                <template #icon>
                     <Icon name="plus" />
-                    <span>Add User</span>
-                </Link>
+                </template>
             </Button>
         </div>
 
@@ -114,7 +127,7 @@ const destroy = (user: UserList) => {
                     </template>
                 </Column>
 
-                <Column>
+                <Column v-if="can('user.update') || can('users.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />
                     </template>

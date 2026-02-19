@@ -13,10 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
     task_priorities: () => [],
 });
 
-const hasPermission = (): boolean => {
-    const role = usePage().props.auth.role;
-    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
-}
 </script>
 
 <template>
@@ -25,7 +21,7 @@ const hasPermission = (): boolean => {
     <AppLayout>
         <div class="flex flex-col gap-6">
             <Heading title="Task Priority" description="Manage master data task priority" />
-            <TaskPriorityTable :task_priorities="props.task_priorities" :has-permission="hasPermission()" />
+            <TaskPriorityTable :task_priorities="props.task_priorities" />
         </div>
     </AppLayout>
 </template>

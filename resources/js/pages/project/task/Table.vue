@@ -434,11 +434,9 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Title Column with indentation based on level -->
-                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 200px">
+                <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
-                        <span :title="node.data.title">
-                            {{ node.data.title.length > 30 ? node.data.title.slice(0, 30) + '...' : node.data.title }}
-                        </span>
+                        <p class="max-w-[300px] truncate text-ellipsis">{{ node.data.title }}</p>
                     </template>
                 </Column>
 
@@ -487,7 +485,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Created By Column -->
-                <Column header="Created By" style="min-width: 150px">
+                <Column header="Created By" style="min-width: 150px;">
                     <template #body="{ node }">
                         <div v-if="node.original.creator" class="flex items-center gap-2">
                             <Avatar
@@ -508,8 +506,8 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                         ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
                                         : {}
                                 "
+                                v-tooltip.bottom="node.original.creator.name"
                             />
-                            <span class="text-sm">{{ node.original.creator.name }}</span>
                         </div>
                         <span v-else class="text-sm text-gray-400">-</span>
                     </template>

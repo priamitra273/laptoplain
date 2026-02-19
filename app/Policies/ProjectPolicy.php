@@ -37,12 +37,11 @@ class ProjectPolicy
             return true;
         }
         
-        $isMember = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isMember = $project
+            ->projectMembers()
+            ->whereNotNull('user_id')
             ->where('user_id', $user->id)
-            ->isNotEmpty();
+            ->exists();
         return $isMember;
     }
 
@@ -87,12 +86,11 @@ class ProjectPolicy
             return true;
         }
         
-        $isMember = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isMember = $project
+            ->projectMembers()
+            ->whereNotNull('user_id')
             ->where('user_id', $user->id)
-            ->isNotEmpty();
+            ->exists();
         return $isMember;
     }
 
@@ -117,13 +115,16 @@ class ProjectPolicy
             return true;
         }
 
-        $isOwner = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isOwner = $project
+            ->projectMembers()
+            ->whereNotNull('user_id')
             ->where('user_id', $user->id)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
+            ->whereHas(
+                'role',
+                fn($q) =>
+                $q->where('name', 'Owner')
+            )
+            ->exists();
         return $isOwner;
     }
 

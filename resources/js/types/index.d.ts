@@ -15,6 +15,7 @@ export interface Auth {
     user: User;
     role: UserRoles | null;
     menu: SidebarMenuItem[];
+    permissions: string[];
 }
 
 export interface BreadcrumbItem {
@@ -88,6 +89,7 @@ export interface UserList extends User {
     team_name: string;
     role_id: number;
     role_label: string;
+    created_by: string;
 }
 
 export interface Menu {
@@ -426,8 +428,8 @@ export interface SeverityOption {
 }
 
 export interface Notification {
-    id: string
-    message: string
-    task_id: string
-    is_read: boolean
+    id: string;
+    message: string;
+    task_id: string;
+    is_read: boolean;
 }

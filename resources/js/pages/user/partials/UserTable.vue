@@ -114,6 +114,8 @@ const destroy = (user: UserList) => {
                     </template>
                 </Column>
 
+                <Column field="created_by" header="Created By"></Column>
+
                 <Column>
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />

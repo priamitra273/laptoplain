@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityProjectMember;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProjectMember extends Model
 {
-    use SoftDeletes, LogUsers;
+    use SoftDeletes, LogUsers, LogsActivityProjectMember;
 
     protected $table = 'project_members';
 
@@ -36,15 +37,17 @@ class ProjectMember extends Model
     protected static function booted()
     {
         static::deleting(function ($member) {
-            // Ambil semua task dari project
+
             $tasks = Task::where('project_id', $member->project_id)->get();
 
-            // Detach user dari setiap task
             foreach ($tasks as $task) {
-                $task->users()->detach($member->user_id);
+                activity()->withoutLogs(function () use ($task, $member) {
+                    $task->users()->detach($member->user_id);
+                });
             }
         });
     }
+
 
     public function project(): BelongsTo
     {

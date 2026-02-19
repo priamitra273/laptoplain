@@ -37,13 +37,12 @@ class TaskPolicy
         if ($hasAllowedRole) {
             return true;
         }
-        
-        $isMember = $task->project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+
+        $isMember = $task->project
+            ->projectMembers()
+            ->whereNotNull('user_id')
             ->where('user_id', $user->id)
-            ->isNotEmpty();
+            ->exists();
         return $isMember;
     }
 
@@ -68,22 +67,25 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isOwner = $project
+            ->projectMembers()
             ->where('user_id', $user->id)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
+            ->whereHas(
+                'role',
+                fn($q) =>
+                $q->where('name', 'Owner')
+            )
+            ->exists();
 
         if ($isOwner) {
             return $isOwner;
         }
 
-        $isMember = $project->projectMembers()
+        $isMember = $project
+            ->projectMembers()
+            ->whereNotNull('user_id')
             ->where('user_id', $user->id)
             ->exists();
-
         return $isMember;
     }
 
@@ -108,19 +110,22 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $task->project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isOwner = $task->project
+            ->projectMembers()
             ->where('user_id', $user->id)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
+            ->whereHas(
+                'role',
+                fn($q) =>
+                $q->where('name', 'Owner')
+            )
+            ->exists();
 
         if ($isOwner) {
             return $isOwner;
         }
 
-        $isMember = $task->users()
+        $isMember = $task
+            ->users()
             ->where('user_id', $user->id)
             ->exists();
 
@@ -148,19 +153,22 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $task->project->projectMembers
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
+        $isOwner = $task->project
+            ->projectMembers()
             ->where('user_id', $user->id)
-            ->where('role.name', 'Owner')
-            ->isNotEmpty();
+            ->whereHas(
+                'role',
+                fn($q) =>
+                $q->where('name', 'Owner')
+            )
+            ->exists();
 
         if ($isOwner) {
             return $isOwner;
         }
 
-        $isMember = $task->users()
+        $isMember = $task
+            ->users()
             ->where('user_id', $user->id)
             ->exists();
 

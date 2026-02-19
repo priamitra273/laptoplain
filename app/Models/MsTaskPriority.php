@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityTaskPriority;
+use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MsTaskPriority extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogUsers, LogsActivityTaskPriority;
 
     protected $table = 'ms_task_priorities';
 

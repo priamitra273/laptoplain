@@ -28,7 +28,8 @@ class UserListResource extends JsonResource
             'is_active' => $this->is_active,
             'email_verified_at' => $this->email_verified_at,
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
+            'updated_at' => $this->updated_at,
+            'created_by' => $this->created_by_user?->name ?? '-'
         ];
     }
 }

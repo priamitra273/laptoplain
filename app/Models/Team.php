@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivityTeam;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,7 +13,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Concerns\HasUuid;
 
 class Team extends Model
 {
-    use HasUuid, LogUsers, SoftDeletes;
+    use HasUuid, LogUsers, SoftDeletes, LogsActivityTeam;
 
     protected $fillable = [
         'name',

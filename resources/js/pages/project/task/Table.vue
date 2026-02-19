@@ -28,7 +28,7 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
-    (e: 'edit', task: Task): void;
+    (e: 'edit', task: Task, parentId: string | null): void;
 }>();
 
 const deleteLoading = ref(false);
@@ -61,14 +61,15 @@ const getInitials = (name: string) =>
 // Get color for avatar
 const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
-// Format tasks for TreeTable
-const formatTasks = (list?: Task[]): TaskFormatted[] => {
+// Format tasks for TreeTable — now accepts a `level` parameter for indentation
+const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
         key: t.id,
         original: t,
         data: {
             id: t.id,
+            parent_id: t.parent_id,
             title: t.title,
             status: t.status,
             priority: t.priority,
@@ -80,8 +81,9 @@ const formatTasks = (list?: Task[]): TaskFormatted[] => {
             created_by: t.created_by,
             completed_at: t.completed_at,
             is_overdue: t.is_overdue,
+            level,
         },
-        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive) : [],
+        children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive, level + 1) : [],
     }));
 };
 
@@ -202,6 +204,9 @@ const remove = (t: Task) => {
         accept: () => {
             router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
                 preserveScroll: true,
+                onError: () => {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
+                },
                 onFinish: () => (deleteLoading.value = false),
             });
         },
@@ -292,8 +297,14 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto" v-if="isMember || hasPermission">
-                <Button label="Add Task" icon="pi pi-plus" @click="emit('add', null)" class="w-full min-w-[120px] sm:w-auto sm:min-w-0" />
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+                <Button 
+                    label="Add Task" 
+                    icon="pi pi-plus" 
+                    @click="emit('add', null)" 
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0" 
+                    :disabled="!isMember && !hasPermission" 
+                />
                 <Button
                     v-if="hasSelectedTasks"
                     label="Delete Selected"
@@ -302,6 +313,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     @click="removeSelected"
                     class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
                     variant="outlined"
+                    :disabled="!isMember && !hasPermission" 
                 />
             </div>
         </div>
@@ -421,11 +433,9 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Expander Column - FROZEN LEFT -->
-                <Column :expander="true" style="width: 3rem" frozen alignFrozen="left" />
-
-                <!-- Title Column -->
-                <Column field="title" header="Title" style="min-width: 200px" sortable />
+                <!-- Title Column with indentation based on level -->
+                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 200px" >
+                </Column>
 
                 <Column field="status.name" header="Status" style="min-width: 120px" sortable>
                     <template #body="{ node }">
@@ -501,7 +511,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Actions Column - FROZEN RIGHT -->
-                <Column header="Actions" frozen alignFrozen="right" style="min-width: 200px">
+                <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
                             <Link :href="route('task.show', node.original)">
@@ -511,25 +521,22 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-plus"
                                 size="small"
                                 severity="info"
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || (!isMember && !hasPermission)"
                                 @click="emit('add', node.data.id)"
-                                v-if="isMember || hasPermission"
                             />
                             <Button
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
-                                :disabled="deleteLoading"
-                                @click="emit('edit', node.original)"
-                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
+                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
+                                @click="emit('edit', node.original, node.data.parent_id)""
                             />
                             <Button
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="remove(node.original)"
-                                v-if="(isMember && hasAccessToEditAndDelete(node.data)) || hasPermission"
                             />
                         </div>
                     </template>

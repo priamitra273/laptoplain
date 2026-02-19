@@ -12,10 +12,10 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskTypeForm from './Form.vue';
+import { can } from '@/lib/utils';
 
 interface Props {
-    task_types?: TaskType[];
-    hasPermission?: boolean
+    task_types?: TaskType[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -47,6 +47,25 @@ const items: MenuItem[] = [
         },
     },
 ];
+
+if (can('task-type.update')) {
+    items.push({
+        label: 'Edit',
+        command(event) {
+            selected.value = event.item.data;
+            visibleForm.value = true;
+        },
+    })
+}
+
+if (can('task-type.delete')) {
+    items.push({
+        label: 'Delete',
+        command(event) {
+            destroy(event.item.data);
+        },
+    })
+}
 
 const destroy = (task_type: TaskType) => {
     confirm.require({
@@ -89,7 +108,7 @@ watch(visibleForm, (newVal) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Type" raised @click="visibleForm = true" v-if="hasPermission">
+            <Button label="Add Task Type" raised @click="visibleForm = true" :disabled="!can('task-type.create')">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -128,7 +147,7 @@ watch(visibleForm, (newVal) => {
                     </template>
                 </Column>
 
-                <Column header="Actions" v-if="hasPermission">
+                <Column header="Actions" v-if="can('task-type.update') || can('task-type.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" />
                     </template>

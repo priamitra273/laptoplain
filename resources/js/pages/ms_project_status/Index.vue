@@ -2,7 +2,7 @@
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { MsProjectStatus } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import ProjectStatusTable from './Table.vue';
 
 interface Props {
@@ -13,10 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
     statuses: () => [],
 });
 
-const hasPermission = (): boolean => {
-    const role = usePage().props.auth.role;
-    return role ? (role.startsWith('super-admin-') || role.startsWith('admin-')) : false;
-}
 </script>
 
 <template>
@@ -26,7 +22,7 @@ const hasPermission = (): boolean => {
         <div class="flex flex-col gap-6">
             <Heading title="Project Status" description="Manage master data project status" />
 
-            <ProjectStatusTable :statuses="props.statuses" :has-permission="hasPermission()" />
+            <ProjectStatusTable :statuses="props.statuses" />
         </div>
     </AppLayout>
 </template>

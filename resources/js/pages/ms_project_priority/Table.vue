@@ -2,6 +2,7 @@
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { getSeverityLabel } from '@/constants';
+import { can } from '@/lib/utils';
 import { ProjectPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -15,7 +16,6 @@ import ProjectPriorityForm from './Form.vue';
 
 interface Props {
     project_priorities?: ProjectPriority[];
-    hasPermission?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -32,22 +32,27 @@ const filters = ref({
 const visibleForm = ref<boolean>(false);
 const selected = ref<ProjectPriority | undefined>(undefined);
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('project-priority.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             const id = event.item.menuKey;
             selected.value = props.project_priorities.find((item) => item.id === id);
             visibleForm.value = true;
         },
-    },
-    {
+    })
+}
+
+if (can('project-priority.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data);
         },
-    },
-];
+    })
+}
 
 const destroy = (project_priority: ProjectPriority) => {
     confirm.require({
@@ -88,7 +93,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Project Priority" raised @click="visibleForm = true" v-if="hasPermission">
+            <Button label="Add Project Priority" raised @click="visibleForm = true" :disabled="!can('project-priority.create')">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -126,7 +131,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Actions" style="width: 10%" v-if="hasPermission">
+                <Column header="Actions" style="width: 10%" v-if="can('project-priority.update') || can('project-priority.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

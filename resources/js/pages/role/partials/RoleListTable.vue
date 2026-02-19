@@ -8,6 +8,7 @@ import DropdownButton from '@/components/DropdownButton.vue';
 import { RoleList, Team } from '@/types';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2'
+import { can } from '@/lib/utils';
 
 interface Props {
     roles?: RoleList[]
@@ -21,20 +22,25 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('role.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             router.visit(route('role.edit', event.item.menuKey))
         },
-    },
-    {
+    })
+}
+
+if (can('role.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data)
         },
-    }
-];
+    })
+}
 
 const destroy = (role: RoleList) => {
     Swal.fire({
@@ -71,11 +77,18 @@ const destroy = (role: RoleList) => {
                 </InputIcon>
             </IconField>
 
-            <Button raised as-child v-slot="slotProps">
-                <Link :href="route('role.create')" :class="slotProps.class">
+            <Link v-if="can('role.create')" :href="route('role.create')">
+                <Button label="Add Role" raised>
+                    <template #icon>
+                        <Icon name="plus" />
+                    </template>
+                </Button>
+            </Link>
+
+            <Button v-else label="Add Role" raised disabled>
+                <template #icon>
                     <Icon name="plus" />
-                    <span>Add Role</span>
-                </Link>
+                </template>
             </Button>
         </div>
 
@@ -104,7 +117,7 @@ const destroy = (role: RoleList) => {
                     </template>
                 </Column>
 
-                <Column>
+                <Column v-if="can('role.update') || can('role.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

@@ -9,6 +9,7 @@ import DropdownButton from '@/components/DropdownButton.vue';
 import { Team } from '@/types';
 import { MenuItem } from 'primevue/menuitem';
 import Swal from 'sweetalert2'
+import { can } from '@/lib/utils';
 
 interface Props {
     teams?: Team[]
@@ -25,21 +26,26 @@ const filters = ref({
 const visibleForm = ref<boolean>(false)
 const selected = ref<Team>()
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('team.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             selected.value = props.teams?.find((item) => item.uuid === event.item.menuKey)
             visibleForm.value = true;
         },
-    },
-    {
+    })
+}
+
+if (can('team.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data)
         },
-    }
-];
+    })
+}
 
 const destroy = (team: Team) => {
     Swal.fire({
@@ -76,7 +82,7 @@ const destroy = (team: Team) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Team" raised @click="visibleForm = true">
+            <Button label="Add Team" raised @click="visibleForm = true" :disabled="!can('team.create')">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -102,7 +108,7 @@ const destroy = (team: Team) => {
                     </template>
                 </Column>
 
-                <Column>
+                <Column v-if="can('team.update') || can('team.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.uuid" />
                     </template>

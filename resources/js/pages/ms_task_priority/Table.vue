@@ -11,6 +11,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskPriorityForm from './Form.vue';
+import { can } from '@/lib/utils';
 
 interface Props {
     task_priorities?: TaskPriority[];
@@ -30,22 +31,27 @@ const selected = ref<TaskPriority | undefined>(undefined);
 const confirm = useConfirm();
 const toast = useToast();
 
-const items = [
-    {
+const items = [];
+
+if (can('task-priority.update')) {
+    items.push({
         label: 'Edit',
         command(event: any) {
             const id = event.item.menuKey;
             selected.value = props.task_priorities.find((i) => i.id === id);
             visibleForm.value = true;
         },
-    },
-    {
+    })
+}
+
+if (can('task-priority.delete')) {
+    items.push({
         label: 'Delete',
         command(event: any) {
             destroy(event.item.data);
         },
-    },
-];
+    })
+}
 
 const destroy = (taskPriority: TaskPriority) => {
     confirm.require({
@@ -86,7 +92,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Priority" raised @click="visibleForm = true" v-if="hasPermission">
+            <Button label="Add Task Priority" raised @click="visibleForm = true" :disabled="!can('task-priority.create')">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -124,7 +130,7 @@ watch(visibleForm, (newValue) => {
                     </template>
                 </Column>
 
-                <Column header="Action" style="width: 10%" v-if="hasPermission">
+                <Column header="Action" style="width: 10%" v-if="can('task-priority.update') || can('task-priority.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" :menu-key="data.id" />
                     </template>

@@ -3,6 +3,7 @@ import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { getSeverityLabel } from '@/constants';
 import { TaskStatus } from '@/types';
+import { can } from '@/lib/utils';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
@@ -14,8 +15,7 @@ import { ref, watch } from 'vue';
 import TaskStatusForm from './Form.vue';
 
 interface Props {
-    task_statuses?: TaskStatus[];
-    hasPermission?: boolean
+    task_statuses?: TaskStatus[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -32,21 +32,26 @@ const selected = ref<TaskStatus | undefined>(undefined);
 const confirm = useConfirm();
 const toast = useToast();
 
-const items: MenuItem[] = [
-    {
+const items: MenuItem[] = [];
+
+if (can('task-status.update')) {
+    items.push({
         label: 'Edit',
         command(event) {
             selected.value = event.item.data;
             visibleForm.value = true;
         },
-    },
-    {
+    })
+}
+
+if (can('task-status.delete')) {
+    items.push({
         label: 'Delete',
         command(event) {
             destroy(event.item.data);
         },
-    },
-];
+    })
+}
 
 const destroy = (task_status: TaskStatus) => {
     confirm.require({
@@ -89,7 +94,7 @@ watch(visibleForm, (newVal) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Task Status" raised @click="visibleForm = true" v-if="hasPermission">
+            <Button label="Add Task Status" raised @click="visibleForm = true" :disabled="!can('task-status.create')">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -134,7 +139,7 @@ watch(visibleForm, (newVal) => {
                     </template>
                 </Column>
 
-                <Column header="Actions" v-if="hasPermission">
+                <Column header="Actions" v-if="can('task-status.update') || can('task-status.delete')">
                     <template #body="{ data }">
                         <DropdownButton :items="items" :data="data" />
                     </template>

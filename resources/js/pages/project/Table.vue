@@ -36,7 +36,6 @@ interface Props {
     statuses: ProjectStatus[];
     priorities: ProjectPriority[];
     progresses?: number;
-    hasPermission?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -78,24 +77,24 @@ const goToCreate = () => {
     visibleForm.value = true;
 };
 
-const items: MenuItem[] = [
-    {
-        label: 'View Detail',
-        command(event) {
-            const data = event.item.data;
-            router.visit(route('project.show', { encoded: data.id }));
-        },
-    },
-];
+// const items: MenuItem[] = [
+//     {
+//         label: 'View Detail',
+//         command(event) {
+//             const data = event.item.data;
+//             router.visit(route('project.show', { encoded: data.id }));
+//         },
+//     },
+// ];
 
-if (props.hasPermission) {
-    items.push({
-        label: 'Delete',
-        command(event) {
-            confirmDelete(event.item.data);
-        },
-    });
-}
+// if (can('project.delete')) {
+//     items.push({
+//         label: 'Delete',
+//         command(event) {
+//             confirmDelete(event.item.data);
+//         },
+//     });
+// }
 
 const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
     if (data[field] === newValue) return;
@@ -217,7 +216,7 @@ watch(visibleForm, (val) => {
                 </InputIcon>
             </IconField>
 
-            <Button v-if="can('project.create')" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
+            <Button :disabled="!can('project.create')" icon="pi pi-plus" label="Add Project" @click="goToCreate" />
         </div>
 
         <div class="card overflow-hidden">
@@ -263,7 +262,7 @@ watch(visibleForm, (val) => {
                         </div>
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data, field }">
+                    <template v-if="can('project.update')" #editor="{ data, field }">
                         <div class="flex w-full items-center gap-2">
                             <div class="relative">
                                 <button type="button" @click.stop="toggleEmojiPicker(data.id)" class="rounded px-2 py-1 text-2xl hover:bg-gray-100">
@@ -290,7 +289,7 @@ watch(visibleForm, (val) => {
                         <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data, field }">
+                    <template v-if="can('project.update')" #editor="{ data, field }">
                         <Editor v-model="data[field]" editorStyle="height: 200px">
                             <template #toolbar>
                                 <span class="ql-formats">
@@ -316,7 +315,7 @@ watch(visibleForm, (val) => {
                         </MultiSelect>
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data }">
+                    <template v-if="can('project.update')" #editor="{ data }">
                         <Dropdown v-model="data.status_id" :options="props.statuses" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
@@ -341,7 +340,7 @@ watch(visibleForm, (val) => {
                         </MultiSelect>
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data }">
+                    <template v-if="can('project.update')" #editor="{ data }">
                         <Dropdown v-model="data.priority_id" :options="props.priorities" optionLabel="name" optionValue="id" class="w-full" />
                     </template>
                 </Column>
@@ -355,7 +354,7 @@ watch(visibleForm, (val) => {
                         <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-mm-dd" />
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data, field }">
+                    <template v-if="can('project.update')" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
@@ -369,7 +368,7 @@ watch(visibleForm, (val) => {
                         <DatePicker v-model="filterModel.value" dateFormat="yy-mm-dd" placeholder="yyyy-mm-dd" />
                     </template>
 
-                    <template v-if="props.hasPermission" #editor="{ data, field }">
+                    <template v-if="can('project.update')" #editor="{ data, field }">
                         <InputText v-model="data[field]" type="date" class="w-full" />
                     </template>
                 </Column>
@@ -395,7 +394,7 @@ watch(visibleForm, (val) => {
                                 icon="pi pi-eye"
                                 severity="secondary"
                                 size="small"
-                                :disabled="deleteLoading"
+                                :disabled="deleteLoading || !can('project.read')"
                                 @click="router.visit(route('project.show', { encoded: data.id }))"
                                 v-tooltip.bottom="'View Details'"
                             />
@@ -403,7 +402,7 @@ watch(visibleForm, (val) => {
                                 icon="pi pi-trash"
                                 severity="danger"
                                 size="small"
-                                :disabled="deleteLoading || !hasPermission"
+                                :disabled="deleteLoading ||  !can('project.delete')"
                                 @click="confirmDelete(data)"
                                 v-tooltip.bottom="'Delete'"
                             />

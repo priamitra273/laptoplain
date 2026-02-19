@@ -290,8 +290,8 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                         {{ data.emoji }}
                                     </span>
                                     <Link :href="route('project.show', data.id)" @click.stop>
-                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white">
-                                            {{ data.title }}
+                                        <span class="truncate font-medium text-gray-900 hover:underline dark:text-white" :title="data.title">
+                                            {{ data.title.length > 30 ? data.title.slice(0, 30) + '...' : data.title }}
                                         </span>
                                     </Link>
                                 </div>
@@ -308,7 +308,7 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                 <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
                             </template>
                         </Column>
-                        
+
                         <template #empty>
                             <p class="text-center">No Data Available</p>
                         </template>
@@ -339,8 +339,8 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                         <Column field="title" header="Task" style="min-width: 250px">
                             <template #body="{ data }">
                                 <Link :href="route('task.show', data.id)" @click.stop>
-                                    <span class="truncate font-semibold text-gray-900 hover:underline dark:text-white">
-                                        {{ data.title }}
+                                    <span class="truncate font-semibold text-gray-900 hover:underline dark:text-white" :title="data.title">
+                                        {{ data.title.length > 30 ? data.title.slice(0, 30) + '...' : data.title }}
                                     </span>
                                 </Link>
                             </template>
@@ -355,7 +355,7 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                 <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
                             </template>
                         </Column>
-                        
+
                         <template #empty>
                             <p class="text-center">No Data Available</p>
                         </template>

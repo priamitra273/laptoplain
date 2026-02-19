@@ -5,18 +5,18 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, inject, Ref, ref, watch } from 'vue';
 
 interface NotificationStore {
-    notifications: Ref<Notification[]>
-    unreadCount: Ref<number>
-    markAsRead: (notificationId: string) => Promise<void>
-    clearNotifications: () => Promise<void>
-    connect: () => void
-    disconnect: () => void
+    notifications: Ref<Notification[]>;
+    unreadCount: Ref<number>;
+    markAsRead: (notificationId: string) => Promise<void>;
+    clearNotifications: () => Promise<void>;
+    connect: () => void;
+    disconnect: () => void;
 }
 
 const { onMenuToggle, onConfigSidebarToggle } = useLayout();
 
-const page = usePage()
-const user = computed(() => page.props.auth?.user ?? null)
+const page = usePage();
+const user = computed(() => page.props.auth?.user ?? null);
 
 // Logout
 async function logout() {
@@ -48,15 +48,19 @@ const isDelete = (message: string): boolean => {
     return message.toLowerCase().includes('delete');
 };
 
-watch(user, (newUser) => {
-    if (!notifications) return
+watch(
+    user,
+    (newUser) => {
+        if (!notifications) return;
 
-    if (newUser) {
-        connect()
-    } else {
-        disconnect()
-    }
-}, { immediate: true })
+        if (newUser) {
+            connect();
+        } else {
+            disconnect();
+        }
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -95,10 +99,10 @@ watch(user, (newUser) => {
 
                         <div
                             v-show="showNotificationDropdown"
-                            class="absolute right-0 z-50 mt-2 w-96 rounded-md border border-gray-200 bg-white shadow-lg"
+                            class="absolute right-0 z-50 mt-2 w-96 rounded-md border border-gray-200 bg-white shadow-lg dark:border-surface-700 dark:bg-surface-800"
                             @click.stop
                         >
-                            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2">
+                            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-surface-700">
                                 <span class="font-semibold">Notifications</span>
                                 <button v-if="notifications.length > 0" class="text-xs text-red-600 hover:underline" @click="clear">Clear All</button>
                             </div>
@@ -107,7 +111,7 @@ watch(user, (newUser) => {
                                 <li
                                     v-for="notif in notifications"
                                     :key="notif.id"
-                                    class="flex cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                    class="flex cursor-pointer px-4 py-2 hover:bg-gray-100 dark:hover:bg-surface-700"
                                     :class="{ 'font-bold': !notif.is_read }"
                                 >
                                     <component
@@ -121,7 +125,7 @@ watch(user, (newUser) => {
                                     </component>
                                 </li>
 
-                                <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500">No notifications</li>
+                                <li v-if="notifications.length === 0" class="px-4 py-2 text-gray-500 dark:text-surface-400">No notifications</li>
                             </ul>
                         </div>
                     </li>

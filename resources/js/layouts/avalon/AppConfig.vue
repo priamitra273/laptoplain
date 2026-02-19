@@ -1,4 +1,5 @@
 <script setup>
+import { useAppearance } from '@/composables/useAppearance';
 import { useLayout } from '@/composables/useLayouts';
 import { $t, updatePreset, updateSurfacePalette } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
@@ -13,27 +14,44 @@ defineProps({
     },
 });
 
-const { layoutState, layoutConfig, setPrimary, setSurface, setPreset, setMenuMode, setTopbarTheme, setProfilePosition, toggleDarkMode, isDarkTheme } =
-    useLayout();
+const {
+    layoutState,
+    layoutConfig,
+    setPrimary,
+    setSurface,
+    setPreset,
+    setMenuMode,
+    setTopbarTheme,
+    setProfilePosition,
+    setColorScheme,
+    getColorScheme,
+    toggleDarkMode,
+    isDarkTheme,
+} = useLayout();
 
 const presets = {
     Aura,
     Lara,
 };
+
 const presetOptions = ref(Object.keys(presets));
 const preset = ref(layoutConfig.preset);
 const themeOptions = ref([
-    { name: 'Light', value: false },
-    { name: 'Dark', value: true },
+    { name: 'Light', value: 'light' },
+    { name: 'Dark', value: 'dark' },
+    { name: 'System', value: 'system' },
 ]);
 const menuThemeOptions = ref([
     { name: 'Light', value: 'light', disabled: isDarkTheme },
     { name: 'Dark', value: 'dark', disabled: false },
 ]);
+const colorScheme = ref(layoutConfig.colorScheme ?? 'system');
 const darkTheme = ref(layoutConfig.darkTheme);
 const menuMode = ref(layoutConfig.menuMode);
 const menuProfilePosition = ref(layoutConfig.menuProfilePosition);
 const selectedScene = ref(null);
+
+const { updateAppearance } = useAppearance();
 
 const primaryColors = ref([
     { name: 'noir', palette: {} },
@@ -684,7 +702,6 @@ function changeScene(item) {
 }
 
 function changeDarkMode() {
-    // layoutConfigSession.value = layoutConfig;
     toggleDarkMode();
 }
 
@@ -703,19 +720,34 @@ function implementThemeFromSession() {
         setMenuMode(session.menuMode);
 
         darkTheme.value = session.darkTheme;
+        colorScheme.value = session.colorScheme ?? 'system';
+
+        // Sync appearance saat restore session
+        updateAppearance(colorScheme.value); // ← tambahan
 
         if (layoutConfig.darkTheme) {
             document.documentElement.classList.add('app-dark');
         }
     }
 }
-
 implementThemeFromSession();
 
-watch(darkTheme, (val) => {
-    layoutConfigSession.value.darkTheme = val;
-    layoutConfigSession.value.menuTheme = val ? 'dark' : 'light';
+// Watch colorScheme → update layout & session
+watch(colorScheme, (val) => {
+    setColorScheme(val);
+    updateAppearance(val); // ← sync ke useAppearance
+    layoutConfigSession.value.colorScheme = val;
 });
+
+// Sync darkTheme ref saat isDarkTheme berubah (misal dari OS system change)
+watch(
+    () => layoutConfig.darkTheme,
+    (val) => {
+        darkTheme.value = val;
+        layoutConfigSession.value.darkTheme = val;
+        layoutConfigSession.value.menuTheme = val ? 'dark' : 'light';
+    },
+);
 
 watch(
     () => layoutConfig.topbarTheme,
@@ -753,10 +785,17 @@ watch(
                         @click="updateColors('primary', primaryColor)"
                         :class="[
                             'flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full p-0 outline-none outline-offset-1',
-                            { 'outline-primary': layoutConfig.primary === primaryColor.name },
                         ]"
                         :style="{ backgroundColor: `${primaryColor.name === 'noir' ? 'var(--text-color)' : primaryColor.palette['500']}` }"
-                    ></button>
+                    >
+                        <i
+                            v-if="primaryColor.name === layoutConfig.primary"
+                            :class="[
+                                'pi pi-check text-xs',
+                                primaryColor.name === 'noir' && !isDarkTheme ? 'text-white' : isDarkTheme ? 'text-black' : 'text-white',
+                            ]"
+                        ></i>
+                    </button>
                 </div>
             </div>
 
@@ -770,16 +809,20 @@ watch(
                         @click="updateColors('surface', surface)"
                         :class="[
                             'flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full p-0 outline-none outline-offset-1',
-                            {
-                                'outline-primary': layoutConfig.surface
+                        ]"
+                        :style="{ backgroundColor: `${surface.palette['500']}` }"
+                    >
+                        <i
+                            v-if="
+                                layoutConfig.surface
                                     ? layoutConfig.surface === surface.name
                                     : isDarkTheme
                                       ? surface.name === 'zinc'
-                                      : surface.name === 'slate',
-                            },
-                        ]"
-                        :style="{ backgroundColor: `${surface.palette['500']}` }"
-                    ></button>
+                                      : surface.name === 'slate'
+                            "
+                            :class="['pi pi-check text-xs', isDarkTheme ? 'text-black' : 'text-white']"
+                        ></i>
+                    </button>
                 </div>
             </div>
 
@@ -819,14 +862,7 @@ watch(
             <div>
                 <div class="flex flex-col gap-2">
                     <span class="text-lg font-semibold text-muted-color">Color Scheme</span>
-                    <SelectButton
-                        v-model="darkTheme"
-                        @change="changeDarkMode"
-                        :options="themeOptions"
-                        optionLabel="name"
-                        optionValue="value"
-                        :allowEmpty="false"
-                    />
+                    <SelectButton v-model="colorScheme" :options="themeOptions" optionLabel="name" optionValue="value" :allowEmpty="false" />
                 </div>
             </div>
 
@@ -846,7 +882,6 @@ watch(
                                     ></RadioButton>
                                     <label for="mode1">Static</label>
                                 </div>
-
                                 <div class="flex w-1/2 items-center gap-2">
                                     <RadioButton
                                         name="menuMode"
@@ -867,7 +902,7 @@ watch(
                                         @update:modelValue="setMenuMode"
                                         inputId="mode3"
                                     ></RadioButton>
-                                    <label for="mode2">Slim</label>
+                                    <label for="mode3">Slim</label>
                                 </div>
                                 <div class="flex w-1/2 items-center gap-2">
                                     <RadioButton
@@ -877,7 +912,7 @@ watch(
                                         @update:modelValue="setMenuMode"
                                         inputId="mode4"
                                     ></RadioButton>
-                                    <label for="mode3">Slim+</label>
+                                    <label for="mode4">Slim+</label>
                                 </div>
                             </div>
                             <div class="flex">
@@ -889,7 +924,7 @@ watch(
                                         @update:modelValue="setMenuMode"
                                         inputId="mode5"
                                     ></RadioButton>
-                                    <label for="mode4">Reveal</label>
+                                    <label for="mode5">Reveal</label>
                                 </div>
                                 <div class="flex w-1/2 items-center gap-2">
                                     <RadioButton
@@ -899,7 +934,7 @@ watch(
                                         @update:modelValue="setMenuMode"
                                         inputId="mode6"
                                     ></RadioButton>
-                                    <label for="mode5">Drawer</label>
+                                    <label for="mode6">Drawer</label>
                                 </div>
                             </div>
                             <div class="flex">
@@ -932,7 +967,6 @@ watch(
                                 ></RadioButton>
                                 <label for="profile1">Start</label>
                             </div>
-
                             <div class="flex w-1/2 items-center gap-2">
                                 <RadioButton
                                     name="menuProfilePosition"

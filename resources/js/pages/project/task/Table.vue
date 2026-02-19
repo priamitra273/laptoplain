@@ -434,7 +434,12 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Title Column with indentation based on level -->
-                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 200px" >
+                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 200px">
+                    <template #body="{ node }">
+                        <span :title="node.data.title">
+                            {{ node.data.title.length > 30 ? node.data.title.slice(0, 30) + '...' : node.data.title }}
+                        </span>
+                    </template>
                 </Column>
 
                 <Column field="status.name" header="Status" style="min-width: 120px" sortable>

@@ -9,7 +9,6 @@ import emojiData from 'emoji-mart-vue-fast/data/all.json';
 // @ts-ignore
 import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
-import { MenuItem } from 'primevue/menuitem';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
@@ -245,7 +244,7 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column field="project_no" header="Project No" sortable class="w-32">
+                <Column field="project_no" header="Project No" sortable style="min-width: 120px">
                     <template #body="{ data }">
                         <span class="font-mono text-sm">
                             {{ data.project_no ?? '-' }}
@@ -402,7 +401,7 @@ watch(visibleForm, (val) => {
                                 icon="pi pi-trash"
                                 severity="danger"
                                 size="small"
-                                :disabled="deleteLoading ||  !can('project.delete')"
+                                :disabled="deleteLoading || !can('project.delete')"
                                 @click="confirmDelete(data)"
                                 v-tooltip.bottom="'Delete'"
                             />

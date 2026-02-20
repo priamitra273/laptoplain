@@ -57,9 +57,10 @@ interface ProjectMemberSimple {
     name: string;
 }
 
-interface ParentOption {
-    id: string;
-    title: string;
+interface TreeNodeOption {
+    key: string;
+    label: string;
+    children?: TreeNodeOption[];
 }
 
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
@@ -79,70 +80,48 @@ const authUser = computed(() => usePage().props.auth.user);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
 
-const flattenTasks = (tasks: Task[]): ParentOption[] => {
-    const result: ParentOption[] = [];
+const selectedParent = ref<Record<string, boolean> | null>(
+    props.task?.parent_id ? { [props.task.parent_id]: true } : null
+)
 
-    const traverse = (items: Task[]) => {
-        for (const item of items) {
-            result.push({
-                id: item.id,
-                title: item.title,
-            });
+const collectDescendants = (task: Task): string[] => {
+    const ids: string[] = []
 
-            if (item.sub_task_recursive?.length) {
-                traverse(item.sub_task_recursive);
-            }
+    const walk = (node: Task) => {
+        if (!node.sub_task_recursive) return
+        for (const child of node.sub_task_recursive) {
+            ids.push(child.id)
+            walk(child)
         }
-    };
+    }
 
-    traverse(tasks);
-    return result;
-};
+    walk(task)
+    return ids
+}
 
-const descendantIds = computed<string[]>(() => {
-    if (!props.task) return [];
+const parentTreeOptions = computed<TreeNodeOption[]>(() => {
+    const excludeIds = new Set<string>()
 
-    const collect = (items: Task[]): string[] => {
-        let ids: string[] = [];
+    if (props.task) {
+        excludeIds.add(props.task.id)
 
-        for (const t of items) {
-            ids.push(t.id);
+        collectDescendants(props.task).forEach(id =>
+            excludeIds.add(id)
+        )
+    }
 
-            if (t.sub_task_recursive?.length) {
-                ids = ids.concat(collect(t.sub_task_recursive));
-            }
-        }
+    const build = (tasks: Task[]): TreeNodeOption[] => {
+        return tasks
+            .filter(t => !excludeIds.has(t.id))
+            .map(t => ({
+                key: t.id,
+                label: t.title,
+                children: t.sub_task_recursive ? build(t.sub_task_recursive) : undefined
+            }))
+    }
 
-        return ids;
-    };
-
-    return collect(props.task.sub_task_recursive ?? []);
-});
-
-const parentTaskOptions = computed<ParentOption[]>(() => {
-    const flat = flattenTasks(props.tasks);
-
-    if (!props.task) return flat;
-
-    return flat.filter((t) => {
-        const isSelf = t.id === props.task!.id;
-        const isDescendant = descendantIds.value.includes(t.id);
-
-        return !isSelf && !isDescendant;
-    });
-});
-
-const parentSelectOptions = computed(() => {
-    return [{ id: null, title: '— No Parent —' }, ...parentTaskOptions.value];
-});
-
-const getParentLabel = computed<string>(() => {
-    if (!form.parent_id) return '— No Parent —';
-
-    const found = parentSelectOptions.value.find((opt) => opt.id === form.parent_id);
-
-    return found?.title ?? '— No Parent —';
-});
+    return build(props.tasks)
+})
 
 watch(
     existedMembers,
@@ -285,6 +264,8 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
+    form.parent_id = selectedParent.value ? Object.keys(selectedParent.value)[0] : null
+
     const existed = existedMembers.value.map((u) => u.id);
     const selected = selectedMembers.value.map((u) => u.id);
 
@@ -318,6 +299,7 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
+                selectedParent.value = {}
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update task', life: 3000 });
@@ -336,6 +318,7 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
+                selectedParent.value = {}
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to store task', life: 3000 });
@@ -366,6 +349,28 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
 <template>
     <div class="flex flex-col gap-4">
+        <div v-if="isEdit" class="flex flex-col">
+            <label class="font-semibold">Parent Task</label>
+            <!-- <Select
+                v-model="form.parent_id"
+                :options="parentSelectOptions"
+                optionLabel="title"
+                optionValue="id"
+                placeholder="Select Parent Task"
+                class="w-full"
+            >
+                <template #value>
+                    <span>{{ getParentLabel }}</span>
+                </template>
+            </Select> -->
+            <TreeSelect 
+                v-model="selectedParent" 
+                :options="parentTreeOptions" 
+                placeholder="Select Parent Task" 
+                class="w-full" 
+                showClear
+            />
+        </div>
         <div>
             <label class="font-semibold">Title</label>
             <InputText v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
@@ -420,22 +425,6 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 :class="{ 'p-invalid': form.errors.assign_users }"
             />
             <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
-        </div>
-
-        <div v-if="isEdit" class="flex flex-col">
-            <label class="font-semibold">Parent Task</label>
-            <Select
-                v-model="form.parent_id"
-                :options="parentSelectOptions"
-                optionLabel="title"
-                optionValue="id"
-                placeholder="Select Parent Task"
-                class="w-full"
-            >
-                <template #value>
-                    <span>{{ getParentLabel }}</span>
-                </template>
-            </Select>
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

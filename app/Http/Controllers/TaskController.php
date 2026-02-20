@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
 use App\Enums\TaskNotificationType;
+use App\Http\Requests\Task\TaskUpdateRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -277,7 +278,7 @@ class TaskController extends Controller
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
-    public function update(TaskStoreRequest $request, string $encoded, string $taskEncoded)
+    public function update(TaskUpdateRequest $request, string $encoded, string $taskEncoded)
     {
         try {
             $taskId = Sqids::decode($taskEncoded);

@@ -52,6 +52,7 @@ declare module 'vue' {
     Timeline: typeof import('primevue/timeline')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+    TreeSelect: typeof import('primevue/treeselect')['default']
     TreeTable: typeof import('primevue/treetable')['default']
   }
   export interface ComponentCustomProperties {

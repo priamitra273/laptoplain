@@ -143,7 +143,7 @@ const editValue = ref<any>(null);
 const editingElement = ref<HTMLElement | null>(null);
 
 const startEdit = (field: string, currentValue: any, event?: Event) => {
-    if (!props.isTaskMember && (!hasPermission() || !isOwner.value)) {
+    if (!props.isTaskMember && !hasPermission() && !isOwner.value) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -354,7 +354,15 @@ const submitComment = () => {
                 class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
             >
                 <template #content>
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <Button
+                        icon="pi pi-arrow-left"
+                        text
+                        rounded
+                        severity="secondary"
+                        @click="router.visit(route('project.show', { encoded: project.id }))"
+                        class="hover:bg-surface-100 dark:hover:bg-surface-800"
+                    />
                         <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
                             <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
                                 <Emoji

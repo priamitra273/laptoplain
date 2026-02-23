@@ -285,10 +285,6 @@ const formatDate = (date: string | undefined) => {
     return date ? moment(date).format('DD MMMM YYYY') : '-';
 };
 
-const goBack = () => {
-    router.visit(route('project.index'));
-};
-
 const getInitials = (name: string) =>
     name
         .split(' ')

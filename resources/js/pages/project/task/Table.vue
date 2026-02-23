@@ -436,7 +436,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <!-- Title Column with indentation based on level -->
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
-                        <p class="max-w-[300px] truncate text-ellipsis">{{ node.data.title }}</p>
+                        <p :title="node.data.title" class="max-w-[300px] truncate text-ellipsis">{{ node.data.title }}</p>
                     </template>
                 </Column>
 

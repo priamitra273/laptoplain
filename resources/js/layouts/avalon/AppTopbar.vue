@@ -117,11 +117,11 @@ watch(
                                     <component
                                         :is="!isDelete(notif.message) ? Link : 'div'"
                                         :href="!isDelete(notif.message) ? route('task.show', notif.task_id) : null"
-                                        class="relative my-2 flex cursor-pointer flex-row gap-2"
+                                        class="relative my-2 flex cursor-pointer flex-row gap-2 w-full"
                                         @click="readNotification(notif.id)"
                                     >
-                                        <i class="pi pi-info-circle my-auto ml-1 mr-2"></i>
-                                        <span>{{ notif.message }}</span>
+                                        <i class="pi pi-info-circle my-auto ml-1 mr-2 shrink-0"></i>
+                                        <span class="break-words min-w-0 flex-1">{{ notif.message }}</span>
                                     </component>
                                 </li>
 

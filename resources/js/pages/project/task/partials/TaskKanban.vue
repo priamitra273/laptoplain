@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
 import { Task, TaskStatusOption } from '../type';
 
@@ -11,6 +12,10 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const emit = defineEmits<{
+    statusUpdate: [taskId: string, newStatusId: string];
+}>();
 
 const grouped = ref<Record<string, Task[]>>({});
 
@@ -69,11 +74,24 @@ const getStatusName = (id: string) => {
 
 const onGroupChange = async (task: Task, newStatusId: string) => {
     const response = await axios.post(route('task.status.update', task.id), { _method: 'PUT', status_id: newStatusId });
+    if (response.status === 200) {
+        emit('statusUpdate', task.id, newStatusId);
+    }
 };
 
 onMounted(() => {
     grouped.value = getGroupedTasks();
 });
+
+watch(
+    () => props.tasks,
+    () => {
+        if (!draggingItem.value) {
+            grouped.value = getGroupedTasks();
+        }
+    },
+    { deep: true },
+);
 </script>
 
 <template>
@@ -99,7 +117,11 @@ onMounted(() => {
                         :class="[draggingItem ? 'cursor-grabbing' : 'cursor-pointer']"
                     >
                         <template #subtitle>
-                            {{ item.project?.title }}
+                            <Link :href="route('task.show', item.id)">
+                                <span class="hover:underline">
+                                    {{ item.project?.title }}
+                                </span>
+                            </Link>
                         </template>
                         <template #content>
                             <div class="space-y-4">

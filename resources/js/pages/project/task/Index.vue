@@ -158,6 +158,18 @@ const clearFilters = () => {
 };
 
 const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssigned.value} assignments`);
+
+const onStatusUpdate = (taskId: string, newStatusId: string) => {
+    const task = tasksData.value.find((t) => t.id === taskId);
+
+    if (!task) return;
+
+    const newStatus = props.statuses.find((s) => s.id === newStatusId);
+
+    if (newStatus) {
+        task.status = newStatus;
+    }
+};
 </script>
 
 <template>
@@ -350,7 +362,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                 <!-- BOARD VIEW -->
                 <div v-else>
                     <template v-if="filteredTasks.length > 0">
-                        <TaskKanban :tasks="filteredTasks" :statuses="props.statuses" />
+                        <TaskKanban :tasks="filteredTasks" :statuses="props.statuses" @status-update="onStatusUpdate" />
                     </template>
 
                     <!-- Empty State -->

@@ -62,7 +62,7 @@ class TaskController extends Controller
 
         $totalAssigned = $tasks->where('is_assigned', true)->count();
 
-        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $projects = Project::select('id', 'title')->get();

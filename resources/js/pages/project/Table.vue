@@ -257,7 +257,7 @@ watch(visibleForm, (val) => {
                     <template #body="{ data }">
                         <div class="flex items-center gap-2">
                             <span class="text-2xl">{{ data.emoji || '😀' }}</span>
-                            <span>{{ data.title }}</span>
+                            <span :title="data.title">{{ data.title }}</span>
                         </div>
                     </template>
 

@@ -264,7 +264,9 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
-    form.parent_id = selectedParent.value ? Object.keys(selectedParent.value)[0] : null
+    if (selectedParent.value) {
+        form.parent_id = Object.keys(selectedParent.value)[0];
+    }
 
     const existed = existedMembers.value.map((u) => u.id);
     const selected = selectedMembers.value.map((u) => u.id);

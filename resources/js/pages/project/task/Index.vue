@@ -40,11 +40,11 @@ const filterPriority = ref<string | null>(null);
 const filterType = ref<string | null>(null);
 
 // View mode
-const viewMode = ref<'list' | 'board'>('list');
+const viewMode = ref<'list' | 'board'>('board');
 
 const viewModeOptions = [
-    { icon: 'pi pi-list', label: 'List', value: 'list' },
     { icon: 'pi pi-th-large', label: 'Board', value: 'board' },
+    { icon: 'pi pi-list', label: 'List', value: 'list' },
 ];
 
 // Truncate text helper

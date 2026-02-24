@@ -5,6 +5,7 @@ namespace App\Http\Requests\Task;
 use App\Facades\Sqids;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TaskStoreRequest extends FormRequest
 {
@@ -42,7 +43,12 @@ class TaskStoreRequest extends FormRequest
             'description' => 'nullable|string',
 
             'start_date' => 'nullable|date',
-            'due_date'   => 'nullable|date|after_or_equal:start_date',
+            'due_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:start_date',
+                Rule::requiredIf(fn() => (int) $this->status_id === 2),
+            ],
 
             // 'progress' => 'nullable|numeric|min:0|max:100',
 
@@ -94,6 +100,7 @@ class TaskStoreRequest extends FormRequest
             'add_tag.new.*.name.max'      => 'New tag name may not exceed 255 characters.',
             'add_tag.new.*.severity.max'  => 'The severity value may not exceed 50 characters.',
             'remove_tag.*.exists' => 'One of the tags to remove is invalid.',
+            'due_date.after_or_equal' => 'The due date must be after or equal to the start date.',
         ];
     }
 

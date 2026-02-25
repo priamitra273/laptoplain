@@ -172,7 +172,7 @@ watch(
             } catch {}
         }
         isUpdatingFromProp = false;
-        syncMentionedIds(); // ✅ Sync setelah update dari luar
+        syncMentionedIds();
     },
 );
 </script>
@@ -184,7 +184,6 @@ watch(
 </template>
 
 <style>
-/* ===== Quill Base Override ===== */
 .mention-editor-wrapper .ql-container {
     font-size: 0.875rem;
     border-bottom-left-radius: 0.5rem;
@@ -226,7 +225,6 @@ watch(
     color: #6b7280;
 }
 
-/* ===== Mention Dropdown ===== */
 .ql-mention-list-container {
     z-index: 9999;
     min-width: 200px;
@@ -271,7 +269,6 @@ watch(
     background-color: rgba(59, 130, 246, 0.15);
 }
 
-/* ===== Mention Item Inner ===== */
 .mention-item-inner {
     display: flex;
     align-items: center;
@@ -291,7 +288,6 @@ watch(
     color: #f3f4f6;
 }
 
-/* ===== Mention Chip (in editor) ===== */
 .mention {
     display: inline-flex !important;
     align-items: center;

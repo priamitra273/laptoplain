@@ -68,7 +68,7 @@ const save = () => {
         />
         <InputError :message="form.errors?.user_id" />
 
-        <Dropdown v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" placeholder="Select role" />
+        <Select v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" placeholder="Select role" />
         <InputError :message="form.errors?.project_role_id" />
 
         <div class="mt-4 flex justify-end gap-2">

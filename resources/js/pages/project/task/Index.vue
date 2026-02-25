@@ -8,13 +8,17 @@ import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
+import AutoComplete from 'primevue/autocomplete';
 import { computed, onMounted, ref, watch } from 'vue';
 import TaskKanban from './partials/TaskKanban.vue';
-import { Task, TaskStatusOption } from './type';
+import { Task, TaskStatusOption, TaskPriorityOption, TaskTypeOption } from './type';
 
 interface Props {
     tasks: Task[];
+    projects: { id: string; title: string}[];
     statuses: TaskStatusOption[];
+    priorities: TaskPriorityOption[];
+    types: TaskTypeOption[];
     totalAssigned?: number;
 }
 
@@ -26,6 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const tasksData = ref<Task[]>([]);
+const projectsData = ref<{ id: string; title: string}[]>([]);
 const filteredTasks = ref<Task[]>([]);
 const totalAssigned = ref<number>(props.totalAssigned || 0);
 
@@ -35,9 +40,10 @@ const first = ref<number>(0);
 
 // Search & Filter
 const searchQuery = ref<string>('');
-const filterStatus = ref<string | null>(null);
-const filterPriority = ref<string | null>(null);
-const filterType = ref<string | null>(null);
+const filterStatus = ref<TaskStatusOption | null>(null);
+const filterPriority = ref<TaskPriorityOption | null>(null);
+const filterType = ref<TaskTypeOption | null>(null);
+const filterProject = ref<{ id: string; title: string} | null>(null);
 
 // View mode
 const viewMode = ref<'list' | 'board'>('list');
@@ -76,13 +82,18 @@ const isOverdue = (date?: string) => {
     return d < today;
 };
 
+const searchProjects = (event: { query: string }) => {
+    const query = event.query.toLowerCase();
+    projectsData.value = props.projects.filter((p) => p.title.toLowerCase().includes(query))
+}
+
 onMounted(() => {
     tasksData.value = JSON.parse(JSON.stringify(props.tasks));
     applyFilters();
 });
 
 // Watch filters
-watch([searchQuery, filterStatus, filterPriority, filterType], () => {
+watch([searchQuery, filterStatus, filterPriority, filterType, filterProject], () => {
     applyFilters();
 });
 
@@ -94,39 +105,29 @@ const applyFilters = () => {
         result = result.filter((task) => task.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
     }
 
+    // Project filter
+    if (filterProject.value) {
+        result = result.filter((task) => task.project?.id == filterProject.value?.id);
+    }
+
     // Status filter
     if (filterStatus.value) {
-        result = result.filter((task) => task.status?.name === filterStatus.value);
+        result = result.filter((task) => task.status?.id === filterStatus.value?.id);
     }
 
     // Priority filter
     if (filterPriority.value) {
-        result = result.filter((task) => task.priority?.name === filterPriority.value);
+        result = result.filter((task) => task.priority?.id === filterPriority.value?.id);
     }
 
     // Type filter
     if (filterType.value) {
-        result = result.filter((task) => task.type?.name === filterType.value);
+        result = result.filter((task) => task.type?.id === filterType.value?.id);
     }
 
     filteredTasks.value = result;
     first.value = 0;
 };
-
-const statusOptions = computed(() => {
-    const statuses = new Set(tasksData.value.map((t) => t.status?.name).filter(Boolean));
-    return Array.from(statuses).map((s) => ({ label: s, value: s }));
-});
-
-const priorityOptions = computed(() => {
-    const priorities = new Set(tasksData.value.map((t) => t.priority?.name).filter(Boolean));
-    return Array.from(priorities).map((p) => ({ label: p, value: p }));
-});
-
-const typeOptions = computed(() => {
-    const types = new Set(tasksData.value.map((t) => t.type?.name).filter(Boolean));
-    return Array.from(types).map((t) => ({ label: t, value: t }));
-});
 
 const statusSummary = computed(() => {
     const summary: Record<string, { count: number; severity?: string }> = {};
@@ -155,6 +156,7 @@ const clearFilters = () => {
     filterStatus.value = null;
     filterPriority.value = null;
     filterType.value = null;
+    filterProject.value = null;
 };
 
 const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssigned.value} assignments`);
@@ -178,72 +180,123 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
         <div class="space-y-6 p-4">
             <Heading title="My Task" :description="`Manage and track your work items - ${user?.name ?? 'User'}`" />
             <div class="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <!-- Toolbar -->
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <!-- Left: Search & Filters -->
-                    <div class="flex w-full flex-wrap items-center gap-3">
-                        <!-- Search -->
-                        <InputText v-model="searchQuery" placeholder="Search assignments..." class="min-w-[200px] flex-1 sm:w-80" />
+<!-- Toolbar -->
+<div class="flex flex-col gap-3">
+    <!-- Row 1: Search + View Mode -->
+    <div class="flex items-center gap-3">
+        <div class="relative flex-1">
+            <InputText
+                v-model="searchQuery"
+                placeholder="Search assignments..."
+                class="w-full pl-9"
+            />
+        </div>
 
-                        <!-- Filters -->
-                        <Select
-                            v-model="filterStatus"
-                            :options="statusOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Status"
-                            :showClear="true"
-                            class="w-36"
-                        />
-                        <Select
-                            v-model="filterPriority"
-                            :options="priorityOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Priority"
-                            :showClear="true"
-                            class="w-36"
-                        />
-                        <Select
-                            v-model="filterType"
-                            :options="typeOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Type"
-                            :showClear="true"
-                            class="w-36"
-                        />
+        <div class="flex items-center gap-3 shrink-0">
+            <span class="hidden sm:block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {{ totalText }}
+            </span>
+            <SelectButton
+                v-model="viewMode"
+                :options="viewModeOptions"
+                option-label="value"
+                option-value="value"
+                data-key="value"
+                aria-labelledby="custom"
+                :allow-empty="false"
+            >
+                <template #option="slotProps">
+                    <i :class="slotProps.option.icon"></i>
+                </template>
+            </SelectButton>
+        </div>
+    </div>
 
-                        <!-- Clear Button -->
-                        <Button
-                            v-if="searchQuery || filterStatus || filterPriority || filterType"
-                            label="Clear"
-                            icon="pi pi-filter-slash"
-                            text
-                            class="ml-auto"
-                            @click="clearFilters"
-                        />
-                    </div>
-
-                    <!-- Right: View Mode & Total -->
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm text-gray-600 dark:text-gray-400">{{ totalText }}</span>
-
-                        <SelectButton
-                            v-model="viewMode"
-                            :options="viewModeOptions"
-                            option-label="value"
-                            option-value="value"
-                            data-key="value"
-                            aria-labelledby="custom"
-                            :allow-empty="false"
-                        >
-                            <template #option="slotProps">
-                                <i :class="slotProps.option.icon"></i>
-                            </template>
-                        </SelectButton>
-                    </div>
+    <!-- Row 2: Filters -->
+    <div class="flex flex-wrap items-center gap-2">
+        <AutoComplete
+            v-model="filterProject"
+            :suggestions="projectsData"
+            @complete="searchProjects"
+            @change="applyFilters"
+            optionLabel="title"
+            placeholder="Project"
+            dropdown
+            class="lg:w-96"
+        />
+        <Select
+            v-model="filterStatus"
+            :options="statuses"
+            optionLabel="name"
+            placeholder="Status"
+            :showClear="true"
+            class="w-48"
+        >
+            <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex items-center">
+                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
                 </div>
+                <span v-else>{{ slotProps.placeholder }}</span>
+            </template>
+            <template #option="slotProps">
+                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+            </template>
+        </Select>
+        <Select
+            v-model="filterPriority"
+            :options="priorities"
+            optionLabel="name"
+            placeholder="Priority"
+            :showClear="true"
+            class="w-48"
+        >
+            <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex items-center">
+                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                </div>
+                <span v-else>{{ slotProps.placeholder }}</span>
+            </template>
+            <template #option="slotProps">
+                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+            </template>
+        </Select>
+        <Select
+            v-model="filterType"
+            :options="types"
+            optionLabel="name"
+            placeholder="Type"
+            :showClear="true"
+            class="w-48"
+        >
+            <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex items-center">
+                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                </div>
+                <span v-else>{{ slotProps.placeholder }}</span>
+            </template>
+            <template #option="slotProps">
+                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+            </template>
+        </Select>
+
+        <!-- Total (mobile only) -->
+        <span class="sm:hidden text-sm text-gray-500 dark:text-gray-400 ml-auto">
+            {{ totalText }}
+        </span>
+
+        <!-- Clear Button -->
+        <Button
+            v-if="searchQuery || filterProject || filterStatus || filterPriority || filterType"
+            label="Clear"
+            icon="pi pi-filter-slash"
+            text
+            severity="secondary"
+            size="small"
+            class="ml-auto"
+            @click="clearFilters"
+        />
+    </div>
+</div>
 
                 <!-- Status Summary -->
                 <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-4 dark:border-gray-700">

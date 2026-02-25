@@ -65,7 +65,9 @@ class TaskController extends Controller
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
-        $projects = Project::select('id', 'title')->get();
+        $projects = Project::visibleFor(Auth::user())
+            ->select('id', 'title')
+            ->get();
 
         $response = [
             'tasks' => $tasks->toArray(),

@@ -38,7 +38,6 @@ const editorRef = ref<HTMLElement | null>(null);
 let quillInstance: Quill | null = null;
 let isUpdatingFromProp = false;
 
-// ✅ Track user IDs yang sudah di-mention
 const mentionedIds = ref<Set<number | string>>(new Set());
 
 function syncMentionedIds() {
@@ -120,7 +119,6 @@ onMounted(() => {
                         avatar: m.avatar,
                     }));
 
-                    // ✅ Filter user yang sudah di-mention
                     const available = members.filter((m) => !mentionedIds.value.has(String(m.id)));
 
                     if (searchTerm.length === 0) {
@@ -138,12 +136,12 @@ onMounted(() => {
         isUpdatingFromProp = true;
         quillInstance.clipboard.dangerouslyPasteHTML(props.modelValue);
         isUpdatingFromProp = false;
-        syncMentionedIds(); // ✅ Sync saat load awal
+        syncMentionedIds();
     }
 
     quillInstance.on('text-change', () => {
         if (isUpdatingFromProp) return;
-        syncMentionedIds(); // ✅ Sync setiap ada perubahan (termasuk hapus mention)
+        syncMentionedIds();
         const html = quillInstance!.root.innerHTML;
         const isEmpty = html === '<p><br></p>' || html === '<p></p>' || !html;
         emit('update:modelValue', isEmpty ? '' : html);

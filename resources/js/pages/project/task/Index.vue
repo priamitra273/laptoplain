@@ -46,11 +46,11 @@ const filterType = ref<TaskTypeOption | null>(null);
 const filterProject = ref<{ id: string; title: string} | null>(null);
 
 // View mode
-const viewMode = ref<'list' | 'board'>('list');
+const viewMode = ref<'list' | 'board'>('board');
 
 const viewModeOptions = [
-    { icon: 'pi pi-list', label: 'List', value: 'list' },
     { icon: 'pi pi-th-large', label: 'Board', value: 'board' },
+    { icon: 'pi pi-list', label: 'List', value: 'list' },
 ];
 
 // Truncate text helper

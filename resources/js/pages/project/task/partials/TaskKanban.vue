@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
 import { onMounted, ref, watch } from 'vue';
@@ -115,6 +115,7 @@ watch(
                         :key="item.id"
                         class="!rounded-lg border !shadow-none"
                         :class="[draggingItem ? 'cursor-grabbing' : 'cursor-pointer']"
+                        @click="router.get(route('task.show', { encoded: item.id }))"
                     >
                         <template #subtitle>
                             <Link :href="route('task.show', item.id)">

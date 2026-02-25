@@ -31,6 +31,14 @@ class StoreCommentRequest extends FormRequest
         ];
     }
 
+    /**
+     * Get the IDs of users mentioned in the comment.
+     *
+     * Extracts and returns an array of user IDs that are mentioned or tagged
+     * within the comment content.
+     *
+     * @return array An array of user IDs that are mentioned in the comment.
+     */
     public function mentionedUserIds(): array
     {
         preg_match_all('/data-id="([^"]+)"/', $this->body, $matches);

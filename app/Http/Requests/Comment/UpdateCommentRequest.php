@@ -14,7 +14,7 @@ class UpdateCommentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -29,6 +29,15 @@ class UpdateCommentRequest extends FormRequest
         ];
     }
 
+    /**
+     * Get the IDs of newly mentioned users in the updated comment.
+     *
+     * Compares the mention IDs from the old comment body with the new comment body
+     * and returns only the newly added mentions, excluding the current authenticated user.
+     *
+     * @param Comment $comment The original comment to compare against
+     * @return array An array of newly mentioned user IDs
+     */
     public function newMentionedUserIds(Comment $comment): array
     {
         $oldMentions = $this->extractMentionIds($comment->body);
@@ -40,6 +49,15 @@ class UpdateCommentRequest extends FormRequest
             ->toArray();
     }
 
+    /**
+     * Extract user mention IDs from a comment body.
+     *
+     * Parses the given body string to find all data-id attributes matching the mention
+     * pattern and decodes them using Sqids. Returns unique, non-empty IDs.
+     *
+     * @param string $body The comment body text containing encoded mention IDs
+     * @return array An array of decoded unique mention user IDs
+     */
     private function extractMentionIds(string $body): array
     {
         preg_match_all('/data-id="([^"]+)"/', $body, $matches);

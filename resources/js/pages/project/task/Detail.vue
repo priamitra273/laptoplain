@@ -9,7 +9,6 @@ import Card from 'primevue/card';
 import Chip from 'primevue/chip';
 import DatePicker from 'primevue/datepicker';
 import Divider from 'primevue/divider';
-import Editor from 'primevue/editor';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
@@ -20,10 +19,11 @@ import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
+import MentionEditor from '@/components/Mentioneditor.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { Comment, ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '..';
 import CommentItem from './CommentItem.vue';
 import MemberCard from './partials/MemberCard.vue';
-import { Comment, ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface User {
     id: number;
@@ -32,17 +32,17 @@ interface User {
 }
 
 interface TaskForm {
-    status_id: string
-    priority_id: string
-    type_id: string
-    start_date: string | null
-    due_date: string | null
-    progress_value: number
+    status_id: string;
+    priority_id: string;
+    type_id: string;
+    start_date: string | null;
+    due_date: string | null;
+    progress_value: number;
 
     [key: string]: any;
 }
 
-type TaskFormField = keyof TaskForm
+type TaskFormField = keyof TaskForm;
 
 interface Props {
     task: Task;
@@ -67,17 +67,25 @@ interface Props {
     statuses: TaskStatus[];
     priorities: TaskPriority[];
     types: TaskType[];
-    
+
     isTaskMember: boolean;
     creator?: User;
 }
 
 const props = defineProps<Props>();
 
-const commentLoading = ref(false)
+const commentLoading = ref(false);
 const currentUserId = computed(() => Number(usePage().props.auth.user.id));
 
 const toast = useToast();
+
+// Compute flat list of project members for mention
+const mentionMembers = computed(() =>
+    props.project.project_members.map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+    })),
+);
 
 const breadcrumbItems = computed(() => [
     {
@@ -210,8 +218,8 @@ const autoSave = (field: TaskFormField, value: any) => {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                cancelEdit()
-                handleClickOutside(new MouseEvent('click'))
+                cancelEdit();
+                handleClickOutside(new MouseEvent('click'));
             },
             onError: () => {
                 toast.add({
@@ -278,7 +286,7 @@ const hasSubTasks = computed(() => {
 const newComment = ref('');
 
 const submitComment = () => {
-    commentLoading.value = true
+    commentLoading.value = true;
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = newComment.value;
@@ -291,6 +299,7 @@ const submitComment = () => {
             detail: 'Please write a comment before posting.',
             life: 3000,
         });
+        commentLoading.value = false;
         return;
     }
 
@@ -312,7 +321,7 @@ const submitComment = () => {
                     detail: 'Comment posted successfully.',
                     life: 3000,
                 });
-                commentLoading.value = false
+                commentLoading.value = false;
             },
             onError: () => {
                 toast.add({
@@ -321,9 +330,9 @@ const submitComment = () => {
                     detail: 'Failed to post comment. Please try again.',
                     life: 3000,
                 });
-                commentLoading.value = false
+                commentLoading.value = false;
             },
-            onFinish: () => commentLoading.value = false
+            onFinish: () => (commentLoading.value = false),
         },
     );
 };
@@ -356,13 +365,13 @@ const submitComment = () => {
                 <template #content>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <Button
-                        icon="pi pi-arrow-left"
-                        text
-                        rounded
-                        severity="secondary"
-                        @click="router.visit(route('project.show', { encoded: project.id }))"
-                        class="hover:bg-surface-100 dark:hover:bg-surface-800"
-                    />
+                            icon="pi pi-arrow-left"
+                            text
+                            rounded
+                            severity="secondary"
+                            @click="router.visit(route('project.show', { encoded: project.id }))"
+                            class="hover:bg-surface-100 dark:hover:bg-surface-800"
+                        />
                         <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
                             <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
                                 <Emoji
@@ -404,7 +413,11 @@ const submitComment = () => {
                                     <i class="pi pi-list text-indigo-500"></i>
                                     <h2 class="text-lg font-bold">Subtasks</h2>
                                 </div>
-                                <Chip v-if="props.task.sub_task_recursive.length" :label="`${props.task.sub_task_recursive.length}`" class="bg-indigo-100 text-indigo-700" />
+                                <Chip
+                                    v-if="props.task.sub_task_recursive.length"
+                                    :label="`${props.task.sub_task_recursive.length}`"
+                                    class="bg-indigo-100 text-indigo-700"
+                                />
                             </div>
                         </template>
                         <template #content>
@@ -690,16 +703,15 @@ const submitComment = () => {
                         <template #content>
                             <Divider class="my-3" />
                             <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
-                                <Editor v-model="newComment" editorStyle="height: 200px" class="mb-3">
-                                    <template v-slot:toolbar>
-                                        <span class="ql-formats">
-                                            <button v-tooltip.bottom="'Bold'" class="ql-bold"></button>
-                                            <button v-tooltip.bottom="'Italic'" class="ql-italic"></button>
-                                            <button v-tooltip.bottom="'Underline'" class="ql-underline"></button>
-                                        </span>
-                                    </template>
-                                </Editor>
-                                <div class="flex justify-end">
+                                <!-- MentionEditor replaces PrimeVue Editor -->
+                                <MentionEditor
+                                    v-model="newComment"
+                                    :projectMembers="mentionMembers"
+                                    height="200px"
+                                    placeholder="Write a comment... Use @ to mention someone"
+                                    class="mb-3"
+                                />
+                                <div class="mt-3 flex justify-end">
                                     <Button
                                         label="Post Comment"
                                         icon="pi pi-send"
@@ -717,6 +729,7 @@ const submitComment = () => {
                                     :key="comment.id"
                                     :comment="comment"
                                     :taskId="props.task.id"
+                                    :projectMembers="mentionMembers"
                                     class="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                                 />
                             </div>

@@ -298,6 +298,20 @@ class TaskController extends Controller
 
         $data = $request->validated();
 
+        if (isset($data['status_id']) && $data['status_id'] !== $task->status_id) {
+
+            $completedStatusId = MsTaskStatus::where('name', 'Completed')->value('id');
+
+            if ((int) $data['status_id'] === (int) $completedStatusId) {
+                $data['completed_at'] = now();
+
+                if (! $task->children()->exists()) {
+                    $data['progress'] = 100;
+                }
+            } else {
+                $data['completed_at'] = null;
+            }
+        }
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
 
@@ -323,7 +337,11 @@ class TaskController extends Controller
             $task->tags()->detach($data['remove_tag']);
         }
 
-        if ($data['status_id'] && $data['status_id'] !== $task->status_id) {
+        if (
+            isset($data['status_id']) &&
+            $data['status_id'] !== $task->status_id &&
+            ! isset($data['completed_at'])
+        ) {
             $taskStatus = MsTaskStatus::find($data['status_id']);
             $data['progress'] = $taskStatus ? $taskStatus->score : 0;
         }

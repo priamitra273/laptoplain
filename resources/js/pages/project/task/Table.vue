@@ -298,12 +298,12 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
             <div class="flex w-full flex-wrap gap-2 sm:w-auto">
-                <Button 
-                    label="Add Task" 
-                    icon="pi pi-plus" 
-                    @click="emit('add', null)" 
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0" 
-                    :disabled="!isMember && !hasPermission" 
+                <Button
+                    label="Add Task"
+                    icon="pi pi-plus"
+                    @click="emit('add', null)"
+                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
+                    :disabled="!isMember && !hasPermission"
                 />
                 <Button
                     v-if="hasSelectedTasks"
@@ -313,7 +313,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     @click="removeSelected"
                     class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
                     variant="outlined"
-                    :disabled="!isMember && !hasPermission" 
+                    :disabled="!isMember && !hasPermission"
                 />
             </div>
         </div>
@@ -485,7 +485,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </Column>
 
                 <!-- Created By Column -->
-                <Column header="Created By" style="min-width: 150px;">
+                <Column header="Created By" style="min-width: 150px">
                     <template #body="{ node }">
                         <div v-if="node.original.creator" class="flex items-center gap-2">
                             <Avatar
@@ -532,7 +532,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 size="small"
                                 severity="warning"
                                 :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
-                                @click="emit('edit', node.original, node.data.parent_id)""
+                                @click="emit('edit', node.original, node.data.parent_id)"
                             />
                             <Button
                                 icon="pi pi-trash"

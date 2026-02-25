@@ -13,12 +13,24 @@ class TaskService
     {
         $taskHasChildren = $task->children()->exists();
 
+        $completedStatusId = MsTaskStatus::where('name', 'Completed')->value('id');
+
         $data = [
             'status_id' => $status->id,
         ];
 
-        if (! $taskHasChildren) {
-            $data['progress'] = $status->score;
+        if ((int) $status->id === (int) $completedStatusId) {
+            $data['completed_at'] = now();
+
+            if (! $taskHasChildren) {
+                $data['progress'] = 100;
+            }
+        } else {
+            $data['completed_at'] = null;
+
+            if (! $taskHasChildren) {
+                $data['progress'] = $status->score;
+            }
         }
 
         $task->update($data);

@@ -1,17 +1,31 @@
 <script setup lang="ts">
+import Avatar from 'primevue/avatar';
+import Tag from 'primevue/tag';
 import Quill from 'quill';
 import { Mention, MentionBlot } from 'quill-mention';
 import 'quill-mention/dist/quill.mention.css';
 import 'quill/dist/quill.snow.css';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { createApp, h, onMounted, onUnmounted, ref, watch } from 'vue';
 
 if (!Quill.imports['blots/mention']) {
     Quill.register({ 'blots/mention': MentionBlot, 'modules/mention': Mention });
 }
 
+const SEVERITIES = ['primary', 'secondary', 'success', 'info', 'warn', 'danger', 'contrast'] as const;
+type Severity = (typeof SEVERITIES)[number];
+
+const severityCache = new Map<number | string, Severity>();
+
+function getSeverityForId(id: number | string): Severity {
+    if (!severityCache.has(id)) {
+        severityCache.set(id, SEVERITIES[Math.floor(Math.random() * SEVERITIES.length)]);
+    }
+    return severityCache.get(id)!;
+}
+
 const props = defineProps<{
     modelValue: string;
-    projectMembers?: { id: number | string; name: string }[];
+    projectMembers?: { id: number | string; name: string; avatar?: string }[];
     height?: string;
     placeholder?: string;
 }>();
@@ -23,6 +37,20 @@ const emit = defineEmits<{
 const editorRef = ref<HTMLElement | null>(null);
 let quillInstance: Quill | null = null;
 let isUpdatingFromProp = false;
+
+// ✅ Track user IDs yang sudah di-mention
+const mentionedIds = ref<Set<number | string>>(new Set());
+
+function syncMentionedIds() {
+    if (!quillInstance) return;
+    const mentions = quillInstance.root.querySelectorAll('.mention');
+    const ids = new Set<number | string>();
+    mentions.forEach((el) => {
+        const id = el.getAttribute('data-id');
+        if (id !== null) ids.add(id);
+    });
+    mentionedIds.value = ids;
+}
 
 onMounted(() => {
     if (!editorRef.value) return;
@@ -37,38 +65,68 @@ onMounted(() => {
                 mentionDenotationChars: ['@'],
                 showDenotationChar: true,
                 defaultMenuOrientation: 'bottom',
-                renderItem(item: { id: number | string; value: string }) {
+                renderItem(item: { id: number | string; value: string; avatar?: string }) {
                     const div = document.createElement('div');
                     div.classList.add('mention-item-inner');
 
-                    const avatar = document.createElement('div');
-                    avatar.classList.add('mention-avatar');
                     const initials = item.value
                         .split(' ')
                         .map((w: string) => w[0])
                         .join('')
                         .toUpperCase()
                         .slice(0, 2);
-                    avatar.style.backgroundColor = `hsl(${(Number(item.id) * 60) % 360}, 70%, 60%)`;
-                    avatar.innerText = initials;
+
+                    const iconContainer = document.createElement('span');
+
+                    if (item.avatar) {
+                        const app = createApp({
+                            render() {
+                                return h(Avatar, {
+                                    image: item.avatar,
+                                    shape: 'circle',
+                                    size: 'small',
+                                    style: 'border-radius: 9999px;',
+                                });
+                            },
+                        });
+                        app.mount(iconContainer);
+                    } else {
+                        const app = createApp({
+                            render() {
+                                return h(Tag, {
+                                    value: initials,
+                                    severity: getSeverityForId(item.id),
+                                    rounded: true,
+                                    style: 'font-size: 0.6rem; font-weight: 700; cursor: default; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 9999px;',
+                                });
+                            },
+                        });
+                        app.mount(iconContainer);
+                    }
 
                     const name = document.createElement('span');
                     name.innerText = item.value;
+                    name.classList.add('mention-member-name');
 
-                    div.appendChild(avatar);
+                    div.appendChild(iconContainer);
                     div.appendChild(name);
+
                     return div;
                 },
                 source(searchTerm: string, renderList: Function) {
                     const members = (props.projectMembers ?? []).map((m) => ({
                         id: m.id,
                         value: m.name,
+                        avatar: m.avatar,
                     }));
 
+                    // ✅ Filter user yang sudah di-mention
+                    const available = members.filter((m) => !mentionedIds.value.has(String(m.id)));
+
                     if (searchTerm.length === 0) {
-                        renderList(members, searchTerm);
+                        renderList(available, searchTerm);
                     } else {
-                        const matches = members.filter((m) => m.value.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1);
+                        const matches = available.filter((m) => m.value.toLowerCase().includes(searchTerm.toLowerCase()));
                         renderList(matches, searchTerm);
                     }
                 },
@@ -80,10 +138,12 @@ onMounted(() => {
         isUpdatingFromProp = true;
         quillInstance.clipboard.dangerouslyPasteHTML(props.modelValue);
         isUpdatingFromProp = false;
+        syncMentionedIds(); // ✅ Sync saat load awal
     }
 
     quillInstance.on('text-change', () => {
         if (isUpdatingFromProp) return;
+        syncMentionedIds(); // ✅ Sync setiap ada perubahan (termasuk hapus mention)
         const html = quillInstance!.root.innerHTML;
         const isEmpty = html === '<p><br></p>' || html === '<p></p>' || !html;
         emit('update:modelValue', isEmpty ? '' : html);
@@ -114,6 +174,7 @@ watch(
             } catch {}
         }
         isUpdatingFromProp = false;
+        syncMentionedIds(); // ✅ Sync setelah update dari luar
     },
 );
 </script>
@@ -197,7 +258,7 @@ watch(
 
 .ql-mention-list-item {
     cursor: pointer;
-    border-radius: 0.375rem;
+    border-radius: 9999px;
     padding: 0.25rem 0.5rem;
     transition: background-color 0.15s ease;
 }
@@ -212,27 +273,14 @@ watch(
     background-color: rgba(59, 130, 246, 0.15);
 }
 
-/* ===== Custom Mention Item Inner ===== */
+/* ===== Mention Item Inner ===== */
 .mention-item-inner {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.mention-avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.6rem;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.mention-item-inner span {
+.mention-member-name {
     font-size: 0.8125rem;
     font-weight: 500;
     color: #111827;
@@ -241,7 +289,7 @@ watch(
     text-overflow: ellipsis;
 }
 
-.dark .mention-item-inner span {
+.dark .mention-member-name {
     color: #f3f4f6;
 }
 
@@ -252,7 +300,7 @@ watch(
     width: fit-content !important;
     max-width: fit-content !important;
     min-width: 0 !important;
-    border-radius: 0.375rem;
+    border-radius: 9999px;
     background-color: #dbeafe;
     color: #1d4ed8;
     padding: 0 0.35rem;

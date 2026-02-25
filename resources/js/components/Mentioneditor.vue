@@ -5,8 +5,6 @@ import 'quill-mention/dist/quill.mention.css';
 import 'quill/dist/quill.snow.css';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
-// Register sekali saja di module level (bukan di dalam komponen)
-// agar tidak muncul warning "Overwriting blots/mention" saat komponen di-mount ulang
 if (!Quill.imports['blots/mention']) {
     Quill.register({ 'blots/mention': MentionBlot, 'modules/mention': Mention });
 }

@@ -3,8 +3,8 @@
 namespace App\Http\Requests\Task;
 
 use App\Facades\Sqids;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 
 class TaskUpdateRequest extends FormRequest
 {
@@ -51,6 +51,30 @@ class TaskUpdateRequest extends FormRequest
             'remove_tag'   => 'sometimes|array',
             'remove_tag.*' => 'exists:tags,id',
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+
+            // kalau due_date sudah dikirim, biarin rule biasa yang kerja
+            if ($this->has('due_date')) {
+                return;
+            }
+
+            // ambil status dari request atau dari DB
+            $taskId = $this->route('task'); // sesuaikan nama route param
+
+            $statusId = $this->status_id
+                ?? DB::table('tasks')->where('id', $taskId)->value('status_id');
+
+            if (in_array((int) $statusId, [1, 2])) {
+                $validator->errors()->add(
+                    'due_date',
+                    'Due date wajib diisi ketika status ini dipilih.'
+                );
+            }
+        });
     }
 
     public function messages(): array

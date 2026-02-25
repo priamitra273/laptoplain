@@ -5,6 +5,7 @@ namespace App\Http\Requests\Project;
 use App\Facades\Sqids;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProjectUpdateRequest extends FormRequest
 {
@@ -24,6 +25,31 @@ class ProjectUpdateRequest extends FormRequest
             'status_id' => 'sometimes|required|exists:ms_project_statuses,id',
             'priority_id' => 'sometimes|required|exists:ms_project_priority,id',
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+
+            // kalau due_date dikirim, biarin rule biasa jalan
+            if ($this->has('due_date')) {
+                return;
+            }
+
+            // ambil project id dari route
+            $projectId = $this->route('project'); // sesuaikan nama param
+
+            // ambil status dari request atau dari DB
+            $statusId = $this->status_id
+                ?? DB::table('projects')->where('id', $projectId)->value('status_id');
+
+            if (in_array((int) $statusId, [1, 2])) {
+                $validator->errors()->add(
+                    'due_date',
+                    'Due date is required when status is set to "Status"'
+                );
+            }
+        });
     }
 
     protected function prepareForValidation()

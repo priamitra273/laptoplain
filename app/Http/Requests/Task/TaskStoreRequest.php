@@ -47,7 +47,7 @@ class TaskStoreRequest extends FormRequest
                 'nullable',
                 'date',
                 'after_or_equal:start_date',
-                Rule::requiredIf(fn() => (int) $this->status_id === 2),
+                Rule::requiredIf(fn() => in_array((int) $this->status_id, [1, 2])),
             ],
 
             // 'progress' => 'nullable|numeric|min:0|max:100',

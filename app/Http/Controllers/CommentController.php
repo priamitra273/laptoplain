@@ -6,18 +6,16 @@ use App\Facades\Sqids;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Enums\TaskNotificationType;
+use App\Facades\TaskNotification;
+use App\Http\Requests\Comment\StoreCommentRequest;
+use App\Http\Requests\Comment\UpdateCommentRequest;
+use App\Models\Task;
 
 class CommentController extends Controller
 {
-    public function store(Request $request)
+    public function store(StoreCommentRequest $request)
     {
-        $request->validate([
-            'body' => 'required|string',
-            'commentable_type' => 'required|string',
-            'commentable_id' => 'required|string',
-            'parent_id' => 'nullable|string',
-        ]);
-
         $commentableId = Sqids::decode($request->commentable_id);
         $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
 
@@ -31,25 +29,46 @@ class CommentController extends Controller
             'owned_id' => Auth::id(),
         ]);
 
+        $mentionedUserIds = $request->mentionedUserIds();
+
+        if (!empty($mentionedUserIds)) {
+            $task = Task::find($commentableId);
+
+            TaskNotification::createTaskNotification(
+                $task,
+                $mentionedUserIds,
+                TaskNotificationType::MENTIONED
+            );
+        }
+
         return back();
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateCommentRequest $request, string $id)
     {
         $commentId = Sqids::decode($id);
-        $request->validate([
-            'body' => 'required|string',
-        ]);
-
         $comment = Comment::findOrFail($commentId);
+
         if ($comment->owned_id !== Auth::id()) {
             abort(403, 'Unauthorized action.');
         }
+
+        $newMentionedUserIds = $request->newMentionedUserIds($comment);
 
         $comment->update([
             'body' => $request->body,
             'updated_by' => Auth::id(),
         ]);
+
+        if (!empty($newMentionedUserIds)) {
+            $task = Task::find($comment->commentable_id);
+
+            TaskNotification::createTaskNotification(
+                $task,
+                $newMentionedUserIds,
+                TaskNotificationType::MENTIONED
+            );
+        }
     }
 
     public function destroy(string $id)

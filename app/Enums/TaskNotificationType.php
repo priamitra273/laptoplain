@@ -7,6 +7,7 @@ enum TaskNotificationType: string
     case CREATED = 'created';
     case UPDATED = 'updated';
     case DELETED = 'deleted';
+    case MENTIONED = 'mentioned';
 
     public function message(): string
     {
@@ -14,6 +15,7 @@ enum TaskNotificationType: string
             self::CREATED => 'created',
             self::UPDATED => 'updated',
             self::DELETED => 'deleted',
+            self::MENTIONED => 'mentioned',
         };
     }
 }

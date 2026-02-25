@@ -3,7 +3,6 @@ import InputError from '@/components/InputError.vue';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Dropdown from 'primevue/dropdown';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 

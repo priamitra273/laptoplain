@@ -2,25 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Http\Requests\Task\TaskStoreRequest;
+use App\Http\Requests\Task\TaskUpdateRequest;
+use App\Http\Requests\Task\TaskUpdateStatusRequest;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
-use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
-use App\Enums\TaskNotificationType;
-use App\Http\Requests\Task\TaskUpdateRequest;
+use App\Services\TaskService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TaskController extends Controller
 {
+    public function __construct(
+        private TaskService $service
+    ) {}
+
     public function index()
     {
         $userId = Auth::id();
@@ -34,7 +38,7 @@ class TaskController extends Controller
             'tags:id,name,severity',
             'subTaskRecursive',
             'creator:id,name', // Add creator relationship
-            'creator.media'
+            'creator.media',
         ])
             ->where(function ($query) use ($userId) {
                 $query->where('created_by', $userId)
@@ -58,7 +62,7 @@ class TaskController extends Controller
 
         $totalAssigned = $tasks->where('is_assigned', true)->count();
 
-        $statuses = MsTaskStatus::select('id', 'name', 'severity')->get();
+        $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $projects = Project::select('id', 'title')->get();
@@ -83,7 +87,7 @@ class TaskController extends Controller
             return back()->with('error', 'Project not found.');
         }
 
-        if (!$projectId) {
+        if (! $projectId) {
             return back()->with('error', 'Project not found.');
         }
 
@@ -92,7 +96,7 @@ class TaskController extends Controller
             $query->whereHas('user');
         }])->find($projectId);
 
-        if (!$project) {
+        if (! $project) {
             return back()->with('error', 'Project not found.');
         }
 
@@ -108,7 +112,7 @@ class TaskController extends Controller
 
         $assignUserIds = $validated['assign_users'] ?? [];
 
-        if (!in_array(Auth::id(), $assignUserIds)) {
+        if (! in_array(Auth::id(), $assignUserIds)) {
             $assignUserIds[] = Auth::id();
         }
 
@@ -116,8 +120,8 @@ class TaskController extends Controller
         $addTagNew = [];
         foreach ($validated['add_tag']['new'] ?? [] as $newTag) {
             $tag = Tag::create([
-                'name'       => $newTag['name'],
-                'severity'   => $newTag['severity']
+                'name' => $newTag['name'],
+                'severity' => $newTag['severity'],
             ]);
 
             $addTagNew[] = $tag->id;
@@ -131,27 +135,27 @@ class TaskController extends Controller
 
         $task = Task::create($validated);
 
-        if (!empty($assignUserIds)) {
+        if (! empty($assignUserIds)) {
             $task->users()->syncWithoutDetaching($assignUserIds);
         }
 
-        if (!empty($addTagExist)) {
+        if (! empty($addTagExist)) {
             $task->tags()->syncWithoutDetaching($addTagExist);
         }
 
-        if (!empty($addTagNew)) {
+        if (! empty($addTagNew)) {
             $task->tags()->syncWithoutDetaching($addTagNew);
         }
 
         $parent = $task->parent;
         while ($parent) {
             $parent->update([
-                'progress' => $parent->calculateProgress()
+                'progress' => $parent->calculateProgress(),
             ]);
             $parent = $parent->parent;
         }
 
-        if (!empty($assignUserIds)) {
+        if (! empty($assignUserIds)) {
             try {
                 TaskNotification::createTaskNotification(
                     $task,
@@ -159,7 +163,7 @@ class TaskController extends Controller
                     TaskNotificationType::CREATED
                 );
             } catch (\Throwable $th) {
-                //throw $th;
+                // throw $th;
             }
         }
 
@@ -195,9 +199,9 @@ class TaskController extends Controller
                             'replies' => function ($q) {
                                 $q->orderBy('id', 'asc');
                             },
-                            'replies.user'
+                            'replies.user',
                         ]);
-                }
+                },
             ])->findOrFail($taskId);
         } catch (\Exception $e) {
             throw new NotFoundHttpException(404);
@@ -213,7 +217,7 @@ class TaskController extends Controller
         $project = Project::with([
             'projectMembers.user:id,name,email',
             'projectMembers.user.media',
-            'projectMembers.role:id,name'
+            'projectMembers.role:id,name',
         ])->findOrFail($task->project_id);
 
         // Get assignable users with avatar_url - filter out null users
@@ -297,25 +301,25 @@ class TaskController extends Controller
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
 
-        if (!empty($data['add_tag']['exists'])) {
+        if (! empty($data['add_tag']['exists'])) {
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
         }
 
         $newTagIds = [];
         foreach ($data['add_tag']['new'] ?? [] as $newTag) {
             $tag = Tag::create([
-                'name'       => $newTag['name'],
-                'severity'   => $newTag['severity']
+                'name' => $newTag['name'],
+                'severity' => $newTag['severity'],
             ]);
 
             $newTagIds[] = $tag->id;
         }
 
-        if (!empty($newTagIds)) {
+        if (! empty($newTagIds)) {
             $task->tags()->syncWithoutDetaching($newTagIds);
         }
 
-        if (!empty($data['remove_tag'])) {
+        if (! empty($data['remove_tag'])) {
             $task->tags()->detach($data['remove_tag']);
         }
 
@@ -344,17 +348,16 @@ class TaskController extends Controller
 
         $allUserIds = array_merge($existingUserIds, $assignUserIds);
 
-
         foreach ($assignUserIds as $userId) {
             $task->assignUser($userId);
         }
 
-        if (!empty($unassignUserIds)) {
+        if (! empty($unassignUserIds)) {
             $task->users()->detach($unassignUserIds);
         }
 
         $hasChildren = $task->children()->exists();
-        if (!$hasChildren && isset($data['progress'])) {
+        if (! $hasChildren && isset($data['progress'])) {
             $parent = $task->parent;
             while ($parent) {
                 $parent->update(['progress' => $parent->calculateProgress()]);
@@ -369,9 +372,30 @@ class TaskController extends Controller
                 TaskNotificationType::UPDATED
             );
         } catch (\Throwable $th) {
-            //throw $th;
+            // throw $th;
         }
+
         return back()->with('success', 'Task updated successfully');
+    }
+
+    /**
+     * Update task status
+     */
+    public function updateStatus(TaskUpdateStatusRequest $request, string $encoded)
+    {
+        $task = $this->findByEncodedId($encoded);
+
+        if (Auth::user()->cannot('update', $task)) {
+            abort(403);
+        }
+
+        $status = MsTaskStatus::find(Sqids::decode($request->status_id));
+        $this->service->updateStatus($task, $status);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task status updated successfully',
+        ]);
     }
 
     public function destroy(string $encoded, string $taskEncoded)
@@ -383,7 +407,6 @@ class TaskController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Task not found.');
         }
-
 
         foreach ($task->subTaskRecursive as $subTask) {
             $allUserIds = $subTask->users()
@@ -431,5 +454,20 @@ class TaskController extends Controller
 
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');
+    }
+
+    /**
+     * Find task by encoded id
+     */
+    protected function findByEncodedId(string $encoded): Task
+    {
+        try {
+            $taskId = Sqids::decode($encoded);
+            $task = Task::findOrFail($taskId);
+        } catch (\Exception $e) {
+            abort(404);
+        }
+
+        return $task;
     }
 }

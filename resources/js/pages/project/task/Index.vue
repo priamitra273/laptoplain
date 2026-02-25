@@ -6,31 +6,15 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
-import Paginator from 'primevue/paginator';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { computed, onMounted, ref, watch } from 'vue';
-
-interface TaskType {
-    id: string;
-    name: string;
-    severity?: string;
-}
-
-interface Task {
-    id: string;
-    title: string;
-    due_date?: string;
-    project?: { id: string; title: string };
-    status?: { id: string; name: string; severity?: string };
-    priority?: { id: string; name: string; severity?: string };
-    type?: TaskType;
-    is_assigned?: boolean;
-    is_created_by_me?: boolean;
-}
+import TaskKanban from './partials/TaskKanban.vue';
+import { Task, TaskStatusOption } from './type';
 
 interface Props {
     tasks: Task[];
+    statuses: TaskStatusOption[];
     totalAssigned?: number;
 }
 
@@ -56,7 +40,12 @@ const filterPriority = ref<string | null>(null);
 const filterType = ref<string | null>(null);
 
 // View mode
-const viewMode = ref<'list' | 'board'>('list');
+const viewMode = ref<'list' | 'board'>('board');
+
+const viewModeOptions = [
+    { icon: 'pi pi-th-large', label: 'Board', value: 'board' },
+    { icon: 'pi pi-list', label: 'List', value: 'list' },
+];
 
 // Truncate text helper
 const truncateText = (text: string, maxLength: number = 50) => {
@@ -169,6 +158,18 @@ const clearFilters = () => {
 };
 
 const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssigned.value} assignments`);
+
+const onStatusUpdate = (taskId: string, newStatusId: string) => {
+    const task = tasksData.value.find((t) => t.id === taskId);
+
+    if (!task) return;
+
+    const newStatus = props.statuses.find((s) => s.id === newStatusId);
+
+    if (newStatus) {
+        task.status = newStatus;
+    }
+};
 </script>
 
 <template>
@@ -228,20 +229,19 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                     <div class="flex items-center gap-3">
                         <span class="text-sm text-gray-600 dark:text-gray-400">{{ totalText }}</span>
 
-                        <div class="flex rounded-lg border border-gray-200 dark:border-gray-600">
-                            <Button
-                                icon="pi pi-list"
-                                :class="viewMode === 'list' ? 'bg-gray-100 dark:bg-gray-700' : ''"
-                                text
-                                @click="viewMode = 'list'"
-                            />
-                            <Button
-                                icon="pi pi-th-large"
-                                :class="viewMode === 'board' ? 'bg-gray-100 dark:bg-gray-700' : ''"
-                                text
-                                @click="viewMode = 'board'"
-                            />
-                        </div>
+                        <SelectButton
+                            v-model="viewMode"
+                            :options="viewModeOptions"
+                            option-label="value"
+                            option-value="value"
+                            data-key="value"
+                            aria-labelledby="custom"
+                            :allow-empty="false"
+                        >
+                            <template #option="slotProps">
+                                <i :class="slotProps.option.icon"></i>
+                            </template>
+                        </SelectButton>
                     </div>
                 </div>
 
@@ -362,84 +362,7 @@ const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssign
                 <!-- BOARD VIEW -->
                 <div v-else>
                     <template v-if="filteredTasks.length > 0">
-                        <div class="flex flex-col gap-4">
-                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                <div
-                                    v-for="task in filteredTasks.slice(first, first + rows)"
-                                    :key="task.id"
-                                    class="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
-                                    @click="router.get(route('task.show', { encoded: task.id }))"
-                                >
-                                    <!-- Header -->
-                                    <div class="mb-3 flex items-start justify-between">
-                                        <Tag v-if="task.status" :value="task.status.name" :severity="task.status.severity" class="text-xs" />
-                                    </div>
-
-                                    <!-- Title -->
-                                    <h3
-                                        class="mb-2 block w-full overflow-hidden truncate text-ellipsis text-base font-semibold text-gray-900 dark:text-white"
-                                    >
-                                        {{ task.title }}
-                                    </h3>
-
-                                    <!-- Project -->
-                                    <div v-if="task.project" class="mb-3 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                        <i class="pi pi-folder text-xs"></i>
-                                        <Link
-                                            :href="route('project.show', { encoded: task.project.id })"
-                                            class="hover:text-blue-600 hover:underline"
-                                            @click.stop
-                                        >
-                                            {{ task.project.title }}
-                                        </Link>
-                                    </div>
-
-                                    <!-- Meta Info -->
-                                    <div class="mb-3 flex flex-wrap items-center gap-2">
-                                        <div v-if="task.priority" class="flex items-center gap-1">
-                                            <i
-                                                :class="[
-                                                    'pi',
-                                                    getPriorityIcon(task.priority),
-                                                    'text-xs',
-                                                    task.priority.severity === 'danger'
-                                                        ? 'text-red-500'
-                                                        : task.priority.severity === 'warning'
-                                                          ? 'text-yellow-500'
-                                                          : 'text-gray-500',
-                                                ]"
-                                            ></i>
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">
-                                                {{ task.priority.name }}
-                                            </span>
-                                        </div>
-                                        <span class="text-gray-300 dark:text-gray-600">•</span>
-                                        <span
-                                            :class="[
-                                                'text-xs',
-                                                isOverdue(task.due_date)
-                                                    ? 'font-medium text-red-600 dark:text-red-400'
-                                                    : 'text-gray-600 dark:text-gray-400',
-                                            ]"
-                                        >
-                                            {{ formatDueDate(task.due_date) }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Type & Badges -->
-                                    <div class="flex flex-wrap gap-1">
-                                        <Tag v-if="task.type" :value="task.type.name" :severity="task.type.severity" class="text-xs" />
-                                        <Tag v-if="task.is_assigned" value="Assigned" severity="info" class="text-xs" />
-                                        <Tag v-if="task.is_created_by_me" value="Created by me" severity="success" class="text-xs" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Paginator -->
-                            <div v-if="filteredTasks.length > rows" class="flex justify-center border-t border-gray-200 pt-4 dark:border-gray-700">
-                                <Paginator :first="first" :rows="rows" :totalRecords="filteredTasks.length" @page="(e) => (first = e.first)" />
-                            </div>
-                        </div>
+                        <TaskKanban :tasks="filteredTasks" :statuses="props.statuses" @status-update="onStatusUpdate" />
                     </template>
 
                     <!-- Empty State -->

@@ -15,6 +15,7 @@ use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TaskActivityController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TeamController;
@@ -22,7 +23,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-Route::get('/', fn () => to_route('login'))->name('home');
+Route::get('/', fn() => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
     Route::put('/task/{encoded}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
+    Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
@@ -95,8 +97,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifications.clear');
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
 
 Route::fallback(function () {
     throw new NotFoundHttpException(404);

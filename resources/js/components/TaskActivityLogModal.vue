@@ -5,14 +5,7 @@ import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
-import Tag from 'primevue/tag';
 import { computed, ref, watch } from 'vue';
-
-interface ActivityChange {
-    field: string;
-    old_value: string | null;
-    new_value: string | null;
-}
 
 interface ActivityCauser {
     id: number;
@@ -20,12 +13,18 @@ interface ActivityCauser {
     avatar_url: string | null;
 }
 
+interface ActivityChangedField {
+    field: string;
+    old_value: string | null;
+    new_value: string | null;
+    has_value: boolean;
+}
+
 interface Activity {
     id: number;
     event: string;
-    description: string;
     causer: ActivityCauser | null;
-    changes: ActivityChange[];
+    changed_fields: ActivityChangedField[];
     created_at: string;
 }
 
@@ -36,9 +35,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{
-    (e: 'update:visible', value: boolean): void;
-}>();
+const emit = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 
 const activities = ref<Activity[]>([]);
 const loading = ref(false);
@@ -57,53 +54,9 @@ const getInitials = (name: string) =>
 
 const getAvatarColor = (name: string) => {
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     return `hsl(${Math.abs(hash) % 360}, 65%, 55%)`;
 };
-
-const eventSeverity = (event: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' => {
-    const map: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
-        created: 'success',
-        updated: 'info',
-        deleted: 'danger',
-        restored: 'warn',
-    };
-    return map[event] ?? 'secondary';
-};
-
-const eventLabel = (event: string) => {
-    const map: Record<string, string> = {
-        created: 'Created',
-        updated: 'Updated',
-        deleted: 'Deleted',
-        restored: 'Restored',
-    };
-    return map[event] ?? event.charAt(0).toUpperCase() + event.slice(1);
-};
-
-const eventIcon = (event: string) => {
-    const map: Record<string, string> = {
-        created: 'pi pi-plus-circle',
-        updated: 'pi pi-pencil',
-        deleted: 'pi pi-trash',
-        restored: 'pi pi-refresh',
-    };
-    return map[event] ?? 'pi pi-circle';
-};
-
-const eventIconBg = (event: string) => {
-    const map: Record<string, string> = {
-        created: 'bg-green-500',
-        updated: 'bg-blue-500',
-        deleted: 'bg-red-500',
-        restored: 'bg-yellow-500',
-    };
-    return map[event] ?? 'bg-surface-400';
-};
-
-const totalChanges = computed(() => activities.value.reduce((sum, a) => sum + a.changes.length, 0));
 
 const uniqueActors = computed(() => {
     const seen = new Set<number>();
@@ -118,8 +71,7 @@ const fetchActivities = async () => {
         const { data } = await axios.get(route('task.activities', { encoded: props.taskId }));
         activities.value = data.activities ?? [];
     } catch (err) {
-        error.value = 'Failed to load activity log. Please try again.';
-        console.error(err);
+        error.value = 'Failed to load activity log.';
     } finally {
         loading.value = false;
     }
@@ -142,31 +94,23 @@ const closeModal = () => emit('update:visible', false);
         @update:visible="closeModal"
         modal
         :header="`Activity Log — ${taskTitle}`"
-        :style="{ width: '680px', maxWidth: '95vw' }"
+        :style="{ width: '480px', maxWidth: '95vw' }"
         :draggable="false"
         dismissableMask
-        :pt="{
-            content: { style: 'overflow-y: auto; max-height: 70vh; padding: 1.25rem;' },
-        }"
+        :pt="{ content: { style: 'overflow-y: auto; max-height: 70vh; padding: 1.25rem;' } }"
     >
         <!-- Stats bar -->
-        <div class="mb-5 flex flex-wrap items-center gap-4 rounded-lg bg-surface-100 px-4 py-3 dark:bg-surface-800">
+        <div class="mb-4 flex items-center gap-4 rounded-lg bg-surface-100 px-4 py-3 dark:bg-surface-800">
             <div class="flex items-center gap-1.5 text-sm">
                 <i class="pi pi-history text-primary-500" />
                 <span class="font-semibold">{{ activities.length }}</span>
-                <span class="text-surface-500">activities</span>
-            </div>
-            <div class="flex items-center gap-1.5 text-sm">
-                <i class="pi pi-list text-blue-500" />
-                <span class="font-semibold">{{ totalChanges }}</span>
-                <span class="text-surface-500">changes</span>
+                <span class="text-surface-500">updates</span>
             </div>
             <div class="flex items-center gap-1.5 text-sm">
                 <i class="pi pi-users text-green-500" />
                 <span class="font-semibold">{{ uniqueActors.length }}</span>
                 <span class="text-surface-500">contributors</span>
             </div>
-
             <div v-if="uniqueActors.length" class="ml-auto flex -space-x-2">
                 <Avatar
                     v-for="actor in uniqueActors.slice(0, 5)"
@@ -182,59 +126,41 @@ const closeModal = () => emit('update:visible', false);
                     "
                     v-tooltip.top="actor.name"
                 />
-                <div
-                    v-if="uniqueActors.length > 5"
-                    class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-surface-300 text-xs font-semibold dark:bg-surface-600"
-                >
-                    +{{ uniqueActors.length - 5 }}
-                </div>
             </div>
         </div>
 
         <!-- Loading -->
         <div v-if="loading" class="flex flex-col items-center justify-center gap-3 py-16">
-            <ProgressSpinner style="width: 48px; height: 48px" strokeWidth="4" />
-            <span class="text-sm text-surface-500">Loading activity log...</span>
+            <ProgressSpinner style="width: 40px; height: 40px" strokeWidth="4" />
+            <span class="text-sm text-surface-500">Loading...</span>
         </div>
 
         <!-- Error -->
         <div v-else-if="error" class="flex flex-col items-center justify-center gap-3 py-16 text-red-500">
-            <i class="pi pi-exclamation-circle text-4xl" />
+            <i class="pi pi-exclamation-circle text-3xl" />
             <span class="text-sm">{{ error }}</span>
             <Button label="Retry" icon="pi pi-refresh" size="small" @click="fetchActivities" severity="secondary" />
         </div>
 
         <!-- Empty -->
         <div v-else-if="!activities.length" class="flex flex-col items-center justify-center gap-3 py-16 text-surface-400">
-            <i class="pi pi-inbox text-4xl" />
-            <span class="text-sm">No activity recorded for this task yet.</span>
+            <i class="pi pi-inbox text-3xl" />
+            <span class="text-sm">No activity recorded yet.</span>
         </div>
 
-        <!-- Activity list — custom timeline tanpa PrimeVue Timeline -->
-        <div v-else class="flex flex-col gap-0">
-            <div v-for="(item, index) in activities" :key="item.id" class="flex gap-4">
-                <!-- Timeline marker + line -->
-                <div class="flex flex-col items-center">
-                    <div
-                        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white shadow-sm"
-                        :class="eventIconBg(item.event)"
-                    >
-                        <i :class="eventIcon(item.event)" class="text-sm" />
-                    </div>
-                    <!-- Connector line -->
-                    <div
-                        v-if="index < activities.length - 1"
-                        class="w-0.5 flex-1 bg-surface-200 dark:bg-surface-700"
-                        style="min-height: 1.5rem; margin-top: 2px; margin-bottom: 2px"
-                    />
+        <!-- Activity list -->
+        <div v-else class="flex flex-col">
+            <div v-for="(item, index) in activities" :key="item.id" class="flex gap-3">
+                <!-- Timeline dot + connector -->
+                <div class="flex flex-col items-center pt-1">
+                    <div class="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-900" />
+                    <div v-if="index < activities.length - 1" class="mt-1 w-px flex-1 bg-surface-200 dark:bg-surface-700" style="min-height: 2rem" />
                 </div>
 
-                <!-- Content card -->
-                <div
-                    class="mb-4 min-w-0 flex-1 rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
-                >
-                    <!-- Header -->
-                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <!-- Row content -->
+                <div class="mb-4 min-w-0 flex-1">
+                    <!-- User + time -->
+                    <div class="mb-2 flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
                             <Avatar
                                 v-if="item.causer"
@@ -249,73 +175,48 @@ const closeModal = () => emit('update:visible', false);
                                 "
                             />
                             <Avatar v-else icon="pi pi-user" shape="circle" size="small" />
-                            <div class="flex flex-col leading-tight">
-                                <span class="text-sm font-semibold text-surface-800 dark:text-surface-100">
-                                    {{ item.causer?.name ?? 'System' }}
-                                </span>
-                                <span class="text-xs text-surface-400" :title="formatDate(item.created_at)">
-                                    {{ timeAgo(item.created_at) }}
-                                </span>
-                            </div>
+                            <span class="text-sm font-semibold text-surface-800 dark:text-surface-100">
+                                {{ item.causer?.name ?? 'System' }}
+                            </span>
                         </div>
-                        <Tag :value="eventLabel(item.event)" :severity="eventSeverity(item.event)" class="text-xs" />
+                        <span class="flex-shrink-0 text-xs text-surface-400" :title="formatDate(item.created_at)">
+                            {{ timeAgo(item.created_at) }}
+                        </span>
                     </div>
 
-                    <!-- No changes -->
-                    <p v-if="!item.changes.length" class="text-sm italic text-surface-500">
-                        {{ item.event === 'created' ? 'Task was created.' : item.description }}
-                    </p>
+                    <!-- Changed fields -->
+                    <div class="flex flex-col gap-1.5">
+                        <div v-for="f in item.changed_fields" :key="f.field" class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-xs text-surface-500">updated</span>
+                            <span
+                                class="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                            >
+                                {{ f.field }}
+                            </span>
 
-                    <!-- Changes table -->
-                    <div v-else class="w-full overflow-hidden rounded-md border border-surface-200 dark:border-surface-700">
-                        <table class="w-full table-fixed text-sm">
-                            <colgroup>
-                                <col style="width: 25%" />
-                                <col style="width: 37.5%" />
-                                <col style="width: 37.5%" />
-                            </colgroup>
-                            <thead>
-                                <tr class="bg-surface-50 dark:bg-surface-800">
-                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase text-surface-500">Field</th>
-                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase text-surface-500">Before</th>
-                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase text-surface-500">After</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="(change, idx) in item.changes"
-                                    :key="idx"
-                                    class="border-t border-surface-100 dark:border-surface-700"
-                                    :class="idx % 2 === 0 ? 'bg-white dark:bg-surface-900' : 'bg-surface-50 dark:bg-surface-800'"
+                            <!-- Status: tampilkan old → new value -->
+                            <template v-if="f.has_value">
+                                <span
+                                    v-if="f.old_value"
+                                    class="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600 line-through dark:bg-red-900/20 dark:text-red-400"
                                 >
-                                    <td class="px-3 py-2 font-medium text-surface-700 dark:text-surface-200">
-                                        {{ change.field }}
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <span
-                                            v-if="change.old_value"
-                                            class="rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-600 line-through decoration-red-400 dark:bg-red-900/20 dark:text-red-400"
-                                        >
-                                            {{ change.old_value }}
-                                        </span>
-                                        <span v-else class="text-xs italic text-surface-400">empty</span>
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <span
-                                            v-if="change.new_value"
-                                            class="rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                                        >
-                                            {{ change.new_value }}
-                                        </span>
-                                        <span v-else class="text-xs italic text-surface-400">empty</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                    {{ f.old_value }}
+                                </span>
+                                <span v-else class="text-xs text-surface-400">—</span>
+                                <i class="pi pi-arrow-right text-xs text-surface-300" />
+                                <span
+                                    v-if="f.new_value"
+                                    class="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                                >
+                                    {{ f.new_value }}
+                                </span>
+                                <span v-else class="text-xs text-surface-400">—</span>
+                            </template>
+                        </div>
                     </div>
 
-                    <!-- Timestamp -->
-                    <p class="mt-2 text-right text-xs text-surface-400">{{ formatDate(item.created_at) }}</p>
+                    <!-- Exact date -->
+                    <p class="mt-1.5 text-xs text-surface-400">{{ formatDate(item.created_at) }}</p>
                 </div>
             </div>
         </div>

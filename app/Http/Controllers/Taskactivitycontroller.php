@@ -10,6 +10,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TaskActivityController extends Controller
 {
+
     public function index(string $encoded): JsonResponse
     {
         try {
@@ -23,7 +24,9 @@ class TaskActivityController extends Controller
             abort(403);
         }
 
-        $activities = Task::getFormattedActivities($task->id);
+        $activities = Task::getFormattedActivities($task->id, 'updated')
+            ->filter(fn($activity) => count($activity['changed_fields']) > 0)
+            ->values();
 
         return response()->json([
             'success'    => true,

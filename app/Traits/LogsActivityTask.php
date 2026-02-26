@@ -42,9 +42,6 @@ trait LogsActivityTask
         };
     }
 
-    /**
-     * Human-readable field labels
-     */
     protected static function activityFieldLabels(): array
     {
         return [
@@ -64,91 +61,75 @@ trait LogsActivityTask
     }
 
     /**
-     * Resolve a raw DB value to a human-readable string.
+     * Kembalikan daftar nama field yang berubah (tanpa value).
      */
-    protected static function resolveActivityValue(string $field, mixed $value): ?string
-    {
-        if (is_null($value)) {
-            return null;
-        }
-
-        return match ($field) {
-            'status_id'   => \App\Models\MsTaskStatus::find($value)?->name   ?? (string) $value,
-            'priority_id' => \App\Models\MsTaskPriority::find($value)?->name ?? (string) $value,
-            'type_id'     => \App\Models\MsTaskType::find($value)?->name     ?? (string) $value,
-            'owned_id'    => \App\Models\User::find($value)?->name           ?? (string) $value,
-            'project_id'  => \App\Models\Project::find($value)?->title       ?? (string) $value,
-            'parent_id'   => \App\Models\Task::withTrashed()->find($value)?->title ?? (string) $value,
-            'is_archived' => $value ? 'Yes' : 'No',
-            'progress'    => $value . '%',
-            default       => (string) $value,
-        };
-    }
-
-    /**
-     * Return formatted activity log entries for a given task ID.
-     *
-     * Each entry:
-     * [
-     *   'id'          => int,
-     *   'event'       => string,         // created | updated | deleted | restored
-     *   'description' => string,
-     *   'causer'      => ['id', 'name', 'avatar_url'] | null,
-     *   'changes'     => [['field', 'old_value', 'new_value'], ...],
-     *   'created_at'  => ISO-8601 string,
-     * ]
-     */
-    public static function getFormattedActivities(int $taskId): \Illuminate\Support\Collection
+    public static function getFormattedActivities(int $taskId, ?string $event = null): \Illuminate\Support\Collection
     {
         $labels = static::activityFieldLabels();
 
-        return \Spatie\Activitylog\Models\Activity::query()
+        $query = \Spatie\Activitylog\Models\Activity::query()
             ->with('causer:id,name')
             ->where('subject_type', static::class)
             ->where('subject_id', $taskId)
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function ($activity) use ($labels) {
-                $old        = $activity->properties['old']        ?? [];
-                $attributes = $activity->properties['attributes'] ?? [];
+            ->orderByDesc('created_at');
 
-                // Build a diff only for fields that actually changed
-                $changes = [];
-                foreach ($attributes as $field => $newRaw) {
-                    $oldRaw = $old[$field] ?? null;
+        if ($event !== null) {
+            $query->where('event', $event);
+        }
 
-                    // Skip if identical (guard against spatie edge-cases)
-                    if ($oldRaw === $newRaw) {
-                        continue;
-                    }
+        return $query->get()->map(function ($activity) use ($labels) {
+            $old        = $activity->properties['old']        ?? [];
+            $attributes = $activity->properties['attributes'] ?? [];
 
-                    $changes[] = [
+            // Kumpulkan perubahan field:
+            // - status_id → sertakan old & new value (nama status)
+            // - field lain → hanya nama field saja
+            $changedFields = [];
+            foreach ($attributes as $field => $newRaw) {
+                $oldRaw = $old[$field] ?? null;
+                if ($oldRaw === $newRaw) {
+                    continue;
+                }
+
+                if ($field === 'status_id') {
+                    $changedFields[] = [
                         'field'     => $labels[$field] ?? $field,
-                        'old_value' => static::resolveActivityValue($field, $oldRaw),
-                        'new_value' => static::resolveActivityValue($field, $newRaw),
+                        'old_value' => $oldRaw
+                            ? (\App\Models\MsTaskStatus::find($oldRaw)?->name ?? (string) $oldRaw)
+                            : null,
+                        'new_value' => $newRaw
+                            ? (\App\Models\MsTaskStatus::find($newRaw)?->name ?? (string) $newRaw)
+                            : null,
+                        'has_value' => true,
+                    ];
+                } else {
+                    $changedFields[] = [
+                        'field'     => $labels[$field] ?? $field,
+                        'old_value' => null,
+                        'new_value' => null,
+                        'has_value' => false,
                     ];
                 }
+            }
 
-                // Resolve causer with avatar (media library compatible)
-                $causer = null;
-                if ($activity->causer) {
-                    $causer = [
-                        'id'         => $activity->causer->id,
-                        'name'       => $activity->causer->name,
-                        'avatar_url' => method_exists($activity->causer, 'getFirstMediaUrl')
-                            ? ($activity->causer->getFirstMediaUrl('avatars') ?: null)
-                            : ($activity->causer->avatar_url ?? null),
-                    ];
-                }
-
-                return [
-                    'id'          => $activity->id,
-                    'event'       => $activity->event ?? 'updated',
-                    'description' => $activity->description,
-                    'causer'      => $causer,
-                    'changes'     => $changes,
-                    'created_at'  => $activity->created_at->toIso8601String(),
+            $causer = null;
+            if ($activity->causer) {
+                $causer = [
+                    'id'         => $activity->causer->id,
+                    'name'       => $activity->causer->name,
+                    'avatar_url' => method_exists($activity->causer, 'getFirstMediaUrl')
+                        ? ($activity->causer->getFirstMediaUrl('avatars') ?: null)
+                        : ($activity->causer->avatar_url ?? null),
                 ];
-            });
+            }
+
+            return [
+                'id'             => $activity->id,
+                'event'          => $activity->event ?? 'updated',
+                'causer'         => $causer,
+                'changed_fields' => $changedFields,
+                'created_at'     => $activity->created_at->toIso8601String(),
+            ];
+        });
     }
 }

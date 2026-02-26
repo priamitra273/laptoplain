@@ -469,20 +469,14 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
-                            <Button
-                                icon="pi pi-history"
-                                size="small"
-                                severity="secondary"
-                                v-tooltip.top="'Activity Log'"
-                                @click="openActivityLog(node.original)"
-                            />
                             <Link :href="route('task.show', node.original)">
-                                <Button icon="pi pi-eye" size="small" severity="secondary" />
+                                <Button icon="pi pi-eye" size="small" severity="secondary" v-tooltip.top="'View Task'" />
                             </Link>
                             <Button
                                 icon="pi pi-plus"
                                 size="small"
                                 severity="info"
+                                v-tooltip.top="'Add Subtask'"
                                 :disabled="deleteLoading || (!isMember && !hasPermission)"
                                 @click="emit('add', node.data.id)"
                             />
@@ -490,6 +484,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
+                                v-tooltip.top="'Edit Task'"
                                 :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="emit('edit', node.original, node.data.parent_id)"
                             />
@@ -497,8 +492,16 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
+                                v-tooltip.top="'Deleted'"
                                 :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="remove(node.original)"
+                            />
+                            <Button
+                                icon="pi pi-history"
+                                size="small"
+                                severity="secondary"
+                                v-tooltip.top="'History Log'"
+                                @click="openActivityLog(node.original)"
                             />
                         </div>
                     </template>

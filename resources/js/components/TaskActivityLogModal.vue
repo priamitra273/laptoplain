@@ -93,7 +93,7 @@ const closeModal = () => emit('update:visible', false);
         :visible="props.visible"
         @update:visible="closeModal"
         modal
-        :header="`Activity Log — ${taskTitle}`"
+        :header="`History Log — ${taskTitle}`"
         :style="{ width: '480px', maxWidth: '95vw' }"
         :draggable="false"
         dismissableMask

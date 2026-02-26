@@ -10,6 +10,15 @@ use Illuminate\Support\Facades\Cache;
 
 class TaskNotificationService
 {
+    private function getMessage(string $taskTitle, TaskNotificationType $type): string
+    {
+        switch ($type) {
+            case TaskNotificationType::MENTIONED:
+                return "You were mentioned in task '{$taskTitle}' ";
+            default:
+                return "Task '{$taskTitle}' has been {$type->message()}.";
+        }
+    }
     public function createTaskNotification($task, $userIds, TaskNotificationType $type)
     {
         $watchersIds = User::whereHas('roles', function ($query) {
@@ -17,17 +26,11 @@ class TaskNotificationService
         })->pluck('id')->toArray();
         $userIds = array_unique(array_merge($userIds, $watchersIds));
         
-        if ($type === TaskNotificationType::MENTIONED){
-            $message = "You were mentioned in task '{$task->title}'.";
-        } else {
-            $message = "Task '{$task->title}' has been {$type->message()}.";
-        }
-        
         $notification = Notification::create([
             'task_id' => $task->id,
             'task_status_id' => $task->status_id,
             'task_type_id' => $task->type_id,
-            'message' => $message,
+            'message' => $this->getMessage($task->title, $type),
         ]);
         foreach ($userIds as $userId) {
             $notification->users()->attach($userId, ['is_read' => false]);

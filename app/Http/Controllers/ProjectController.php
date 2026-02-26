@@ -74,11 +74,6 @@ class ProjectController extends Controller
             throw new NotFoundHttpException(404);
         }
 
-        $currentUser = Auth::user();
-        if ($currentUser->cannot('view', $project)) {
-            throw new NotFoundHttpException(404);
-        }
-
         $project->update([
             'progress' => $project->calculateProgress(),
         ]);
@@ -247,10 +242,6 @@ class ProjectController extends Controller
 
     public function store(ProjectStoreRequest $request)
     {
-        $user = Auth::user();
-        if ($user->cannot('create', Project::class)) {
-            return back()->with('error', 'You do not have permission to create a project.');
-        }
         $project = Project::create($request->validated());
 
         $project->update([
@@ -276,7 +267,6 @@ class ProjectController extends Controller
 
     public function update(ProjectUpdateRequest $request, string $encoded)
     {
-        $user = Auth::user();
         try {
             $id = Sqids::decode($encoded);
 
@@ -285,9 +275,6 @@ class ProjectController extends Controller
             return back()->with('error', 'Project not found.');
         }
 
-        if ($user->cannot('update', $project)) {
-            return back()->with('error', 'You do not have permission to update this project.');
-        }
         $project->update($request->validated());
         $project->update([
             'progress' => $project->calculateProgress(),
@@ -305,16 +292,12 @@ class ProjectController extends Controller
 
     public function destroy(string $encoded)
     {
-        $user = Auth::user();
         try {
             $id = Sqids::decode($encoded);
 
             $project = Project::findOrFail($id);
         } catch (\Exception $e) {
             return back()->with('error', 'Project not found.');
-        }
-        if ($user->cannot('delete', $project)) {
-            return back()->with('error', 'You do not have permission to delete this project.');
         }
         $project->allTasks()
             ->with('users')

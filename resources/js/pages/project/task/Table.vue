@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
@@ -32,9 +33,7 @@ const emit = defineEmits<{
 }>();
 
 const deleteLoading = ref(false);
-
 const currentUser = usePage().props.auth.user;
-
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 
@@ -43,13 +42,26 @@ const selectedStatuses = ref<string[]>([]);
 const selectedPriorities = ref<string[]>([]);
 const selectedTypes = ref<string[]>([]);
 
-// Format date helper
+// Activity modal state
+const activityModal = ref({
+    visible: false,
+    taskId: '',
+    taskTitle: '',
+});
+
+const openActivityLog = (task: Task) => {
+    activityModal.value = {
+        visible: true,
+        taskId: task.id,
+        taskTitle: task.title,
+    };
+};
+
 const formatDate = (date: string | null | undefined): string => {
     if (!date) return '-';
     return moment(date).format('DD MMM YYYY');
 };
 
-// Get initials for avatar
 const getInitials = (name: string) =>
     name
         .split(' ')
@@ -58,10 +70,8 @@ const getInitials = (name: string) =>
         .toUpperCase()
         .slice(0, 2);
 
-// Get color for avatar
 const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
-// Format tasks for TreeTable — now accepts a `level` parameter for indentation
 const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
@@ -87,77 +97,54 @@ const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     }));
 };
 
-// Get filter options from master data (props) - show all available options
 const statusOptions = computed(() => props.taskStatuses ?? []);
 const priorityOptions = computed(() => props.taskPriorities ?? []);
 const typeOptions = computed(() => props.taskTypes ?? []);
 
-// Filter tasks recursively
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
-    // Check if current task matches
     const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
     const matchesStatus =
         !selectedStatuses.value ||
         selectedStatuses.value.length === 0 ||
         (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
-
     const matchesPriority =
         !selectedPriorities.value ||
         selectedPriorities.value.length === 0 ||
         (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
-
     const matchesType =
         !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
 
     const currentMatches = matchesSearch && matchesStatus && matchesPriority && matchesType;
-
-    // Check if any children match
     const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
-
     return currentMatches || hasMatchingChildren;
 };
 
-// Filter and sort tasks based on search query and filters (newest first)
 const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
     if (!props.tasks || !Array.isArray(props.tasks)) return [];
-
     let tasks = formatTasks(props.tasks);
-
-    // Sort by created_at or updated_at (newest first)
     tasks = tasks.sort((a, b) => {
         const dateA = new Date(a.original.updated_at || a.original.created_at).getTime();
         const dateB = new Date(b.original.updated_at || b.original.created_at).getTime();
-        return dateB - dateA; // Descending order (newest first)
+        return dateB - dateA;
     });
-
     const query = searchQuery.value.toLowerCase();
-
-    // Apply filters
     tasks = tasks.filter((task) => filterTaskRecursive(task, query));
-
     return tasks;
 });
 
-// Check if all tasks are selected
 const isAllSelected = computed(() => {
     if (!filteredTasks.value.length) return false;
-
     const allKeys: string[] = [];
     const collectKeys = (node: TaskFormatted) => {
         allKeys.push(node.key);
         if (node.children) node.children.forEach(collectKeys);
     };
     filteredTasks.value.forEach(collectKeys);
-
     return allKeys.every((key) => selectedKey.value[key]?.checked);
 });
 
-// Check if any task is selected
-const hasSelectedTasks = computed(() => {
-    return Object.keys(selectedKey.value).length > 0;
-});
+const hasSelectedTasks = computed(() => Object.keys(selectedKey.value).length > 0);
 
-// Check if any filter is active
 const hasActiveFilters = computed(() => {
     return (
         searchQuery.value !== '' ||
@@ -167,7 +154,6 @@ const hasActiveFilters = computed(() => {
     );
 });
 
-// Clear all filters
 const clearFilters = () => {
     searchQuery.value = '';
     selectedStatuses.value = [];
@@ -175,15 +161,12 @@ const clearFilters = () => {
     selectedTypes.value = [];
 };
 
-// Handle clear for individual filters
 const handleClearStatuses = () => {
     selectedStatuses.value = [];
 };
-
 const handleClearPriorities = () => {
     selectedPriorities.value = [];
 };
-
 const handleClearTypes = () => {
     selectedTypes.value = [];
 };
@@ -191,7 +174,6 @@ const handleClearTypes = () => {
 const confirm = useConfirm();
 const toast = useToast();
 
-// Remove single task
 const remove = (t: Task) => {
     deleteLoading.value = true;
     confirm.require({
@@ -214,7 +196,6 @@ const remove = (t: Task) => {
     });
 };
 
-// Toggle Select All
 const toggleSelectAll = () => {
     if (isAllSelected.value) {
         clearSelection();
@@ -223,39 +204,27 @@ const toggleSelectAll = () => {
     }
 };
 
-// Select All (all filtered tasks, including children)
 const selectAll = () => {
     const keys: { [key: string]: any } = {};
-
     const mark = (node: TaskFormatted) => {
         keys[node.key] = { checked: true, partialChecked: false };
         if (node.children) node.children.forEach(mark);
     };
-
     filteredTasks.value.forEach(mark);
     selectedKey.value = { ...keys };
 };
 
-// Clear selection
 const clearSelection = () => {
     selectedKey.value = {};
     selectedKey.value = { ...selectedKey.value };
 };
 
-// Remove selected tasks
 const removeSelected = () => {
     const ids = Object.keys(selectedKey.value);
-
     if (!ids.length) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'No tasks selected to delete.',
-            life: 3000,
-        });
+        toast.add({ severity: 'warn', summary: 'Warning', detail: 'No tasks selected to delete.', life: 3000 });
         return;
     }
-
     confirm.require({
         message: `Delete ${ids.length} selected task(s)? This action cannot be undone.`,
         header: 'Confirmation',
@@ -269,25 +238,17 @@ const removeSelected = () => {
                     preserveScroll: true,
                 });
             });
-
             selectedKey.value = {};
             selectedKey.value = { ...selectedKey.value };
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: `${ids.length} tasks deleted successfully`,
-                life: 3000,
-            });
+            toast.add({ severity: 'success', summary: 'Success', detail: `${ids.length} tasks deleted successfully`, life: 3000 });
         },
     });
 };
 
 const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     if (props.hasPermission) return true;
-
     const taskUsers: TaskUser[] = task.users || [];
     const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
-
     return isMember;
 };
 </script>
@@ -320,13 +281,10 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- Filters Section -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <!-- Search input -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Search</label>
                 <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
             </div>
-
-            <!-- Status Filter -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Status</label>
                 <MultiSelect
@@ -350,8 +308,6 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </MultiSelect>
             </div>
-
-            <!-- Priority Filter -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Priority</label>
                 <MultiSelect
@@ -375,8 +331,6 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </MultiSelect>
             </div>
-
-            <!-- Type Filter -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Type</label>
                 <MultiSelect
@@ -407,10 +361,10 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
             <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
         </div>
 
-        <!-- TreeTable container scrollable for mobile -->
+        <!-- TreeTable -->
         <div class="overflow-x-auto">
             <TreeTable :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
-                <!-- Select All Checkbox Column - FROZEN LEFT -->
+                <!-- Checkbox Column -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
@@ -433,7 +387,7 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Title Column with indentation based on level -->
+                <!-- Title Column -->
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
                         <p :title="node.data.title" class="max-w-[300px] truncate text-ellipsis">{{ node.data.title }}</p>
@@ -458,14 +412,12 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Start Date Column -->
                 <Column field="start_date" header="Start Date" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <span>{{ formatDate(node.data.start_date) }}</span>
                     </template>
                 </Column>
 
-                <!-- Due Date Column -->
                 <Column field="due_date" header="Due Date" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <span :class="{ 'text-red-500': node.data.is_overdue }">{{ formatDate(node.data.due_date) }}</span>
@@ -513,10 +465,17 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                     </template>
                 </Column>
 
-                <!-- Actions Column - FROZEN RIGHT -->
+                <!-- Actions Column -->
                 <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
+                            <Button
+                                icon="pi pi-history"
+                                size="small"
+                                severity="secondary"
+                                v-tooltip.top="'Activity Log'"
+                                @click="openActivityLog(node.original)"
+                            />
                             <Link :href="route('task.show', node.original)">
                                 <Button icon="pi pi-eye" size="small" severity="secondary" />
                             </Link>
@@ -550,5 +509,8 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 </template>
             </TreeTable>
         </div>
+
+        <!-- Activity Log Modal — milik TaskTable, di sini tempatnya -->
+        <TaskActivityLogModal v-model:visible="activityModal.visible" :taskId="activityModal.taskId" :taskTitle="activityModal.taskTitle" />
     </div>
 </template>

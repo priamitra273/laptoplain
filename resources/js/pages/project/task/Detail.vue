@@ -585,18 +585,17 @@ const submitComment = () => {
                                             <Tag v-if="hasSubTasks" value="Auto" severity="info" class="text-[10px]" />
                                         </p>
                                         <div class="flex items-center gap-2">
-                                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                            <div class="relative h-5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                                 <div
                                                     class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
                                                     :style="{ width: `${props.task.progress}%` }"
                                                 />
+                                                <span
+                                                    class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow"
+                                                >
+                                                    {{ props.task.progress }}%
+                                                </span>
                                             </div>
-                                            <span
-                                                class="text-sm font-semibold"
-                                                :class="hasSubTasks ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'"
-                                            >
-                                                {{ props.task.progress }}%
-                                            </span>
                                         </div>
                                     </div>
                                 </div>

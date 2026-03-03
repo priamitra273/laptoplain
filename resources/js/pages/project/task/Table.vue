@@ -41,7 +41,7 @@ const expandedKeys = ref<{ [key: string]: boolean }>({});
 
 // Filter refs
 const selectedStatuses = ref<string[]>([]);
-const selectedPriorities = ref<string[]>([]);
+// const selectedPriorities = ref<string[]>([]);
 const selectedTypes = ref<string[]>([]);
 
 // Activity modal state
@@ -119,7 +119,7 @@ const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
 };
 
 const statusOptions = computed(() => props.taskStatuses ?? []);
-const priorityOptions = computed(() => props.taskPriorities ?? []);
+// const priorityOptions = computed(() => props.taskPriorities ?? []);
 const typeOptions = computed(() => props.taskTypes ?? []);
 
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
@@ -128,14 +128,14 @@ const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
         !selectedStatuses.value ||
         selectedStatuses.value.length === 0 ||
         (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
-    const matchesPriority =
-        !selectedPriorities.value ||
-        selectedPriorities.value.length === 0 ||
-        (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
+    // const matchesPriority =
+    //     !selectedPriorities.value ||
+    //     selectedPriorities.value.length === 0 ||
+    //     (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
     const matchesType =
         !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
 
-    const currentMatches = matchesSearch && matchesStatus && matchesPriority && matchesType;
+    const currentMatches = matchesSearch && matchesStatus && /* matchesPriority && */ matchesType;
     const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
     return currentMatches || hasMatchingChildren;
 };
@@ -170,7 +170,7 @@ const hasActiveFilters = computed(() => {
     return (
         searchQuery.value !== '' ||
         (selectedStatuses.value && selectedStatuses.value.length > 0) ||
-        (selectedPriorities.value && selectedPriorities.value.length > 0) ||
+        // (selectedPriorities.value && selectedPriorities.value.length > 0) ||
         (selectedTypes.value && selectedTypes.value.length > 0)
     );
 });
@@ -178,16 +178,16 @@ const hasActiveFilters = computed(() => {
 const clearFilters = () => {
     searchQuery.value = '';
     selectedStatuses.value = [];
-    selectedPriorities.value = [];
+    // selectedPriorities.value = [];
     selectedTypes.value = [];
 };
 
 const handleClearStatuses = () => {
     selectedStatuses.value = [];
 };
-const handleClearPriorities = () => {
-    selectedPriorities.value = [];
-};
+// const handleClearPriorities = () => {
+//     selectedPriorities.value = [];
+// };
 const handleClearTypes = () => {
     selectedTypes.value = [];
 };
@@ -600,7 +600,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Filters Section -->
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Search</label>
                 <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
@@ -628,6 +628,7 @@ onBeforeUnmount(() => {
                     </template>
                 </MultiSelect>
             </div>
+            <!-- Priority Filter (commented out)
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Priority</label>
                 <MultiSelect
@@ -651,6 +652,7 @@ onBeforeUnmount(() => {
                     </template>
                 </MultiSelect>
             </div>
+            -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Type</label>
                 <MultiSelect
@@ -727,11 +729,7 @@ onBeforeUnmount(() => {
                         <div
                             data-task-drop-row="true"
                             class="flex items-center gap-2 rounded px-1 py-1 transition-colors"
-                            :class="
-                                dropTargetTaskId === node.key
-                                    ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70'
-                                    : ''
-                            "
+                            :class="dropTargetTaskId === node.key ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70' : ''"
                             @dragover.prevent="onRowDragOver($event, node)"
                             @dragenter.prevent="onRowDragOver($event, node)"
                             @drop.stop.prevent="onRowDrop($event, node)"
@@ -739,11 +737,9 @@ onBeforeUnmount(() => {
                         >
                             <div
                                 :title="node.data.title"
-                                class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5 select-none"
+                                class="max-w-[300px] select-none truncate text-ellipsis rounded px-1 py-0.5"
                                 :class="[
-                                    hasAccessToEditAndDelete(node.data)
-                                        ? 'cursor-grab active:cursor-grabbing'
-                                        : 'cursor-not-allowed opacity-50',
+                                    hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
                                         ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
                                         : '',
@@ -768,11 +764,13 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
+                <!-- Priority Column (commented out)
                 <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
                     </template>
                 </Column>
+                -->
 
                 <Column field="type.name" header="Type" style="min-width: 120px" sortable>
                     <template #body="{ node }">
@@ -792,7 +790,7 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <Column field="completed_at" header="Complete Date" style="min-width: 120px" sortable>
+                <Column field="completed_at" header="Complete Date" style="min-width: 160px" sortable>
                     <template #body="{ node }">
                         <span>{{ formatDate(node.data.completed_at) }}</span>
                     </template>
@@ -804,8 +802,8 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <!-- Created By Column -->
-                <Column header="Created By" style="min-width: 150px">
+                <!-- Created Column -->
+                <Column header="Created" style="min-width: 90px">
                     <template #body="{ node }">
                         <div v-if="node.original.creator" class="flex items-center gap-2">
                             <Avatar

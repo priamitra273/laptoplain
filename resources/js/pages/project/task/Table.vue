@@ -53,6 +53,9 @@ const activityModal = ref({
 const draggedTaskId = ref<string | null>(null);
 const dropTargetTaskId = ref<string | null>(null);
 const updateParentLoading = ref(false);
+const TASK_DRAG_MIME = 'application/x-task-id';
+const TASK_DRAG_TEXT_MIME = 'text/plain';
+const TASK_DRAG_LEGACY_TEXT_MIME = 'text';
 
 const openActivityLog = (task: Task) => {
     activityModal.value = {
@@ -295,14 +298,38 @@ const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
 
     draggedTaskId.value = node.key;
     dropTargetTaskId.value = null;
-    event.dataTransfer?.setData('text/plain', node.key);
     if (event.dataTransfer) {
+        // Use multiple MIME keys because browsers handle drag payload types differently.
+        event.dataTransfer.setData(TASK_DRAG_TEXT_MIME, node.key);
+        event.dataTransfer.setData(TASK_DRAG_LEGACY_TEXT_MIME, node.key);
+        try {
+            event.dataTransfer.setData(TASK_DRAG_MIME, node.key);
+        } catch {
+            // Some browsers reject custom MIME types, built-in text keys are still enough.
+        }
         event.dataTransfer.effectAllowed = 'move';
     }
 };
 
 const onHandleDragEnd = () => {
     resetDragState();
+};
+
+const getDraggedTaskIdFromEvent = (event: DragEvent): string | null => {
+    const transfer = event.dataTransfer;
+    if (!transfer) return draggedTaskId.value;
+
+    const candidates = [TASK_DRAG_MIME, TASK_DRAG_TEXT_MIME, TASK_DRAG_LEGACY_TEXT_MIME];
+    for (const mime of candidates) {
+        try {
+            const value = transfer.getData(mime)?.trim();
+            if (value) return value;
+        } catch {
+            // Ignore unsupported MIME reads and continue with next fallback.
+        }
+    }
+
+    return draggedTaskId.value;
 };
 
 const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
@@ -352,7 +379,7 @@ const updateTaskParent = async (taskId: string, parentId: string | null) => {
 
 const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
     event.preventDefault();
-    const sourceTaskId = draggedTaskId.value || event.dataTransfer?.getData('text/plain');
+    const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (!sourceTaskId) return;
 
     if (sourceTaskId === targetNode.key) {
@@ -382,7 +409,7 @@ const onRootDragOver = (event: DragEvent) => {
 
 const onRootDrop = async (event: DragEvent) => {
     event.preventDefault();
-    const sourceTaskId = draggedTaskId.value || event.dataTransfer?.getData('text/plain');
+    const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (!sourceTaskId) return;
     await updateTaskParent(sourceTaskId, null);
 };
@@ -537,20 +564,21 @@ const onRootDrop = async (event: DragEvent) => {
                             class="flex items-center gap-2 rounded px-1 py-1"
                             :class="dropTargetTaskId === node.key ? 'bg-blue-50 dark:bg-blue-950/30' : ''"
                             @dragover="onRowDragOver($event, node)"
+                            @dragenter.prevent
                             @drop="onRowDrop($event, node)"
                         >
-                            <p
+                            <div
                                 :title="node.data.title"
-                                class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5"
+                                class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5 select-none"
                                 :class="[
                                     hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                 ]"
                                 :draggable="hasAccessToEditAndDelete(node.data)"
-                                @dragstart="onHandleDragStart($event, node)"
+                                @dragstart.stop="onHandleDragStart($event, node)"
                                 @dragend="onHandleDragEnd"
                             >
                                 {{ node.data.title }}
-                            </p>
+                            </div>
                         </div>
                     </template>
                 </Column>

@@ -78,10 +78,6 @@ interface Props {
 
 const props = defineProps<Props>();
 
-/* ============================================================================
- * SAFE ACCESSORS
- * ========================================================================== */
-
 const safeUsers = computed(() => props.users?.data ?? []);
 const safeFilterUsers = computed(() => props.filterOptions?.users ?? []);
 const safeFilterStatuses = computed(() => props.filterOptions?.workload_statuses ?? []);
@@ -95,10 +91,6 @@ const safeSummary = computed(
             busy: 0,
         },
 );
-
-/* ============================================================================
- * STATE
- * ========================================================================== */
 
 const selectedUsers = ref<string[]>(parseStringArray(props.filters?.names));
 const selectedWorkloadStatuses = ref<number[]>(parseNumberArray(props.filters?.workload_statuses));
@@ -138,11 +130,11 @@ const getSeverityByStatus = (status: string): string => {
         case 'Free':
             return 'success';
         case 'Almost Done':
-            return 'warning';
+            return 'info';
         case 'Ongoing':
-            return 'help';
+            return 'warn';
         default:
-            return 'danger'; // Overloaded
+            return 'danger';
     }
 };
 

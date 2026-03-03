@@ -333,9 +333,13 @@ const getDraggedTaskIdFromEvent = (event: DragEvent): string | null => {
 };
 
 const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
-    if (!draggedTaskId.value || targetNode.key === draggedTaskId.value) return;
+    const sourceTaskId = getDraggedTaskIdFromEvent(event);
+    if (!sourceTaskId || targetNode.key === sourceTaskId) return;
 
     event.preventDefault();
+    if (!draggedTaskId.value) {
+        draggedTaskId.value = sourceTaskId;
+    }
     dropTargetTaskId.value = targetNode.key;
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
@@ -380,7 +384,10 @@ const updateTaskParent = async (taskId: string, parentId: string | null) => {
 const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
-    if (!sourceTaskId) return;
+    if (!sourceTaskId) {
+        resetDragState();
+        return;
+    }
 
     if (sourceTaskId === targetNode.key) {
         resetDragState();
@@ -402,15 +409,22 @@ const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
 };
 
 const onRootDragOver = (event: DragEvent) => {
-    if (!draggedTaskId.value) return;
+    const sourceTaskId = getDraggedTaskIdFromEvent(event);
+    if (!sourceTaskId) return;
     event.preventDefault();
+    if (!draggedTaskId.value) {
+        draggedTaskId.value = sourceTaskId;
+    }
     dropTargetTaskId.value = null;
 };
 
 const onRootDrop = async (event: DragEvent) => {
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
-    if (!sourceTaskId) return;
+    if (!sourceTaskId) {
+        resetDragState();
+        return;
+    }
     await updateTaskParent(sourceTaskId, null);
 };
 </script>
@@ -563,9 +577,12 @@ const onRootDrop = async (event: DragEvent) => {
                         <div
                             class="flex items-center gap-2 rounded px-1 py-1"
                             :class="dropTargetTaskId === node.key ? 'bg-blue-50 dark:bg-blue-950/30' : ''"
+                            :draggable="hasAccessToEditAndDelete(node.data)"
                             @dragover="onRowDragOver($event, node)"
                             @dragenter.prevent
                             @drop="onRowDrop($event, node)"
+                            @dragstart.stop="onHandleDragStart($event, node)"
+                            @dragend="onHandleDragEnd"
                         >
                             <div
                                 :title="node.data.title"
@@ -573,9 +590,6 @@ const onRootDrop = async (event: DragEvent) => {
                                 :class="[
                                     hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                 ]"
-                                :draggable="hasAccessToEditAndDelete(node.data)"
-                                @dragstart.stop="onHandleDragStart($event, node)"
-                                @dragend="onHandleDragEnd"
                             >
                                 {{ node.data.title }}
                             </div>

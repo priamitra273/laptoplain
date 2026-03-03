@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -48,6 +49,14 @@ const activityModal = ref({
     taskId: '',
     taskTitle: '',
 });
+
+const HOLD_TO_DRAG_MS = 0;
+const holdTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const holdTaskId = ref<string | null>(null);
+const dragReadyTaskId = ref<string | null>(null);
+const draggedTaskId = ref<string | null>(null);
+const dropTargetTaskId = ref<string | null>(null);
+const updateParentLoading = ref(false);
 
 const openActivityLog = (task: Task) => {
     activityModal.value = {
@@ -251,6 +260,182 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
     return isMember;
 };
+
+const clearHoldTimer = () => {
+    if (holdTimer.value) {
+        clearTimeout(holdTimer.value);
+        holdTimer.value = null;
+    }
+};
+
+const resetDragState = () => {
+    clearHoldTimer();
+    holdTaskId.value = null;
+    dragReadyTaskId.value = null;
+    draggedTaskId.value = null;
+    dropTargetTaskId.value = null;
+};
+
+const startHoldToDrag = (taskId: string, canMove: boolean) => {
+    if (!canMove || updateParentLoading.value) return;
+
+    clearHoldTimer();
+    holdTaskId.value = taskId;
+    dragReadyTaskId.value = null;
+
+    holdTimer.value = setTimeout(() => {
+        dragReadyTaskId.value = taskId;
+        toast.add({
+            severity: 'info',
+            summary: 'Drag unlocked',
+            detail: 'You can drag this task now.',
+            life: 1800,
+        });
+    }, HOLD_TO_DRAG_MS);
+};
+
+const cancelHoldToDrag = (taskId?: string) => {
+    if (!taskId || holdTaskId.value === taskId) {
+        clearHoldTimer();
+        holdTaskId.value = null;
+    }
+};
+
+const findTaskById = (list: Task[], taskId: string): Task | null => {
+    for (const item of list) {
+        if (item.id === taskId) return item;
+        const found = findTaskById(item.sub_task_recursive || [], taskId);
+        if (found) return found;
+    }
+    return null;
+};
+
+const isDescendant = (sourceId: string, targetId: string): boolean => {
+    const source = findTaskById(props.tasks, sourceId);
+    if (!source) return false;
+
+    const walk = (nodes: Task[]): boolean => {
+        for (const n of nodes) {
+            if (n.id === targetId) return true;
+            if (walk(n.sub_task_recursive || [])) return true;
+        }
+        return false;
+    };
+
+    return walk(source.sub_task_recursive || []);
+};
+
+const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
+    const canMove = hasAccessToEditAndDelete(node.data);
+    if (!canMove) {
+        event.preventDefault();
+        return;
+    }
+
+    if (dragReadyTaskId.value !== node.key) {
+        event.preventDefault();
+        toast.add({
+            severity: 'warn',
+            summary: 'Hold required',
+            detail: 'Press and hold the task title for 1 second first.',
+            life: 2200,
+        });
+        return;
+    }
+
+    draggedTaskId.value = node.key;
+    dropTargetTaskId.value = null;
+    event.dataTransfer?.setData('text/plain', node.key);
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+    }
+};
+
+const onHandleDragEnd = () => {
+    resetDragState();
+};
+
+const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
+    if (!draggedTaskId.value || targetNode.key === draggedTaskId.value) return;
+
+    event.preventDefault();
+    dropTargetTaskId.value = targetNode.key;
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
+};
+
+const updateTaskParent = async (taskId: string, parentId: string | null) => {
+    if (updateParentLoading.value) return;
+    updateParentLoading.value = true;
+
+    try {
+        await axios.put(
+            route('project.tasks.parent.update', {
+                projectEncoded: props.projectId,
+                taskEncoded: taskId,
+            }),
+            { parent_id: parentId },
+        );
+
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Task parent updated successfully.',
+            life: 2200,
+        });
+
+        router.reload();
+    } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to update task parent.';
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: message,
+            life: 3000,
+        });
+    } finally {
+        updateParentLoading.value = false;
+        resetDragState();
+    }
+};
+
+const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
+    event.preventDefault();
+    const sourceTaskId = draggedTaskId.value || event.dataTransfer?.getData('text/plain');
+    if (!sourceTaskId) return;
+
+    if (sourceTaskId === targetNode.key) {
+        resetDragState();
+        return;
+    }
+
+    if (isDescendant(sourceTaskId, targetNode.key)) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Invalid move',
+            detail: 'Cannot move task under its own descendant.',
+            life: 2500,
+        });
+        resetDragState();
+        return;
+    }
+
+    await updateTaskParent(sourceTaskId, targetNode.key);
+};
+
+const onRootDragOver = (event: DragEvent) => {
+    if (!draggedTaskId.value) return;
+    event.preventDefault();
+    dropTargetTaskId.value = null;
+};
+
+const onRootDrop = async (event: DragEvent) => {
+    event.preventDefault();
+    const sourceTaskId = draggedTaskId.value || event.dataTransfer?.getData('text/plain');
+    if (!sourceTaskId) return;
+    await updateTaskParent(sourceTaskId, null);
+};
 </script>
 
 <template>
@@ -363,6 +548,14 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
 
         <!-- TreeTable -->
         <div class="overflow-x-auto">
+            <div
+                v-if="draggedTaskId"
+                class="mb-3 rounded-md border border-dashed border-blue-400 bg-blue-50 px-3 py-2 text-sm text-blue-700"
+                @dragover="onRootDragOver"
+                @drop="onRootDrop"
+            >
+                Drop here to move task as top-level task
+            </div>
             <TreeTable :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
                 <!-- Checkbox Column -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
@@ -390,7 +583,32 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
                 <!-- Title Column -->
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
-                        <p :title="node.data.title" class="max-w-[300px] truncate text-ellipsis">{{ node.data.title }}</p>
+                        <div
+                            class="flex items-center gap-2 rounded px-1 py-1"
+                            :class="dropTargetTaskId === node.key ? 'bg-blue-50 dark:bg-blue-950/30' : ''"
+                            @dragover="onRowDragOver($event, node)"
+                            @drop="onRowDrop($event, node)"
+                        >
+                            <p
+                                :title="node.data.title"
+                                class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5"
+                                :class="[
+                                    hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
+                                    holdTaskId === node.key && !dragReadyTaskId ? 'animate-pulse' : '',
+                                    dragReadyTaskId === node.key ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : '',
+                                ]"
+                                :draggable="hasAccessToEditAndDelete(node.data)"
+                                @mousedown="startHoldToDrag(node.key, hasAccessToEditAndDelete(node.data))"
+                                @mouseup="cancelHoldToDrag(node.key)"
+                                @mouseleave="cancelHoldToDrag(node.key)"
+                                @touchstart.passive="startHoldToDrag(node.key, hasAccessToEditAndDelete(node.data))"
+                                @touchend="cancelHoldToDrag(node.key)"
+                                @dragstart="onHandleDragStart($event, node)"
+                                @dragend="onHandleDragEnd"
+                            >
+                                {{ node.data.title }}
+                            </p>
+                        </div>
                     </template>
                 </Column>
 

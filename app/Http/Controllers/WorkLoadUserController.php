@@ -192,8 +192,8 @@ class WorkLoadUserController extends Controller
     {
         return match ($status) {
             'Free'        => 'success',
-            'Almost Done' => 'warning',
-            'Ongoing'     => 'help',
+            'Almost Done' => 'info',
+            'Ongoing'     => 'warn',
             default       => 'danger',
         };
     }

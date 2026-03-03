@@ -14,7 +14,7 @@ import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ComputedRef, ref } from 'vue';
+import { computed, ComputedRef, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
 
 interface Props {
@@ -37,6 +37,7 @@ const deleteLoading = ref(false);
 const currentUser = usePage().props.auth.user;
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
+const expandedKeys = ref<{ [key: string]: boolean }>({});
 
 // Filter refs
 const selectedStatuses = ref<string[]>([]);
@@ -53,9 +54,21 @@ const activityModal = ref({
 const draggedTaskId = ref<string | null>(null);
 const dropTargetTaskId = ref<string | null>(null);
 const updateParentLoading = ref(false);
+const pointerDraggedTaskId = ref<string | null>(null);
+const pointerOnRootDropzone = ref(false);
+const dragArmedTaskId = ref<string | null>(null);
+const holdCandidateTaskId = ref<string | null>(null);
+const holdTimerId = ref<ReturnType<typeof setTimeout> | null>(null);
+const autoExpandTargetKey = ref<string | null>(null);
+const autoExpandTimerId = ref<ReturnType<typeof setTimeout> | null>(null);
+const DRAG_HOLD_MS = 900;
+const AUTO_EXPAND_DELAY_MS = 500;
 const TASK_DRAG_MIME = 'application/x-task-id';
 const TASK_DRAG_TEXT_MIME = 'text/plain';
 const TASK_DRAG_LEGACY_TEXT_MIME = 'text';
+const activeDragTaskId = computed(() => pointerDraggedTaskId.value || draggedTaskId.value || dragArmedTaskId.value);
+const isDraggingTask = computed(() => !!activeDragTaskId.value);
+const isRootDropActive = computed(() => isDraggingTask.value && pointerOnRootDropzone.value && !dropTargetTaskId.value);
 
 const openActivityLog = (task: Task) => {
     activityModal.value = {
@@ -260,9 +273,42 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     return isMember;
 };
 
+const clearAutoExpandSchedule = () => {
+    if (autoExpandTimerId.value) {
+        clearTimeout(autoExpandTimerId.value);
+        autoExpandTimerId.value = null;
+    }
+    autoExpandTargetKey.value = null;
+};
+
+const scheduleAutoExpand = (node: TaskFormatted) => {
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    if (!hasChildren || expandedKeys.value[node.key]) {
+        clearAutoExpandSchedule();
+        return;
+    }
+
+    if (autoExpandTargetKey.value === node.key && autoExpandTimerId.value) return;
+    clearAutoExpandSchedule();
+    autoExpandTargetKey.value = node.key;
+    autoExpandTimerId.value = setTimeout(() => {
+        expandedKeys.value = { ...expandedKeys.value, [node.key]: true };
+        clearAutoExpandSchedule();
+    }, AUTO_EXPAND_DELAY_MS);
+};
+
 const resetDragState = () => {
+    if (holdTimerId.value) {
+        clearTimeout(holdTimerId.value);
+        holdTimerId.value = null;
+    }
+    clearAutoExpandSchedule();
     draggedTaskId.value = null;
     dropTargetTaskId.value = null;
+    pointerDraggedTaskId.value = null;
+    pointerOnRootDropzone.value = false;
+    dragArmedTaskId.value = null;
+    holdCandidateTaskId.value = null;
 };
 
 const findTaskById = (list: Task[], taskId: string): Task | null => {
@@ -291,11 +337,12 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
 
 const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
     const canMove = hasAccessToEditAndDelete(node.data);
-    if (!canMove) {
+    if (!canMove || dragArmedTaskId.value !== node.key) {
         event.preventDefault();
         return;
     }
 
+    onPointerDragStart(node);
     draggedTaskId.value = node.key;
     dropTargetTaskId.value = null;
     if (event.dataTransfer) {
@@ -332,18 +379,29 @@ const getDraggedTaskIdFromEvent = (event: DragEvent): string | null => {
     return draggedTaskId.value;
 };
 
+const hasTaskDragPayload = (event: DragEvent): boolean => {
+    if (draggedTaskId.value) return true;
+    const transfer = event.dataTransfer;
+    if (!transfer?.types) return false;
+    const types = Array.from(transfer.types);
+    return [TASK_DRAG_MIME, TASK_DRAG_TEXT_MIME, TASK_DRAG_LEGACY_TEXT_MIME].some((mime) => types.includes(mime));
+};
+
 const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
+    if (!hasTaskDragPayload(event)) return;
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
-    if (!sourceTaskId || targetNode.key === sourceTaskId) return;
+    if (sourceTaskId && targetNode.key === sourceTaskId) return;
 
     event.preventDefault();
     if (!draggedTaskId.value) {
         draggedTaskId.value = sourceTaskId;
     }
+    pointerOnRootDropzone.value = false;
     dropTargetTaskId.value = targetNode.key;
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
     }
+    scheduleAutoExpand(targetNode);
 };
 
 const updateTaskParent = async (taskId: string, parentId: string | null) => {
@@ -381,20 +439,18 @@ const updateTaskParent = async (taskId: string, parentId: string | null) => {
     }
 };
 
-const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
-    event.preventDefault();
-    const sourceTaskId = getDraggedTaskIdFromEvent(event);
+const moveTaskWithValidation = async (sourceTaskId: string | null, targetTaskId: string | null) => {
     if (!sourceTaskId) {
         resetDragState();
         return;
     }
 
-    if (sourceTaskId === targetNode.key) {
+    if (targetTaskId && sourceTaskId === targetTaskId) {
         resetDragState();
         return;
     }
 
-    if (isDescendant(sourceTaskId, targetNode.key)) {
+    if (targetTaskId && isDescendant(sourceTaskId, targetTaskId)) {
         toast.add({
             severity: 'warn',
             summary: 'Invalid move',
@@ -405,28 +461,116 @@ const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
         return;
     }
 
-    await updateTaskParent(sourceTaskId, targetNode.key);
+    await updateTaskParent(sourceTaskId, targetTaskId);
+};
+
+const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
+    event.preventDefault();
+    const sourceTaskId = getDraggedTaskIdFromEvent(event);
+    await moveTaskWithValidation(sourceTaskId, targetNode.key);
 };
 
 const onRootDragOver = (event: DragEvent) => {
+    if (!hasTaskDragPayload(event)) return;
+    const target = event.target as Element | null;
+    const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
+    if (insideTaskRow) return;
+
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
-    if (!sourceTaskId) return;
     event.preventDefault();
-    if (!draggedTaskId.value) {
+    if (!draggedTaskId.value && sourceTaskId) {
         draggedTaskId.value = sourceTaskId;
     }
+    pointerOnRootDropzone.value = true;
     dropTargetTaskId.value = null;
+    clearAutoExpandSchedule();
 };
 
 const onRootDrop = async (event: DragEvent) => {
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
-    if (!sourceTaskId) {
-        resetDragState();
+    await moveTaskWithValidation(sourceTaskId, null);
+};
+
+const onPointerDragStart = (node: TaskFormatted) => {
+    if (!hasAccessToEditAndDelete(node.data)) return;
+    pointerDraggedTaskId.value = node.key;
+    pointerOnRootDropzone.value = false;
+    draggedTaskId.value = node.key;
+    dropTargetTaskId.value = null;
+};
+
+const cancelPointerHold = () => {
+    if (holdTimerId.value) {
+        clearTimeout(holdTimerId.value);
+        holdTimerId.value = null;
+    }
+    holdCandidateTaskId.value = null;
+    if (!pointerDraggedTaskId.value) {
+        dragArmedTaskId.value = null;
+    }
+};
+
+const onPointerHoldStart = (node: TaskFormatted) => {
+    if (!hasAccessToEditAndDelete(node.data)) return;
+    cancelPointerHold();
+    holdCandidateTaskId.value = node.key;
+    holdTimerId.value = setTimeout(() => {
+        if (holdCandidateTaskId.value !== node.key) return;
+        dragArmedTaskId.value = node.key;
+        onPointerDragStart(node);
+    }, DRAG_HOLD_MS);
+};
+
+const onPointerRowEnter = (node: TaskFormatted) => {
+    if (!pointerDraggedTaskId.value) return;
+    pointerOnRootDropzone.value = false;
+    dropTargetTaskId.value = node.key === pointerDraggedTaskId.value ? null : node.key;
+    scheduleAutoExpand(node);
+};
+
+const onPointerRootEnter = () => {
+    if (!pointerDraggedTaskId.value) return;
+    pointerOnRootDropzone.value = true;
+    dropTargetTaskId.value = null;
+    clearAutoExpandSchedule();
+};
+
+const onPointerRootLeave = () => {
+    if (!pointerDraggedTaskId.value) return;
+    pointerOnRootDropzone.value = false;
+};
+
+const onPointerContainerMove = (event: MouseEvent) => {
+    if (!pointerDraggedTaskId.value) return;
+    const target = event.target as Element | null;
+    const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
+    if (insideTaskRow) {
+        pointerOnRootDropzone.value = false;
         return;
     }
-    await updateTaskParent(sourceTaskId, null);
+    onPointerRootEnter();
 };
+
+const finalizePointerDrag = async () => {
+    if (!pointerDraggedTaskId.value) return;
+    const sourceTaskId = pointerDraggedTaskId.value;
+    const targetTaskId = pointerOnRootDropzone.value ? null : dropTargetTaskId.value;
+    await moveTaskWithValidation(sourceTaskId, targetTaskId);
+};
+
+const onGlobalMouseUp = () => {
+    void finalizePointerDrag();
+    cancelPointerHold();
+};
+
+onMounted(() => {
+    window.addEventListener('mouseup', onGlobalMouseUp);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mouseup', onGlobalMouseUp);
+});
 </script>
 
 <template>
@@ -538,16 +682,22 @@ const onRootDrop = async (event: DragEvent) => {
         </div>
 
         <!-- TreeTable -->
-        <div class="overflow-x-auto">
-            <div
-                v-if="draggedTaskId"
-                class="mb-3 rounded-md border border-dashed border-blue-400 bg-blue-50 px-3 py-2 text-sm text-blue-700"
-                @dragover="onRootDragOver"
-                @drop="onRootDrop"
-            >
-                Drop here to move task as top-level task
-            </div>
-            <TreeTable :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
+        <div
+            class="overflow-x-auto"
+            :class="
+                isRootDropActive
+                    ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
+                    : isDraggingTask
+                      ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
+                      : 'transition-colors'
+            "
+            @dragover.prevent="onRootDragOver"
+            @dragenter.prevent="onRootDragOver"
+            @drop.stop.prevent="onRootDrop"
+            @mousemove="onPointerContainerMove"
+            @mouseleave="onPointerRootLeave"
+        >
+            <TreeTable v-model:expandedKeys="expandedKeys" :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
                 <!-- Checkbox Column -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
@@ -575,21 +725,36 @@ const onRootDrop = async (event: DragEvent) => {
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
                         <div
-                            class="flex items-center gap-2 rounded px-1 py-1"
-                            :class="dropTargetTaskId === node.key ? 'bg-blue-50 dark:bg-blue-950/30' : ''"
-                            :draggable="hasAccessToEditAndDelete(node.data)"
-                            @dragover="onRowDragOver($event, node)"
-                            @dragenter.prevent
-                            @drop="onRowDrop($event, node)"
-                            @dragstart.stop="onHandleDragStart($event, node)"
-                            @dragend="onHandleDragEnd"
+                            data-task-drop-row="true"
+                            class="flex items-center gap-2 rounded px-1 py-1 transition-colors"
+                            :class="
+                                dropTargetTaskId === node.key
+                                    ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70'
+                                    : ''
+                            "
+                            @dragover.prevent="onRowDragOver($event, node)"
+                            @dragenter.prevent="onRowDragOver($event, node)"
+                            @drop.stop.prevent="onRowDrop($event, node)"
+                            @mouseenter="onPointerRowEnter(node)"
                         >
                             <div
                                 :title="node.data.title"
                                 class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5 select-none"
                                 :class="[
-                                    hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
+                                    hasAccessToEditAndDelete(node.data)
+                                        ? 'cursor-grab active:cursor-grabbing'
+                                        : 'cursor-not-allowed opacity-50',
+                                    activeDragTaskId === node.key
+                                        ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
+                                        : '',
                                 ]"
+                                :draggable="hasAccessToEditAndDelete(node.data) && dragArmedTaskId === node.key"
+                                style="-webkit-user-drag: element"
+                                @mousedown.left.stop.prevent="onPointerHoldStart(node)"
+                                @mouseup.left="cancelPointerHold"
+                                @mouseleave="cancelPointerHold"
+                                @dragstart.stop="onHandleDragStart($event, node)"
+                                @dragend="onHandleDragEnd"
                             >
                                 {{ node.data.title }}
                             </div>

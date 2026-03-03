@@ -50,10 +50,6 @@ const activityModal = ref({
     taskTitle: '',
 });
 
-const HOLD_TO_DRAG_MS = 0;
-const holdTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const holdTaskId = ref<string | null>(null);
-const dragReadyTaskId = ref<string | null>(null);
 const draggedTaskId = ref<string | null>(null);
 const dropTargetTaskId = ref<string | null>(null);
 const updateParentLoading = ref(false);
@@ -261,44 +257,9 @@ const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     return isMember;
 };
 
-const clearHoldTimer = () => {
-    if (holdTimer.value) {
-        clearTimeout(holdTimer.value);
-        holdTimer.value = null;
-    }
-};
-
 const resetDragState = () => {
-    clearHoldTimer();
-    holdTaskId.value = null;
-    dragReadyTaskId.value = null;
     draggedTaskId.value = null;
     dropTargetTaskId.value = null;
-};
-
-const startHoldToDrag = (taskId: string, canMove: boolean) => {
-    if (!canMove || updateParentLoading.value) return;
-
-    clearHoldTimer();
-    holdTaskId.value = taskId;
-    dragReadyTaskId.value = null;
-
-    holdTimer.value = setTimeout(() => {
-        dragReadyTaskId.value = taskId;
-        toast.add({
-            severity: 'info',
-            summary: 'Drag unlocked',
-            detail: 'You can drag this task now.',
-            life: 1800,
-        });
-    }, HOLD_TO_DRAG_MS);
-};
-
-const cancelHoldToDrag = (taskId?: string) => {
-    if (!taskId || holdTaskId.value === taskId) {
-        clearHoldTimer();
-        holdTaskId.value = null;
-    }
 };
 
 const findTaskById = (list: Task[], taskId: string): Task | null => {
@@ -329,17 +290,6 @@ const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
     const canMove = hasAccessToEditAndDelete(node.data);
     if (!canMove) {
         event.preventDefault();
-        return;
-    }
-
-    if (dragReadyTaskId.value !== node.key) {
-        event.preventDefault();
-        toast.add({
-            severity: 'warn',
-            summary: 'Hold required',
-            detail: 'Press and hold the task title for 1 second first.',
-            life: 2200,
-        });
         return;
     }
 
@@ -594,15 +544,8 @@ const onRootDrop = async (event: DragEvent) => {
                                 class="max-w-[300px] truncate text-ellipsis rounded px-1 py-0.5"
                                 :class="[
                                     hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
-                                    holdTaskId === node.key && !dragReadyTaskId ? 'animate-pulse' : '',
-                                    dragReadyTaskId === node.key ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : '',
                                 ]"
                                 :draggable="hasAccessToEditAndDelete(node.data)"
-                                @mousedown="startHoldToDrag(node.key, hasAccessToEditAndDelete(node.data))"
-                                @mouseup="cancelHoldToDrag(node.key)"
-                                @mouseleave="cancelHoldToDrag(node.key)"
-                                @touchstart.passive="startHoldToDrag(node.key, hasAccessToEditAndDelete(node.data))"
-                                @touchend="cancelHoldToDrag(node.key)"
                                 @dragstart="onHandleDragStart($event, node)"
                                 @dragend="onHandleDragEnd"
                             >

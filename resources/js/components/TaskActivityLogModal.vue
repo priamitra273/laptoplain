@@ -97,7 +97,12 @@ const closeModal = () => emit('update:visible', false);
         :style="{ width: '480px', maxWidth: '95vw' }"
         :draggable="false"
         dismissableMask
-        :pt="{ content: { style: 'overflow-y: auto; max-height: 70vh; padding: 1.25rem;' } }"
+        :pt="{
+            header: {
+                style: 'white-space: normal; word-break: break-word; overflow-wrap: break-word; max-width: 100%;',
+            },
+            content: { style: 'overflow-y: auto; max-height: 70vh; padding: 1.25rem;' },
+        }"
     >
         <!-- Stats bar -->
         <div class="mb-4 flex items-center gap-4 rounded-lg bg-surface-100 px-4 py-3 dark:bg-surface-800">

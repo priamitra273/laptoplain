@@ -20,6 +20,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WorkLoadUserController;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -35,6 +36,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $except = ['create', 'show', 'edit'];
         Route::get('dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get('workload-users', [WorkLoadUserController::class, 'index'])
+            ->name('workload-users.index');
 
         Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
         Route::resource('user', UserController::class)->except('show');

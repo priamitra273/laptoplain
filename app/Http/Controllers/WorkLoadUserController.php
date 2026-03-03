@@ -16,6 +16,9 @@ class WorkLoadUserController extends Controller
 
         $perPage = $request->input('per_page', 50);
 
+        // =====================================================
+        // SUBQUERY: workload calculation (PURE SQL)
+        // =====================================================
         $workloadSub = DB::table('users as u')
             ->leftJoin('task_users as tu', 'tu.user_id', '=', 'u.id')
             ->leftJoin('tasks as t', function ($join) {
@@ -32,16 +35,18 @@ class WorkLoadUserController extends Controller
                 DB::raw('COUNT(t.id) AS total_tasks'),
                 DB::raw("
                     CASE
-                        WHEN COUNT(t.id) = 0 THEN 'FREE (100%)'
-                        WHEN ROUND(AVG(100 - t.progress)) = 0 THEN 'FREE (100%)'
-                        WHEN ROUND(AVG(100 - t.progress)) BETWEEN 1 AND 20 THEN '80%'
-                        WHEN ROUND(AVG(100 - t.progress)) BETWEEN 21 AND 50 THEN '50%'
-                        ELSE 'BUSY'
+                        WHEN COUNT(t.id) = 0 THEN 'Free'
+                        WHEN ROUND(AVG(100 - t.progress)) = 0 THEN 'Free'
+                        WHEN ROUND(AVG(100 - t.progress)) BETWEEN 1 AND 20 THEN 'Almost Done'
+                        WHEN ROUND(AVG(100 - t.progress)) BETWEEN 21 AND 50 THEN 'Ongoing'
+                        ELSE 'Overloaded'
                     END AS workload_status
                 "),
             ]);
 
-
+        // =====================================================
+        // MAIN QUERY: Eloquent (avatar_url accessor works here)
+        // =====================================================
         $query = User::query()
             ->select([
                 'users.*',
@@ -53,22 +58,28 @@ class WorkLoadUserController extends Controller
 
         $this->applyFilters($query, $filters);
 
-
+        // =====================================================
+        // SUMMARY (before pagination)
+        // =====================================================
         $allForSummary = (clone $query)->get(['w.workload_status']);
 
         $summary = [
             'total_users' => $allForSummary->count(),
-            'free'        => $allForSummary->where('workload_status', 'FREE (100%)')->count(),
-            'light'       => $allForSummary->where('workload_status', '80%')->count(),
-            'moderate'    => $allForSummary->where('workload_status', '50%')->count(),
-            'busy'        => $allForSummary->where('workload_status', 'BUSY')->count(),
+            'free'        => $allForSummary->where('workload_status', 'Free')->count(),
+            'light'       => $allForSummary->where('workload_status', 'Almost Done')->count(),
+            'moderate'    => $allForSummary->where('workload_status', 'Ongoing')->count(),
+            'busy'        => $allForSummary->where('workload_status', 'Overloaded')->count(),
         ];
 
+        // =====================================================
+        // PAGINATION
+        // =====================================================
         $users = $query
             ->orderByDesc('w.remaining_work_percent')
             ->paginate($perPage)
             ->withQueryString();
 
+        // Encode IDs in paginated results
         $formattedUsers = $users->through(function ($user) {
             return [
                 'id'                     => Sqids::encode($user->id),
@@ -80,6 +91,9 @@ class WorkLoadUserController extends Controller
             ];
         });
 
+        // =====================================================
+        // FILTER OPTIONS
+        // =====================================================
         $filterOptions = $this->getFilterOptions();
 
         return Inertia::render('workload/index', [
@@ -90,9 +104,12 @@ class WorkLoadUserController extends Controller
         ]);
     }
 
+    // =====================================================
+    // APPLY FILTERS
+    // =====================================================
     private function applyFilters($query, array $filters): void
     {
-
+        // Filter by user IDs (encoded)
         if (!empty($filters['names'])) {
             $names = is_array($filters['names'])
                 ? $filters['names']
@@ -106,7 +123,7 @@ class WorkLoadUserController extends Controller
             $query->whereIn('users.id', $userIds);
         }
 
-
+        // Filter by workload status IDs
         if (!empty($filters['workload_statuses'])) {
             $statuses = is_array($filters['workload_statuses'])
                 ? $filters['workload_statuses']
@@ -123,13 +140,15 @@ class WorkLoadUserController extends Controller
             }
         }
 
-
+        // Search by name (PostgreSQL ILIKE)
         if (!empty($filters['search'])) {
             $query->where('users.name', 'ILIKE', "%{$filters['search']}%");
         }
     }
 
-
+    // =====================================================
+    // FILTER OPTIONS
+    // =====================================================
     private function getFilterOptions(): array
     {
         $users = User::where('is_active', true)
@@ -137,8 +156,8 @@ class WorkLoadUserController extends Controller
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn($user) => [
-                'id'        => Sqids::encode($user->id),
-                'name'      => $user->name,
+                'id'         => Sqids::encode($user->id),
+                'name'       => $user->name,
                 'avatar_url' => $user->avatar_url ?? null,
             ]);
 
@@ -151,27 +170,30 @@ class WorkLoadUserController extends Controller
             ->values();
 
         return [
-            'users'            => $users->toArray(),
+            'users'             => $users->toArray(),
             'workload_statuses' => $workloadStatuses->toArray(),
         ];
     }
 
+    // =====================================================
+    // HELPERS
+    // =====================================================
     private function statusMap(): array
     {
         return [
-            1 => 'FREE (100%)',
-            2 => '80%',
-            3 => '50%',
-            4 => 'BUSY',
+            1 => 'Free',
+            2 => 'Almost Done',
+            3 => 'Ongoing',
+            4 => 'Overloaded',
         ];
     }
 
     private function getSeverity(string $status): string
     {
         return match ($status) {
-            'FREE (100%)' => 'success',
-            '80%'         => 'warning',
-            '50%'         => 'help',
+            'Free'        => 'success',
+            'Almost Done' => 'warning',
+            'Ongoing'     => 'help',
             default       => 'danger',
         };
     }

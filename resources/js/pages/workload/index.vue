@@ -98,7 +98,6 @@ const safeSummary = computed(
 
 /* ============================================================================
  * STATE
- * NOTE: names are Sqids-encoded strings; workload_statuses are numeric IDs
  * ========================================================================== */
 
 const selectedUsers = ref<string[]>(parseStringArray(props.filters?.names));
@@ -136,14 +135,14 @@ const getUserColor = (index: number): string => `hsl(${index * 60}, 70%, 60%)`;
 
 const getSeverityByStatus = (status: string): string => {
     switch (status) {
-        case 'FREE (100%)':
+        case 'Free':
             return 'success';
-        case '80%':
+        case 'Almost Done':
             return 'warning';
-        case '50%':
+        case 'Ongoing':
             return 'help';
         default:
-            return 'danger';
+            return 'danger'; // Overloaded
     }
 };
 
@@ -199,10 +198,10 @@ const onPageChange = (event: any) => {
 
 const summaryCards = [
     { key: 'total_users' as const, label: 'Total Users', icon: 'pi pi-users', color: '#6366f1', bg: '#e0e7ff' },
-    { key: 'free' as const, label: 'Free (100%)', icon: 'pi pi-check-circle', color: '#16a34a', bg: '#dcfce7' },
-    { key: 'light' as const, label: 'Light (80%)', icon: 'pi pi-chart-bar', color: '#2563eb', bg: '#dbeafe' },
-    { key: 'moderate' as const, label: 'Moderate (50%)', icon: 'pi pi-clock', color: '#ca8a04', bg: '#fef9c3' },
-    { key: 'busy' as const, label: 'Busy', icon: 'pi pi-exclamation-triangle', color: '#dc2626', bg: '#fee2e2' },
+    { key: 'free' as const, label: 'Free', icon: 'pi pi-check-circle', color: '#16a34a', bg: '#dcfce7' },
+    { key: 'light' as const, label: 'Almost Done', icon: 'pi pi-chart-bar', color: '#2563eb', bg: '#dbeafe' },
+    { key: 'moderate' as const, label: 'Ongoing', icon: 'pi pi-clock', color: '#ca8a04', bg: '#fef9c3' },
+    { key: 'busy' as const, label: 'Overloaded', icon: 'pi pi-exclamation-triangle', color: '#dc2626', bg: '#fee2e2' },
 ];
 </script>
 
@@ -342,10 +341,10 @@ const summaryCards = [
                                         :showValue="false"
                                         class="h-6 overflow-hidden rounded-lg transition-all duration-500"
                                         :class="{
-                                            'p-progressbar-success': data.workload_status === 'FREE (100%)',
-                                            'p-progressbar-warning': data.workload_status === '80%',
-                                            'p-progressbar-help': data.workload_status === '50%',
-                                            'p-progressbar-danger': data.workload_status === 'BUSY',
+                                            'p-progressbar-success': data.workload_status === 'Free',
+                                            'p-progressbar-warning': data.workload_status === 'Almost Done',
+                                            'p-progressbar-help': data.workload_status === 'Ongoing',
+                                            'p-progressbar-danger': data.workload_status === 'Overloaded',
                                         }"
                                     />
                                     <span class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
@@ -369,9 +368,9 @@ const summaryCards = [
 
                     <Paginator
                         class="mt-4"
-                        :rows="props.users?.per_page ?? 10"
+                        :rows="props.users?.per_page ?? 50"
                         :totalRecords="props.users?.total ?? 0"
-                        :first="((props.users?.current_page ?? 1) - 1) * (props.users?.per_page ?? 10)"
+                        :first="((props.users?.current_page ?? 1) - 1) * (props.users?.per_page ?? 50)"
                         :rowsPerPageOptions="[10, 25, 50, 100]"
                         @page="onPageChange"
                     />

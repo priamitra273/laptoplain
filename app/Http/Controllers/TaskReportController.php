@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
+use App\Http\Requests\TaskReport\TaskReportIndexRequest;
+use App\Models\MsTaskPriority;
+use App\Models\MsTaskStatus;
+use App\Models\MsTaskType;
 use App\Models\Task;
 use App\Models\User;
-use App\Models\MsTaskStatus;
-use App\Models\MsTaskPriority;
-use App\Models\MsTaskType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class TaskReportController extends Controller
@@ -17,20 +17,10 @@ class TaskReportController extends Controller
     /**
      * Display task report with filters
      */
-    public function index(Request $request)
+    public function index(TaskReportIndexRequest $request)
     {
         // Get filter parameters
-        $filters = $request->only([
-            'names',
-            'statuses',
-            'priorities',
-            'types',
-            'start_date_from',
-            'start_date_to',
-            'due_date_from',
-            'due_date_to',
-            'search'
-        ]);
+        $filters = $request->validated();
 
         $query = Task::with([
             'creator:id,name',
@@ -109,7 +99,7 @@ class TaskReportController extends Controller
             'start_date_to',
             'due_date_from',
             'due_date_to',
-            'search'
+            'search',
         ]);
 
         $query = Task::with([
@@ -124,11 +114,11 @@ class TaskReportController extends Controller
 
         $tasks = $query->orderByDesc('created_at')->get();
 
-        $filename = 'task-report-' . now()->format('Y-m-d-His') . '.csv';
+        $filename = 'task-report-'.now()->format('Y-m-d-His').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($tasks) {
@@ -177,72 +167,68 @@ class TaskReportController extends Controller
     private function applyFilters($query, array $filters)
     {
         // CREATOR
-        if (!empty($filters['names'])) {
+        if (! empty($filters['names'])) {
             $names = is_array($filters['names'])
                 ? $filters['names']
                 : explode(',', $filters['names']);
 
-            $creatorIds = collect($names)->map(function ($encoded) {
-                return Sqids::decode($encoded);
-            })->toArray();
+            $creatorIds = array_map(fn ($encoded) => Sqids::decode($encoded), $names);
 
-            $query->whereHas('creator', function ($q) use ($creatorIds) {
-                $q->whereIn('id', $creatorIds);
-            });
+            $query->whereRelation('users', fn ($query) => $query->whereIn('users.id', $creatorIds));
         }
 
         // STATUS
-        if (!empty($filters['statuses'])) {
+        if (! empty($filters['statuses'])) {
             $statuses = is_array($filters['statuses'])
                 ? $filters['statuses']
                 : explode(',', $filters['statuses']);
 
-            $statusIds = collect($statuses)->map(fn($id) => Sqids::decode($id))->toArray();
+            $statusIds = array_map(fn ($encoded) => Sqids::decode($encoded), $statuses);
 
             $query->whereIn('status_id', $statusIds);
         }
 
         // PRIORITY
-        if (!empty($filters['priorities'])) {
+        if (! empty($filters['priorities'])) {
             $priorities = is_array($filters['priorities'])
                 ? $filters['priorities']
                 : explode(',', $filters['priorities']);
 
-            $priorityIds = collect($priorities)->map(fn($id) => Sqids::decode($id))->toArray();
+            $priorityIds = array_map(fn ($encoded) => Sqids::decode($encoded), $priorities);
 
             $query->whereIn('priority_id', $priorityIds);
         }
 
         // TYPE
-        if (!empty($filters['types'])) {
+        if (! empty($filters['types'])) {
             $types = is_array($filters['types'])
                 ? $filters['types']
                 : explode(',', $filters['types']);
 
-            $typeIds = collect($types)->map(fn($id) => Sqids::decode($id))->toArray();
+            $typeIds = array_map(fn ($encoded) => Sqids::decode($encoded), $types);
 
             $query->whereIn('type_id', $typeIds);
         }
 
         // DATE FILTERS
-        if (!empty($filters['start_date_from'])) {
+        if (! empty($filters['start_date_from'])) {
             $query->whereDate('start_date', '>=', $filters['start_date_from']);
         }
 
-        if (!empty($filters['start_date_to'])) {
+        if (! empty($filters['start_date_to'])) {
             $query->whereDate('start_date', '<=', $filters['start_date_to']);
         }
 
-        if (!empty($filters['due_date_from'])) {
+        if (! empty($filters['due_date_from'])) {
             $query->whereDate('due_date', '>=', $filters['due_date_from']);
         }
 
-        if (!empty($filters['due_date_to'])) {
+        if (! empty($filters['due_date_to'])) {
             $query->whereDate('due_date', '<=', $filters['due_date_to']);
         }
 
         // SEARCH (PostgreSQL friendly)
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
 
             $query->where(function ($q) use ($search) {
@@ -307,14 +293,14 @@ class TaskReportController extends Controller
 
     private function generateSummary(?string $description): string
     {
-        if (!$description) {
+        if (! $description) {
             return '-';
         }
 
         $text = strip_tags($description);
 
         if (strlen($text) > 100) {
-            return substr($text, 0, 100) . '...';
+            return substr($text, 0, 100).'...';
         }
 
         return $text;

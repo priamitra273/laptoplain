@@ -196,7 +196,6 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const remove = (t: Task) => {
-    deleteLoading.value = true;
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -205,15 +204,29 @@ const remove = (t: Task) => {
         acceptClass: 'p-button-danger',
         rejectLabel: 'Cancel',
         accept: () => {
-            router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
-                preserveScroll: true,
-                onError: () => {
-                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
-                },
-                onFinish: () => (deleteLoading.value = false),
-            });
+            deleteLoading.value = true;
+
+            router.delete(
+                route('project.tasks.destroy', {
+                    projectEncoded: props.projectId,
+                    taskEncoded: t.id
+                }),
+                {
+                    preserveScroll: true,
+                    onError: () => {
+                        toast.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: 'Failed to delete task',
+                            life: 3000
+                        });
+                    },
+                    onFinish: () => {
+                        deleteLoading.value = false;
+                    },
+                }
+            );
         },
-        reject: () => (deleteLoading.value = false),
     });
 };
 

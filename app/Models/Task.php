@@ -32,6 +32,7 @@ class Task extends Model
         'sequence_number',
         'is_archived',
         'project_id',
+        'completed_at',
     ];
 
     // protected $appends = ['sub_task'];

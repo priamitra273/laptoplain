@@ -3,7 +3,6 @@ import InputError from '@/components/InputError.vue';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Dropdown from 'primevue/dropdown';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 
@@ -68,7 +67,7 @@ const save = () => {
         />
         <InputError :message="form.errors?.user_id" />
 
-        <Dropdown v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" placeholder="Select role" />
+        <Select v-model="form.project_role_id" :options="props.roles" optionLabel="name" optionValue="id" placeholder="Select role" />
         <InputError :message="form.errors?.project_role_id" />
 
         <div class="mt-4 flex justify-end gap-2">

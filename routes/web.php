@@ -15,14 +15,16 @@ use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TaskActivityController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WorkLoadUserController;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-Route::get('/', fn () => to_route('login'))->name('home');
+Route::get('/', fn() => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -34,6 +36,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $except = ['create', 'show', 'edit'];
         Route::get('dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get('workload-users', [WorkLoadUserController::class, 'index'])
+            ->name('workload-users.index');
 
         Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
         Route::resource('user', UserController::class)->except('show');
@@ -67,6 +72,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
     Route::put('/task/{encoded}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
+    Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 
     Route::prefix('project/{projectEncoded}')
         ->name('project.')
@@ -77,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
+            Route::put('tasks/{taskEncoded}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
 
@@ -95,8 +102,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifications.clear');
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
 
 Route::fallback(function () {
     throw new NotFoundHttpException(404);

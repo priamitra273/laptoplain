@@ -6,6 +6,7 @@ use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Http\Requests\Task\TaskStoreRequest;
+use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
 use App\Models\MsTaskPriority;
@@ -65,7 +66,9 @@ class TaskController extends Controller
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
-        $projects = Project::select('id', 'title')->get();
+        $projects = Project::visibleFor(Auth::user())
+            ->select('id', 'title')
+            ->get();
 
         $response = [
             'tasks' => $tasks->toArray(),
@@ -298,6 +301,20 @@ class TaskController extends Controller
 
         $data = $request->validated();
 
+        if (isset($data['status_id']) && $data['status_id'] !== $task->status_id) {
+
+            $completedStatusId = MsTaskStatus::where('name', 'Completed')->value('id');
+
+            if ((int) $data['status_id'] === (int) $completedStatusId) {
+                $data['completed_at'] = now();
+
+                if (! $task->children()->exists()) {
+                    $data['progress'] = 100;
+                }
+            } else {
+                $data['completed_at'] = null;
+            }
+        }
         $assignUserIds = $data['assign_users'] ?? [];
         $unassignUserIds = $data['unassign_users'] ?? [];
 
@@ -323,7 +340,11 @@ class TaskController extends Controller
             $task->tags()->detach($data['remove_tag']);
         }
 
-        if ($data['status_id'] && $data['status_id'] !== $task->status_id) {
+        if (
+            isset($data['status_id']) &&
+            $data['status_id'] !== $task->status_id &&
+            ! isset($data['completed_at'])
+        ) {
             $taskStatus = MsTaskStatus::find($data['status_id']);
             $data['progress'] = $taskStatus ? $taskStatus->score : 0;
         }
@@ -395,6 +416,92 @@ class TaskController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Task status updated successfully',
+        ]);
+    }
+
+    public function updateParent(TaskUpdateParentRequest $request, string $encoded, string $taskEncoded)
+    {
+        try {
+            $projectId = Sqids::decode($encoded);
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid task or project id.',
+            ], 422);
+        }
+
+        $task = Task::where('project_id', $projectId)->find($taskId);
+
+        if (! $task) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Task not found.',
+            ], 404);
+        }
+
+        if (! Auth::user()->can('update', $task)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to move this task.',
+            ], 403);
+        }
+
+        $parentId = $request->validated('parent_id');
+        $oldParentId = $task->parent_id;
+
+        if ($parentId === $task->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Task cannot be its own parent.',
+            ], 422);
+        }
+
+        if ($parentId) {
+            $newParent = Task::where('project_id', $projectId)->find($parentId);
+            if (! $newParent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target parent task not found in this project.',
+                ], 422);
+            }
+
+            $cursor = $newParent;
+            while ($cursor) {
+                if ($cursor->id === $task->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid move: cannot move task under its own descendant.',
+                    ], 422);
+                }
+                $cursor = $cursor->parent;
+            }
+        }
+
+        $task->update([
+            'parent_id' => $parentId,
+        ]);
+
+        $recalculateParents = function (?int $startParentId): void {
+            if (! $startParentId) {
+                return;
+            }
+
+            $current = Task::find($startParentId);
+            while ($current) {
+                $current->update([
+                    'progress' => $current->calculateProgress(),
+                ]);
+                $current = $current->parent;
+            }
+        };
+
+        $recalculateParents($oldParentId);
+        $recalculateParents($parentId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task parent updated successfully.',
         ]);
     }
 

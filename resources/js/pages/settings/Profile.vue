@@ -15,6 +15,8 @@ import FileUpload from 'primevue/fileupload';
 import InlineMessage from 'primevue/inlinemessage';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
+import { Cropper } from 'vue-advanced-cropper';
+import 'vue-advanced-cropper/dist/style.css';
 
 interface Props {
     mustVerifyEmail: boolean;
@@ -23,12 +25,7 @@ interface Props {
 
 defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: '/settings/profile',
-    },
-];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Profile settings', href: '/settings/profile' }];
 
 const page = usePage<SharedData>();
 const user = page.props.auth.user as User;
@@ -43,18 +40,41 @@ const previewImage = ref<string | null>(user.avatar_url || null);
 const showDeleteDialog = ref(false);
 const deletingAvatar = ref(false);
 
+// Cropper state
+const cropperImage = ref<string | null>(null);
+const cropperCanvas = ref<HTMLCanvasElement | null>(null);
+const showCropper = ref(false);
+
+// ✅ Ganti onFileSelect — sekarang buka cropper dulu
 const onFileSelect = (event: any) => {
     const file = event.files[0];
     if (file) {
-        form.avatar = file;
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewImage.value = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
+        cropperImage.value = URL.createObjectURL(file);
+        showCropper.value = true;
     }
+};
+
+const onCrop = ({ canvas }: { canvas: HTMLCanvasElement }) => {
+    cropperCanvas.value = canvas;
+};
+
+// ✅ Apply crop → convert ke File, set preview
+const applyCrop = () => {
+    if (cropperCanvas.value) {
+        cropperCanvas.value.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], 'avatar.png', { type: 'image/png' });
+                form.avatar = file;
+                previewImage.value = URL.createObjectURL(file);
+                showCropper.value = false;
+            }
+        }, 'image/png');
+    }
+};
+
+const cancelCrop = () => {
+    showCropper.value = false;
+    cropperImage.value = null;
 };
 
 const removeImage = () => {
@@ -82,7 +102,6 @@ const confirmDeleteAvatar = () => {
 
 const deleteAvatar = () => {
     deletingAvatar.value = true;
-
     router.delete(route('profile.avatar.destroy'), {
         preserveScroll: true,
         onSuccess: () => {
@@ -137,7 +156,6 @@ const cancelDelete = () => {
 
                                 <Button v-if="form.avatar" type="button" severity="secondary" size="small" @click="removeImage" label="Remove" />
 
-                                <!-- Tombol delete untuk avatar yang sudah tersimpan -->
                                 <Button
                                     v-else-if="user.avatar_url"
                                     type="button"
@@ -194,7 +212,6 @@ const cancelDelete = () => {
                         </Link>
                     </Message>
 
-                    <!-- Verification Success Message -->
                     <Message v-if="status === 'verification-link-sent'" severity="success" :closable="false">
                         A new verification link has been sent to your email address.
                     </Message>
@@ -202,7 +219,6 @@ const cancelDelete = () => {
                     <!-- Submit Button -->
                     <div class="flex items-center gap-4">
                         <Button type="submit" :loading="form.processing" label="Save Changes" />
-
                         <Transition
                             enter-active-class="transition ease-in-out"
                             enter-from-class="opacity-0"
@@ -216,6 +232,32 @@ const cancelDelete = () => {
             </div>
 
             <DeleteUser />
+
+            <!-- ✅ Cropper Dialog -->
+            <Dialog
+                v-model:visible="showCropper"
+                modal
+                header="Adjust Profile Picture"
+                :style="{ width: '520px' }"
+                :breakpoints="{ '960px': '80vw', '640px': '95vw' }"
+                :closable="false"
+            >
+                <Cropper
+                    v-if="cropperImage"
+                    :src="cropperImage"
+                    class="max-h-[400px] w-full rounded border"
+                    :stencil-props="{ aspectRatio: 1 }"
+                    :transformable="true"
+                    :scalable="true"
+                    :zoomable="true"
+                    :movable="true"
+                    @change="onCrop"
+                />
+                <template #footer>
+                    <Button label="Cancel" severity="secondary" @click="cancelCrop" />
+                    <Button label="Apply" icon="pi pi-check" @click="applyCrop" />
+                </template>
+            </Dialog>
 
             <!-- Delete Avatar Confirmation Dialog -->
             <Dialog
@@ -234,7 +276,6 @@ const cancelDelete = () => {
                         </p>
                     </div>
                 </div>
-
                 <template #footer>
                     <Button label="Cancel" severity="secondary" @click="cancelDelete" :disabled="deletingAvatar" />
                     <Button label="Delete" severity="danger" @click="deleteAvatar" :loading="deletingAvatar" />

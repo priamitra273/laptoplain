@@ -16,6 +16,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 - Placeholder for upcoming bug fixes.
 
+## [0.7.0] - 2026-03-05
+
+### Added
+- `SqidExists` validation rule for model existence checks. (22e60f2)
+- Workload index: sortable columns and links from user names to task reports. (1675c32)
+
+### Changed
+- `TaskReport` component: filter value types changed from number to string for improved handling. (4f79faa)
+- `TaskReportController` refactored to use `TaskReportIndexRequest` for validation and improved filter handling. (6ae6315)
+
+### Fixed
+- No notable bug fixes in this release.
+
 ## [0.6.0] - 2026-02-25
 
 ### Added
@@ -124,7 +137,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 Notes:
 - Versions above are organized semantically from historical milestones in `git log`.
-- Latest commit incorporated: `c66b9f2` (add t-logo.png and update dependencies).
+- Latest commit incorporated: `1675c32` (feat: enhance workload index page by adding sortable columns and linking user names to task reports).
 - Future releases should increment:
   - `PATCH` for backward-compatible bug fixes,
   - `MINOR` for backward-compatible features,

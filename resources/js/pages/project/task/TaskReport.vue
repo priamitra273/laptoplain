@@ -105,10 +105,10 @@ const props = defineProps<Props>();
 // STATE
 // ============================================================================
 
-const selectedCreators = ref<number[]>([]);
-const selectedStatuses = ref<number[]>([]);
-const selectedPriorities = ref<number[]>([]);
-const selectedTypes = ref<number[]>([]);
+const selectedCreators = ref<string[]>([]);
+const selectedStatuses = ref<string[]>([]);
+const selectedPriorities = ref<string[]>([]);
+const selectedTypes = ref<string[]>([]);
 const startDateFrom = ref<Date | null>(null);
 const startDateTo = ref<Date | null>(null);
 const dueDateFrom = ref<Date | null>(null);
@@ -163,8 +163,8 @@ const getUserColor = (index: number): string => {
     return `hsl(${index * 60}, 70%, 60%)`;
 };
 
-const parseFilterValue = (value: string[] | string): number[] => {
-    return Array.isArray(value) ? value.map(Number) : value.split(',').map(Number);
+const parseFilterValue = (value: string[] | string): string[] => {
+    return Array.isArray(value) ? value : value.split(',');
 };
 
 // ============================================================================

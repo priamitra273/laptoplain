@@ -3,7 +3,6 @@ import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
-import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
@@ -737,7 +736,7 @@ onBeforeUnmount(() => {
                         >
                             <div
                                 :title="node.data.title"
-                                class="max-w-[300px] select-none truncate text-ellipsis rounded px-1 py-0.5"
+                                class="max-w-[150px] select-none truncate text-ellipsis rounded px-1 py-0.5"
                                 :class="[
                                     hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
@@ -802,7 +801,7 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <!-- Created Column -->
+                <!-- Created Column
                 <Column header="Created" style="min-width: 90px">
                     <template #body="{ node }">
                         <div v-if="node.original.creator" class="flex items-center gap-2">
@@ -829,7 +828,7 @@ onBeforeUnmount(() => {
                         </div>
                         <span v-else class="text-sm text-gray-400">-</span>
                     </template>
-                </Column>
+                </Column> -->
 
                 <!-- Actions Column -->
                 <Column header="Actions" frozen alignFrozen="right">

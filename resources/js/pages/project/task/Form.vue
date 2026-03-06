@@ -24,6 +24,7 @@ interface Props {
     taskPriorities: TaskPriority[];
     tags: TagData[];
     members: ProjectMember[];
+    isDeveloper: boolean
 }
 
 interface Form {
@@ -83,6 +84,12 @@ const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.member
 const selectedParent = ref<Record<string, boolean> | null>(
     props.task?.parent_id ? { [props.task.parent_id]: true } : null
 )
+
+const statusOption = computed(() => {
+    return props.isDeveloper ?
+        props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) :
+        props.taskStatuses
+});
 
 const collectDescendants = (task: Task): string[] => {
     const ids: string[] = []
@@ -368,6 +375,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <TreeSelect 
                 v-model="selectedParent" 
                 :options="parentTreeOptions" 
+                :disabled="isDeveloper"
                 placeholder="Select Parent Task" 
                 class="w-full" 
                 showClear
@@ -375,13 +383,14 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         </div>
         <div>
             <label class="font-semibold">Title</label>
-            <InputText v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
+            <InputText :disabled="isDeveloper" v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
             <small v-if="form.errors.title" class="p-error text-red-500">{{ form.errors.title }}</small>
         </div>
 
         <div>
             <label class="font-semibold">Description</label>
-            <Editor v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
+            <div v-if="isDeveloper" class="p-3 border rounded-md min-h-[200px] bg-surface-50 dark:bg-surface-900" v-html="form.description"></div>
+            <Editor v-else v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
                 <template #toolbar>
                     <span class="ql-formats">
                         <button class="ql-bold"></button>
@@ -416,6 +425,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         <div class="flex flex-col">
             <label class="font-semibold">Assigned Member</label>
             <MultiSelect
+            :disabled="isDeveloper"
                 v-model="selectedMembers"
                 display="chip"
                 :options="formattedMemberOption"
@@ -433,6 +443,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">Start Date</label>
                 <DatePicker
+                :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.start_date"
                     dateFormat="yy-mm-dd"
@@ -459,6 +470,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">Type</label>
                 <Select
+                :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
@@ -491,7 +503,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 <Select
                     class="w-full"
                     v-model="form.status_id"
-                    :options="props.taskStatuses"
+                    :options="statusOption"
                     optionValue="id"
                     placeholder="Select Status"
                     :class="{ 'p-invalid': form.errors.status_id }"
@@ -519,6 +531,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">Priority</label>
                 <Select
+                :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
@@ -549,6 +562,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
+            :disabled="isDeveloper"
                 v-model="selectedTags"
                 multiple
                 optionLabel="name"
@@ -572,6 +586,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">Archived</label>
                 <Select
+                :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.is_archived"
                     :options="[

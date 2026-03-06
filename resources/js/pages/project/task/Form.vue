@@ -80,48 +80,43 @@ const authUser = computed(() => usePage().props.auth.user);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
 
-const selectedParent = ref<Record<string, boolean> | null>(
-    props.task?.parent_id ? { [props.task.parent_id]: true } : null
-)
+const selectedParent = ref<Record<string, boolean> | null>(props.task?.parent_id ? { [props.task.parent_id]: true } : null);
 
 const collectDescendants = (task: Task): string[] => {
-    const ids: string[] = []
+    const ids: string[] = [];
 
     const walk = (node: Task) => {
-        if (!node.sub_task_recursive) return
+        if (!node.sub_task_recursive) return;
         for (const child of node.sub_task_recursive) {
-            ids.push(child.id)
-            walk(child)
+            ids.push(child.id);
+            walk(child);
         }
-    }
+    };
 
-    walk(task)
-    return ids
-}
+    walk(task);
+    return ids;
+};
 
 const parentTreeOptions = computed<TreeNodeOption[]>(() => {
-    const excludeIds = new Set<string>()
+    const excludeIds = new Set<string>();
 
     if (props.task) {
-        excludeIds.add(props.task.id)
-
-        collectDescendants(props.task).forEach(id =>
-            excludeIds.add(id)
-        )
+        excludeIds.add(props.task.id);
+        collectDescendants(props.task).forEach((id) => excludeIds.add(id));
     }
 
     const build = (tasks: Task[]): TreeNodeOption[] => {
         return tasks
-            .filter(t => !excludeIds.has(t.id))
-            .map(t => ({
+            .filter((t) => !excludeIds.has(t.id))
+            .map((t) => ({
                 key: t.id,
                 label: t.title,
-                children: t.sub_task_recursive ? build(t.sub_task_recursive) : undefined
-            }))
-    }
+                children: t.sub_task_recursive ? build(t.sub_task_recursive) : undefined,
+            }));
+    };
 
-    return build(props.tasks)
-})
+    return build(props.tasks);
+});
 
 watch(
     existedMembers,
@@ -134,7 +129,6 @@ watch(
         }
 
         const authExistsInOptions = formattedMemberOption.value.some((m) => m.id === authUser.value.id);
-
         const authExistsInMembers = members.some((m) => m.id === authUser.value.id);
 
         if (authExistsInOptions && !authExistsInMembers) {
@@ -171,6 +165,89 @@ const form: InertiaForm<Form> = useForm({
     remove_tag: [],
 });
 
+// =====================
+// Validation
+// =====================
+const validationErrors = ref<Record<string, string>>({});
+
+const isToDoStatus = computed(() => {
+    const status = props.taskStatuses.find((s) => s.id === form.status_id);
+    return status?.name?.toLowerCase() === 'to do';
+});
+
+const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!form.title?.trim()) {
+        errors.title = 'Title is required.';
+    }
+
+    if (!form.status_id) {
+        errors.status_id = 'Status is required.';
+    }
+
+    if (!form.priority_id) {
+        errors.priority_id = 'Priority is required.';
+    }
+
+    if (!form.type_id) {
+        errors.type_id = 'Type is required.';
+    }
+
+    if (!selectedMembers.value.length) {
+        errors.assign_users = 'At least one member must be assigned.';
+    }
+
+    if (!isToDoStatus.value && !form.due_date) {
+        errors.due_date = 'Due date is required for this status.';
+    }
+
+    validationErrors.value = errors;
+    return Object.keys(errors).length === 0;
+};
+
+// Auto-clear validation errors when fields change
+watch(
+    () => form.title,
+    () => {
+        delete validationErrors.value.title;
+    },
+);
+watch(
+    () => form.status_id,
+    () => {
+        delete validationErrors.value.status_id;
+    },
+);
+watch(
+    () => form.priority_id,
+    () => {
+        delete validationErrors.value.priority_id;
+    },
+);
+watch(
+    () => form.type_id,
+    () => {
+        delete validationErrors.value.type_id;
+    },
+);
+watch(
+    () => form.due_date,
+    () => {
+        delete validationErrors.value.due_date;
+    },
+);
+watch(
+    selectedMembers,
+    () => {
+        delete validationErrors.value.assign_users;
+    },
+    { deep: true },
+);
+
+// =====================
+// Tags
+// =====================
 const tagOptions = computed<TagData[]>(() => props.tags);
 const selectedTags = ref<TagData[]>([]);
 const filteredTags = ref<TagData[]>([]);
@@ -189,6 +266,9 @@ watch(
     { immediate: true },
 );
 
+// =====================
+// Status watch: update progress + clear due_date if "To Do"
+// =====================
 watch(
     () => form.status_id,
     (newStatusId) => {
@@ -200,6 +280,10 @@ watch(
         const status = props.taskStatuses.find((s) => s.id === newStatusId);
 
         form.progress_value = status?.score ?? 0;
+
+        if (status?.name?.toLowerCase() === 'to do') {
+            form.due_date = null;
+        }
     },
     { immediate: true },
 );
@@ -225,7 +309,6 @@ const search = (event: any) => {
             name: event.query.trim(),
             severity: '',
         };
-
         result = [newTag, ...result];
     }
 
@@ -256,7 +339,6 @@ const addNewTag = (event: any) => {
     };
 
     selectedTags.value.push(newTag);
-
     event.target.value = '';
 };
 
@@ -264,6 +346,8 @@ const isEdit = computed(() => !!props.task);
 const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'project.tasks.store'));
 
 const submit = () => {
+    if (!validate()) return;
+
     if (selectedParent.value) {
         form.parent_id = Object.keys(selectedParent.value)[0];
     }
@@ -301,7 +385,8 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                selectedParent.value = {}
+                selectedParent.value = {};
+                validationErrors.value = {};
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update task', life: 3000 });
@@ -320,7 +405,8 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                selectedParent.value = {}
+                selectedParent.value = {};
+                validationErrors.value = {};
             },
             onError: () => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to store task', life: 3000 });
@@ -353,30 +439,20 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
     <div class="flex flex-col gap-4">
         <div v-if="isEdit" class="flex flex-col">
             <label class="font-semibold">Parent Task</label>
-            <!-- <Select
-                v-model="form.parent_id"
-                :options="parentSelectOptions"
-                optionLabel="title"
-                optionValue="id"
-                placeholder="Select Parent Task"
-                class="w-full"
-            >
-                <template #value>
-                    <span>{{ getParentLabel }}</span>
-                </template>
-            </Select> -->
-            <TreeSelect 
-                v-model="selectedParent" 
-                :options="parentTreeOptions" 
-                placeholder="Select Parent Task" 
-                class="w-full" 
-                showClear
-            />
+            <TreeSelect v-model="selectedParent" :options="parentTreeOptions" placeholder="Select Parent Task" class="w-full" showClear />
         </div>
+
         <div>
-            <label class="font-semibold">Title</label>
-            <InputText v-model="form.title" class="w-full" placeholder="Task title" :class="{ 'p-invalid': form.errors.title }" />
-            <small v-if="form.errors.title" class="p-error text-red-500">{{ form.errors.title }}</small>
+            <label class="font-semibold">Title <span class="text-red-500">*</span></label>
+            <InputText
+                v-model="form.title"
+                class="w-full"
+                placeholder="Task title"
+                :class="{ 'p-invalid': form.errors.title || validationErrors.title }"
+            />
+            <small v-if="form.errors.title || validationErrors.title" class="p-error text-red-500">
+                {{ form.errors.title || validationErrors.title }}
+            </small>
         </div>
 
         <div>
@@ -414,7 +490,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         </div>
 
         <div class="flex flex-col">
-            <label class="font-semibold">Assigned Member</label>
+            <label class="font-semibold">Assigned Member <span class="text-red-500">*</span></label>
             <MultiSelect
                 v-model="selectedMembers"
                 display="chip"
@@ -424,9 +500,11 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 placeholder="Select Member"
                 :maxSelectedLabels="3"
                 class="w-full"
-                :class="{ 'p-invalid': form.errors.assign_users }"
+                :class="{ 'p-invalid': form.errors.assign_users || validationErrors.assign_users }"
             />
-            <small v-if="form.errors.assign_users" class="p-error text-red-500">{{ form.errors.assign_users }}</small>
+            <small v-if="form.errors.assign_users || validationErrors.assign_users" class="p-error text-red-500">
+                {{ form.errors.assign_users || validationErrors.assign_users }}
+            </small>
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -443,28 +521,34 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </div>
 
             <div>
-                <label class="font-semibold">Due Date</label>
+                <label class="font-semibold">
+                    Due Date
+                    <span v-if="!isToDoStatus" class="text-red-500">*</span>
+                </label>
                 <DatePicker
                     class="w-full"
                     v-model="form.due_date"
                     dateFormat="yy-mm-dd"
                     showIcon
                     :minDate="minDueDate"
-                    :class="{ 'p-invalid': form.errors.due_date }"
+                    :class="{ 'p-invalid': form.errors.due_date || validationErrors.due_date }"
                 />
-                <small v-if="form.errors.due_date" class="p-error text-red-500">{{ form.errors.due_date }}</small>
+                <small v-if="form.errors.due_date || validationErrors.due_date" class="p-error text-red-500">
+                    {{ form.errors.due_date || validationErrors.due_date }}
+                </small>
             </div>
         </div>
+
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-                <label class="font-semibold">Type</label>
+                <label class="font-semibold">Type <span class="text-red-500">*</span></label>
                 <Select
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
                     optionValue="id"
                     placeholder="Select Type"
-                    :class="{ 'p-invalid': form.errors.type_id }"
+                    :class="{ 'p-invalid': form.errors.type_id || validationErrors.type_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -473,9 +557,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                                 :severity="getSelectValue(slotProps.value, props.taskTypes)?.severity"
                             />
                         </div>
-                        <span v-else>
-                            {{ slotProps.placeholder }}
-                        </span>
+                        <span v-else>{{ slotProps.placeholder }}</span>
                     </template>
                     <template #option="slotProps">
                         <div class="flex">
@@ -483,18 +565,20 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.type_id" class="p-error text-red-500">{{ form.errors.type_id }}</small>
+                <small v-if="form.errors.type_id || validationErrors.type_id" class="p-error text-red-500">
+                    {{ form.errors.type_id || validationErrors.type_id }}
+                </small>
             </div>
 
             <div>
-                <label class="font-semibold">Status</label>
+                <label class="font-semibold">Status <span class="text-red-500">*</span></label>
                 <Select
                     class="w-full"
                     v-model="form.status_id"
                     :options="props.taskStatuses"
                     optionValue="id"
                     placeholder="Select Status"
-                    :class="{ 'p-invalid': form.errors.status_id }"
+                    :class="{ 'p-invalid': form.errors.status_id || validationErrors.status_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -503,9 +587,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                                 :severity="getSelectValue(slotProps.value, props.taskStatuses)?.severity"
                             />
                         </div>
-                        <span v-else>
-                            {{ slotProps.placeholder }}
-                        </span>
+                        <span v-else>{{ slotProps.placeholder }}</span>
                     </template>
                     <template #option="slotProps">
                         <div class="flex">
@@ -513,18 +595,20 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.status_id" class="p-error text-red-500">{{ form.errors.status_id }}</small>
+                <small v-if="form.errors.status_id || validationErrors.status_id" class="p-error text-red-500">
+                    {{ form.errors.status_id || validationErrors.status_id }}
+                </small>
             </div>
 
             <div>
-                <label class="font-semibold">Priority</label>
+                <label class="font-semibold">Priority <span class="text-red-500">*</span></label>
                 <Select
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
                     optionValue="id"
                     placeholder="Select Priority"
-                    :class="{ 'p-invalid': form.errors.priority_id }"
+                    :class="{ 'p-invalid': form.errors.priority_id || validationErrors.priority_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -533,9 +617,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                                 :severity="getSelectValue(slotProps.value, props.taskPriorities)?.severity"
                             />
                         </div>
-                        <span v-else>
-                            {{ slotProps.placeholder }}
-                        </span>
+                        <span v-else>{{ slotProps.placeholder }}</span>
                     </template>
                     <template #option="slotProps">
                         <div class="flex">
@@ -543,9 +625,12 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.priority_id" class="p-error text-red-500">{{ form.errors.priority_id }}</small>
+                <small v-if="form.errors.priority_id || validationErrors.priority_id" class="p-error text-red-500">
+                    {{ form.errors.priority_id || validationErrors.priority_id }}
+                </small>
             </div>
         </div>
+
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
@@ -559,15 +644,14 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             >
                 <template #option="slotProps">
                     <div class="flex items-center gap-2" :class="{ 'font-bold text-blue-600': slotProps.option.isNew }">
-                        <span v-if="!slotProps.option.id" class="font-bold">
-                            {{ slotProps.option.name }}
-                        </span>
+                        <span v-if="!slotProps.option.id" class="font-bold">{{ slotProps.option.name }}</span>
                         <span v-else>{{ slotProps.option.name }}</span>
                     </div>
                 </template>
             </AutoComplete>
             <small v-if="Object.keys(form.errors).some((key) => key.startsWith('add_tag'))" class="p-error text-red-500"> Invalid tag data. </small>
         </div>
+
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Archived</label>
@@ -596,14 +680,14 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                     @update:modelValue="onProgressChange"
                     :class="{ 'p-invalid': form.errors.progress_value }"
                 />
-                <small class="text-muted-color">Progress automatically follows task status </small>
+                <small class="text-muted-color">Progress automatically follows task status</small>
                 <small v-if="form.errors.progress" class="p-error text-red-500">{{ form.errors.progress }}</small>
             </div>
         </div>
 
         <div class="mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
-            <Button v-if="!isEdit" label="Create Task" @click="submit" icon=" pi pi-save" :loading="form.processing" :disabled="form.processing" />
+            <Button v-if="!isEdit" label="Create Task" @click="submit" icon="pi pi-save" :loading="form.processing" :disabled="form.processing" />
             <Button
                 v-else
                 label="Update Task"

@@ -19,7 +19,7 @@ class TaskUpdateRequest extends FormRequest
             'project_id'  => 'sometimes|exists:projects,id',
             'parent_id'   => 'sometimes|nullable|exists:tasks,id',
 
-            'status_id'   => 'sometimes|required|exists:ms_task_statuses,id',
+            'status_id'   => 'sometimes|exists:ms_task_statuses,id',
             'priority_id' => 'sometimes|required|exists:ms_task_priorities,id',
             'type_id'     => 'sometimes|required|exists:ms_task_types,id',
 
@@ -57,18 +57,14 @@ class TaskUpdateRequest extends FormRequest
     {
         $validator->after(function ($validator) {
 
-            // kalau due_date sudah dikirim, biarin rule biasa yang kerja
-            if ($this->has('due_date')) {
-                return;
-            }
+            $taskId = $this->route('task');
 
-            // ambil status dari request atau dari DB
-            $taskId = $this->route('task'); // sesuaikan nama route param
-
+            // ambil status dari request atau dari database
             $statusId = $this->status_id
                 ?? DB::table('tasks')->where('id', $taskId)->value('status_id');
 
-            if (in_array((int) $statusId, [1, 2])) {
+            // jika status = 2 maka due_date wajib
+            if ((int)$statusId === 2 && !$this->filled('due_date')) {
                 $validator->errors()->add(
                     'due_date',
                     'Due date wajib diisi ketika status ini dipilih.'
@@ -81,7 +77,6 @@ class TaskUpdateRequest extends FormRequest
     {
         return [
             'title.required'              => 'The title field is required.',
-            'status_id.required'          => 'The status field is required.',
             'status_id.exists'            => 'The selected status is invalid.',
             'priority_id.required'        => 'The priority field is required.',
             'priority_id.exists'          => 'The selected priority is invalid.',
@@ -106,10 +101,10 @@ class TaskUpdateRequest extends FormRequest
         $ownedId    = $this->owned_id;
         $parentId   = $this->parent_id;
 
-        $assignUsersEncoded  = $this->input('assign_users', []);
+        $assignUsersEncoded   = $this->input('assign_users', []);
         $unassignUsersEncoded = $this->input('unassign_users', []);
-        $addTagEncoded       = $this->input('add_tag.exists', []);
-        $removeTagEncoded    = $this->input('remove_tag', []);
+        $addTagEncoded        = $this->input('add_tag.exists', []);
+        $removeTagEncoded     = $this->input('remove_tag', []);
 
         $assignUsers  = [];
         $unassignUsers = [];
@@ -153,10 +148,13 @@ class TaskUpdateRequest extends FormRequest
 
         if ($statusId)   $merged['status_id']   = Sqids::decode($statusId);
         if ($priorityId) $merged['priority_id'] = Sqids::decode($priorityId);
-        if ($typeId)     $merged['type_id']      = Sqids::decode($typeId);
-        if ($projectId)  $merged['project_id']   = Sqids::decode($projectId);
-        if ($ownedId)    $merged['owned_id']      = Sqids::decode($ownedId);
-        if ($parentId)   $merged['parent_id']     = Sqids::decode($parentId);
+        if ($typeId)     $merged['type_id']     = Sqids::decode($typeId);
+        if ($projectId)  $merged['project_id']  = Sqids::decode($projectId);
+        if ($ownedId)    $merged['owned_id']    = Sqids::decode($ownedId);
+        if ($parentId)   $merged['parent_id']   = Sqids::decode($parentId);
+        if ($statusId && (int) Sqids::decode($statusId) === 1) {
+            $merged['due_date'] = null;
+        }
 
         $this->merge($merged);
     }

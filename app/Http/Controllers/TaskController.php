@@ -47,16 +47,12 @@ class TaskController extends Controller
                         $q->where('users.id', $userId);
                     });
             })
+            ->whereHas('project')
             ->orderBy('id')
             ->get()
             ->map(function ($task) use ($userId) {
                 $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
                 $task->is_created_by_me = $task->created_by == $userId;
-
-                // Format creator with avatar
-                if ($task->creator) {
-                    $task->creator->avatar_url = $task->creator->avatar_url;
-                }
 
                 return $task;
             });

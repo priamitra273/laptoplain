@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 import Avatar from 'primevue/avatar';
 import Badge from 'primevue/badge';
@@ -303,7 +303,7 @@ const summaryCards = [
                         @row-click="(e) => router.visit(route('users.show', { user: e.data.id }))"
                     >
                         <!-- NAME -->
-                        <Column header="Name" style="min-width: 200px">
+                        <Column field="name" header="Name" sortable style="min-width: 200px">
                             <template #body="{ data, index }">
                                 <div class="flex items-center gap-3">
                                     <Avatar
@@ -312,20 +312,31 @@ const summaryCards = [
                                         shape="circle"
                                         :style="!data.avatar_url ? { backgroundColor: getUserColor(index), color: 'white' } : {}"
                                     />
-                                    <span class="font-semibold">{{ data.name }}</span>
+                                    <Link
+                                        :href="
+                                            route('reports.tasks.index', {
+                                                _query: {
+                                                    names: [data.id],
+                                                },
+                                            })
+                                        "
+                                        class="font-semibold hover:underline"
+                                    >
+                                        {{ data.name }}
+                                    </Link>
                                 </div>
                             </template>
                         </Column>
 
                         <!-- TOTAL TASKS -->
-                        <Column header="Total Tasks" style="min-width: 120px; text-align: center">
+                        <Column field="total_tasks" header="Total Tasks" sortable style="min-width: 120px; text-align: center">
                             <template #body="{ data }">
                                 <Badge :value="String(data.total_tasks ?? 0)" severity="secondary" />
                             </template>
                         </Column>
 
                         <!-- REMAINING WORK -->
-                        <Column header="Remaining Work (%)" style="min-width: 240px">
+                        <Column field="remaining_work_percent" header="Remaining Work (%)" sortable style="min-width: 240px">
                             <template #body="{ data }">
                                 <div class="relative w-full">
                                     <ProgressBar
@@ -347,7 +358,7 @@ const summaryCards = [
                         </Column>
 
                         <!-- STATUS -->
-                        <Column header="Status" style="min-width: 150px">
+                        <Column field="workload_status" header="Status" sortable style="min-width: 150px">
                             <template #body="{ data }">
                                 <Tag :value="data.workload_status" :severity="getSeverityByStatus(data.workload_status)" />
                             </template>

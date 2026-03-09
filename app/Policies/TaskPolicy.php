@@ -38,11 +38,10 @@ class TaskPolicy
             return true;
         }
 
-        $isMember = $task->project
-            ->projectMembers()
+        $isMember = $task->project?->projectMembers()
             ->whereNotNull('user_id')
             ->where('user_id', $user->id)
-            ->exists();
+            ->exists() ?? false;
         return $isMember;
     }
 

@@ -105,10 +105,10 @@ const props = defineProps<Props>();
 // STATE
 // ============================================================================
 
-const selectedCreators = ref<number[]>([]);
-const selectedStatuses = ref<number[]>([]);
-const selectedPriorities = ref<number[]>([]);
-const selectedTypes = ref<number[]>([]);
+const selectedCreators = ref<string[]>([]);
+const selectedStatuses = ref<string[]>([]);
+const selectedPriorities = ref<string[]>([]);
+const selectedTypes = ref<string[]>([]);
 const startDateFrom = ref<Date | null>(null);
 const startDateTo = ref<Date | null>(null);
 const dueDateFrom = ref<Date | null>(null);
@@ -163,8 +163,8 @@ const getUserColor = (index: number): string => {
     return `hsl(${index * 60}, 70%, 60%)`;
 };
 
-const parseFilterValue = (value: string[] | string): number[] => {
-    return Array.isArray(value) ? value.map(Number) : value.split(',').map(Number);
+const parseFilterValue = (value: string[] | string): string[] => {
+    return Array.isArray(value) ? value : value.split(',');
 };
 
 // ============================================================================
@@ -193,10 +193,10 @@ initializeFilters();
 
 const hasActiveFilters = computed(() => {
     return (
-        selectedCreators.value.length > 0 ||
-        selectedStatuses.value.length > 0 ||
-        selectedPriorities.value.length > 0 ||
-        selectedTypes.value.length > 0 ||
+        selectedCreators.value?.length > 0 ||
+        selectedStatuses.value?.length > 0 ||
+        selectedPriorities.value?.length > 0 ||
+        selectedTypes.value?.length > 0 ||
         startDateFrom.value !== null ||
         startDateTo.value !== null ||
         dueDateFrom.value !== null ||
@@ -212,10 +212,10 @@ const activeFilterCount = computed(() => {
 const buildFilterParams = (): Record<string, any> => {
     const params: Record<string, any> = {};
 
-    if (selectedCreators.value.length > 0) params.names = selectedCreators.value;
-    if (selectedStatuses.value.length > 0) params.statuses = selectedStatuses.value;
-    if (selectedPriorities.value.length > 0) params.priorities = selectedPriorities.value;
-    if (selectedTypes.value.length > 0) params.types = selectedTypes.value;
+    if (selectedCreators.value?.length > 0) params.names = selectedCreators.value;
+    if (selectedStatuses.value?.length > 0) params.statuses = selectedStatuses.value;
+    if (selectedPriorities.value?.length > 0) params.priorities = selectedPriorities.value;
+    if (selectedTypes.value?.length > 0) params.types = selectedTypes.value;
     if (startDateFrom.value) params.start_date_from = moment(startDateFrom.value).format('YYYY-MM-DD');
     if (startDateTo.value) params.start_date_to = moment(startDateTo.value).format('YYYY-MM-DD');
     if (dueDateFrom.value) params.due_date_from = moment(dueDateFrom.value).format('YYYY-MM-DD');
@@ -326,15 +326,17 @@ const onPageChange = (event: any) => {
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <!-- Creator Filter -->
                         <div class="flex flex-col gap-2">
-                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Creator Name</label>
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Assignee</label>
                             <MultiSelect
                                 v-model="selectedCreators"
                                 :options="filterOptions.creators"
                                 optionLabel="name"
                                 optionValue="id"
-                                placeholder="Select creators"
+                                placeholder="Select Assignee"
                                 :maxSelectedLabels="2"
                                 class="w-full"
+                                showClear
+                                filter
                             >
                                 <template #option="{ option }">
                                     <div class="flex items-center gap-2">

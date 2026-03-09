@@ -80,6 +80,7 @@ const props = defineProps<Props>();
 const toast = useToast();
 
 const page = usePage();
+const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'))
 const authUser = computed(() => page.props.auth?.user);
 const isMember = computed(() => {
     if (!authUser.value) return false;
@@ -322,12 +323,12 @@ const taskDialogHeader = computed(() => {
 });
 
 const hasPermission = (): boolean => {
-    const role = usePage().props.auth.role;
+    const role = page.props.auth.role;
     return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
 };
 
 const canEdit = computed(() => {
-    return isOwner || hasPermission();
+    return (isOwner || hasPermission()) && !isDeveloper.value;
 });
 
 // Enable edit mode for a field
@@ -706,6 +707,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                         :taskStatuses="taskStatuses"
                                         :taskPriorities="taskPriorities"
                                         :taskTypes="taskTypes"
+                                        :isDeveloper="isDeveloper"
                                     />
                                 </div>
                             </TabPanel>
@@ -779,7 +781,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                         :members="props.members"
                                         :roles="props.roles"
                                         :users="props.users"
-                                        :hasPermission="isOwner || hasPermission()"
+                                        :hasPermission="(isOwner || hasPermission()) && !isDeveloper"
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />
@@ -838,6 +840,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                 :editTask="selectedTask"
                 :members="formattedMembers"
                 :isMember="isMember"
+                :isDeveloper="isDeveloper"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;

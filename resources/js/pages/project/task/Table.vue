@@ -24,6 +24,7 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
+    isDeveloper: boolean
 }
 
 const props = defineProps<Props>();
@@ -348,7 +349,7 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
 };
 
 const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
-    const canMove = hasAccessToEditAndDelete(node.data);
+    const canMove = hasAccessToEditAndDelete(node.data) && !props.isDeveloper;
     if (!canMove || dragArmedTaskId.value !== node.key) {
         event.preventDefault();
         return;
@@ -400,6 +401,7 @@ const hasTaskDragPayload = (event: DragEvent): boolean => {
 };
 
 const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
+    if (props.isDeveloper) return;
     if (!hasTaskDragPayload(event)) return;
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (sourceTaskId && targetNode.key === sourceTaskId) return;
@@ -477,12 +479,14 @@ const moveTaskWithValidation = async (sourceTaskId: string | null, targetTaskId:
 };
 
 const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
+    if (props.isDeveloper) return;
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     await moveTaskWithValidation(sourceTaskId, targetNode.key);
 };
 
 const onRootDragOver = (event: DragEvent) => {
+    if (props.isDeveloper) return;
     if (!hasTaskDragPayload(event)) return;
     const target = event.target as Element | null;
     const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
@@ -499,13 +503,14 @@ const onRootDragOver = (event: DragEvent) => {
 };
 
 const onRootDrop = async (event: DragEvent) => {
+    if (props.isDeveloper) return;
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     await moveTaskWithValidation(sourceTaskId, null);
 };
 
 const onPointerDragStart = (node: TaskFormatted) => {
-    if (!hasAccessToEditAndDelete(node.data)) return;
+    if (!hasAccessToEditAndDelete(node.data) || props.isDeveloper) return;
     pointerDraggedTaskId.value = node.key;
     pointerOnRootDropzone.value = false;
     draggedTaskId.value = node.key;
@@ -524,7 +529,7 @@ const cancelPointerHold = () => {
 };
 
 const onPointerHoldStart = (node: TaskFormatted) => {
-    if (!hasAccessToEditAndDelete(node.data)) return;
+    if (!hasAccessToEditAndDelete(node.data) || props.isDeveloper) return;
     cancelPointerHold();
     holdCandidateTaskId.value = node.key;
     holdTimerId.value = setTimeout(() => {
@@ -596,7 +601,7 @@ onBeforeUnmount(() => {
                     icon="pi pi-plus"
                     @click="emit('add', null)"
                     class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    :disabled="!isMember && !hasPermission"
+                    :disabled="(!isMember && !hasPermission) || isDeveloper"
                 />
                 <Button
                     v-if="hasSelectedTasks"
@@ -696,14 +701,11 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- TreeTable -->
-        <div
-            class="overflow-x-auto"
-            :class="
-                isRootDropActive
-                    ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
-                    : isDraggingTask
-                      ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
-                      : 'transition-colors'
+        <div class="overflow-x-auto" :class="isRootDropActive
+                ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
+                : isDraggingTask
+                    ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
+                    : 'transition-colors'
             "
             @dragover.prevent="onRootDragOver"
             @dragenter.prevent="onRootDragOver"
@@ -721,14 +723,14 @@ onBeforeUnmount(() => {
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
                             @update:modelValue="
-                                (value) => {
-                                    if (value) {
-                                        selectedKey[node.key] = { checked: true, partialChecked: false };
-                                    } else {
-                                        delete selectedKey[node.key];
-                                    }
-                                    selectedKey = { ...selectedKey };
+                            (value) => {
+                                if (value) {
+                                    selectedKey[node.key] = { checked: true, partialChecked: false };
+                                } else {
+                                    delete selectedKey[node.key];
                                 }
+                                selectedKey = { ...selectedKey };
+                            }
                             "
                             binary
                         />
@@ -756,7 +758,7 @@ onBeforeUnmount(() => {
                                         ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
                                         : '',
                                 ]"
-                                :draggable="hasAccessToEditAndDelete(node.data) && dragArmedTaskId === node.key"
+                                :draggable="hasAccessToEditAndDelete(node.data) && !isDeveloper && dragArmedTaskId === node.key"
                                 style="-webkit-user-drag: element"
                                 @mousedown.left.stop.prevent="onPointerHoldStart(node)"
                                 @mouseup.left="cancelPointerHold"
@@ -821,8 +823,8 @@ onBeforeUnmount(() => {
                             <Avatar
                                 :image="
                                     node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
-                                        ? node.original.creator.avatar_url
-                                        : undefined
+                                    ? node.original.creator.avatar_url
+                                    : undefined
                                 "
                                 :label="
                                     !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
@@ -855,7 +857,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="info"
                                 v-tooltip.top="'Add Subtask'"
-                                :disabled="deleteLoading || (!isMember && !hasPermission)"
+                                :disabled="(deleteLoading || (!isMember && !hasPermission)) || isDeveloper"
                                 @click="emit('add', node.data.id)"
                             />
                             <Button

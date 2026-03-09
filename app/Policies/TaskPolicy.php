@@ -109,18 +109,17 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $task->project
-            ->projectMembers()
+        $isOwner = $task->project?->projectMembers()
             ->where('user_id', $user->id)
             ->whereHas(
                 'role',
                 fn($q) =>
                 $q->where('name', 'Owner')
             )
-            ->exists();
+            ->exists() ?? false;
 
         if ($isOwner) {
-            return $isOwner;
+            return true;
         }
 
         $isMember = $task
@@ -152,18 +151,17 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $task->project
-            ->projectMembers()
+        $isOwner = $task->project?->projectMembers()
             ->where('user_id', $user->id)
             ->whereHas(
                 'role',
                 fn($q) =>
                 $q->where('name', 'Owner')
             )
-            ->exists();
+            ->exists() ?? false;
 
         if ($isOwner) {
-            return $isOwner;
+            return true;
         }
 
         $isMember = $task

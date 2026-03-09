@@ -118,7 +118,7 @@ watch(
                         @click="router.get(route('task.show', { encoded: item.id }))"
                     >
                         <template #subtitle>
-                            <Link :href="route('task.show', item.id)">
+                            <Link :href="route('project.show', item.project?.id)" @click.stop>
                                 <span class="hover:underline">
                                     {{ item.project?.title }}
                                 </span>
@@ -126,7 +126,13 @@ watch(
                         </template>
                         <template #content>
                             <div class="space-y-4">
-                                <div class="break-all">{{ item.title }}</div>
+                                <div class="break-all">
+                                    <Link :href="route('task.show', item.id)" @click.stop>
+                                    <span class="hover:underline">
+                                        {{ item.title }}
+                                    </span>
+                                    </Link>
+                                </div>
                                 <div class="flex justify-between gap-1">
                                     <Tag
                                         icon="pi pi-flag"

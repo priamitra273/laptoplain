@@ -270,7 +270,15 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                             <i class="pi pi-briefcase text-2xl text-purple-500"></i>
                             <span class="text-xl font-bold">Latest Projects</span>
                         </div>
-                        <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" @click="viewAllProjects" />
+                        <Link :href="route('project.index')" >
+                            <Button
+                                label="View All"
+                                icon="pi pi-arrow-right"
+                                iconPos="right"
+                                text
+                                size="small"
+                            />
+                        </Link>
                     </div>
                 </template>
                 <template #content>
@@ -324,7 +332,15 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                             <i class="pi pi-check-square text-2xl text-blue-500"></i>
                             <span class="text-xl font-bold">Latest Tasks</span>
                         </div>
-                        <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" @click="viewAllTasks" />
+                        <Link :href="route('task.index')">
+                            <Button
+                                label="View All"
+                                icon="pi pi-arrow-right"
+                                iconPos="right"
+                                text
+                                size="small"
+                            />
+                        </Link>
                     </div>
                 </template>
                 <template #content>

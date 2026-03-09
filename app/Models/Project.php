@@ -182,4 +182,9 @@ class Project extends Model
             $q->where('user_id', $user->id);
         });
     }
+
+    public function sprints()
+    {
+        return $this->hasMany(ProjectSprint::class, 'project_id');
+    }
 }

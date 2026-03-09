@@ -12,8 +12,10 @@ use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskActivityController;
 use App\Http\Controllers\TaskController;
@@ -61,6 +63,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('project/{encoded}', [ProjectController::class, 'show'])
             ->name('project.show');
 
+        Route::get('project/{encoded}/summary', ProjectSummaryController::class)
+            ->name('project.summary');
+
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
         Route::get('/reports/tasks', [TaskReportController::class, 'index'])
@@ -85,6 +90,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::put('tasks/{taskEncoded}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+            Route::prefix('sprints')->name('sprints.')->group(function () {
+                Route::post('/', [SprintController::class, 'store'])->name('store');
+                Route::get('/', [SprintController::class, 'index'])->name('index');
+                Route::put('/{sprintEncoded}', [SprintController::class, 'update'])->name('update');
+                Route::delete('/{sprintEncoded}', [SprintController::class, 'destroy'])->name('destroy');
+
+                // Lifecycle
+                Route::patch('/{sprintEncoded}/start', [SprintController::class, 'start'])->name('start');
+                Route::patch('/{sprintEncoded}/complete', [SprintController::class, 'complete'])->name('complete');
+
+                // Task management dalam sprint
+                Route::post('/{sprintEncoded}/tasks', [SprintController::class, 'assignTask'])->name('tasks.assign');
+                Route::delete('/{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
+            });
         });
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])

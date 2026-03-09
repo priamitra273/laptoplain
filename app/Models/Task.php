@@ -35,7 +35,6 @@ class Task extends Model
         'completed_at',
     ];
 
-    // protected $appends = ['sub_task'];
     protected $hidden = ['children'];
 
     public static function boot()
@@ -174,8 +173,8 @@ class Task extends Model
                 'type:id,name,severity',
                 'users:id,name',
                 'tags:id,name,severity',
-                'creator:id,name', // Added creator relationship
-                'creator.media',   // Added creator media relationship
+                'creator:id,name',
+                'creator.media',
                 'subTaskRecursive' => function ($q) {
                     $q->orderBy('id')->withRecursive();
                 },
@@ -204,5 +203,39 @@ class Task extends Model
         }
 
         return $this->users()->attach($userId);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(TaskCategory::class, 'task_category_id');
+    }
+
+    public function sprints()
+    {
+        return $this->belongsToMany(
+            ProjectSprint::class,
+            'sprint_task',
+            'task_id',
+            'sprint_id'
+        )->using(SprintTask::class)
+            ->withTimestamps();
+    }
+
+    public function scopeBacklog($query)
+    {
+        return $query->whereDoesntHave('sprints');
+    }
+
+    public function scopeIssues($query)
+    {
+        return $query->whereHas('category', fn($q) => $q->where('name', 'Issue'))
+            ->whereDoesntHave('sprints');
+    }
+
+    // Epics: root level
+    public function scopeEpics($query)
+    {
+        return $query->whereHas('category', fn($q) => $q->where('name', 'Epic'))
+            ->whereNull('parent_id');
     }
 }

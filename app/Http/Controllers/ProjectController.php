@@ -15,7 +15,10 @@ use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Models\ProjectSprint;    // ✅ BARU
+use App\Models\Task;             // ✅ BARU
 use App\Models\Tag;
+use App\Models\TaskCategory;     // ✅ BARU
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -116,7 +119,6 @@ class ProjectController extends Controller
                 return isset($member['user']) && ! is_null($member['user']);
             })
             ->map(function ($member) use ($project) {
-                // Get the full user object with media relation
                 $projectMember = $project->projectMembers
                     ->where('user_id', $member['user']['id'])
                     ->first();
@@ -134,7 +136,7 @@ class ProjectController extends Controller
                     'avatar_url' => $user->avatar_url,
                 ];
             })
-            ->filter() // Remove null values
+            ->filter()
             ->unique('id')
             ->values()
             ->toArray();
@@ -175,7 +177,6 @@ class ProjectController extends Controller
         // Format tasks with creator information
         $formattedTasks = collect($projectArr['tasks'] ?? [])
             ->map(function ($task) {
-                // Add creator information to each task
                 if (isset($task['creator'])) {
                     $creator = User::with('media')->find($task['creator']['id']);
                     if ($creator) {
@@ -183,7 +184,6 @@ class ProjectController extends Controller
                     }
                 }
 
-                // Recursively add creator info to subtasks
                 if (isset($task['sub_task_recursive']) && is_array($task['sub_task_recursive'])) {
                     $task['sub_task_recursive'] = $this->formatSubtasksWithCreator($task['sub_task_recursive']);
                 }
@@ -199,6 +199,72 @@ class ProjectController extends Controller
             })
             ->toArray();
 
+        // ✅ BARU — Sprints dengan tasks-nya untuk tab Backlog
+        $sprints = ProjectSprint::with([
+            'status:id,name,severity',
+            'tasks' => function ($q) {
+                $q->with([
+                    'status:id,name,severity',
+                    'priority:id,name,severity',
+                    'type:id,name,severity',
+                    'category:id,name,icon,severity',
+                    'users:id,name',
+                    'users.media',
+                ])
+                    ->whereNull('parent_id')   // hanya top-level tasks di sprint
+                    ->orderBy('id');
+            },
+        ])
+            ->where('project_id', $projectId)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        // Format avatar_url untuk users di dalam sprint tasks
+        $formattedSprints = $sprints->map(function ($sprint) {
+            $sprintArr = $sprint->toArray();
+            $sprintArr['tasks'] = collect($sprintArr['tasks'] ?? [])->map(function ($task) {
+                $task['users'] = collect($task['users'] ?? [])->map(function ($user) {
+                    $u = User::with('media')->find($user['id']);
+                    $user['avatar_url'] = $u?->avatar_url;
+                    return $user;
+                })->toArray();
+                return $task;
+            })->toArray();
+            return $sprintArr;
+        })->toArray();
+
+        // ✅ BARU — Backlog: tasks top-level yang belum masuk sprint manapun
+        $backlogTasks = Task::with([
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'category:id,name,icon,severity',
+            'users:id,name',
+            'users.media',
+        ])
+            ->where('project_id', $projectId)
+            ->whereNull('parent_id')
+            ->doesntHave('sprints')
+            ->orderBy('id')
+            ->get();
+
+        $formattedBacklog = $backlogTasks->map(function ($task) {
+            $arr = $task->toArray();
+            $arr['users'] = collect($arr['users'] ?? [])->map(function ($user) {
+                $u = User::with('media')->find($user['id']);
+                $user['avatar_url'] = $u?->avatar_url;
+                return $user;
+            })->toArray();
+            return $arr;
+        })->toArray();
+
+        // ✅ BARU — Task Categories (Epic, Story, Issue)
+        $taskCategories = TaskCategory::select('id', 'name', 'icon', 'severity')
+            ->orderBy('severity')
+            ->get()
+            ->toArray();
+
         $data = [
             'project' => $projectArr,
             'members' => $formattedMembers,
@@ -212,6 +278,10 @@ class ProjectController extends Controller
             'assignableUsers' => $assignableUsers,
             'statuses' => $projectStatuses->toArray(),
             'priorities' => $projectPriorities->toArray(),
+            // ✅ BARU
+            'sprints' => $formattedSprints,
+            'backlog' => $formattedBacklog,
+            'taskCategories' => $taskCategories,
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
@@ -269,7 +339,6 @@ class ProjectController extends Controller
     {
         try {
             $id = Sqids::decode($encoded);
-
             $project = Project::findOrFail($id);
         } catch (\Exception $e) {
             return back()->with('error', 'Project not found.');
@@ -281,7 +350,7 @@ class ProjectController extends Controller
         ]);
 
         $referer = $request->header('referer');
-        $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);
+        $isFromDetail = $referer && str_contains($referer, '/project/' . $encoded);
 
         if ($isFromDetail) {
             return to_route('project.show', ['encoded' => $encoded]);
@@ -294,11 +363,11 @@ class ProjectController extends Controller
     {
         try {
             $id = Sqids::decode($encoded);
-
             $project = Project::findOrFail($id);
         } catch (\Exception $e) {
             return back()->with('error', 'Project not found.');
         }
+
         $project->allTasks()
             ->with('users')
             ->chunkById(100, function ($tasks) {

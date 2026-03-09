@@ -29,8 +29,12 @@ import MembersTable from './member/Table.vue';
 import TaskForm from './task/Form.vue';
 import TaskTable from './task/Table.vue';
 
+import BacklogBoard from './task/Backlog.vue'; // ✅ BARU
+import KanbanBoard from './task/partials/TaskKanbanBoard.vue';
+
 import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import type { Sprint, TaskCategory } from './task/type'; // ✅ BARU
 
 interface User {
     id: string;
@@ -73,6 +77,11 @@ interface Props {
 
     statuses?: { id: string; name: string; severity?: string }[];
     priorities?: { id: string; name: string; severity?: string }[];
+
+    // ✅ BARU — props untuk tab Backlog
+    sprints: Sprint[];
+    backlog: Task[];
+    taskCategories: TaskCategory[];
 }
 
 const props = defineProps<Props>();
@@ -80,7 +89,7 @@ const props = defineProps<Props>();
 const toast = useToast();
 
 const page = usePage();
-const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'))
+const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'));
 const authUser = computed(() => page.props.auth?.user);
 const isMember = computed(() => {
     if (!authUser.value) return false;
@@ -88,7 +97,6 @@ const isMember = computed(() => {
 });
 const isOwner = computed(() => {
     if (!authUser.value) return false;
-
     return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
 });
 
@@ -125,7 +133,6 @@ const dueDatePickerRef = ref<HTMLElement | null>(null);
 // Event listeners storage
 const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
 
-// Watch for props changes
 watch(
     () => props.project,
     (newProject) => {
@@ -134,34 +141,20 @@ watch(
     { deep: true },
 );
 
-// Handler untuk click outside
 const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) => {
-    // Remove existing listener if any
     const existingListener = clickOutsideListeners.get(field);
-    if (existingListener) {
-        document.removeEventListener('click', existingListener);
-    }
+    if (existingListener) document.removeEventListener('click', existingListener);
 
-    // Create new listener
     const listener = (event: MouseEvent) => {
         const element = elementRef.value;
         const target = event.target as Node;
-
         if (!element) return;
-
-        // Check if element has $el property (PrimeVue component)
         const domElement = element.$el || element;
-
-        if (domElement && !domElement.contains(target)) {
-            cancelEdit(field);
-        }
+        if (domElement && !domElement.contains(target)) cancelEdit(field);
     };
 
-    // Store and add listener
     clickOutsideListeners.set(field, listener);
-    setTimeout(() => {
-        document.addEventListener('click', listener);
-    }, 100);
+    setTimeout(() => document.addEventListener('click', listener), 100);
 };
 
 const removeClickOutside = (field: keyof typeof editMode.value) => {
@@ -172,67 +165,29 @@ const removeClickOutside = (field: keyof typeof editMode.value) => {
     }
 };
 
-// Watch untuk menambahkan event listener ketika edit mode aktif
 watch(
     () => editMode.value.title,
-    (isActive) => {
-        if (isActive) {
-            setupClickOutside('title', titleInputRef);
-        } else {
-            removeClickOutside('title');
-        }
-    },
+    (isActive) => (isActive ? setupClickOutside('title', titleInputRef) : removeClickOutside('title')),
 );
-
 watch(
     () => editMode.value.status,
-    (isActive) => {
-        if (isActive) {
-            setupClickOutside('status', statusDropdownRef);
-        } else {
-            removeClickOutside('status');
-        }
-    },
+    (isActive) => (isActive ? setupClickOutside('status', statusDropdownRef) : removeClickOutside('status')),
 );
-
 watch(
     () => editMode.value.priority,
-    (isActive) => {
-        if (isActive) {
-            setupClickOutside('priority', priorityDropdownRef);
-        } else {
-            removeClickOutside('priority');
-        }
-    },
+    (isActive) => (isActive ? setupClickOutside('priority', priorityDropdownRef) : removeClickOutside('priority')),
 );
-
 watch(
     () => editMode.value.startDate,
-    (isActive) => {
-        if (isActive) {
-            setupClickOutside('startDate', startDatePickerRef);
-        } else {
-            removeClickOutside('startDate');
-        }
-    },
+    (isActive) => (isActive ? setupClickOutside('startDate', startDatePickerRef) : removeClickOutside('startDate')),
 );
-
 watch(
     () => editMode.value.dueDate,
-    (isActive) => {
-        if (isActive) {
-            setupClickOutside('dueDate', dueDatePickerRef);
-        } else {
-            removeClickOutside('dueDate');
-        }
-    },
+    (isActive) => (isActive ? setupClickOutside('dueDate', dueDatePickerRef) : removeClickOutside('dueDate')),
 );
 
-// Cleanup on unmount
 onUnmounted(() => {
-    clickOutsideListeners.forEach((listener) => {
-        document.removeEventListener('click', listener);
-    });
+    clickOutsideListeners.forEach((listener) => document.removeEventListener('click', listener));
     clickOutsideListeners.clear();
 });
 
@@ -242,14 +197,9 @@ const openEdit = (member: ProjectMember) => {
     visibleEdit.value = true;
 };
 
-const openTaskAdd = (parentId: string | null) => {
-    if (!isMember && !hasPermission()) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Access Denied',
-            detail: 'You must be a project member to create tasks',
-            life: 3000,
-        });
+const openTaskAdd = (parentId: string | null, _statusId?: string) => {
+    if (!isMember.value && !hasPermission()) {
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to create tasks', life: 3000 });
         return;
     }
     parentTaskId.value = parentId;
@@ -257,13 +207,8 @@ const openTaskAdd = (parentId: string | null) => {
 };
 
 const openTaskEdit = (task: Task, parentId: string | null) => {
-    if (!isMember && !hasPermission()) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Access Denied',
-            detail: 'You must be a project member to edit tasks',
-            life: 3000,
-        });
+    if (!isMember.value && !hasPermission()) {
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to edit tasks', life: 3000 });
         return;
     }
     parentTaskId.value = parentId;
@@ -282,9 +227,7 @@ const onDialogClosed = () => {
     parentTaskId.value = null;
 };
 
-const formatDate = (date: string | undefined) => {
-    return date ? moment(date).format('DD MMMM YYYY') : '-';
-};
+const formatDate = (date: string | undefined) => (date ? moment(date).format('DD MMMM YYYY') : '-');
 
 const getInitials = (name: string) =>
     name
@@ -299,26 +242,19 @@ const getMemberColor = (index: number) => {
     return colors[index % colors.length];
 };
 
-const formattedMembers = computed(() => {
-    return props.assignableUsers.map(
+const formattedMembers = computed(() =>
+    props.assignableUsers.map(
         (user) =>
             ({
                 id: user.id,
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email || '',
-                    avatar_url: user.avatar_url,
-                },
+                user: { id: user.id, name: user.name, email: user.email || '', avatar_url: user.avatar_url },
                 role: { id: '', name: '' },
             }) as MemberWithAvatar,
-    );
-});
+    ),
+);
 
 const taskDialogHeader = computed(() => {
-    if (selectedTask.value) {
-        return 'Edit Task';
-    }
+    if (selectedTask.value) return 'Edit Task';
     return parentTaskId.value ? 'Create Subtask' : 'Create Task';
 });
 
@@ -331,39 +267,24 @@ const canEdit = computed(() => {
     return (isOwner || hasPermission()) && !isDeveloper.value;
 });
 
-// Enable edit mode for a field
 const enableEditMode = (field: keyof typeof editMode.value) => {
     if (!canEdit.value) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Access Denied',
-            detail: 'You do not have permission to edit this project',
-            life: 3000,
-        });
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You do not have permission to edit this project', life: 3000 });
         return;
     }
     editMode.value[field] = true;
 };
 
-// Disable edit mode for a field
 const disableEditMode = (field: keyof typeof editMode.value) => {
     editMode.value[field] = false;
 };
 
-// Update project - sesuai dengan ProjectUpdateRequest di backend
 const updateProject = (newValue: any, field: string, editField?: keyof typeof editMode.value) => {
     if (!canEdit.value) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Access Denied',
-            detail: 'You do not have permission to edit this project',
-            life: 3000,
-        });
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You do not have permission to edit this project', life: 3000 });
         return;
     }
 
-    // Prepare payload sesuai dengan ProjectUpdateRequest
-    // Backend memerlukan: title, description, emoji, start_date, due_date, status_id, priority_id
     let payload: any = {
         title: localProject.value.title,
         description: localProject.value.description || '',
@@ -374,7 +295,6 @@ const updateProject = (newValue: any, field: string, editField?: keyof typeof ed
         priority_id: localProject.value.priority_id || localProject.value.priority?.id,
     };
 
-    // Update field yang diubah
     if (field === 'start_date' || field === 'due_date') {
         payload[field] = moment(newValue).format('YYYY-MM-DD');
     } else if (field === 'status_id' || field === 'priority_id') {
@@ -383,41 +303,22 @@ const updateProject = (newValue: any, field: string, editField?: keyof typeof ed
         payload[field] = newValue;
     }
 
-    // Format semua tanggal ke format YYYY-MM-DD
-    if (payload.start_date) {
-        payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
-    }
-    if (payload.due_date) {
-        payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
-    }
+    if (payload.start_date) payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
+    if (payload.due_date) payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
 
     router.put(route('project.update', props.project.id), payload, {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
-            if (editField) {
-                disableEditMode(editField);
-            }
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Project updated successfully',
-                life: 3000,
-            });
+            if (editField) disableEditMode(editField);
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Project updated successfully', life: 3000 });
         },
         onError: (errors) => {
-            console.error('Update errors:', errors);
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: errors[Object.keys(errors)[0]] || 'Failed to update project',
-                life: 3000,
-            });
+            toast.add({ severity: 'error', summary: 'Error', detail: errors[Object.keys(errors)[0]] || 'Failed to update project', life: 3000 });
         },
     });
 };
 
-// Update handlers
 const onTitleBlur = () => {
     if (localProject.value.title !== props.project.title) {
         updateProject(localProject.value.title, 'title', 'title');
@@ -437,15 +338,11 @@ const onPriorityChange = (event: any) => {
 };
 
 const onStartDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
-    if (value instanceof Date) {
-        updateProject(value, 'start_date', 'startDate');
-    }
+    if (value instanceof Date) updateProject(value, 'start_date', 'startDate');
 };
 
 const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
-    if (value instanceof Date) {
-        updateProject(value, 'due_date', 'dueDate');
-    }
+    if (value instanceof Date) updateProject(value, 'due_date', 'dueDate');
 };
 
 const onDescriptionBlur = () => {
@@ -460,6 +357,11 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
     localProject.value = { ...props.project };
     disableEditMode(field);
 };
+
+// ✅ Kanban status update handler
+const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
+    router.reload({ only: ['tasks'] });
+};
 </script>
 
 <template>
@@ -467,6 +369,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
 
     <AppLayout>
         <div class="flex flex-col gap-4">
+            <!-- Header -->
             <div class="flex items-center justify-between border-b border-surface-200 pb-4 dark:border-surface-700">
                 <div class="flex items-center gap-3">
                     <Button
@@ -477,16 +380,9 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                         @click="router.get(route('project.index'))"
                         class="hover:bg-surface-100 dark:hover:bg-surface-800"
                     />
-                    <Emoji
-                        v-if="props.project?.emoji.startsWith(':')"
-                        :data="emojiIndex"
-                        :emoji="props.project.emoji"
-                        set="google"
-                        :size="36"
-                    ></Emoji>
+                    <Emoji v-if="props.project?.emoji.startsWith(':')" :data="emojiIndex" :emoji="props.project.emoji" set="google" :size="36" />
                     <span v-else class="text-4xl">{{ props.project?.emoji }}</span>
                     <div class="flex-1">
-                        <!-- Editable Title -->
                         <div
                             v-if="!editMode.title"
                             @click="enableEditMode('title')"
@@ -549,6 +445,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                 </div>
             </div>
 
+            <!-- Stats Cards -->
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <!-- Status Card -->
                 <Card class="shadow-sm">
@@ -653,7 +550,6 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
                                     Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
                                 </div>
-
                                 <div v-if="editMode.dueDate" ref="dueDatePickerRef" @click.stop>
                                     <DatePicker
                                         :modelValue="new Date(localProject.due_date || '')"
@@ -685,17 +581,61 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                 </Card>
             </div>
 
+            <!-- Main Tabs Card -->
             <Card class="shadow-sm">
                 <template #content>
-                    <Tabs value="Board">
-                        <TabList>
-                            <Tab value="Board">Board</Tab>
-                            <Tab value="Details">Details</Tab>
-                            <Tab value="Team">Team</Tab>
-                            <Tab value="Timeline">Timeline</Tab>
+                    <Tabs value="Kanban">
+                        <TabList scrollable>
+                            <Tab value="Kanban" v-tooltip.bottom="'Kanban'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-th-large sm:mr-2"></i>
+                                <span class="hidden sm:inline">Kanban</span>
+                            </Tab>
+                            <Tab value="List" v-tooltip.bottom="'List'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-list sm:mr-2"></i>
+                                <span class="hidden sm:inline">List</span>
+                            </Tab>
+                            <!-- ✅ TAB BACKLOG -->
+                            <Tab value="Backlog" v-tooltip.bottom="'Backlog'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-inbox sm:mr-2"></i>
+                                <span class="hidden sm:inline">Backlog</span>
+                            </Tab>
+                            <Tab value="Details" v-tooltip.bottom="'Details'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-info-circle sm:mr-2"></i>
+                                <span class="hidden sm:inline">Details</span>
+                            </Tab>
+                            <Tab value="Team" v-tooltip.bottom="'Team'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-users sm:mr-2"></i>
+                                <span class="hidden sm:inline">Team</span>
+                            </Tab>
+                            <Tab value="Timeline" v-tooltip.bottom="'Timeline'" class="!px-3 sm:!px-4">
+                                <i class="pi pi-chart-bar sm:mr-2"></i>
+                                <span class="hidden sm:inline">Timeline</span>
+                            </Tab>
                         </TabList>
+
                         <TabPanels>
-                            <TabPanel value="Board">
+                            <!-- Kanban Tab -->
+                            <TabPanel value="Kanban">
+                                <div class="py-4">
+                                    <KanbanBoard
+                                        :projectId="project.id"
+                                        :tasks="tasks"
+                                        :statuses="taskStatuses"
+                                        :taskStatuses="taskStatuses"
+                                        :taskPriorities="taskPriorities"
+                                        :taskTypes="taskTypes"
+                                        :isMember="isMember"
+                                        :hasPermission="isOwner || hasPermission()"
+                                        :assignableUsers="assignableUsers"
+                                        @statusUpdate="onKanbanStatusUpdate"
+                                        @add="openTaskAdd"
+                                        @edit="openTaskEdit"
+                                    />
+                                </div>
+                            </TabPanel>
+
+                            <!-- List Tab -->
+                            <TabPanel value="List">
                                 <div class="py-4">
                                     <TaskTable
                                         :projectId="project.id"
@@ -712,13 +652,33 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 </div>
                             </TabPanel>
 
+                            <!-- ✅ BACKLOG TAB -->
+                            <TabPanel value="Backlog">
+                                <div class="py-4">
+                                    <BacklogBoard
+                                        :project-id="project.id"
+                                        :sprints="sprints"
+                                        :backlog="backlog"
+                                        :task-statuses="taskStatuses"
+                                        :task-priorities="taskPriorities"
+                                        :task-types="taskTypes"
+                                        :task-categories="taskCategories"
+                                        :is-member="isMember"
+                                        :has-permission="isOwner || hasPermission()"
+                                        :assignable-users="assignableUsers"
+                                        @add="openTaskAdd"
+                                        @edit="openTaskEdit"
+                                    />
+                                </div>
+                            </TabPanel>
+
+                            <!-- Details Tab -->
                             <TabPanel value="Details">
                                 <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
                                     <div class="lg:col-span-2">
                                         <div class="mb-3 flex items-center justify-between">
                                             <h3 class="text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
                                         </div>
-                                        <!-- Editable Description -->
                                         <div
                                             v-if="!editMode.description"
                                             @click="enableEditMode('description')"
@@ -733,9 +693,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                             />
                                         </div>
                                         <div v-else class="relative">
-                                            <!-- Overlay untuk mendeteksi klik di luar -->
                                             <div class="fixed inset-0 z-10" @click="onDescriptionBlur"></div>
-                                            <!-- Editor wrapper dengan z-index lebih tinggi -->
                                             <div class="relative z-20" @click.stop>
                                                 <Editor v-model="localProject.description" editorStyle="height: 200px">
                                                     <template #toolbar>
@@ -774,6 +732,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                 </div>
                             </TabPanel>
 
+                            <!-- Team Tab -->
                             <TabPanel value="Team">
                                 <div class="py-4">
                                     <MembersTable
@@ -787,6 +746,8 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                     />
                                 </div>
                             </TabPanel>
+
+                            <!-- Timeline Tab -->
                             <TabPanel value="Timeline">
                                 <div class="py-4">
                                     <ProjectGanttChart :tasks="props.tasks" />
@@ -798,6 +759,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
             </Card>
         </div>
 
+        <!-- Dialogs -->
         <Dialog v-model:visible="visibleAdd" header="Add Member" modal class="w-96">
             <MemberAddForm :projectId="props.project.id" :users="props.users" :roles="props.roles" @close="visibleAdd = false" @saved="onSaved" />
         </Dialog>
@@ -822,11 +784,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
             @hide="onDialogClosed"
             :style="{ width: '70rem' }"
             :contentStyle="{ maxHeight: '75vh' }"
-            :breakpoints="{
-                '1200px': '80vw',
-                '960px': '90vw',
-                '640px': '100vw',
-            }"
+            :breakpoints="{ '1200px': '80vw', '960px': '90vw', '640px': '100vw' }"
         >
             <TaskForm
                 :projectId="props.project.id"

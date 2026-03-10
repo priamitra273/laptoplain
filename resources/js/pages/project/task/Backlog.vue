@@ -12,7 +12,8 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import type { Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from './type';
+import type { Sprint, User } from './type';
+import type { Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps<{

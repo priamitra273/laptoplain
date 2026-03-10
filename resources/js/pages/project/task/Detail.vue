@@ -76,14 +76,12 @@ const props = defineProps<Props>();
 const page = usePage();
 const commentLoading = ref(false);
 const currentUserId = computed(() => Number(page.props.auth.user.id));
-const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'))
+const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'));
 
 const toast = useToast();
 
 const statusOption = computed(() => {
-    return isDeveloper.value ?
-        props.statuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) :
-        props.statuses
+    return isDeveloper.value ? props.statuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.statuses;
 });
 
 // Compute flat list of project members for mention
@@ -157,12 +155,11 @@ const editValue = ref<any>(null);
 const editingElement = ref<HTMLElement | null>(null);
 
 const startEdit = (field: string, currentValue: any, event?: Event) => {
-
     if (
-            isDeveloper.value 
-            // && field !== 'status_id' 
-            // && field !== 'due_date'
-        ) {
+        isDeveloper.value
+        // && field !== 'status_id'
+        // && field !== 'due_date'
+    ) {
         toast.add({
             severity: 'warn',
             summary: 'Access Denied',
@@ -360,20 +357,22 @@ const submitComment = () => {
 </script>
 
 <template>
-
     <Head :title="`Task Detail - ${props.task.title}`" />
 
     <AppLayout>
         <div class="flex flex-col gap-6 pb-8">
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
-                    <Breadcrumb :home="breadcrumbHome" :model="breadcrumbItems"
-                        class="border-none bg-transparent p-0 text-sm">
+                    <Breadcrumb :home="breadcrumbHome" :model="breadcrumbItems" class="border-none bg-transparent p-0 text-sm">
                         <template #item="{ item, props }">
-                            <a v-bind="props.action"
-                                class="flex cursor-pointer items-center gap-1.5 text-gray-500 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
+                            <a
+                                v-bind="props.action"
+                                class="flex cursor-pointer items-center gap-1.5 text-gray-500 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                            >
                                 <i :class="item.icon" class="text-xs"></i>
-                                <span class="font-medium">{{ item.label }}</span>
+                                <span class="max-w-prose truncate font-medium" :title="item.label as string">
+                                    {{ item.label }}
+                                </span>
                             </a>
                         </template>
                     </Breadcrumb>
@@ -381,24 +380,33 @@ const submitComment = () => {
             </Card>
 
             <Card
-                class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900">
+                class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900"
+            >
                 <template #content>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <Button icon="pi pi-arrow-left" text rounded severity="secondary"
+                        <Button
+                            icon="pi pi-arrow-left"
+                            text
+                            rounded
+                            severity="secondary"
                             @click="router.visit(route('project.show', { encoded: project.id }))"
-                            class="hover:bg-surface-100 dark:hover:bg-surface-800" />
-                        <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]"
-                            @click="goToProject">
-                            <div
-                                class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
-                                <Emoji v-if="props.project?.emoji?.startsWith(':')" :data="emojiIndex"
-                                    :emoji="props.project.emoji" set="google" :size="36" />
+                            class="hover:bg-surface-100 dark:hover:bg-surface-800"
+                        />
+                        <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
+                            <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
+                                <Emoji
+                                    v-if="props.project?.emoji?.startsWith(':')"
+                                    :data="emojiIndex"
+                                    :emoji="props.project.emoji"
+                                    set="google"
+                                    :size="36"
+                                />
                                 <span v-else class="text-4xl">
                                     {{ props.project.emoji }}
                                 </span>
                             </div>
                             <div class="flex-1">
-                                <h1 class="mb-1 text-3xl font-bold text-gray-800 dark:text-white">
+                                <h1 class="mb-1 break-all text-3xl font-bold text-gray-800 dark:text-white">
                                     {{ props.task.title }}
                                 </h1>
                                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
@@ -425,31 +433,38 @@ const submitComment = () => {
                                     <i class="pi pi-list text-indigo-500"></i>
                                     <h2 class="text-lg font-bold">Subtasks</h2>
                                 </div>
-                                <Chip v-if="props.task.sub_task_recursive.length"
+                                <Chip
+                                    v-if="props.task.sub_task_recursive.length"
                                     :label="`${props.task.sub_task_recursive.length}`"
-                                    class="bg-indigo-100 text-indigo-700" />
+                                    class="bg-indigo-100 text-indigo-700"
+                                />
                             </div>
                         </template>
                         <template #content>
                             <Divider class="my-3" />
                             <div v-if="props.task.sub_task_recursive.length" class="space-y-3">
-                                <div v-for="subTask in props.task.sub_task_recursive" :key="subTask.id"
+                                <div
+                                    v-for="subTask in props.task.sub_task_recursive"
+                                    :key="subTask.id"
                                     @click="goToSubTask(subTask.id)"
-                                    class="group cursor-pointer rounded-xl border-2 border-gray-100 bg-white p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-600">
+                                    class="group cursor-pointer rounded-xl border-2 border-gray-100 bg-white p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-600"
+                                >
                                     <div class="mb-3 flex items-start justify-between gap-3">
                                         <div class="flex min-w-0 flex-1 items-start gap-3">
                                             <p
-                                                class="break-words text-base font-semibold text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
+                                                :title="subTask.title"
+                                                class="max-w-full truncate break-words text-base font-semibold text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400"
+                                            >
                                                 {{ subTask.title }}
                                             </p>
                                         </div>
-                                        <Tag :value="subTask.status?.name" :severity="subTask.status?.severity"
-                                            class="shrink-0" />
+                                        <Tag :value="subTask.status?.name" :severity="subTask.status?.severity" class="shrink-0" />
                                     </div>
                                     <div class="text-sm text-gray-600 dark:text-gray-300">
-                                        <div class="prose prose-sm dark:prose-invert max-h-32 overflow-auto break-words"
-                                            v-html="subTask.description || '<span class=\'text-gray-400 italic\'>No description</span>'">
-                                        </div>
+                                        <div
+                                            class="prose prose-sm dark:prose-invert max-h-32 overflow-auto break-words"
+                                            v-html="subTask.description || '<span class=\'text-gray-400 italic\'>No description</span>'"
+                                        ></div>
                                     </div>
                                 </div>
                             </div>
@@ -477,20 +492,28 @@ const submitComment = () => {
                                         <i class="pi pi-user mr-1 text-indigo-500"></i>CREATED BY
                                     </p>
                                     <div v-if="props.creator" class="flex items-center gap-2">
-                                        <Avatar :image="props.creator.avatar_url && props.creator.avatar_url !== '/images/default-avatar.png'
-                                                ? props.creator.avatar_url
-                                                : undefined
-                                            " :label="!props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
+                                        <Avatar
+                                            :image="
+                                                props.creator.avatar_url && props.creator.avatar_url !== '/images/default-avatar.png'
+                                                    ? props.creator.avatar_url
+                                                    : undefined
+                                            "
+                                            :label="
+                                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
                                                     ? getInitials(props.creator.name)
                                                     : undefined
-                                                " shape="circle" size="normal" :style="!props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
+                                            "
+                                            shape="circle"
+                                            size="normal"
+                                            :style="
+                                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
                                                     ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
                                                     : {}
-                                                " />
+                                            "
+                                        />
                                         <div>
                                             <p class="text-sm font-semibold">{{ props.creator.name }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{
-                                                formatDateTime(props.task.created_at) }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDateTime(props.task.created_at) }}</p>
                                         </div>
                                     </div>
                                     <p v-else class="text-sm italic text-gray-400">Unknown</p>
@@ -499,74 +522,98 @@ const submitComment = () => {
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">STATUS</p>
-                                        <div v-if="editingField !== 'status_id'"
-                                            @click="startEdit('status_id', props.task.status_id, $event)" :class="[
+                                        <div
+                                            v-if="editingField !== 'status_id'"
+                                            @click="startEdit('status_id', props.task.status_id, $event)"
+                                            :class="[
                                                 props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
-                                            ]">
-                                            <Tag :value="props.task.status?.name"
-                                                :severity="props.task.status?.severity" class="w-full" />
+                                            ]"
+                                        >
+                                            <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" class="w-full" />
                                         </div>
                                         <div v-else @click.stop>
-                                            <Select v-model="editValue" :options="statusOption" optionLabel="name"
-                                                optionValue="id" placeholder="Select Status" class="w-full"
-                                                @change="handleSelectChange('status_id', editValue)" />
+                                            <Select
+                                                v-model="editValue"
+                                                :options="statusOption"
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder="Select Status"
+                                                class="w-full"
+                                                @change="handleSelectChange('status_id', editValue)"
+                                            />
                                         </div>
                                     </div>
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PRIORITY
-                                        </p>
-                                        <div v-if="editingField !== 'priority_id'"
-                                            @click="startEdit('priority_id', props.task.priority_id, $event)" :class="[
+                                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PRIORITY</p>
+                                        <div
+                                            v-if="editingField !== 'priority_id'"
+                                            @click="startEdit('priority_id', props.task.priority_id, $event)"
+                                            :class="[
                                                 props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
-                                            ]">
-                                            <Tag :value="props.task.priority?.name"
-                                                :severity="props.task.priority?.severity" class="w-full" />
+                                            ]"
+                                        >
+                                            <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" class="w-full" />
                                         </div>
                                         <div v-else @click.stop>
-                                            <Select v-model="editValue" :options="props.priorities" optionLabel="name"
-                                                optionValue="id" placeholder="Select Priority" class="w-full"
-                                                @change="handleSelectChange('priority_id', editValue)" />
+                                            <Select
+                                                v-model="editValue"
+                                                :options="props.priorities"
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder="Select Priority"
+                                                class="w-full"
+                                                @change="handleSelectChange('priority_id', editValue)"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">TYPE</p>
-                                        <div v-if="editingField !== 'type_id'"
-                                            @click="startEdit('type_id', props.task.type_id, $event)" :class="[
+                                        <div
+                                            v-if="editingField !== 'type_id'"
+                                            @click="startEdit('type_id', props.task.type_id, $event)"
+                                            :class="[
                                                 props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
-                                            ]">
-                                            <Tag :value="props.task.type?.name" :severity="props.task.type?.severity"
-                                                class="w-full" />
+                                            ]"
+                                        >
+                                            <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" class="w-full" />
                                         </div>
                                         <div v-else @click.stop>
-                                            <Select v-model="editValue" :options="props.types" optionLabel="name"
-                                                optionValue="id" placeholder="Select Type" class="w-full"
-                                                @change="handleSelectChange('type_id', editValue)" />
+                                            <Select
+                                                v-model="editValue"
+                                                :options="props.types"
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder="Select Type"
+                                                class="w-full"
+                                                @change="handleSelectChange('type_id', editValue)"
+                                            />
                                         </div>
                                     </div>
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                                        <p
-                                            class="mb-2 flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <p class="mb-2 flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             PROGRESS
                                             <Tag v-if="hasSubTasks" value="Auto" severity="info" class="text-[10px]" />
                                         </p>
                                         <div class="flex items-center gap-2">
-                                            <div
-                                                class="relative h-5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                                                <div class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
-                                                    :style="{ width: `${props.task.progress}%` }" />
+                                            <div class="relative h-5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                                <div
+                                                    class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
+                                                    :style="{ width: `${props.task.progress}%` }"
+                                                />
                                                 <span
-                                                    class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
+                                                    class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow"
+                                                >
                                                     {{ props.task.progress }}%
                                                 </span>
                                             </div>
@@ -578,36 +625,52 @@ const submitComment = () => {
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             <i class="pi pi-calendar mr-1 text-blue-500"></i>START DATE
                                         </p>
-                                        <div v-if="editingField !== 'start_date'"
-                                            @click="startEdit('start_date', props.task.start_date, $event)" :class="[
+                                        <div
+                                            v-if="editingField !== 'start_date'"
+                                            @click="startEdit('start_date', props.task.start_date, $event)"
+                                            :class="[
                                                 props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
-                                            ]">
+                                            ]"
+                                        >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.start_date) }}</p>
                                         </div>
                                         <div v-else @click.stop>
-                                            <DatePicker v-model="editValue" dateFormat="dd M yy" class="w-full" showIcon
-                                                @date-select="handleSelectChange('start_date', editValue)" />
+                                            <DatePicker
+                                                v-model="editValue"
+                                                dateFormat="dd M yy"
+                                                class="w-full"
+                                                showIcon
+                                                @date-select="handleSelectChange('start_date', editValue)"
+                                            />
                                         </div>
                                     </div>
                                     <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
                                         <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                             <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE
                                         </p>
-                                        <div v-if="editingField !== 'due_date'"
-                                            @click="startEdit('due_date', props.task.due_date, $event)" :class="[
+                                        <div
+                                            v-if="editingField !== 'due_date'"
+                                            @click="startEdit('due_date', props.task.due_date, $event)"
+                                            :class="[
                                                 props.isTaskMember || hasPermission() || isOwner
                                                     ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
                                                     : 'cursor-not-allowed opacity-75',
                                                 'rounded p-1 transition-all',
-                                            ]">
+                                            ]"
+                                        >
                                             <p class="text-sm font-semibold">{{ formatDate(props.task.due_date) }}</p>
                                         </div>
                                         <div v-else @click.stop>
-                                            <DatePicker v-model="editValue" dateFormat="dd M yy" class="w-full" showIcon
-                                                @date-select="handleSelectChange('due_date', editValue)" />
+                                            <DatePicker
+                                                v-model="editValue"
+                                                dateFormat="dd M yy"
+                                                class="w-full"
+                                                showIcon
+                                                @date-select="handleSelectChange('due_date', editValue)"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -616,8 +679,7 @@ const submitComment = () => {
                                         <i class="pi pi-tags mr-1 text-orange-500"></i>TAGS
                                     </p>
                                     <div class="flex flex-wrap gap-2">
-                                        <Chip v-for="tag in props.task.tags" :key="tag.id ?? tag.name" :label="tag.name"
-                                            class="text-xs" />
+                                        <Chip v-for="tag in props.task.tags" :key="tag.id ?? tag.name" :label="tag.name" class="text-xs" />
                                     </div>
                                 </div>
                             </div>
@@ -640,8 +702,10 @@ const submitComment = () => {
                         </template>
                         <template #content>
                             <Divider class="my-3" />
-                            <div class="prose prose-sm max-h-60 overflow-auto break-words text-gray-700 dark:text-gray-300"
-                                v-html="props.task.description || '<p class=\'text-gray-400 italic\'>No description provided</p>'" />
+                            <div
+                                class="prose prose-sm max-h-60 overflow-auto break-words text-gray-700 dark:text-gray-300"
+                                v-html="props.task.description || '<p class=\'text-gray-400 italic\'>No description provided</p>'"
+                            />
                         </template>
                     </Card>
 
@@ -653,27 +717,41 @@ const submitComment = () => {
                                     <i class="pi pi-comments text-teal-500"></i>
                                     <h2 class="text-lg font-bold">Comments</h2>
                                 </div>
-                                <Chip v-if="props.comments?.length" :label="`${props.comments.length}`"
-                                    class="bg-teal-100 text-teal-700" />
+                                <Chip v-if="props.comments?.length" :label="`${props.comments.length}`" class="bg-teal-100 text-teal-700" />
                             </div>
                         </template>
                         <template #content>
                             <Divider class="my-3" />
                             <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
                                 <!-- MentionEditor replaces PrimeVue Editor -->
-                                <MentionEditor v-model="newComment" :projectMembers="mentionMembers" height="200px"
-                                    placeholder="Write a comment... Use @ to mention someone" class="mb-3" />
+                                <MentionEditor
+                                    v-model="newComment"
+                                    :projectMembers="mentionMembers"
+                                    height="200px"
+                                    placeholder="Write a comment... Use @ to mention someone"
+                                    class="mb-3"
+                                />
                                 <div class="mt-3 flex justify-end">
-                                    <Button label="Post Comment" icon="pi pi-send" @click="submitComment"
-                                        :disabled="!newComment.trim() || commentLoading" :loading="commentLoading"
-                                        class="shadow-md" />
+                                    <Button
+                                        label="Post Comment"
+                                        icon="pi pi-send"
+                                        @click="submitComment"
+                                        :disabled="!newComment.trim() || commentLoading"
+                                        :loading="commentLoading"
+                                        class="shadow-md"
+                                    />
                                 </div>
                             </div>
                             <div v-if="props.comments?.length" class="space-y-4">
-                                <CommentItem v-for="comment in props.comments" :currentUserId="currentUserId"
-                                    :key="comment.id" :comment="comment" :taskId="props.task.id"
+                                <CommentItem
+                                    v-for="comment in props.comments"
+                                    :currentUserId="currentUserId"
+                                    :key="comment.id"
+                                    :comment="comment"
+                                    :taskId="props.task.id"
                                     :projectMembers="mentionMembers"
-                                    class="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800" />
+                                    class="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                                />
                             </div>
                             <div v-else class="flex flex-col items-center justify-center py-8 text-gray-400">
                                 <i class="pi pi-comment mb-3 text-4xl opacity-50"></i>

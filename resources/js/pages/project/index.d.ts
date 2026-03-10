@@ -57,6 +57,24 @@ export interface Task {
     sub_task: Task[];
     sub_task_recursive: Task[];
     tags: Tag[];
+
+    project?: ProjectOptions;
+    category?: TaskCategory;
+    creator?: User;
+    is_assigned?: boolean;
+    is_created_by_me?: boolean;
+}
+
+export interface ProjectOptions {
+    id: string;
+    title: string;
+}
+
+export interface TaskCategory {
+    id: string;
+    name: string; // 'Epic' | 'Story' | 'Issue'
+    icon?: string;
+    severity?: number;
 }
 
 export interface TaskStatus {
@@ -87,6 +105,8 @@ export interface Tag {
 export interface TaskUser {
     id: string;
     name: string;
+    email?: string;
+    avatar_url?: string | null;
     pivot: TaskPivot;
 }
 

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { User } from '../type';
+interface User {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+}
 
 interface Props {
     values: User[];

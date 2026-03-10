@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
 import Avatar from 'primevue/avatar';
@@ -17,7 +17,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import { Task, TaskPriority, TaskStatus, TaskStatusOption, TaskType } from '../type';
+import type { Task, TaskStatus, TaskPriority, TaskType } from '../..';
 
 interface AssignableUser {
     id: string;
@@ -28,7 +28,7 @@ interface AssignableUser {
 interface Props {
     projectId: string;
     tasks: Task[];
-    statuses: TaskStatusOption[];
+    statuses: TaskStatus[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
@@ -800,14 +800,14 @@ const clearFilters = () => {
                             <div
                                 class="hidden items-center justify-end gap-0.5 rounded-b-lg border-t border-surface-100 bg-surface-50 px-2 py-1 group-hover:flex dark:border-surface-700 dark:bg-surface-800/60"
                             >
-                                <a :href="route('task.show', task.id)" @click.stop>
+                                <Link :href="route('task.show', task.id)" @click.stop>
                                     <button
                                         class="rounded p-1 text-surface-400 hover:bg-surface-200 hover:text-surface-700 dark:hover:bg-surface-700"
                                         title="Open"
                                     >
                                         <i class="pi pi-eye text-[11px]" />
                                     </button>
-                                </a>
+                                </Link>
                                 <button
                                     v-if="canAct"
                                     class="rounded p-1 text-surface-400 hover:bg-surface-200 hover:text-surface-700 dark:hover:bg-surface-700"
@@ -894,9 +894,9 @@ const clearFilters = () => {
                     />
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
-                    <a :href="route('task.show', detailPanel.task.id)">
+                    <Link :href="route('task.show', detailPanel.task.id)">
                         <Button icon="pi pi-external-link" text rounded size="small" severity="secondary" v-tooltip.top="'Open full page'" />
-                    </a>
+                    </Link>
                     <Button
                         v-if="canAct"
                         icon="pi pi-pencil"
@@ -1014,11 +1014,11 @@ const clearFilters = () => {
                                 >
                                     <i class="pi pi-pencil text-[10px]" />
                                 </button>
-                                <a :href="route('task.show', sub.id)">
+                                <Link :href="route('task.show', sub.id)">
                                     <button class="rounded p-0.5 text-surface-400 hover:text-surface-700">
                                         <i class="pi pi-external-link text-[10px]" />
                                     </button>
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </div>

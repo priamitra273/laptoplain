@@ -29,7 +29,8 @@ class TaskReportController extends Controller
             'priority:id,name,severity',
             'type:id,name,severity',
             'project:id,title',
-        ]);
+        ])
+        ->whereHas('project');
 
         $this->applyFilters($query, $filters);
 

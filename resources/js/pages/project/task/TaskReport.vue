@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import moment from 'moment';
 
 import Avatar from 'primevue/avatar';
@@ -496,15 +496,21 @@ const onPageChange = (event: any) => {
                         <!-- Summary Column - Clickable Task -->
                         <Column field="summary" header="Summary" style="min-width: 300px">
                             <template #body="{ data }">
-                                <div
-                                    @click="navigateToTask(data.id)"
-                                    class="-m-2 cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                                <Link
+                                    :href="route('task.show', { encoded: data.id })"
+                                    class="-m-2 block cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
-                                    <p class="text-dark mb-1 font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300">
+                                    <p
+                                        class="text-dark mb-1 font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300"
+                                        :title="data.title"
+                                    >
                                         {{ truncateText(data.title, 15) }}
                                     </p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ truncateText(data.summary, 15) }}</p>
-                                </div>
+
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ truncateText(data.summary, 15) }}
+                                    </p>
+                                </Link>
                             </template>
                         </Column>
 

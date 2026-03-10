@@ -1,10 +1,19 @@
 <script setup>
 import { useLayout } from '@/composables/useLayouts';
-import { router } from '@inertiajs/vue3'
-import { computed } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import Avatar from 'primevue/avatar';
+import { computed, ref } from 'vue';
 
 const { layoutState, layoutConfig, onMenuProfileToggle, isHorizontal, isSlim } = useLayout();
 const menuClass = computed(() => (isHorizontal.value ? 'overlay' : null));
+const page = usePage();
+const user = page.props.auth.user;
+const previewImage = ref(user.avatar_url || null);
+const avatarLabel = computed(() => user.name?.charAt(0).toUpperCase() || 'U');
+
+async function logout() {
+    router.post(route('logout'));
+}
 
 function navigateTo(route) {
     router.push(route);
@@ -34,8 +43,13 @@ const iconClass = computed(() => {
     const profilePositionStart = layoutConfig.menuProfilePosition === 'start';
 
     return {
-        'pi-angle-up': (layoutState.menuProfileActive && (profilePositionStart || isHorizontal.value)) || (!layoutState.menuProfileActive && !profilePositionStart && !isHorizontal.value),
-        'pi-angle-down': (!layoutState.menuProfileActive && profilePositionStart) || (layoutState.menuProfileActive && !profilePositionStart) || isHorizontal.value
+        'pi-angle-up':
+            (layoutState.menuProfileActive && (profilePositionStart || isHorizontal.value)) ||
+            (!layoutState.menuProfileActive && !profilePositionStart && !isHorizontal.value),
+        'pi-angle-down':
+            (!layoutState.menuProfileActive && profilePositionStart) ||
+            (layoutState.menuProfileActive && !profilePositionStart) ||
+            isHorizontal.value,
     };
 });
 
@@ -47,36 +61,26 @@ function tooltipValue(tooltipText) {
 <template>
     <div class="layout-menu-profile">
         <button v-tooltip="{ value: tooltipValue('Profile') }" class="rounded-none" @click="toggleMenu()">
-            <img src="/storage/layout/images/avatar/amyelsner.png" alt="avatar" style="width: 32px; height: 32px" />
+            <Avatar v-if="previewImage" size="large" :image="previewImage" shape="circle" class="border-2 border-neutral-200 dark:border-neutral-700" />
+            <Avatar v-else :label="avatarLabel" size="large" shape="circle" class="bg-primary text-white" />
             <span>
-                <strong>Amy Elsner</strong>
-                <small>Webmaster</small>
+                <strong>{{ user.name }}</strong>
+                <!-- <small>Webmaster</small> -->
             </span>
             <i class="layout-menu-profile-toggler pi pi-fw" :class="iconClass"></i>
         </button>
 
         <ul :class="['menu-transition', menuClass]" style="max-height: 0; opacity: 0">
             <li v-tooltip="{ value: tooltipValue('Settings') }">
-                <button @click="navigateTo('/profile/create')">
-                    <i class="pi pi-cog pi-fw"></i>
-                    <span>Settings</span>
-                </button>
-            </li>
-
-            <li v-tooltip="{ value: tooltipValue('Profile') }">
-                <button @click="navigateTo('/profile/list')">
-                    <i class="pi pi-file-o pi-fw"></i>
-                    <span>Profile</span>
-                </button>
-            </li>
-            <li v-tooltip="{ value: tooltipValue('Support') }">
-                <button @click="navigateTo('/documentation')">
-                    <i class="pi pi-compass pi-fw"></i>
-                    <span>Support</span>
+                <button>
+                    <Link href="/settings">
+                        <i class="pi pi-cog pi-fw"></i>
+                        <span class="ml-2">Settings</span>
+                    </Link>
                 </button>
             </li>
             <li v-tooltip="{ value: tooltipValue('Logout') }">
-                <button @click="navigateTo('/auth/login2')">
+                <button @click="logout">
                     <i class="pi pi-power-off pi-fw"></i>
                     <span>Logout</span>
                 </button>

@@ -45,7 +45,7 @@ const menuThemeOptions = ref([
     { name: 'Light', value: 'light', disabled: isDarkTheme },
     { name: 'Dark', value: 'dark', disabled: false },
 ]);
-const colorScheme = ref(layoutConfig.colorScheme ?? 'system');
+const colorScheme = ref(layoutConfig.colorScheme ?? 'light');
 const darkTheme = ref(layoutConfig.darkTheme);
 const menuMode = ref(layoutConfig.menuMode);
 const menuProfilePosition = ref(layoutConfig.menuProfilePosition);
@@ -760,6 +760,13 @@ watch(
     () => layoutConfig.menuTheme,
     (val) => {
         layoutConfigSession.value.menuTheme = val;
+    },
+);
+
+watch(
+    () => layoutConfig.menuProfilePosition,
+    (val) => {
+        layoutConfigSession.value.menuProfilePosition = val;
     },
 );
 </script>

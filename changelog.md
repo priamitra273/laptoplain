@@ -16,6 +16,23 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 - Placeholder for upcoming bug fixes.
 
+## [0.8.0] - 2026-03-10
+
+### Added
+- Change AppMenuProfile dummy data to real data. (3fb68ca)
+- Dashboard: add "View all tasks" and "View all projects" links; TaskKanban and TaskReport UI improvements (task/project titles, summary column). (fbde24d)
+- Comprehensive project task management: table, detail, and form views with drag-and-drop reordering. (10a7303)
+- Task form: client-side validation and auto-clear due date on status change. (71bfcbe)
+- Workload index: sortable columns and links from user names to task reports. (1675c32)
+
+### Changed
+- Simplify date formatting in Table component; remove unused validation rule in ProjectStoreRequest. (f877f71)
+
+### Fixed
+- Prevent error when task has no project using null-safe operator in TaskPolicy. (d95e84b)
+- Handle errors when opening tasks with deleted projects in TaskPolicy, TaskController, and ProjectController. (17bd4b6)
+- Clear `due_date` when `status_id` is set to to-do. (ab9864a)
+
 ## [0.7.0] - 2026-03-05
 
 ### Added
@@ -137,7 +154,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 Notes:
 - Versions above are organized semantically from historical milestones in `git log`.
-- Latest commit incorporated: `1675c32` (feat: enhance workload index page by adding sortable columns and linking user names to task reports).
+- Latest commit incorporated: `f877f71` (refactor: simplify date formatting in Table component and remove unused validation rule in ProjectStoreRequest).
 - Future releases should increment:
   - `PATCH` for backward-compatible bug fixes,
   - `MINOR` for backward-compatible features,

@@ -200,6 +200,11 @@ const onPage = (event: any) => {
     rowsPerPage.value = event.rows;
 };
 
+const formatDate = (date: any) => {
+    const m = moment(date);
+    return m.isValid() ? m.format('YYYY-MM-DD') : '-';
+};
+
 watch(visibleForm, (val) => {
     if (!val) selected.value = undefined;
 });
@@ -346,7 +351,7 @@ watch(visibleForm, (val) => {
 
                 <Column field="start_date" header="Start" sortable filter-field="start_date" data-type="date">
                     <template #body="{ data }">
-                        {{ moment(data.start_date).format('YYYY-MM-DD') }}
+                        {{ formatDate(data.start_date) }}
                     </template>
 
                     <template #filter="{ filterModel }">
@@ -360,7 +365,7 @@ watch(visibleForm, (val) => {
 
                 <Column field="due_date" header="Due" sortable filter-field="due_date" data-type="date">
                     <template #body="{ data }">
-                        {{ moment(data.due_date).format('YYYY-MM-DD') }}
+                        {{ formatDate(data.due_date) }}
                     </template>
 
                     <template #filter="{ filterModel }">

@@ -5,7 +5,6 @@ namespace App\Http\Requests\Project;
 use App\Facades\Sqids;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class ProjectStoreRequest extends FormRequest
 {
@@ -33,7 +32,6 @@ class ProjectStoreRequest extends FormRequest
                 'nullable',
                 'date',
                 'after_or_equal:start_date',
-                Rule::requiredIf(fn() => (int) $this->status_id === 2),
             ],
             'status_id' => 'required|exists:ms_project_statuses,id',
             'priority_id' => 'required|exists:ms_project_priority,id',
@@ -45,7 +43,6 @@ class ProjectStoreRequest extends FormRequest
         return [
             'title.required' => 'Project title is required.',
             'start_date.required' => 'Start date is required.',
-            'due_date.required' => 'Due date is required when status is set to "In Progress".',
             'due_date.after_or_equal' => 'The due date cannot be earlier than the start date.',
             'description.required' => 'Description is required.',
             'emoji.required' => 'Emoji is required.',

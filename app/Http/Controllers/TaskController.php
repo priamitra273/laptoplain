@@ -38,7 +38,7 @@ class TaskController extends Controller
             'project:id,title',
             'tags:id,name,severity',
             'subTaskRecursive',
-            'creator:id,name', // Add creator relationship
+            'creator:id,name',
             'creator.media',
         ])
             ->where(function ($query) use ($userId) {
@@ -47,7 +47,6 @@ class TaskController extends Controller
                         $q->where('users.id', $userId);
                     });
             })
-            ->whereHas('project')
             ->orderBy('id')
             ->get()
             ->map(function ($task) use ($userId) {
@@ -91,13 +90,11 @@ class TaskController extends Controller
         }
 
         // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with(['projectMembers' => function ($query) {
-            $query->whereHas('user');
-        }])->find($projectId);
-
-        if (! $project) {
-            return back()->with('error', 'Project not found.');
-        }
+        $project = Project::with('projectMembers:id,project_id,user_id')
+            ->withExists([
+                'projectMembers as is_project_member' => fn($q) => $q->where('user_id', Auth::id())
+            ])
+            ->findOrFail($projectId);
 
         $user = Auth::user();
         if ($user->cannot('create', [Task::class, $project])) {
@@ -177,18 +174,23 @@ class TaskController extends Controller
 
             $task = Task::with([
                 'project:id,title,emoji',
+
                 'status:id,name,severity',
                 'priority:id,name,severity',
                 'type:id,name,severity',
+
                 'users:id,name',
                 'users.media',
+
                 'tags:id,name,severity',
+
                 'subTaskRecursive',
                 'subTaskRecursive.status:id,name,severity',
                 'subTaskRecursive.priority:id,name,severity',
                 'subTaskRecursive.type:id,name,severity',
                 'subTaskRecursive.users:id,name',
-                'creator:id,name', // Add creator relationship
+
+                'creator:id,name',
                 'creator.media',
                 'comments' => function ($query) {
                     $query->whereNull('parent_id')
@@ -201,6 +203,12 @@ class TaskController extends Controller
                             'replies.user',
                         ]);
                 },
+            ])->withExists([
+                'project as is_project_member' => function ($q) {
+                    $q->whereHas('projectMembers', function ($q) {
+                        $q->where('user_id', Auth::id());
+                    });
+                }
             ])->findOrFail($taskId);
         } catch (\Exception $e) {
             throw new NotFoundHttpException(404);
@@ -213,45 +221,29 @@ class TaskController extends Controller
 
         $task->update(['progress' => $task->calculateProgress()]);
 
-        $project = Project::with([
-            'projectMembers.user:id,name,email',
-            'projectMembers.user.media',
-            'projectMembers.role:id,name',
-        ])->findOrFail($task->project_id);
+        $project = $task->project;
 
         // Get assignable users with avatar_url - filter out null users
         $assignableUsers = collect($project->projectMembers)
-            ->filter(function ($member) {
-                return $member->user !== null;
-            })
-            ->map(function ($member) {
-                return [
-                    'id' => $member->user->id,
-                    'name' => $member->user->name,
-                    'email' => $member->user->email,
-                    'avatar_url' => $member->user->avatar_url,
-                ];
-            })
+            ->filter(fn($member) => $member->user !== null)
+            ->map(fn($member) => [
+                'id' => $member->user->id,
+                'name' => $member->user->name,
+                'email' => $member->user->email,
+                'avatar_url' => $member->user->avatar_url,
+            ])
             ->unique('id')
             ->values()
             ->toArray();
 
-        $isTaskMember = $task->users()
-            ->where('user_id', Auth::id())
-            ->exists();
-
         // Format assigned users with avatar_url
         $assignedUsers = $task->users
-            ->filter(function ($user) {
-                return $user !== null;
-            })
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'avatar_url' => $user->avatar_url ?? null,
-                ];
-            })
+            ->filter(fn($user) => $user !== null)
+            ->map(fn($user) =>  [
+                'id' => $user->id,
+                'name' => $user->name,
+                'avatar_url' => $user->avatar_url ?? null,
+            ])
             ->values()
             ->toArray();
 
@@ -265,6 +257,16 @@ class TaskController extends Controller
             ];
         }
 
+        $isOwner = $task->project
+            ->projectMembers
+            ->contains(function ($member) use ($user) {
+                return $member->user_id === $user->id
+                    && $member->role?->name === 'Owner';
+            });
+
+        $isTaskMember = $task->users
+            ->contains('id', $user->id);
+
         $data = [
             'task' => $task->toArray(),
             'project' => $project->toArray(),
@@ -275,6 +277,7 @@ class TaskController extends Controller
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'isTaskMember' => $isTaskMember,
+            'isOwner' => $isOwner,
             'comments' => $task->comments?->toArray() ?? [],
         ];
 
@@ -285,7 +288,21 @@ class TaskController extends Controller
     {
         try {
             $taskId = Sqids::decode($taskEncoded);
-            $task = Task::findOrFail($taskId);
+            $task = Task::with([
+                'users:id',
+                'project.projectMembers.user:id',
+                'project.projectMembers.role:id,name'
+            ])->withExists([
+                'users as is_task_member' => fn($q) =>
+                $q->where('user_id', Auth::id()),
+
+                'project as is_owner' => function ($q) {
+                    $q->whereHas('projectMembers', function ($q) {
+                        $q->where('user_id', Auth::id())
+                            ->whereHas('role', fn($r) => $r->where('name', 'Owner'));
+                    });
+                }
+            ])->findOrFail($taskId);
         } catch (\Exception $e) {
             return back()->with('error', 'Task not found.');
         }
@@ -406,8 +423,12 @@ class TaskController extends Controller
             abort(403);
         }
 
-        $status = MsTaskStatus::find(Sqids::decode($request->status_id));
+        $status = $request->status;
         $this->service->updateStatus($task, $status);
+
+        if ($request->due_date) {
+            $task->update(['due_date' => $request->due_date]);
+        }
 
         return response()->json([
             'success' => true,
@@ -506,16 +527,32 @@ class TaskController extends Controller
         try {
             $projectId = Sqids::decode($encoded);
             $taskId = Sqids::decode($taskEncoded);
-            $task = Task::findOrFail($taskId);
+            $task = Task::with([
+                'subTaskRecursive.users:id',
+                'users:id'
+            ])->withExists([
+                'users as is_task_member' => fn($q) =>
+                $q->where('user_id', Auth::id()),
+
+                'project as is_owner' => fn($q) =>
+                $q->whereHas(
+                    'projectMembers',
+                    fn($q) =>
+                    $q->where('user_id', Auth::id())
+                        ->whereHas('role', fn($r) => $r->where('name', 'Owner'))
+                )
+            ])->findOrFail($taskId);
         } catch (\Exception $e) {
             return back()->with('error', 'Task not found.');
         }
 
+        $user = Auth::user();
+        if ($user->cannot('delete', $task)) {
+            return back()->with('error', 'You do not have permission to delete this task.');
+        }
+
         foreach ($task->subTaskRecursive as $subTask) {
-            $allUserIds = $subTask->users()
-                ->whereNotNull('users.id')
-                ->pluck('users.id')
-                ->toArray();
+            $allUserIds = $subTask->users->pluck('id')->toArray();
 
             TaskNotification::createTaskNotification(
                 $subTask,
@@ -526,15 +563,7 @@ class TaskController extends Controller
             $subTask->delete();
         }
 
-        $user = Auth::user();
-        if ($user->cannot('delete', $task)) {
-            return back()->with('error', 'You do not have permission to delete this task.');
-        }
-
-        $allUserIds = $task->users()
-            ->whereNotNull('users.id')
-            ->pluck('users.id')
-            ->toArray();
+        $allUserIds = $task->users->pluck('id')->toArray();
 
         TaskNotification::createTaskNotification(
             $task,

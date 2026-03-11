@@ -4,10 +4,13 @@ namespace App\Http\Requests\Task;
 
 use App\Facades\Sqids;
 use App\Models\MsTaskStatus;
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TaskUpdateStatusRequest extends FormRequest
 {
+    public ?MsTaskStatus $status = null;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -28,17 +31,58 @@ class TaskUpdateStatusRequest extends FormRequest
                 'required',
                 'string',
                 function ($attribute, $value, $fail) {
+
                     try {
                         $id = Sqids::decode($value);
                     } catch (\Throwable $th) {
-                        $fail("The $attribute field is invalid.");
+                        return $fail("The $attribute field is invalid.");
                     }
 
-                    if (! MsTaskStatus::where('id', $id)->exists()) {
-                        $fail("The $attribute field does not exist.");
+                    $status = MsTaskStatus::find($id);
+
+                    if (! $status) {
+                        return $fail("The $attribute field does not exist.");
                     }
+
+                    $this->status = $status;
                 },
             ],
+
+            'due_date' => 'sometimes|nullable|date|after_or_equal:start_date',
         ];
     }
+
+    public function withValidator($validator)
+{
+    $validator->after(function ($validator) {
+
+        if (! $this->status) {
+            return;
+        }
+
+        // ambil encoded task dari route
+        $encoded = $this->route('encoded');
+
+        // decode id task
+        $taskId = Sqids::decode($encoded);
+
+        // ambil task
+        $task = Task::find($taskId);
+
+        if (! $task) {
+            return;
+        }
+
+        $statusIsInProgress = $this->status->name === 'In Progress';
+        $taskHasDueDate = ! is_null($task->due_date);
+        $requestHasDueDate = ! is_null($this->due_date);
+
+        if ($statusIsInProgress && ! $taskHasDueDate && ! $requestHasDueDate) {
+            $validator->errors()->add(
+                'due_date',
+                'Due date is required when status is In Progress and the task does not already have one.'
+            );
+        }
+    });
+}
 }

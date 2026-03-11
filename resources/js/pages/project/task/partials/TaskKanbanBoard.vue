@@ -93,6 +93,22 @@ const cardMenuItems = computed(() => [
     { label: 'Delete Task', icon: 'pi pi-trash', command: () => deleteTask(cardMenuTask.value!), disabled: !canAct.value },
 ]);
 
+// ─── In Progress Dialog ───────────────────────────────────────────────────────
+const inProgressDialog = ref<{
+    visible: boolean;
+    task: Task | null;
+    newStatusId: string | null;
+    dueDate: Date | null;
+    snapshot: Record<string, Task[]> | null;
+}>({
+    visible: false,
+    task: null,
+    newStatusId: null,
+    dueDate: null,
+    snapshot: null,
+});
+const inProgressLoading = ref(false);
+
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const canAct = computed(() => props.isMember || props.hasPermission);
 
@@ -257,15 +273,82 @@ watch(
 );
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
+/**
+ * Called when a card is dropped into a new column.
+ * If the target status is "In Progress" and the task has no due_date,
+ * open the dialog instead of saving immediately.
+ */
 const onGroupChange = async (task: Task, newStatusId: string) => {
+    const targetStatus = props.statuses.find((s) => s.id === newStatusId);
+    const isInProgress = targetStatus?.name === 'In Progress';
+    const dueDateMissing = !task.due_date;
+
+    if (isInProgress && dueDateMissing) {
+        // Snapshot the current (post-drag) state so we can restore it on cancel
+        const snapshot: Record<string, Task[]> = {};
+        for (const [sid, tasks] of Object.entries(grouped.value)) {
+            snapshot[sid] = [...tasks];
+        }
+
+        // Revert visually to pre-drag positions
+        grouped.value = buildGrouped();
+
+        inProgressDialog.value = {
+            visible: true,
+            task,
+            newStatusId,
+            dueDate: null,
+            snapshot,
+        };
+        return;
+    }
+
+    await doStatusUpdate(task, newStatusId, null);
+};
+
+/** Perform the actual API call, optionally with a due_date */
+const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string | null) => {
     try {
-        await axios.post(route('task.status.update', task.id), { _method: 'PUT', status_id: newStatusId });
+        await axios.post(route('task.status.update', task.id), {
+            _method: 'PUT',
+            status_id: newStatusId,
+            ...(dueDate ? { due_date: dueDate } : {}),
+        });
         emit('statusUpdate', task.id, newStatusId);
         toast.add({ severity: 'success', summary: 'Status updated', life: 1800 });
     } catch {
         toast.add({ severity: 'error', summary: 'Failed to update status', life: 3000 });
         grouped.value = buildGrouped();
     }
+};
+
+/** Confirm from the In Progress dialog */
+const submitInProgressDialog = async () => {
+    if (!inProgressDialog.value.dueDate) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Due Date Required',
+            detail: 'Please select a due date to set the task as In Progress.',
+            life: 3000,
+        });
+        return;
+    }
+
+    inProgressLoading.value = true;
+    const formattedDueDate = moment(inProgressDialog.value.dueDate).format('YYYY-MM-DD');
+
+    await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.newStatusId!, formattedDueDate);
+
+    inProgressLoading.value = false;
+    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+};
+
+/** Cancel — restore the snapshot so the card reappears in its original column */
+const cancelInProgressDialog = () => {
+    if (inProgressDialog.value.snapshot) {
+        grouped.value = inProgressDialog.value.snapshot;
+    }
+    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
 };
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -861,11 +944,75 @@ const clearFilters = () => {
     <!-- ── Context Menu ──────────────────────────────────────────────────────── -->
     <Menu ref="cardMenu" :model="cardMenuItems" popup />
 
+    <!-- ── In Progress: Due Date Dialog ─────────────────────────────────────── -->
+    <Dialog
+        v-model:visible="inProgressDialog.visible"
+        modal
+        :closable="false"
+        :draggable="false"
+        class="w-full max-w-md"
+    >
+        <template #header>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                    <i class="pi pi-calendar-clock text-blue-600 dark:text-blue-300"></i>
+                </div>
+                <div>
+                    <p class="text-base font-semibold text-gray-800 dark:text-white">Set Due Date</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Required to move task to In Progress</p>
+                </div>
+            </div>
+        </template>
+
+        <div class="flex flex-col gap-4 py-2">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="font-medium text-surface-800 dark:text-surface-100">
+                    "{{ inProgressDialog.task?.title }}"
+                </span>
+                doesn't have a due date yet. Please set one before moving it to
+                <span class="font-semibold text-blue-600 dark:text-blue-400">In Progress</span>.
+            </p>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
+                </label>
+                <DatePicker
+                    v-model="inProgressDialog.dueDate"
+                    dateFormat="dd M yy"
+                    class="w-full"
+                    showIcon
+                    placeholder="Select due date"
+                    :minDate="new Date()"
+                />
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex justify-end gap-2 pt-2">
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    text
+                    @click="cancelInProgressDialog"
+                />
+                <Button
+                    label="Confirm & Move"
+                    icon="pi pi-check"
+                    :disabled="!inProgressDialog.dueDate"
+                    :loading="inProgressLoading"
+                    @click="submitInProgressDialog"
+                />
+            </div>
+        </template>
+    </Dialog>
+
     <!-- ── Detail Slide-over ─────────────────────────────────────────────────── -->
     <Dialog
         v-model:visible="detailPanel.visible"
         position="right"
         modal
+        dismissableMask
         :style="{ width: '460px', height: '100dvh', margin: 0, borderRadius: 0 }"
         :contentStyle="{ padding: 0, height: '100%' }"
         :showHeader="false"

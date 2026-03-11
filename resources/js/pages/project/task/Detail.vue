@@ -154,6 +154,11 @@ const editingField = ref<string | null>(null);
 const editValue = ref<any>(null);
 const editingElement = ref<HTMLElement | null>(null);
 
+// --- In Progress Dialog ---
+const inProgressDialogVisible = ref(false);
+const inProgressDueDate = ref<Date | null>(null);
+const pendingStatusId = ref<string | null>(null);
+
 const startEdit = (field: string, currentValue: any, event?: Event) => {
     if (
         isDeveloper.value
@@ -218,7 +223,7 @@ const form = useForm<TaskForm>({
     progress_value: props.task.progress,
 });
 
-const autoSave = (field: TaskFormField, value: any) => {
+const autoSave = (field: TaskFormField, value: any, extraFields?: Partial<TaskForm>) => {
     let valueToSave = value;
 
     if (field === 'start_date' || field === 'due_date') {
@@ -226,6 +231,13 @@ const autoSave = (field: TaskFormField, value: any) => {
     }
 
     form[field] = valueToSave;
+
+    // Apply extra fields (e.g. due_date when saving status)
+    if (extraFields) {
+        for (const [key, val] of Object.entries(extraFields)) {
+            form[key as TaskFormField] = val;
+        }
+    }
 
     form.put(
         route('project.tasks.update', {
@@ -251,8 +263,59 @@ const autoSave = (field: TaskFormField, value: any) => {
     );
 };
 
+/**
+ * Handle status select change.
+ * If selected status is "In Progress" AND due_date is empty, show the dialog.
+ * Otherwise proceed normally.
+ */
 const handleSelectChange = (field: string, value: any) => {
+    if (field === 'status_id') {
+        const selectedStatus = props.statuses.find((s) => s.id === value);
+        const isInProgress = selectedStatus?.name === 'In Progress';
+        const dueDateMissing = !props.task.due_date;
+
+        if (isInProgress && dueDateMissing) {
+            pendingStatusId.value = value;
+            inProgressDueDate.value = null;
+            inProgressDialogVisible.value = true;
+            // Don't save yet — wait for dialog submit
+            return;
+        }
+    }
+
     autoSave(field, value);
+};
+
+/** Called when user submits the In Progress dialog */
+const submitInProgressDialog = () => {
+    if (!inProgressDueDate.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Due Date Required',
+            detail: 'Please select a due date to set the task as In Progress.',
+            life: 3000,
+        });
+        return;
+    }
+
+    const formattedDueDate = moment(inProgressDueDate.value).format('YYYY-MM-DD');
+
+    // Save status + due_date together
+    autoSave('status_id', pendingStatusId.value, { due_date: formattedDueDate });
+
+    inProgressDialogVisible.value = false;
+    pendingStatusId.value = null;
+    inProgressDueDate.value = null;
+};
+
+/** Called when user cancels the In Progress dialog */
+const cancelInProgressDialog = () => {
+    inProgressDialogVisible.value = false;
+    pendingStatusId.value = null;
+    inProgressDueDate.value = null;
+    // Reset select back to original value
+    editValue.value = props.task.status_id;
+    cancelEdit();
 };
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -762,5 +825,65 @@ const submitComment = () => {
                 </div>
             </div>
         </div>
+
+        <!-- In Progress: Due Date Required Dialog -->
+        <Dialog
+            v-model:visible="inProgressDialogVisible"
+            modal
+            :closable="false"
+            :draggable="false"
+            header="Set Due Date"
+            class="w-full max-w-md"
+        >
+            <template #header>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                        <i class="pi pi-calendar-clock text-blue-600 dark:text-blue-300"></i>
+                    </div>
+                    <div>
+                        <p class="text-base font-semibold text-gray-800 dark:text-white">Set Due Date</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Required to move task to In Progress</p>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex flex-col gap-4 py-2">
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    This task doesn't have a due date yet. Please set a due date before marking it as
+                    <span class="font-semibold text-blue-600 dark:text-blue-400">In Progress</span>.
+                </p>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
+                    </label>
+                    <DatePicker
+                        v-model="inProgressDueDate"
+                        dateFormat="dd M yy"
+                        class="w-full"
+                        showIcon
+                        placeholder="Select due date"
+                        :minDate="new Date()"
+                    />
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button
+                        label="Cancel"
+                        severity="secondary"
+                        text
+                        @click="cancelInProgressDialog"
+                    />
+                    <Button
+                        label="Confirm & Save"
+                        icon="pi pi-check"
+                        :disabled="!inProgressDueDate"
+                        @click="submitInProgressDialog"
+                    />
+                </div>
+            </template>
+        </Dialog>
     </AppLayout>
 </template>

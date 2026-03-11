@@ -38,11 +38,11 @@ class TaskPolicy
             return true;
         }
 
-        $isMember = $task->project?->projectMembers()
-            ->whereNotNull('user_id')
-            ->where('user_id', $user->id)
-            ->exists() ?? false;
-        return $isMember;
+        if ($user->can('task.read')) {
+            return $task->is_project_member;
+        }
+
+        return false;
     }
 
     /**
@@ -66,26 +66,10 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $project
-            ->projectMembers()
-            ->where('user_id', $user->id)
-            ->whereHas(
-                'role',
-                fn($q) =>
-                $q->where('name', 'Owner')
-            )
-            ->exists();
-
-        if ($isOwner) {
-            return $isOwner;
+        if ($user->can('task.create')) {
+            return $project->is_project_member;
         }
-
-        $isMember = $project
-            ->projectMembers()
-            ->whereNotNull('user_id')
-            ->where('user_id', $user->id)
-            ->exists();
-        return $isMember;
+        return false;
     }
 
     /**
@@ -109,68 +93,40 @@ class TaskPolicy
             return true;
         }
 
-        $isOwner = $task->project?->projectMembers()
-            ->where('user_id', $user->id)
-            ->whereHas(
-                'role',
-                fn($q) =>
-                $q->where('name', 'Owner')
-            )
-            ->exists() ?? false;
+        if ($user->can('task.update')) {
 
-        if ($isOwner) {
-            return true;
+            return $task->is_task_member || $task->is_owner;
         }
 
-        $isMember = $task
-            ->users()
-            ->where('user_id', $user->id)
-            ->exists();
-
-        return $isMember;
+        return false;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Task $task): bool
-    {
-        $allowedRoles = ["super-admin-", "admin-"];
-        $roles = $user->getRoleNames();
+        public function delete(User $user, Task $task): bool
+        {
+            $allowedRoles = ["super-admin-", "admin-"];
+            $roles = $user->getRoleNames();
 
-        $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
-            foreach ($allowedRoles as $prefix) {
-                if (str_starts_with($role, $prefix)) {
-                    return true;
+            $hasAllowedRole = $roles->some(function ($role) use ($allowedRoles) {
+                foreach ($allowedRoles as $prefix) {
+                    if (str_starts_with($role, $prefix)) {
+                        return true;
+                    }
                 }
+                return false;
+            });
+
+            if ($hasAllowedRole) {
+                return true;
+            }
+
+            if ($user->can('task.delete')) {
+                return $task->is_task_member || $task->is_owner;
             }
             return false;
-        });
-
-        if ($hasAllowedRole) {
-            return true;
         }
-
-        $isOwner = $task->project?->projectMembers()
-            ->where('user_id', $user->id)
-            ->whereHas(
-                'role',
-                fn($q) =>
-                $q->where('name', 'Owner')
-            )
-            ->exists() ?? false;
-
-        if ($isOwner) {
-            return true;
-        }
-
-        $isMember = $task
-            ->users()
-            ->where('user_id', $user->id)
-            ->exists();
-
-        return $isMember;
-    }
 
     /**
      * Determine whether the user can restore the model.

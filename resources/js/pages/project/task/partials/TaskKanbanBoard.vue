@@ -17,7 +17,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import type { Task, TaskStatus, TaskPriority, TaskType } from '../..';
+import type { Task, TaskPriority, TaskStatus, TaskType } from '../..';
 
 interface AssignableUser {
     id: string;
@@ -58,6 +58,7 @@ const filterAssignee = ref<string | null>(null);
 const filterPriority = ref<string | null>(null);
 const filterType = ref<string | null>(null);
 const collapsedCols = ref<Set<string>>(new Set());
+const preDragSnapshot = ref<Record<string, Task[]> | null>(null);
 
 // Quick-add per column
 const quickAddStatus = ref<string | null>(null);
@@ -284,22 +285,14 @@ const onGroupChange = async (task: Task, newStatusId: string) => {
     const dueDateMissing = !task.due_date;
 
     if (isInProgress && dueDateMissing) {
-        // Snapshot the current (post-drag) state so we can restore it on cancel
-        const snapshot: Record<string, Task[]> = {};
-        for (const [sid, tasks] of Object.entries(grouped.value)) {
-            snapshot[sid] = [...tasks];
-        }
-
-        // Revert visually to pre-drag positions
-        grouped.value = buildGrouped();
-
         inProgressDialog.value = {
             visible: true,
             task,
             newStatusId,
             dueDate: null,
-            snapshot,
+            snapshot: preDragSnapshot.value,
         };
+
         return;
     }
 
@@ -348,7 +341,14 @@ const cancelInProgressDialog = () => {
     if (inProgressDialog.value.snapshot) {
         grouped.value = inProgressDialog.value.snapshot;
     }
-    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+
+    inProgressDialog.value = {
+        visible: false,
+        task: null,
+        newStatusId: null,
+        dueDate: null,
+        snapshot: null,
+    };
 };
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -768,6 +768,13 @@ const clearFilters = () => {
                             (e: any) => {
                                 draggingItem = true;
                                 draggingTaskId = e.item?.dataset?.taskId || null;
+
+                                const snapshot: Record<string, Task[]> = {};
+                                for (const [sid, tasks] of Object.entries(grouped)) {
+                                    snapshot[sid] = [...tasks];
+                                }
+
+                                preDragSnapshot = snapshot;
                             }
                         "
                         @end="
@@ -945,13 +952,7 @@ const clearFilters = () => {
     <Menu ref="cardMenu" :model="cardMenuItems" popup />
 
     <!-- ── In Progress: Due Date Dialog ─────────────────────────────────────── -->
-    <Dialog
-        v-model:visible="inProgressDialog.visible"
-        modal
-        :closable="false"
-        :draggable="false"
-        class="w-full max-w-md"
-    >
+    <Dialog v-model:visible="inProgressDialog.visible" modal :closable="false" :draggable="false" class="w-full max-w-md">
         <template #header>
             <div class="flex items-center gap-3">
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
@@ -966,9 +967,7 @@ const clearFilters = () => {
 
         <div class="flex flex-col gap-4 py-2">
             <p class="text-sm text-gray-600 dark:text-gray-300">
-                <span class="font-medium text-surface-800 dark:text-surface-100">
-                    "{{ inProgressDialog.task?.title }}"
-                </span>
+                <span class="font-medium text-surface-800 dark:text-surface-100"> "{{ inProgressDialog.task?.title }}" </span>
                 doesn't have a due date yet. Please set one before moving it to
                 <span class="font-semibold text-blue-600 dark:text-blue-400">In Progress</span>.
             </p>
@@ -990,12 +989,7 @@ const clearFilters = () => {
 
         <template #footer>
             <div class="flex justify-end gap-2 pt-2">
-                <Button
-                    label="Cancel"
-                    severity="secondary"
-                    text
-                    @click="cancelInProgressDialog"
-                />
+                <Button label="Cancel" severity="secondary" text @click="cancelInProgressDialog" />
                 <Button
                     label="Confirm & Move"
                     icon="pi pi-check"

@@ -47,6 +47,7 @@ class TaskController extends Controller
                         $q->where('users.id', $userId);
                     });
             })
+            ->whereHas('project')
             ->orderBy('id')
             ->get()
             ->map(function ($task) use ($userId) {

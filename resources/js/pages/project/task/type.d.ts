@@ -39,6 +39,18 @@ export interface ProjectOptions {
     title: string;
 }
 
+interface TaskKanban {
+    id: string;
+    title: string;
+    due_date?: string;
+    project?: ProjectOptions;
+    status?: TaskStatusOption;
+    priority?: TaskPriorityOption;
+    type?: TaskTypeOption;
+    is_assigned?: boolean;
+    is_created_by_me?: boolean;
+}
+
 // ─── Sprint types ─────────────────────────────────────────────────────────────
 
 export interface SprintStatus {
@@ -65,3 +77,4 @@ export interface Sprint {
 export type TaskStatus = TaskStatusOption;
 export type TaskPriority = TaskPriorityOption;
 export type TaskType = TaskTypeOption;
+export type Task = TaskKanban

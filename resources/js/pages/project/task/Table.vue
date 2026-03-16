@@ -11,7 +11,7 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
-import TreeTable from 'primevue/treetable';
+import TreeTable, { TreeTableFilterMeta } from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ComputedRef, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -25,7 +25,13 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
-    isDeveloper: boolean
+    isDeveloper: boolean;
+}
+
+interface TableFilter {
+    global: string;
+    'status.name': string[];
+    'type.name': string[];
 }
 
 const props = defineProps<Props>();
@@ -39,6 +45,12 @@ const currentUser = usePage().props.auth.user;
 const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 const expandedKeys = ref<{ [key: string]: boolean }>({});
+
+const filters = ref<TableFilter>({
+    global: '',
+    'status.name': [],
+    'type.name': [],
+});
 
 // Filter refs
 const selectedStatuses = ref<string[]>([]);
@@ -608,12 +620,12 @@ onBeforeUnmount(() => {
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Search</label>
-                <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
+                <InputText v-model="filters.global as string" placeholder="Search by title..." class="w-full" />
             </div>
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Status</label>
                 <MultiSelect
-                    v-model="selectedStatuses"
+                    v-model="filters['status.name']"
                     :options="statusOptions"
                     optionLabel="name"
                     optionValue="name"
@@ -661,7 +673,7 @@ onBeforeUnmount(() => {
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Type</label>
                 <MultiSelect
-                    v-model="selectedTypes"
+                    v-model="filters['type.name']"
                     :options="typeOptions"
                     optionLabel="name"
                     optionValue="name"
@@ -689,11 +701,14 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- TreeTable -->
-        <div class="overflow-x-auto" :class="isRootDropActive
-                ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
-                : isDraggingTask
-                    ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
-                    : 'transition-colors'
+        <div
+            class="overflow-x-auto"
+            :class="
+                isRootDropActive
+                    ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
+                    : isDraggingTask
+                      ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
+                      : 'transition-colors'
             "
             @dragover.prevent="onRootDragOver"
             @dragenter.prevent="onRootDragOver"
@@ -701,7 +716,16 @@ onBeforeUnmount(() => {
             @mousemove="onPointerContainerMove"
             @mouseleave="onPointerRootLeave"
         >
-            <TreeTable v-model:expandedKeys="expandedKeys" :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
+            <TreeTable
+                v-model:expandedKeys="expandedKeys"
+                :value="formatTasks(props.tasks)"
+                :filters="filters as unknown as TreeTableFilterMeta"
+                filter-mode="lenient"
+                class="min-w-full"
+                scrollable
+                scrollHeight="600px"
+                removableSort
+            >
                 <!-- Checkbox Column -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
@@ -711,14 +735,14 @@ onBeforeUnmount(() => {
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
                             @update:modelValue="
-                            (value) => {
-                                if (value) {
-                                    selectedKey[node.key] = { checked: true, partialChecked: false };
-                                } else {
-                                    delete selectedKey[node.key];
+                                (value) => {
+                                    if (value) {
+                                        selectedKey[node.key] = { checked: true, partialChecked: false };
+                                    } else {
+                                        delete selectedKey[node.key];
+                                    }
+                                    selectedKey = { ...selectedKey };
                                 }
-                                selectedKey = { ...selectedKey };
-                            }
                             "
                             binary
                         />
@@ -760,7 +784,7 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <Column field="status.name" header="Status" style="min-width: 120px" sortable>
+                <Column field="status.name" header="Status" filter-match-mode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
@@ -811,8 +835,8 @@ onBeforeUnmount(() => {
                             <Avatar
                                 :image="
                                     node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
-                                    ? node.original.creator.avatar_url
-                                    : undefined
+                                        ? node.original.creator.avatar_url
+                                        : undefined
                                 "
                                 :label="
                                     !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
@@ -845,7 +869,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="info"
                                 v-tooltip.top="'Add Subtask'"
-                                :disabled="(deleteLoading || (!isMember && !hasPermission)) || isDeveloper"
+                                :disabled="deleteLoading || (!isMember && !hasPermission) || isDeveloper"
                                 @click="emit('add', node.data.id)"
                             />
                             <Button

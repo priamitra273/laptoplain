@@ -3,110 +3,17 @@ import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import moment from 'moment';
+import { computed, ref, type CSSProperties } from 'vue';
+import type { TaskReportProps } from './type';
 
-import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
-import DatePicker from 'primevue/datepicker';
-import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
-import Paginator from 'primevue/paginator';
-import Tag from 'primevue/tag';
-import { computed, ref } from 'vue';
+type QueryParamValue = string | number | string[] | undefined;
+const DEFAULT_AVATAR_URL = '/images/default-avatar.png';
 
-interface Creator {
-    id: number;
-    name: string;
-    avatar_url?: string | null;
-}
-
-interface Status {
-    id: number;
-    name: string;
-    severity: string;
-}
-
-interface Priority {
-    id: number;
-    name: string;
-    severity: string;
-}
-
-interface Type {
-    id: number;
-    name: string;
-    severity: string;
-}
-
-interface Project {
-    id: string; // Encoded ID
-    title: string;
-}
-
-interface Task {
-    id: string; // Encoded ID
-    title: string;
-    summary: string;
-    creator: Creator | null;
-    status: Status | null;
-    priority: Priority | null;
-    type: Type | null;
-    project: Project | null;
-    start_date: string | null;
-    due_date: string | null;
-    progress: number;
-    created_at: string;
-}
-
-interface FilterOptions {
-    creators: Creator[];
-    statuses: Status[];
-    priorities: Priority[];
-    types: Type[];
-}
-
-interface PaginatedTasks {
-    data: Task[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number;
-    to: number;
-}
-
-interface Filters {
-    names?: string[] | string;
-    statuses?: string[] | string;
-    priorities?: string[] | string;
-    types?: string[] | string;
-    start_date_from?: string;
-    start_date_to?: string;
-    due_date_from?: string;
-    due_date_to?: string;
-    search?: string;
-}
-
-interface Props {
-    tasks: PaginatedTasks;
-    filters: Filters;
-    filterOptions: FilterOptions;
-}
-
-// ============================================================================
-// PROPS
-// ============================================================================
-
-const props = defineProps<Props>();
-
-// ============================================================================
-// STATE
-// ============================================================================
+const props = defineProps<TaskReportProps>();
 
 const selectedCreators = ref<string[]>([]);
 const selectedStatuses = ref<string[]>([]);
+const selectedProjectStatuses = ref<string[]>([]);
 const selectedPriorities = ref<string[]>([]);
 const selectedTypes = ref<string[]>([]);
 const startDateFrom = ref<Date | null>(null);
@@ -116,29 +23,22 @@ const dueDateTo = ref<Date | null>(null);
 const searchQuery = ref<string>('');
 const showFilters = ref<boolean>(false);
 
-// ============================================================================
-// NAVIGATION FUNCTIONS
-// ============================================================================
+const hasActiveFilters = computed(() => {
+    return (
+        selectedCreators.value?.length > 0 ||
+        selectedStatuses.value?.length > 0 ||
+        selectedProjectStatuses.value?.length > 0 ||
+        selectedPriorities.value?.length > 0 ||
+        selectedTypes.value?.length > 0 ||
+        startDateFrom.value !== null ||
+        startDateTo.value !== null ||
+        dueDateFrom.value !== null ||
+        dueDateTo.value !== null ||
+        searchQuery.value !== ''
+    );
+});
 
-/**
- * Navigate to task detail page
- * @param encodedTaskId - Already encoded task ID from backend
- */
-const navigateToTask = (encodedTaskId: string) => {
-    router.visit(route('task.show', { encoded: encodedTaskId }));
-};
-
-/**
- * Navigate to project detail page
- * @param encodedProjectId - Already encoded project ID from backend
- */
-const navigateToProject = (encodedProjectId: string) => {
-    router.visit(route('project.show', { encoded: encodedProjectId }));
-};
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+const activeFilterCount = computed(() => Object.keys(props.filters).length);
 
 const truncateText = (text: string | null, length: number = 15): string => {
     if (!text) return '-';
@@ -163,57 +63,32 @@ const getUserColor = (index: number): string => {
     return `hsl(${index * 60}, 70%, 60%)`;
 };
 
+const hasCustomAvatar = (avatarUrl?: string | null): boolean => {
+    return Boolean(avatarUrl && avatarUrl !== DEFAULT_AVATAR_URL);
+};
+
+const getAvatarImage = (avatarUrl?: string | null): string | undefined => {
+    return hasCustomAvatar(avatarUrl) ? (avatarUrl ?? undefined) : undefined;
+};
+
+const getAvatarLabel = (name: string, avatarUrl?: string | null): string | undefined => {
+    return hasCustomAvatar(avatarUrl) ? undefined : getInitials(name);
+};
+
+const getAvatarStyle = (avatarUrl?: string | null): CSSProperties => {
+    return hasCustomAvatar(avatarUrl) ? {} : { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' };
+};
+
 const parseFilterValue = (value: string[] | string): string[] => {
     return Array.isArray(value) ? value : value.split(',');
 };
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-const initializeFilters = () => {
-    const { filters } = props;
-
-    if (filters.names) selectedCreators.value = parseFilterValue(filters.names);
-    if (filters.statuses) selectedStatuses.value = parseFilterValue(filters.statuses);
-    if (filters.priorities) selectedPriorities.value = parseFilterValue(filters.priorities);
-    if (filters.types) selectedTypes.value = parseFilterValue(filters.types);
-    if (filters.start_date_from) startDateFrom.value = new Date(filters.start_date_from);
-    if (filters.start_date_to) startDateTo.value = new Date(filters.start_date_to);
-    if (filters.due_date_from) dueDateFrom.value = new Date(filters.due_date_from);
-    if (filters.due_date_to) dueDateTo.value = new Date(filters.due_date_to);
-    if (filters.search) searchQuery.value = filters.search;
-};
-
-initializeFilters();
-
-// ============================================================================
-// COMPUTED
-// ============================================================================
-
-const hasActiveFilters = computed(() => {
-    return (
-        selectedCreators.value?.length > 0 ||
-        selectedStatuses.value?.length > 0 ||
-        selectedPriorities.value?.length > 0 ||
-        selectedTypes.value?.length > 0 ||
-        startDateFrom.value !== null ||
-        startDateTo.value !== null ||
-        dueDateFrom.value !== null ||
-        dueDateTo.value !== null ||
-        searchQuery.value !== ''
-    );
-});
-
-const activeFilterCount = computed(() => {
-    return Object.keys(props.filters).length;
-});
-
-const buildFilterParams = (): Record<string, any> => {
-    const params: Record<string, any> = {};
+const buildFilterParams = (): Record<string, QueryParamValue> => {
+    const params: Record<string, QueryParamValue> = {};
 
     if (selectedCreators.value?.length > 0) params.names = selectedCreators.value;
     if (selectedStatuses.value?.length > 0) params.statuses = selectedStatuses.value;
+    if (selectedProjectStatuses.value?.length > 0) params.project_statuses = selectedProjectStatuses.value;
     if (selectedPriorities.value?.length > 0) params.priorities = selectedPriorities.value;
     if (selectedTypes.value?.length > 0) params.types = selectedTypes.value;
     if (startDateFrom.value) params.start_date_from = moment(startDateFrom.value).format('YYYY-MM-DD');
@@ -225,7 +100,7 @@ const buildFilterParams = (): Record<string, any> => {
     return params;
 };
 
-const navigateWithFilters = (params: Record<string, any> = {}) => {
+const navigateWithFilters = (params: Record<string, QueryParamValue> = {}) => {
     router.get(route('reports.tasks.index'), params, {
         preserveState: true,
         preserveScroll: true,
@@ -239,6 +114,7 @@ const applyFilters = () => {
 const clearFilters = () => {
     selectedCreators.value = [];
     selectedStatuses.value = [];
+    selectedProjectStatuses.value = [];
     selectedPriorities.value = [];
     selectedTypes.value = [];
     startDateFrom.value = null;
@@ -254,12 +130,16 @@ const toggleFilters = () => {
     showFilters.value = !showFilters.value;
 };
 
+const navigateToProject = (encodedProjectId: string) => {
+    router.visit(route('project.show', { encoded: encodedProjectId }));
+};
+
 const exportReport = () => {
     const params = buildFilterParams();
     const queryString = new URLSearchParams(
         Object.entries(params).reduce(
             (acc, [key, value]) => {
-                acc[key] = Array.isArray(value) ? value.join(',') : value;
+                acc[key] = Array.isArray(value) ? value.join(',') : String(value ?? '');
                 return acc;
             },
             {} as Record<string, string>,
@@ -269,14 +149,32 @@ const exportReport = () => {
     window.open(`${route('reports.tasks.export')}?${queryString}`, '_blank');
 };
 
-const onPageChange = (event: any) => {
-    const params = {
-        ...props.filters,
+const initializeFilters = () => {
+    const { filters } = props;
+
+    if (filters.names) selectedCreators.value = parseFilterValue(filters.names);
+    if (filters.statuses) selectedStatuses.value = parseFilterValue(filters.statuses);
+    if (filters.project_statuses) selectedProjectStatuses.value = parseFilterValue(filters.project_statuses);
+    if (filters.priorities) selectedPriorities.value = parseFilterValue(filters.priorities);
+    if (filters.types) selectedTypes.value = parseFilterValue(filters.types);
+    if (filters.start_date_from) startDateFrom.value = new Date(filters.start_date_from);
+    if (filters.start_date_to) startDateTo.value = new Date(filters.start_date_to);
+    if (filters.due_date_from) dueDateFrom.value = new Date(filters.due_date_from);
+    if (filters.due_date_to) dueDateTo.value = new Date(filters.due_date_to);
+    if (filters.search) searchQuery.value = filters.search;
+};
+
+const onPageChange = (event: { page: number; rows: number }) => {
+    const params: Record<string, QueryParamValue> = {
+        ...(props.filters as Record<string, QueryParamValue>),
         page: event.page + 1,
         per_page: event.rows,
     };
+
     navigateWithFilters(params);
 };
+
+initializeFilters();
 </script>
 
 <template>
@@ -341,16 +239,8 @@ const onPageChange = (event: any) => {
                                 <template #option="{ option }">
                                     <div class="flex items-center gap-2">
                                         <Avatar
-                                            :image="
-                                                option.avatar_url && option.avatar_url !== '/images/default-avatar.png'
-                                                    ? option.avatar_url
-                                                    : undefined
-                                            "
-                                            :label="
-                                                !option.avatar_url || option.avatar_url === '/images/default-avatar.png'
-                                                    ? getInitials(option.name)
-                                                    : undefined
-                                            "
+                                            :image="getAvatarImage(option.avatar_url)"
+                                            :label="getAvatarLabel(option.name, option.avatar_url)"
                                             size="small"
                                             shape="circle"
                                         />
@@ -360,9 +250,27 @@ const onPageChange = (event: any) => {
                             </MultiSelect>
                         </div>
 
+                        <!-- Project Status Filter -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Project Status</label>
+                            <MultiSelect
+                                v-model="selectedProjectStatuses"
+                                :options="filterOptions.project_statuses"
+                                optionLabel="name"
+                                optionValue="id"
+                                placeholder="Select project statuses"
+                                :maxSelectedLabels="2"
+                                class="w-full"
+                            >
+                                <template #option="{ option }">
+                                    <Tag :value="option.name" :severity="option.severity" />
+                                </template>
+                            </MultiSelect>
+                        </div>
+
                         <!-- Status Filter -->
                         <div class="flex flex-col gap-2">
-                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Task Status</label>
                             <MultiSelect
                                 v-model="selectedStatuses"
                                 :options="filterOptions.statuses"
@@ -458,23 +366,11 @@ const onPageChange = (event: any) => {
                             <template #body="{ data }">
                                 <div v-if="data.creator" class="flex items-center gap-3">
                                     <Avatar
-                                        :image="
-                                            data.creator.avatar_url && data.creator.avatar_url !== '/images/default-avatar.png'
-                                                ? data.creator.avatar_url
-                                                : undefined
-                                        "
-                                        :label="
-                                            !data.creator.avatar_url || data.creator.avatar_url === '/images/default-avatar.png'
-                                                ? getInitials(data.creator.name)
-                                                : undefined
-                                        "
+                                        :image="getAvatarImage(data.creator.avatar_url)"
+                                        :label="getAvatarLabel(data.creator.name, data.creator.avatar_url)"
                                         shape="circle"
                                         size="normal"
-                                        :style="
-                                            !data.creator.avatar_url || data.creator.avatar_url === '/images/default-avatar.png'
-                                                ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
-                                                : {}
-                                        "
+                                        :style="getAvatarStyle(data.creator.avatar_url)"
                                     />
                                     <div>
                                         <p class="font-semibold">{{ data.creator.name }}</p>
@@ -493,29 +389,39 @@ const onPageChange = (event: any) => {
                             </template>
                         </Column>
 
+                        <Column field="project.status_name" header="Project Status" style="min-width: 120px">
+                            <template #body="{ data }">
+                                <Tag
+                                    v-if="data.project"
+                                    :value="data.project.status_name"
+                                    :severity="data.project.severity"
+                                    class="!bg-transparent"
+                                />
+                                <span v-else class="text-gray-400">-</span>
+                            </template>
+                        </Column>
+
                         <!-- Summary Column - Clickable Task -->
-                        <Column field="summary" header="Summary" style="min-width: 300px">
+                        <Column field="summary" header="Summary" style="width: 300px; min-width: 300px; max-width: 300px">
                             <template #body="{ data }">
                                 <Link
                                     :href="route('task.show', { encoded: data.id })"
                                     class="-m-2 block cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <p
-                                        class="text-dark mb-1 font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300"
+                                        class="text-dark mb-1 truncate text-sm font-semibold transition-colors dark:text-blue-400 dark:hover:text-blue-300"
                                         :title="data.title"
                                     >
-                                        {{ truncateText(data.title, 15) }}
+                                        {{ data.title }}
                                     </p>
 
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        {{ truncateText(data.summary, 15) }}
-                                    </p>
+                                    <p class="truncate text-sm text-gray-600 dark:text-gray-400" v-html="data.summary"></p>
                                 </Link>
                             </template>
                         </Column>
 
                         <!-- Status Column -->
-                        <Column field="status.name" header="Status" style="min-width: 120px">
+                        <Column field="status.name" header="Task Status" style="min-width: 120px">
                             <template #body="{ data }">
                                 <Tag v-if="data.status" :value="data.status.name" :severity="data.status.severity" />
                                 <span v-else class="text-gray-400">-</span>

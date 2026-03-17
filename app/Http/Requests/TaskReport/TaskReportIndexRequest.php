@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\TaskReport;
 
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
@@ -31,6 +32,8 @@ class TaskReportIndexRequest extends FormRequest
             'names.*' => ['sometimes', 'string', new SqidExists(User::class)],
             'statuses' => 'sometimes|array',
             'statuses.*' => ['sometimes', 'string', new SqidExists(MsTaskStatus::class)],
+            'project_statuses' => 'sometimes|array',
+            'project_statuses.*' => ['sometimes', 'string', new SqidExists(MsProjectStatus::class)],
             'priorities' => 'sometimes|array',
             'priorities.*' => ['sometimes', 'string', new SqidExists(MsTaskPriority::class)],
             'types' => 'sometimes|array',

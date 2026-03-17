@@ -2,8 +2,8 @@
 
 namespace App\Traits;
 
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 trait LogsActivityTask
 {
@@ -34,28 +34,28 @@ trait LogsActivityTask
     public function getDescriptionForEvent(string $eventName): string
     {
         return match ($eventName) {
-            'created'  => 'Create task',
-            'updated'  => 'Update task',
-            'deleted'  => 'Delete task',
+            'created' => 'Create task',
+            'updated' => 'Update task',
+            'deleted' => 'Delete task',
             'restored' => 'Restore task',
-            default    => $eventName,
+            default => $eventName,
         };
     }
 
     protected static function activityFieldLabels(): array
     {
         return [
-            'project_id'  => 'Project',
-            'parent_id'   => 'Parent Task',
-            'status_id'   => 'Status',
+            'project_id' => 'Project',
+            'parent_id' => 'Parent Task',
+            'status_id' => 'Status',
             'priority_id' => 'Priority',
-            'type_id'     => 'Type',
-            'owned_id'    => 'Owner',
-            'title'       => 'Title',
+            'type_id' => 'Type',
+            'owned_id' => 'Owner',
+            'title' => 'Title',
             'description' => 'Description',
-            'start_date'  => 'Start Date',
-            'due_date'    => 'Due Date',
-            'progress'    => 'Progress',
+            'start_date' => 'Start Date',
+            'due_date' => 'Due Date',
+            'progress' => 'Progress',
             'is_archived' => 'Archived',
         ];
     }
@@ -78,7 +78,7 @@ trait LogsActivityTask
         }
 
         return $query->get()->map(function ($activity) use ($labels) {
-            $old        = $activity->properties['old']        ?? [];
+            $old = $activity->properties['old'] ?? [];
             $attributes = $activity->properties['attributes'] ?? [];
 
             // Kumpulkan perubahan field:
@@ -93,7 +93,7 @@ trait LogsActivityTask
 
                 if ($field === 'status_id') {
                     $changedFields[] = [
-                        'field'     => $labels[$field] ?? $field,
+                        'field' => $labels[$field] ?? $field,
                         'old_value' => $oldRaw
                             ? (\App\Models\MsTaskStatus::find($oldRaw)?->name ?? (string) $oldRaw)
                             : null,
@@ -104,7 +104,7 @@ trait LogsActivityTask
                     ];
                 } else {
                     $changedFields[] = [
-                        'field'     => $labels[$field] ?? $field,
+                        'field' => $labels[$field] ?? $field,
                         'old_value' => null,
                         'new_value' => null,
                         'has_value' => false,
@@ -115,8 +115,8 @@ trait LogsActivityTask
             $causer = null;
             if ($activity->causer) {
                 $causer = [
-                    'id'         => $activity->causer->id,
-                    'name'       => $activity->causer->name,
+                    'id' => $activity->causer->id,
+                    'name' => $activity->causer->name,
                     'avatar_url' => method_exists($activity->causer, 'getFirstMediaUrl')
                         ? ($activity->causer->getFirstMediaUrl('avatars') ?: null)
                         : ($activity->causer->avatar_url ?? null),
@@ -124,11 +124,11 @@ trait LogsActivityTask
             }
 
             return [
-                'id'             => $activity->id,
-                'event'          => $activity->event ?? 'updated',
-                'causer'         => $causer,
+                'id' => $activity->id,
+                'event' => $activity->event ?? 'updated',
+                'causer' => $causer,
                 'changed_fields' => $changedFields,
-                'created_at'     => $activity->created_at->toIso8601String(),
+                'created_at' => $activity->created_at->toIso8601String(),
             ];
         });
     }

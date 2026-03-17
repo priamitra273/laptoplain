@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Http\Requests\TaskReport\TaskReportIndexRequest;
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
@@ -28,9 +29,20 @@ class TaskReportController extends Controller
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
-            'project:id,title',
+            'project:id,title,status_id',
+            'project.status:id,name,severity',
         ])
-        ->whereHas('project');
+            ->whereHas('project', function ($query) use ($filters) {
+                if (! empty($filters['project_statuses'])) {
+                    $projectStatuses = is_array($filters['project_statuses'])
+                        ? $filters['project_statuses']
+                        : explode(',', $filters['project_statuses']);
+
+                    $projectStatusIds = array_map(fn ($encoded) => Sqids::decode($encoded), $projectStatuses);
+
+                    $query->whereIn('projects.status_id', $projectStatusIds);
+                }
+            });
 
         $this->applyFilters($query, $filters);
 
@@ -68,6 +80,8 @@ class TaskReportController extends Controller
                 'project' => $task->project ? [
                     'id' => Sqids::encode($task->project->id), // Encode project ID
                     'title' => $task->project->title,
+                    'status_name' => $task->project->status->name,
+                    'severity' => $task->project->status->severity,
                 ] : null,
                 'start_date' => $task->start_date,
                 'due_date' => $task->due_date,
@@ -243,6 +257,16 @@ class TaskReportController extends Controller
 
     private function getFilterOptions()
     {
+        $projectStatuses = MsProjectStatus::select('id', 'name', 'severity')
+            ->get()
+            ->map(function ($projectStatus) {
+                return [
+                    'id' => Sqids::encode($projectStatus->id), // Encode project status ID untuk filter
+                    'name' => $projectStatus->name,
+                    'severity' => $projectStatus->severity,
+                ];
+            });
+
         $creators = User::whereHas('createdTasks')
             ->with('media')
             ->get(['id', 'name'])
@@ -285,6 +309,7 @@ class TaskReportController extends Controller
             });
 
         return [
+            'project_statuses' => $projectStatuses->toArray(),
             'creators' => $creators->toArray(),
             'statuses' => $statuses->toArray(),
             'priorities' => $priorities->toArray(),

@@ -16,6 +16,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 - Placeholder for upcoming bug fixes.
 
+## [0.9.0] - 2026-03-17
+
+### Added
+- Project status filtering in TaskReport (request validation, controller, and Vue component updates). (d91fb08)
+- Restrict task status updates for product owners; update status options in task forms and details. (d25806d)
+- Navigation enhancements in task detail and kanban views (back navigation and query parameter handling). (24a33bb)
+- Global search and status/type filters for task table. (6bb87e6)
+
+### Changed
+- Changelog updated for v0.8.0. (822e449)
+
+### Fixed
+- No notable bug fixes in this release.
+
 ## [0.8.0] - 2026-03-10
 
 ### Added
@@ -154,7 +168,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 Notes:
 - Versions above are organized semantically from historical milestones in `git log`.
-- Latest commit incorporated: `f877f71` (refactor: simplify date formatting in Table component and remove unused validation rule in ProjectStoreRequest).
+- Latest commit incorporated: `d91fb0` (feat: add project status filtering to task report, including updates to request validation, controller logic, and Vue component for enhanced task management).
 - Future releases should increment:
   - `PATCH` for backward-compatible bug fixes,
   - `MINOR` for backward-compatible features,

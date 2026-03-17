@@ -78,12 +78,17 @@ const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
 const authUser = computed(() => usePage().props.auth.user);
+const isProductOwner = computed(() => usePage().props.auth?.role?.startsWith('product-owner-'));
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
 
 const selectedParent = ref<Record<string, boolean> | null>(props.task?.parent_id ? { [props.task.parent_id]: true } : null);
 
 const statusOption = computed(() => {
+    if (isProductOwner.value) {
+        return props.taskStatuses.filter((status) => ['to do', 'complete', 'completed', 'block', 'blocked'].includes(status.name.toLowerCase()));
+    }
+
     return props.isDeveloper ?
         props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) :
         props.taskStatuses

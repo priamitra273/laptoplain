@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Task;
 
 use App\Facades\Sqids;
+use App\Models\MsTaskStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 
@@ -68,6 +69,27 @@ class TaskUpdateRequest extends FormRequest
                 $validator->errors()->add(
                     'due_date',
                     'Due date wajib diisi ketika status ini dipilih.'
+                );
+            }
+
+            $user = $this->user();
+            if (! $user || ! $this->filled('status_id')) {
+                return;
+            }
+
+            $isProductOwner = $user->getRoleNames()->contains(fn ($role) => str_starts_with($role, 'product-owner-'));
+            if (! $isProductOwner) {
+                return;
+            }
+
+            $statusName = (string) optional(MsTaskStatus::find($this->status_id))->name;
+            $normalized = mb_strtolower(trim($statusName));
+            $allowed = ['to do', 'complete', 'completed', 'block', 'blocked'];
+
+            if (! in_array($normalized, $allowed, true)) {
+                $validator->errors()->add(
+                    'status_id',
+                    'Product Owner can only set status to To Do, Complete(d), or Block.'
                 );
             }
         });

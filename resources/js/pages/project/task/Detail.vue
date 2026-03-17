@@ -77,10 +77,15 @@ const page = usePage();
 const commentLoading = ref(false);
 const currentUserId = computed(() => Number(page.props.auth.user.id));
 const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'))
+const isProductOwner = computed(() => page.props.auth?.role?.startsWith('product-owner-'))
 
 const toast = useToast();
 
 const statusOption = computed(() => {
+    if (isProductOwner.value) {
+        return props.statuses.filter((status) => ['to do', 'complete', 'completed', 'block', 'blocked'].includes(status.name.toLowerCase()));
+    }
+
     return isDeveloper.value ?
         props.statuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) :
         props.statuses

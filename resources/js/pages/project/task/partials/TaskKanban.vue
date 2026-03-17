@@ -115,7 +115,7 @@ watch(
                         :key="item.id"
                         class="!rounded-lg border !shadow-none"
                         :class="[draggingItem ? 'cursor-grabbing' : 'cursor-pointer']"
-                        @click="router.get(route('task.show', { encoded: item.id }))"
+                        @click="router.get(route('task.show', { encoded: item.id, from: 'task' }))"
                     >
                         <template #subtitle>
                             <Link :href="route('project.show', item.project?.id)" @click.stop>
@@ -127,7 +127,7 @@ watch(
                         <template #content>
                             <div class="space-y-4">
                                 <div class="break-all">
-                                    <Link :href="route('task.show', item.id)" @click.stop>
+                                    <Link :href="route('task.show', { encoded: item.id, from: 'task' })" @click.stop>
                                     <span class="hover:underline">
                                         {{ item.title }}
                                     </span>

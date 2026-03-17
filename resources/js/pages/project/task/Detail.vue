@@ -136,9 +136,34 @@ const goToProject = () => {
     }
 };
 
+const isFromMyTask = computed(() => {
+    if (typeof window !== 'undefined') {
+        const query = new URLSearchParams(window.location.search);
+        return query.get('from') === 'task';
+    }
+
+    const queryString = page.url.includes('?') ? page.url.split('?')[1] : '';
+    const query = new URLSearchParams(queryString);
+    return query.get('from') === 'task';
+});
+
+const goBack = () => {
+    if (isFromMyTask.value) {
+        router.visit(route('task.index'));
+        return;
+    }
+
+    goToProject();
+};
+
 const goToSubTask = (subTaskId: string) => {
     if (subTaskId) {
-        router.visit(route('task.show', { encoded: subTaskId }));
+        router.visit(
+            route('task.show', {
+                encoded: subTaskId,
+                ...(isFromMyTask.value ? { from: 'task' } : {}),
+            }),
+        );
     }
 };
 
@@ -385,7 +410,7 @@ const submitComment = () => {
                 <template #content>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <Button icon="pi pi-arrow-left" text rounded severity="secondary"
-                            @click="router.visit(route('project.show', { encoded: project.id }))"
+                            @click="goBack"
                             class="hover:bg-surface-100 dark:hover:bg-surface-800" />
                         <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]"
                             @click="goToProject">

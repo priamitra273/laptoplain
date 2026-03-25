@@ -288,24 +288,6 @@ watch(visibleForm, (val) => {
                     </template>
                 </Column>
 
-                <Column field="description" header="Description">
-                    <template #body="{ data }">
-                        <div class="line-clamp-1 max-w-xs overflow-hidden text-ellipsis" v-html="truncateHtmlPreserve(data.description, 20)"></div>
-                    </template>
-
-                    <template v-if="can('project.update')" #editor="{ data, field }">
-                        <Editor v-model="data[field]" editorStyle="height: 200px">
-                            <template #toolbar>
-                                <span class="ql-formats">
-                                    <button class="ql-bold"></button>
-                                    <button class="ql-italic"></button>
-                                    <button class="ql-underline"></button>
-                                </span>
-                            </template>
-                        </Editor>
-                    </template>
-                </Column>
-
                 <Column field="status_id" header="Status" sortable filter-field="status_id" :show-filter-match-modes="false" style="width: 4rem">
                     <template #body="{ data }">
                         <Tag :value="data.status?.name" :severity="data.status?.severity" />
@@ -399,8 +381,10 @@ watch(visibleForm, (val) => {
                                 severity="secondary"
                                 size="small"
                                 :disabled="deleteLoading || !can('project.read')"
-                                @click="router.visit(route('project.show', { encoded: data.id }))"
                                 v-tooltip.bottom="'View Details'"
+                                as="a"
+                                :href="route('project.show', { encoded: data.id })"
+                                target="_blank"
                             />
                             <Button
                                 icon="pi pi-trash"

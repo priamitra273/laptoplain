@@ -30,8 +30,8 @@ export interface TaskTypeOption {
 export interface TaskCategory {
     id: string;
     name: string; // 'Epic' | 'Story' | 'Issue'
-    icon?: string;
-    severity?: number;
+    icon?: string; // e.g., 'pi pi-bolt', 'pi pi-book', 'pi pi-exclamation-circle'
+    severity?: PrimeSeverity; // 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast'
 }
 
 export interface ProjectOptions {

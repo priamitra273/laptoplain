@@ -12,7 +12,7 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
 import moment from 'moment';
-import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { ProjectMember, Tag as TagData, Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
     parentId: string | null;
@@ -22,9 +22,10 @@ interface Props {
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
+    taskCategories?: TaskCategory[]; // ← OPTIONAL dengan default value
     tags: TagData[];
     members: ProjectMember[];
-    isDeveloper: boolean
+    isDeveloper: boolean;
 }
 
 interface Form {
@@ -35,6 +36,7 @@ interface Form {
     type_id: string | null;
     status_id: string | null;
     priority_id: string | null;
+    task_category_id: string | null;
     parent_id: string | null;
     start_date: Date | null;
     due_date: Date | null;
@@ -68,7 +70,9 @@ const toDate = (value?: string | null): Date | null => (value ? new Date(value) 
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    taskCategories: () => [], // ← Default value jika tidak dikirim
+});
 
 const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
@@ -84,9 +88,7 @@ const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.member
 const selectedParent = ref<Record<string, boolean> | null>(props.task?.parent_id ? { [props.task.parent_id]: true } : null);
 
 const statusOption = computed(() => {
-    return props.isDeveloper ?
-        props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) :
-        props.taskStatuses
+    return props.isDeveloper ? props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.taskStatuses;
 });
 
 const collectDescendants = (task: Task): string[] => {
@@ -158,6 +160,7 @@ const form: InertiaForm<Form> = useForm({
     type_id: props?.task?.type?.id ?? null,
     status_id: props?.task?.status?.id ?? null,
     priority_id: props?.task?.priority?.id ?? null,
+    task_category_id: props?.task?.category?.id ?? null,
     parent_id: props?.parentId ?? null,
     start_date: toDate(props?.task?.start_date),
     due_date: toDate(props?.task?.due_date),
@@ -173,13 +176,13 @@ const form: InertiaForm<Form> = useForm({
 });
 
 // =====================
-// Validation
+// Validation (Jira-style: only title is required)
 // =====================
 const validationErrors = ref<Record<string, string>>({});
 
-const isToDoStatus = computed(() => {
+const isInProgressStatus = computed(() => {
     const status = props.taskStatuses.find((s) => s.id === form.status_id);
-    return status?.name?.toLowerCase() === 'to do';
+    return status?.name === 'In Progress';
 });
 
 const validate = (): boolean => {
@@ -189,67 +192,39 @@ const validate = (): boolean => {
         errors.title = 'Title is required.';
     }
 
-    if (!form.status_id) {
-        errors.status_id = 'Status is required.';
-    }
-
-    if (!form.priority_id) {
-        errors.priority_id = 'Priority is required.';
-    }
-
-    if (!form.type_id) {
-        errors.type_id = 'Type is required.';
-    }
-
-    if (!selectedMembers.value.length) {
-        errors.assign_users = 'At least one member must be assigned.';
-    }
-
-    if (!isToDoStatus.value && !form.due_date) {
-        errors.due_date = 'Due date is required for this status.';
+    // Validasi due_date jika status adalah "In Progress"
+    if (isInProgressStatus.value && !form.due_date) {
+        errors.due_date = 'Due date is required when status is In Progress.';
     }
 
     validationErrors.value = errors;
     return Object.keys(errors).length === 0;
 };
 
-// Auto-clear validation errors when fields change
+// Auto-clear validation errors when title changes
 watch(
     () => form.title,
     () => {
         delete validationErrors.value.title;
     },
 );
-watch(
-    () => form.status_id,
-    () => {
-        delete validationErrors.value.status_id;
-    },
-);
-watch(
-    () => form.priority_id,
-    () => {
-        delete validationErrors.value.priority_id;
-    },
-);
-watch(
-    () => form.type_id,
-    () => {
-        delete validationErrors.value.type_id;
-    },
-);
+
+// Auto-clear due_date error when it changes
 watch(
     () => form.due_date,
     () => {
         delete validationErrors.value.due_date;
     },
 );
+
+// Auto-clear due_date error when status changes from In Progress
 watch(
-    selectedMembers,
+    () => form.status_id,
     () => {
-        delete validationErrors.value.assign_users;
+        if (!isInProgressStatus.value) {
+            delete validationErrors.value.due_date;
+        }
     },
-    { deep: true },
 );
 
 // =====================
@@ -437,7 +412,7 @@ const onProgressChange = (val: number | null) => {
     }
 };
 
-const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[]) => {
+const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[] | TaskCategory[]) => {
     return options.find((option) => option.id === id) || null;
 };
 </script>
@@ -464,7 +439,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
         <div>
             <label class="font-semibold">Description</label>
-            <div v-if="isDeveloper" class="p-3 border rounded-md min-h-[200px] bg-surface-50 dark:bg-surface-900" v-html="form.description"></div>
+            <div v-if="isDeveloper" class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900" v-html="form.description"></div>
             <Editor v-else v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
                 <template #toolbar>
                     <span class="ql-formats">
@@ -497,10 +472,49 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <small v-if="form.errors.description" class="p-error text-red-500">{{ form.errors.description }}</small>
         </div>
 
+        <!-- Only show Category field if taskCategories is available -->
+        <div v-if="taskCategories && taskCategories.length > 0" class="flex flex-col">
+            <label class="font-semibold">Category</label>
+            <Select
+                :disabled="isDeveloper"
+                class="w-full"
+                v-model="form.task_category_id"
+                :options="taskCategories"
+                optionValue="id"
+                placeholder="Select Category"
+                showClear
+                :class="{ 'p-invalid': form.errors.task_category_id }"
+            >
+                <template #value="slotProps">
+                    <div v-if="slotProps.value" class="flex items-center gap-2">
+                        <i
+                            v-if="getSelectValue(slotProps.value, taskCategories)?.icon"
+                            :class="getSelectValue(slotProps.value, taskCategories)?.icon"
+                            class="text-lg"
+                        ></i>
+                        <Tag
+                            :value="getSelectValue(slotProps.value, taskCategories)?.name"
+                            :severity="getSelectValue(slotProps.value, taskCategories)?.severity"
+                        />
+                    </div>
+                    <span v-else>{{ slotProps.placeholder }}</span>
+                </template>
+                <template #option="slotProps">
+                    <div class="flex items-center gap-2">
+                        <i v-if="slotProps.option.icon" :class="slotProps.option.icon" class="text-lg"></i>
+                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" class="flex-1" />
+                    </div>
+                </template>
+            </Select>
+            <small v-if="form.errors.task_category_id" class="p-error text-red-500">
+                {{ form.errors.task_category_id }}
+            </small>
+        </div>
+
         <div class="flex flex-col">
-            <label class="font-semibold">Assigned Member <span class="text-red-500">*</span></label>
+            <label class="font-semibold">Assigned Member</label>
             <MultiSelect
-            :disabled="isDeveloper"
+                :disabled="isDeveloper"
                 v-model="selectedMembers"
                 display="chip"
                 :options="formattedMemberOption"
@@ -509,18 +523,14 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 placeholder="Select Member"
                 :maxSelectedLabels="3"
                 class="w-full"
-                :class="{ 'p-invalid': form.errors.assign_users || validationErrors.assign_users }"
             />
-            <small v-if="form.errors.assign_users || validationErrors.assign_users" class="p-error text-red-500">
-                {{ form.errors.assign_users || validationErrors.assign_users }}
-            </small>
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="font-semibold">Start Date</label>
                 <DatePicker
-                :disabled="isDeveloper"
+                    :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.start_date"
                     dateFormat="yy-mm-dd"
@@ -533,7 +543,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">
                     Due Date
-                    <span v-if="!isToDoStatus" class="text-red-500">*</span>
+                    <span v-if="isInProgressStatus" class="text-red-500">*</span>
                 </label>
                 <DatePicker
                     class="w-full"
@@ -551,15 +561,16 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-                <label class="font-semibold">Type <span class="text-red-500">*</span></label>
+                <label class="font-semibold">Type</label>
                 <Select
-                :disabled="isDeveloper"
+                    :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
                     optionValue="id"
                     placeholder="Select Type"
-                    :class="{ 'p-invalid': form.errors.type_id || validationErrors.type_id }"
+                    showClear
+                    :class="{ 'p-invalid': form.errors.type_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -576,20 +587,21 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.type_id || validationErrors.type_id" class="p-error text-red-500">
-                    {{ form.errors.type_id || validationErrors.type_id }}
+                <small v-if="form.errors.type_id" class="p-error text-red-500">
+                    {{ form.errors.type_id }}
                 </small>
             </div>
 
             <div>
-                <label class="font-semibold">Status <span class="text-red-500">*</span></label>
+                <label class="font-semibold">Status</label>
                 <Select
                     class="w-full"
                     v-model="form.status_id"
                     :options="statusOption"
                     optionValue="id"
                     placeholder="Select Status"
-                    :class="{ 'p-invalid': form.errors.status_id || validationErrors.status_id }"
+                    showClear
+                    :class="{ 'p-invalid': form.errors.status_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -606,21 +618,22 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.status_id || validationErrors.status_id" class="p-error text-red-500">
-                    {{ form.errors.status_id || validationErrors.status_id }}
+                <small v-if="form.errors.status_id" class="p-error text-red-500">
+                    {{ form.errors.status_id }}
                 </small>
             </div>
 
             <div>
-                <label class="font-semibold">Priority <span class="text-red-500">*</span></label>
+                <label class="font-semibold">Priority</label>
                 <Select
-                :disabled="isDeveloper"
+                    :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
                     optionValue="id"
                     placeholder="Select Priority"
-                    :class="{ 'p-invalid': form.errors.priority_id || validationErrors.priority_id }"
+                    showClear
+                    :class="{ 'p-invalid': form.errors.priority_id }"
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center">
@@ -637,8 +650,8 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                         </div>
                     </template>
                 </Select>
-                <small v-if="form.errors.priority_id || validationErrors.priority_id" class="p-error text-red-500">
-                    {{ form.errors.priority_id || validationErrors.priority_id }}
+                <small v-if="form.errors.priority_id" class="p-error text-red-500">
+                    {{ form.errors.priority_id }}
                 </small>
             </div>
         </div>
@@ -646,7 +659,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
-            :disabled="isDeveloper"
+                :disabled="isDeveloper"
                 v-model="selectedTags"
                 multiple
                 optionLabel="name"
@@ -669,7 +682,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             <div>
                 <label class="font-semibold">Archived</label>
                 <Select
-                :disabled="isDeveloper"
+                    :disabled="isDeveloper"
                     class="w-full"
                     v-model="form.is_archived"
                     :options="[

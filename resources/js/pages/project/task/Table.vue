@@ -13,8 +13,9 @@ import Tag from 'primevue/tag';
 import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ComputedRef, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
+import type { TaskCategory } from '../task/type';
 
 interface Props {
     projectId: string;
@@ -24,7 +25,8 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
-    isDeveloper: boolean
+    taskCategories?: TaskCategory[];
+    isDeveloper: boolean;
 }
 
 const props = defineProps<Props>();
@@ -39,12 +41,9 @@ const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 const expandedKeys = ref<{ [key: string]: boolean }>({});
 
-// Filter refs
 const selectedStatuses = ref<string[]>([]);
-// const selectedPriorities = ref<string[]>([]);
 const selectedTypes = ref<string[]>([]);
 
-// Activity modal state
 const activityModal = ref({
     visible: false,
     taskId: '',
@@ -83,16 +82,9 @@ const formatDate = (date: string | null | undefined): string => {
     return moment(date).format('DD MMM YYYY');
 };
 
-const getInitials = (name: string) =>
-    name
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-
 const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
+// ─── Pure function, tidak ada side effects ────────────────────────────────────
 const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
@@ -100,57 +92,68 @@ const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
         original: t,
         data: {
             id: t.id,
-            parent_id: t.parent_id,
+            parent_id: t.parent_id ?? null,
             title: t.title,
-            status: t.status,
-            priority: t.priority,
-            type: t.type,
-            progress: Number(t.progress) ?? 0,
+            status: t.status ?? null,
+            priority: t.priority ?? null,
+            type: t.type ?? null,
+            category: t.category ?? null,
+            progress: Number(t.progress) || 0,
             users: t.users || [],
-            start_date: t.start_date,
-            due_date: t.due_date,
-            created_by: t.created_by,
-            completed_at: t.completed_at,
-            is_overdue: t.is_overdue,
+            start_date: t.start_date ?? null,
+            due_date: t.due_date ?? null,
+            created_by: t.created_by ?? null,
+            completed_at: t.completed_at ?? null,
+            is_overdue: t.is_overdue ?? false,
             level,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive, level + 1) : [],
     }));
 };
 
+// ─── FIX: Gunakan ref + watch instead of computed untuk menghindari recursive update ───
+const formattedTasks = ref<TaskFormatted[]>([]);
+
+watch(
+    () => props.tasks,
+    (tasks) => {
+        if (!tasks || !Array.isArray(tasks)) {
+            formattedTasks.value = [];
+            return;
+        }
+
+        const sorted = [...formatTasks(tasks)].sort((a, b) => {
+            const dateA = new Date(a.original.updated_at || a.original.created_at || 0).getTime();
+            const dateB = new Date(b.original.updated_at || b.original.created_at || 0).getTime();
+            return dateB - dateA;
+        });
+
+        formattedTasks.value = sorted;
+    },
+    { immediate: true, deep: false },
+);
+
+// ─── Filter tetap pakai computed tapi sumbernya dari ref, bukan props langsung ──
 const statusOptions = computed(() => props.taskStatuses ?? []);
-// const priorityOptions = computed(() => props.taskPriorities ?? []);
 const typeOptions = computed(() => props.taskTypes ?? []);
 
 const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
     const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
     const matchesStatus =
-        !selectedStatuses.value ||
-        selectedStatuses.value.length === 0 ||
-        (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
-    // const matchesPriority =
-    //     !selectedPriorities.value ||
-    //     selectedPriorities.value.length === 0 ||
-    //     (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
-    const matchesType =
-        !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
+        selectedStatuses.value.length === 0 || (task.data.status?.name != null && selectedStatuses.value.includes(task.data.status.name));
+    const matchesType = selectedTypes.value.length === 0 || (task.data.type?.name != null && selectedTypes.value.includes(task.data.type.name));
 
-    const currentMatches = matchesSearch && matchesStatus && /* matchesPriority && */ matchesType;
-    const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
+    const currentMatches = matchesSearch && matchesStatus && matchesType;
+    const hasMatchingChildren = task.children?.some((child) => filterTaskRecursive(child, query)) ?? false;
     return currentMatches || hasMatchingChildren;
 };
 
-const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-    let tasks = formatTasks(props.tasks);
-    tasks = tasks.sort((a, b) => {
-        const dateA = new Date(a.original.updated_at || a.original.created_at).getTime();
-        const dateB = new Date(b.original.updated_at || b.original.created_at).getTime();
-        return dateB - dateA;
-    });
+const filteredTasks = computed(() => {
     const query = searchQuery.value.toLowerCase();
-    tasks = tasks.filter((task) => filterTaskRecursive(task, query));
-    return tasks;
+    if (!query && selectedStatuses.value.length === 0 && selectedTypes.value.length === 0) {
+        return formattedTasks.value;
+    }
+    return formattedTasks.value.filter((task) => filterTaskRecursive(task, query));
 });
 
 const isAllSelected = computed(() => {
@@ -167,27 +170,18 @@ const isAllSelected = computed(() => {
 const hasSelectedTasks = computed(() => Object.keys(selectedKey.value).length > 0);
 
 const hasActiveFilters = computed(() => {
-    return (
-        searchQuery.value !== '' ||
-        (selectedStatuses.value && selectedStatuses.value.length > 0) ||
-        // (selectedPriorities.value && selectedPriorities.value.length > 0) ||
-        (selectedTypes.value && selectedTypes.value.length > 0)
-    );
+    return searchQuery.value !== '' || selectedStatuses.value.length > 0 || selectedTypes.value.length > 0;
 });
 
 const clearFilters = () => {
     searchQuery.value = '';
     selectedStatuses.value = [];
-    // selectedPriorities.value = [];
     selectedTypes.value = [];
 };
 
 const handleClearStatuses = () => {
     selectedStatuses.value = [];
 };
-// const handleClearPriorities = () => {
-//     selectedPriorities.value = [];
-// };
 const handleClearTypes = () => {
     selectedTypes.value = [];
 };
@@ -205,26 +199,20 @@ const remove = (t: Task) => {
         rejectLabel: 'Cancel',
         accept: () => {
             deleteLoading.value = true;
-
             router.delete(
                 route('project.tasks.destroy', {
                     projectEncoded: props.projectId,
-                    taskEncoded: t.id
+                    taskEncoded: t.id,
                 }),
                 {
                     preserveScroll: true,
                     onError: () => {
-                        toast.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete task',
-                            life: 3000
-                        });
+                        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
                     },
                     onFinish: () => {
                         deleteLoading.value = false;
                     },
-                }
+                },
             );
         },
     });
@@ -250,7 +238,6 @@ const selectAll = () => {
 
 const clearSelection = () => {
     selectedKey.value = {};
-    selectedKey.value = { ...selectedKey.value };
 };
 
 const removeSelected = () => {
@@ -273,7 +260,6 @@ const removeSelected = () => {
                 });
             });
             selectedKey.value = {};
-            selectedKey.value = { ...selectedKey.value };
             toast.add({ severity: 'success', summary: 'Success', detail: `${ids.length} tasks deleted successfully`, life: 3000 });
         },
     });
@@ -282,8 +268,7 @@ const removeSelected = () => {
 const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     if (props.hasPermission) return true;
     const taskUsers: TaskUser[] = task.users || [];
-    const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
-    return isMember;
+    return taskUsers.some((tu) => tu.id === currentUser.id);
 };
 
 const clearAutoExpandSchedule = () => {
@@ -300,7 +285,6 @@ const scheduleAutoExpand = (node: TaskFormatted) => {
         clearAutoExpandSchedule();
         return;
     }
-
     if (autoExpandTargetKey.value === node.key && autoExpandTimerId.value) return;
     clearAutoExpandSchedule();
     autoExpandTargetKey.value = node.key;
@@ -336,7 +320,6 @@ const findTaskById = (list: Task[], taskId: string): Task | null => {
 const isDescendant = (sourceId: string, targetId: string): boolean => {
     const source = findTaskById(props.tasks, sourceId);
     if (!source) return false;
-
     const walk = (nodes: Task[]): boolean => {
         for (const n of nodes) {
             if (n.id === targetId) return true;
@@ -344,7 +327,6 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
         }
         return false;
     };
-
     return walk(source.sub_task_recursive || []);
 };
 
@@ -354,19 +336,15 @@ const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
         event.preventDefault();
         return;
     }
-
     onPointerDragStart(node);
     draggedTaskId.value = node.key;
     dropTargetTaskId.value = null;
     if (event.dataTransfer) {
-        // Use multiple MIME keys because browsers handle drag payload types differently.
         event.dataTransfer.setData(TASK_DRAG_TEXT_MIME, node.key);
         event.dataTransfer.setData(TASK_DRAG_LEGACY_TEXT_MIME, node.key);
         try {
             event.dataTransfer.setData(TASK_DRAG_MIME, node.key);
-        } catch {
-            // Some browsers reject custom MIME types, built-in text keys are still enough.
-        }
+        } catch {}
         event.dataTransfer.effectAllowed = 'move';
     }
 };
@@ -378,17 +356,13 @@ const onHandleDragEnd = () => {
 const getDraggedTaskIdFromEvent = (event: DragEvent): string | null => {
     const transfer = event.dataTransfer;
     if (!transfer) return draggedTaskId.value;
-
     const candidates = [TASK_DRAG_MIME, TASK_DRAG_TEXT_MIME, TASK_DRAG_LEGACY_TEXT_MIME];
     for (const mime of candidates) {
         try {
             const value = transfer.getData(mime)?.trim();
             if (value) return value;
-        } catch {
-            // Ignore unsupported MIME reads and continue with next fallback.
-        }
+        } catch {}
     }
-
     return draggedTaskId.value;
 };
 
@@ -405,23 +379,17 @@ const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
     if (!hasTaskDragPayload(event)) return;
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (sourceTaskId && targetNode.key === sourceTaskId) return;
-
     event.preventDefault();
-    if (!draggedTaskId.value) {
-        draggedTaskId.value = sourceTaskId;
-    }
+    if (!draggedTaskId.value) draggedTaskId.value = sourceTaskId;
     pointerOnRootDropzone.value = false;
     dropTargetTaskId.value = targetNode.key;
-    if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-    }
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     scheduleAutoExpand(targetNode);
 };
 
 const updateTaskParent = async (taskId: string, parentId: string | null) => {
     if (updateParentLoading.value) return;
     updateParentLoading.value = true;
-
     try {
         await axios.put(
             route('project.tasks.parent.update', {
@@ -430,23 +398,11 @@ const updateTaskParent = async (taskId: string, parentId: string | null) => {
             }),
             { parent_id: parentId },
         );
-
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Task parent updated successfully.',
-            life: 2200,
-        });
-
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Task parent updated successfully.', life: 2200 });
         router.reload();
     } catch (error: any) {
         const message = error?.response?.data?.message || 'Failed to update task parent.';
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: message,
-            life: 3000,
-        });
+        toast.add({ severity: 'error', summary: 'Error', detail: message, life: 3000 });
     } finally {
         updateParentLoading.value = false;
         resetDragState();
@@ -458,23 +414,15 @@ const moveTaskWithValidation = async (sourceTaskId: string | null, targetTaskId:
         resetDragState();
         return;
     }
-
     if (targetTaskId && sourceTaskId === targetTaskId) {
         resetDragState();
         return;
     }
-
     if (targetTaskId && isDescendant(sourceTaskId, targetTaskId)) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Invalid move',
-            detail: 'Cannot move task under its own descendant.',
-            life: 2500,
-        });
+        toast.add({ severity: 'warn', summary: 'Invalid move', detail: 'Cannot move task under its own descendant.', life: 2500 });
         resetDragState();
         return;
     }
-
     await updateTaskParent(sourceTaskId, targetTaskId);
 };
 
@@ -491,12 +439,9 @@ const onRootDragOver = (event: DragEvent) => {
     const target = event.target as Element | null;
     const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
     if (insideTaskRow) return;
-
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     event.preventDefault();
-    if (!draggedTaskId.value && sourceTaskId) {
-        draggedTaskId.value = sourceTaskId;
-    }
+    if (!draggedTaskId.value && sourceTaskId) draggedTaskId.value = sourceTaskId;
     pointerOnRootDropzone.value = true;
     dropTargetTaskId.value = null;
     clearAutoExpandSchedule();
@@ -523,9 +468,7 @@ const cancelPointerHold = () => {
         holdTimerId.value = null;
     }
     holdCandidateTaskId.value = null;
-    if (!pointerDraggedTaskId.value) {
-        dragArmedTaskId.value = null;
-    }
+    if (!pointerDraggedTaskId.value) dragArmedTaskId.value = null;
 };
 
 const onPointerHoldStart = (node: TaskFormatted) => {
@@ -581,10 +524,45 @@ const onGlobalMouseUp = () => {
     cancelPointerHold();
 };
 
+// ─── Category styling ─────────────────────────────────────────────────────────
+const severityColorMap: Record<string, { bg: string; text: string; border: string }> = {
+    primary: { bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' },
+    secondary: { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' },
+    success: { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
+    info: { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
+    warn: { bg: '#fef9c3', text: '#a16207', border: '#fde68a' },
+    danger: { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' },
+    contrast: { bg: '#1e293b', text: '#f8fafc', border: '#334155' },
+};
+
+const DEFAULT_CATEGORY_STYLE = severityColorMap['secondary'];
+
+// Full badge style (kept for backward compat if needed elsewhere)
+const getCategoryStyle = (category: TaskCategory) => {
+    if (!category) return DEFAULT_CATEGORY_STYLE;
+    const colors = severityColorMap[category.severity ?? ''] ?? DEFAULT_CATEGORY_STYLE;
+    return {
+        backgroundColor: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+    };
+};
+
+// Icon-only style — Jira style: small square chip with bg color, icon only
+const getCategoryIconStyle = (category: TaskCategory) => {
+    if (!category) return {};
+    const colors = severityColorMap[category.severity ?? ''] ?? DEFAULT_CATEGORY_STYLE;
+    return {
+        backgroundColor: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '4px',
+    };
+};
+
 onMounted(() => {
     window.addEventListener('mouseup', onGlobalMouseUp);
 });
-
 onBeforeUnmount(() => {
     window.removeEventListener('mouseup', onGlobalMouseUp);
 });
@@ -592,7 +570,6 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Header with buttons -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 class="text-lg font-semibold">Tasks</h3>
             <div class="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -616,7 +593,6 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <!-- Filters Section -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Search</label>
@@ -645,31 +621,6 @@ onBeforeUnmount(() => {
                     </template>
                 </MultiSelect>
             </div>
-            <!-- Priority Filter (commented out)
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Priority</label>
-                <MultiSelect
-                    v-model="selectedPriorities"
-                    :options="priorityOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Priority"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearPriorities"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-            -->
             <div class="w-full">
                 <label class="mb-2 block text-sm font-medium">Type</label>
                 <MultiSelect
@@ -695,17 +646,18 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <!-- Clear Filters Button -->
         <div v-if="hasActiveFilters" class="flex justify-end">
             <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
         </div>
 
-        <!-- TreeTable -->
-        <div class="overflow-x-auto" :class="isRootDropActive
-                ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
-                : isDraggingTask
-                    ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
-                    : 'transition-colors'
+        <div
+            class="overflow-x-auto"
+            :class="
+                isRootDropActive
+                    ? 'rounded-lg border-2 border-dashed border-emerald-400 bg-emerald-50/60 p-1 transition-colors dark:border-emerald-500/80 dark:bg-emerald-950/35'
+                    : isDraggingTask
+                      ? 'rounded-lg border border-dashed border-blue-300/80 bg-blue-50/40 p-1 transition-colors dark:border-blue-700/70 dark:bg-blue-950/20'
+                      : 'transition-colors'
             "
             @dragover.prevent="onRootDragOver"
             @dragenter.prevent="onRootDragOver"
@@ -714,7 +666,6 @@ onBeforeUnmount(() => {
             @mouseleave="onPointerRootLeave"
         >
             <TreeTable v-model:expandedKeys="expandedKeys" :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
-                <!-- Checkbox Column -->
                 <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
@@ -723,21 +674,20 @@ onBeforeUnmount(() => {
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
                             @update:modelValue="
-                            (value) => {
-                                if (value) {
-                                    selectedKey[node.key] = { checked: true, partialChecked: false };
-                                } else {
-                                    delete selectedKey[node.key];
+                                (value) => {
+                                    if (value) {
+                                        selectedKey[node.key] = { checked: true, partialChecked: false };
+                                    } else {
+                                        delete selectedKey[node.key];
+                                    }
+                                    selectedKey = { ...selectedKey };
                                 }
-                                selectedKey = { ...selectedKey };
-                            }
                             "
                             binary
                         />
                     </template>
                 </Column>
 
-                <!-- Title Column -->
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
                         <div
@@ -749,6 +699,22 @@ onBeforeUnmount(() => {
                             @drop.stop.prevent="onRowDrop($event, node)"
                             @mouseenter="onPointerRowEnter(node)"
                         >
+                            <!-- Category icon — Jira style: icon-only chip with tooltip -->
+                            <span
+                                v-if="node.data.category?.id"
+                                v-tooltip.top="node.data.category.name"
+                                class="inline-flex shrink-0 cursor-default items-center justify-center"
+                                style="width: 20px; height: 20px; border-radius: 4px"
+                                :style="getCategoryIconStyle(node.data.category)"
+                            >
+                                <i v-if="node.data.category.icon" :class="node.data.category.icon" class="text-[11px]"></i>
+                                <span v-else class="text-[10px] font-bold leading-none">
+                                    {{ node.data.category.name?.charAt(0)?.toUpperCase() }}
+                                </span>
+                            </span>
+                            <!-- Placeholder so title stays aligned when no category -->
+                            <span v-else class="inline-block shrink-0" style="width: 20px; height: 20px"></span>
+
                             <div
                                 :title="node.data.title"
                                 class="max-w-[150px] select-none truncate text-ellipsis rounded px-1 py-0.5"
@@ -777,14 +743,6 @@ onBeforeUnmount(() => {
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
-
-                <!-- Priority Column (commented out)
-                <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
-                    <template #body="{ node }">
-                        <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
-                    </template>
-                </Column>
-                -->
 
                 <Column field="type.name" header="Type" style="min-width: 120px" sortable>
                     <template #body="{ node }">
@@ -816,36 +774,6 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <!-- Created Column
-                <Column header="Created" style="min-width: 90px">
-                    <template #body="{ node }">
-                        <div v-if="node.original.creator" class="flex items-center gap-2">
-                            <Avatar
-                                :image="
-                                    node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
-                                    ? node.original.creator.avatar_url
-                                    : undefined
-                                "
-                                :label="
-                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
-                                        ? getInitials(node.original.creator.name)
-                                        : undefined
-                                "
-                                shape="circle"
-                                size="small"
-                                :style="
-                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
-                                        ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
-                                        : {}
-                                "
-                                v-tooltip.bottom="node.original.creator.name"
-                            />
-                        </div>
-                        <span v-else class="text-sm text-gray-400">-</span>
-                    </template>
-                </Column> -->
-
-                <!-- Actions Column -->
                 <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
@@ -857,7 +785,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="info"
                                 v-tooltip.top="'Add Subtask'"
-                                :disabled="(deleteLoading || (!isMember && !hasPermission)) || isDeveloper"
+                                :disabled="deleteLoading || (!isMember && !hasPermission) || isDeveloper"
                                 @click="emit('add', node.data.id)"
                             />
                             <Button
@@ -872,7 +800,7 @@ onBeforeUnmount(() => {
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
-                                v-tooltip.top="'Deleted'"
+                                v-tooltip.top="'Delete'"
                                 :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="remove(node.original)"
                             />
@@ -893,7 +821,6 @@ onBeforeUnmount(() => {
             </TreeTable>
         </div>
 
-        <!-- Activity Log Modal — milik TaskTable, di sini tempatnya -->
         <TaskActivityLogModal v-model:visible="activityModal.visible" :taskId="activityModal.taskId" :taskTitle="activityModal.taskTitle" />
     </div>
 </template>

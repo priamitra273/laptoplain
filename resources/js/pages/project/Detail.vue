@@ -647,6 +647,7 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                         :taskStatuses="taskStatuses"
                                         :taskPriorities="taskPriorities"
                                         :taskTypes="taskTypes"
+                                        :taskCategories="taskCategories"
                                         :isDeveloper="isDeveloper"
                                     />
                                 </div>
@@ -799,6 +800,7 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                 :members="formattedMembers"
                 :isMember="isMember"
                 :isDeveloper="isDeveloper"
+                :taskCategories="taskCategories"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;

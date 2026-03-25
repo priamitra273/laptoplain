@@ -33,6 +33,7 @@ class Task extends Model
         'is_archived',
         'project_id',
         'completed_at',
+        'task_category_id',
     ];
 
     protected $hidden = ['children'];
@@ -42,7 +43,6 @@ class Task extends Model
         parent::boot();
 
         static::deleting(function (Task $task) {
-
             if (! $task->isForceDeleting()) {
                 foreach ($task->children as $child) {
                     $child->delete();
@@ -73,7 +73,6 @@ class Task extends Model
         return $this->belongsTo(Task::class, 'parent_id');
     }
 
-
     public function children()
     {
         return $this->hasMany(Task::class, 'parent_id');
@@ -89,18 +88,15 @@ class Task extends Model
         return $this->belongsTo(MsTaskPriority::class, 'priority_id');
     }
 
-
     public function type()
     {
         return $this->belongsTo(MsTaskType::class, 'type_id');
     }
 
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
 
     public function updater()
     {
@@ -136,7 +132,6 @@ class Task extends Model
             ->withTrashed();
     }
 
-
     public function comments()
     {
         return $this->morphMany(Comment::class, 'commentable');
@@ -154,9 +149,20 @@ class Task extends Model
             ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
     }
 
+    // ← FIX: tambah eager load category dan relasi lainnya
     public function subTaskRecursive()
     {
-        return $this->children()->with('subTaskRecursive');
+        return $this->children()->with([
+            'subTaskRecursive',
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'category:id,name,icon,severity',
+            'users:id,name',
+            'tags:id,name,severity',
+            'creator:id,name',
+            'creator.media',
+        ]);
     }
 
     public function getSubTaskAttribute()
@@ -171,6 +177,7 @@ class Task extends Model
                 'status:id,name,severity',
                 'priority:id,name,severity',
                 'type:id,name,severity',
+                'category:id,name,icon,severity',
                 'users:id,name',
                 'tags:id,name,severity',
                 'creator:id,name',
@@ -232,7 +239,6 @@ class Task extends Model
             ->whereDoesntHave('sprints');
     }
 
-    // Epics: root level
     public function scopeEpics($query)
     {
         return $query->whereHas('category', fn($q) => $q->where('name', 'Epic'))

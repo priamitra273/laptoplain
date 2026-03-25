@@ -15,6 +15,7 @@ use App\Models\MsTaskType;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
+use App\Models\TaskCategory;
 use App\Services\TaskService;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -35,6 +36,7 @@ class TaskController extends Controller
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
+            'category:id,name,icon,severity',
             'project:id,title',
             'tags:id,name,severity',
             'subTaskRecursive',
@@ -62,6 +64,7 @@ class TaskController extends Controller
         $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
         $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
         $types = MsTaskType::select('id', 'name', 'severity')->get();
+        $categories = TaskCategory::select('id', 'name', 'icon', 'severity')->get();
         $projects = Project::visibleFor(Auth::user())
             ->select('id', 'title')
             ->get();
@@ -71,6 +74,7 @@ class TaskController extends Controller
             'statuses' => $statuses->toArray(),
             'priorities' => $priorities->toArray(),
             'types' => $types->toArray(),
+            'categories' => $categories->toArray(),
             'projects' => $projects->toArray(),
             'totalAssigned' => $totalAssigned,
         ];
@@ -109,7 +113,8 @@ class TaskController extends Controller
 
         $assignUserIds = $validated['assign_users'] ?? [];
 
-        if (! in_array(Auth::id(), $assignUserIds)) {
+        // Auto-assign current user if not in list
+        if (!empty($assignUserIds) && !in_array(Auth::id(), $assignUserIds)) {
             $assignUserIds[] = Auth::id();
         }
 
@@ -124,8 +129,13 @@ class TaskController extends Controller
             $addTagNew[] = $tag->id;
         }
 
-        $taskStatus = MsTaskStatus::find($validated['status_id']);
-        $progress = $taskStatus ? $taskStatus->score : 0;
+        // Set default progress based on status
+        if (isset($validated['status_id'])) {
+            $taskStatus = MsTaskStatus::find($validated['status_id']);
+            $progress = $taskStatus ? $taskStatus->score : 0;
+        } else {
+            $progress = 0;
+        }
         $validated['progress'] = $progress;
 
         unset($validated['assign_users'], $validated['add_tag']);
@@ -179,7 +189,6 @@ class TaskController extends Controller
                 'status:id,name,severity',
                 'priority:id,name,severity',
                 'type:id,name,severity',
-
                 'users:id,name',
                 'users.media',
 
@@ -189,9 +198,9 @@ class TaskController extends Controller
                 'subTaskRecursive.status:id,name,severity',
                 'subTaskRecursive.priority:id,name,severity',
                 'subTaskRecursive.type:id,name,severity',
+                'subTaskRecursive.category:id,name,icon,severity',
                 'subTaskRecursive.users:id,name',
-
-                'creator:id,name',
+                'creator:id,name', // Add creator relationship
                 'creator.media',
                 'comments' => function ($query) {
                     $query->whereNull('parent_id')
@@ -273,10 +282,11 @@ class TaskController extends Controller
             'project' => $project->toArray(),
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
-            'creator' => $creator, // Add creator to response
+            'creator' => $creator,
             'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
+            'categories' => TaskCategory::select('id', 'name', 'icon', 'severity')->get()->toArray(),
             'isTaskMember' => $isTaskMember,
             'isOwner' => $isOwner,
             'comments' => $task->comments?->toArray() ?? [],

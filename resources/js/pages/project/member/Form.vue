@@ -71,8 +71,8 @@ const save = () => {
         <InputError :message="form.errors?.project_role_id" />
 
         <div class="mt-4 flex justify-end gap-2">
-            <Button label="Cancel" severity="secondary" @click="emit('close')" />
-            <Button label="Save" icon="pi pi-check" @click="save" />
+            <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
+            <Button label="Save" icon="pi pi-check" @click="save" :disabled="form.processing" :loading="form.processing" />
         </div>
     </div>
 </template>

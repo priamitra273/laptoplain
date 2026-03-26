@@ -54,9 +54,9 @@ const grouped = ref<Record<string, Task[]>>({});
 const draggingItem = ref(false);
 const draggingTaskId = ref<string | null>(null);
 const searchQuery = ref('');
-const filterAssignee = ref<string | null>(null);
-const filterPriority = ref<string | null>(null);
-const filterType = ref<string | null>(null);
+const filterAssignee = ref<string[]>([]);
+const filterPriority = ref<string[]>([]);
+const filterType = ref<string[]>([]);
 const collapsedCols = ref<Set<string>>(new Set());
 const preDragSnapshot = ref<Record<string, Task[]> | null>(null);
 
@@ -133,16 +133,18 @@ const filteredGrouped = computed(() => {
     for (const [sid, tasks] of Object.entries(grouped.value)) {
         result[sid] = tasks.filter((t) => {
             const matchQ = !q || t.title.toLowerCase().includes(q);
-            const matchA = !filterAssignee.value || (t.users || []).some((u) => u.id === filterAssignee.value);
-            const matchP = !filterPriority.value || t.priority?.id === filterPriority.value;
-            const matchT = !filterType.value || t.type?.id === filterType.value;
+            const matchA = !filterAssignee.value.length || (t.users || []).some((u) => filterAssignee.value.includes(u.id));
+            const matchP = !filterPriority.value.length || filterPriority.value.includes(t.priority?.id ?? '');
+            const matchT = !filterType.value.length || filterType.value.includes(t.type?.id ?? '');
             return matchQ && matchA && matchP && matchT;
         });
     }
     return result;
 });
 
-const hasActiveFilter = computed(() => !!searchQuery.value || !!filterAssignee.value || !!filterPriority.value || !!filterType.value);
+const hasActiveFilter = computed(
+    () => !!searchQuery.value || filterAssignee.value.length > 0 || filterPriority.value.length > 0 || filterType.value.length > 0,
+);
 
 const totalTasks = computed(() => props.tasks.length);
 const doneTasks = computed(() => {
@@ -297,6 +299,19 @@ const onGroupChange = async (task: Task, newStatusId: string) => {
     }
 
     await doStatusUpdate(task, newStatusId, null);
+};
+
+// Drag Start
+const onDragStart = (e: any) => {
+    draggingItem.value = true;
+    draggingTaskId.value = e.item?.dataset?.taskId || null;
+
+    const snapshot: Record<string, Task[]> = {};
+    for (const [sid, tasks] of Object.entries(grouped.value)) {
+        snapshot[sid] = [...tasks];
+    }
+
+    preDragSnapshot.value = snapshot;
 };
 
 /** Perform the actual API call, optionally with a due_date */
@@ -461,9 +476,9 @@ const openCardMenu = (e: MouseEvent, task: Task) => {
 // ─── Filters ─────────────────────────────────────────────────────────────────
 const clearFilters = () => {
     searchQuery.value = '';
-    filterAssignee.value = null;
-    filterPriority.value = null;
-    filterType.value = null;
+    filterAssignee.value = [];
+    filterPriority.value = [];
+    filterType.value = [];
 };
 </script>
 
@@ -481,10 +496,10 @@ const clearFilters = () => {
                 <button
                     v-for="u in allAssignees.slice(0, 5)"
                     :key="u.id"
-                    @click="filterAssignee = filterAssignee === u.id ? null : u.id"
+                    @click="filterAssignee = filterAssignee.includes(u.id) ? filterAssignee.filter((id) => id !== u.id) : [...filterAssignee, u.id]"
                     class="rounded-full transition-all"
                     :title="u.name"
-                    :class="filterAssignee === u.id ? 'ring-2 ring-blue-500 ring-offset-1' : 'opacity-70 hover:opacity-100'"
+                    :class="filterAssignee.includes(u.id) ? 'ring-2 ring-blue-500 ring-offset-1' : 'opacity-70 hover:opacity-100'"
                 >
                     <Avatar
                         :image="u.avatar_url && u.avatar_url !== '/images/default-avatar.png' ? u.avatar_url : undefined"
@@ -502,10 +517,10 @@ const clearFilters = () => {
                 <button
                     v-for="p in taskPriorities"
                     :key="p.id"
-                    @click="filterPriority = filterPriority === p.id ? null : p.id"
+                    @click="filterPriority = filterPriority.includes(p.id) ? filterPriority.filter((id) => id !== p.id) : [...filterPriority, p.id]"
                     class="flex h-7 items-center gap-1 rounded-full border px-2 text-xs transition-all"
                     :class="
-                        filterPriority === p.id
+                        filterPriority.includes(p.id)
                             ? 'border-blue-400 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
                             : 'border-surface-200 bg-white text-surface-600 hover:border-surface-300 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400'
                     "
@@ -519,10 +534,10 @@ const clearFilters = () => {
                 <button
                     v-for="tp in taskTypes"
                     :key="tp.id"
-                    @click="filterType = filterType === tp.id ? null : tp.id"
+                    @click="filterType = filterType.includes(tp.id) ? filterType.filter((id) => id !== tp.id) : [...filterType, tp.id]"
                     class="h-7 rounded-full border px-2 text-xs transition-all"
                     :class="
-                        filterType === tp.id
+                        filterType.includes(tp.id)
                             ? 'border-blue-400 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
                             : 'border-surface-200 bg-white text-surface-600 hover:border-surface-300 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400'
                     "
@@ -764,19 +779,7 @@ const clearFilters = () => {
                         ghostClass="kanban-ghost"
                         group="kanban"
                         @add="(e: DraggableEvent<Task>) => onGroupChange(e.data, statusId)"
-                        @start="
-                            (e: any) => {
-                                draggingItem = true;
-                                draggingTaskId = e.item?.dataset?.taskId || null;
-
-                                const snapshot: Record<string, Task[]> = {};
-                                for (const [sid, tasks] of Object.entries(grouped)) {
-                                    snapshot[sid] = [...tasks];
-                                }
-
-                                preDragSnapshot = snapshot;
-                            }
-                        "
+                        @start="onDragStart"
                         @end="
                             () => {
                                 draggingItem = false;

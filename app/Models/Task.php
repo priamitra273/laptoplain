@@ -29,6 +29,7 @@ class Task extends Model
         'start_date',
         'due_date',
         'progress',
+        'story_points',
         'sequence_number',
         'is_archived',
         'project_id',

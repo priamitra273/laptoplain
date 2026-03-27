@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
@@ -26,15 +28,11 @@ import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
+import BacklogBoard from './task/Backlog.vue';
 import TaskForm from './task/Form.vue';
-import TaskTable from './task/Table.vue';
-
-import BacklogBoard from './task/Backlog.vue'; // ✅ BARU
 import KanbanBoard from './task/partials/TaskKanbanBoard.vue';
-
-import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
-import 'emoji-mart-vue-fast/css/emoji-mart.css';
-import type { Sprint, TaskCategory } from './task/type'; // ✅ BARU
+import TaskTable from './task/Table.vue';
+import type { Sprint, TaskCategory } from './task/type';
 
 interface User {
     id: string;
@@ -45,6 +43,13 @@ interface User {
 
 interface MemberWithAvatar extends ProjectMember {
     user: User;
+}
+
+// ─── Tambah Epic interface ─────────────────────────────────────────
+interface Epic {
+    id: string;
+    title: string;
+    story_points?: number | null;
 }
 
 interface Props {
@@ -67,21 +72,18 @@ interface Props {
     members: MemberWithAvatar[];
     roles: { id: string; name: string }[];
     users: User[];
-
     tasks: Task[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     tags: TagData[];
     assignableUsers: User[];
-
     statuses?: { id: string; name: string; severity?: string }[];
     priorities?: { id: string; name: string; severity?: string }[];
-
-    // ✅ BARU — props untuk tab Backlog
     sprints: Sprint[];
     backlog: Task[];
     taskCategories: TaskCategory[];
+    epics: Epic[]; // ← BARU
 }
 
 const props = defineProps<Props>();
@@ -105,10 +107,8 @@ const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
 const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
-
 const parentTaskId = ref<string | null>(null);
 
-// Edit mode states
 const editMode = ref({
     title: false,
     status: false,
@@ -118,19 +118,15 @@ const editMode = ref({
     description: false,
 });
 
-// Local state for editable fields
 const localProject = ref({ ...props.project });
-
 let emojiIndex = new EmojiIndex(emojiData);
 
-// Refs untuk click outside detection
 const titleInputRef = ref<HTMLElement | null>(null);
 const statusDropdownRef = ref<HTMLElement | null>(null);
 const priorityDropdownRef = ref<HTMLElement | null>(null);
 const startDatePickerRef = ref<HTMLElement | null>(null);
 const dueDatePickerRef = ref<HTMLElement | null>(null);
 
-// Event listeners storage
 const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
 
 watch(
@@ -144,7 +140,6 @@ watch(
 const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) => {
     const existingListener = clickOutsideListeners.get(field);
     if (existingListener) document.removeEventListener('click', existingListener);
-
     const listener = (event: MouseEvent) => {
         const element = elementRef.value;
         const target = event.target as Node;
@@ -152,7 +147,6 @@ const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) 
         const domElement = element.$el || element;
         if (domElement && !domElement.contains(target)) cancelEdit(field);
     };
-
     clickOutsideListeners.set(field, listener);
     setTimeout(() => document.addEventListener('click', listener), 100);
 };
@@ -167,27 +161,27 @@ const removeClickOutside = (field: keyof typeof editMode.value) => {
 
 watch(
     () => editMode.value.title,
-    (isActive) => (isActive ? setupClickOutside('title', titleInputRef) : removeClickOutside('title')),
+    (v) => (v ? setupClickOutside('title', titleInputRef) : removeClickOutside('title')),
 );
 watch(
     () => editMode.value.status,
-    (isActive) => (isActive ? setupClickOutside('status', statusDropdownRef) : removeClickOutside('status')),
+    (v) => (v ? setupClickOutside('status', statusDropdownRef) : removeClickOutside('status')),
 );
 watch(
     () => editMode.value.priority,
-    (isActive) => (isActive ? setupClickOutside('priority', priorityDropdownRef) : removeClickOutside('priority')),
+    (v) => (v ? setupClickOutside('priority', priorityDropdownRef) : removeClickOutside('priority')),
 );
 watch(
     () => editMode.value.startDate,
-    (isActive) => (isActive ? setupClickOutside('startDate', startDatePickerRef) : removeClickOutside('startDate')),
+    (v) => (v ? setupClickOutside('startDate', startDatePickerRef) : removeClickOutside('startDate')),
 );
 watch(
     () => editMode.value.dueDate,
-    (isActive) => (isActive ? setupClickOutside('dueDate', dueDatePickerRef) : removeClickOutside('dueDate')),
+    (v) => (v ? setupClickOutside('dueDate', dueDatePickerRef) : removeClickOutside('dueDate')),
 );
 
 onUnmounted(() => {
-    clickOutsideListeners.forEach((listener) => document.removeEventListener('click', listener));
+    clickOutsideListeners.forEach((l) => document.removeEventListener('click', l));
     clickOutsideListeners.clear();
 });
 
@@ -220,14 +214,11 @@ const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
 };
-
 const onDialogClosed = () => {
     visibleTaskAdd.value = false;
     selectedTask.value = null;
     parentTaskId.value = null;
 };
-
-const formatDate = (date: string | undefined) => (date ? moment(date).format('DD MMMM YYYY') : '-');
 
 const getInitials = (name: string) =>
     name
@@ -236,7 +227,6 @@ const getInitials = (name: string) =>
         .join('')
         .toUpperCase()
         .slice(0, 2);
-
 const getMemberColor = (index: number) => {
     const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f43f5e'];
     return colors[index % colors.length];
@@ -263,9 +253,7 @@ const hasPermission = (): boolean => {
     return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
 };
 
-const canEdit = computed(() => {
-    return (isOwner || hasPermission()) && !isDeveloper.value;
-});
+const canEdit = computed(() => (isOwner || hasPermission()) && !isDeveloper.value);
 
 const enableEditMode = (field: keyof typeof editMode.value) => {
     if (!canEdit.value) {
@@ -295,13 +283,9 @@ const updateProject = (newValue: any, field: string, editField?: keyof typeof ed
         priority_id: localProject.value.priority_id || localProject.value.priority?.id,
     };
 
-    if (field === 'start_date' || field === 'due_date') {
-        payload[field] = moment(newValue).format('YYYY-MM-DD');
-    } else if (field === 'status_id' || field === 'priority_id') {
-        payload[field] = newValue;
-    } else {
-        payload[field] = newValue;
-    }
+    if (field === 'start_date' || field === 'due_date') payload[field] = moment(newValue).format('YYYY-MM-DD');
+    else if (field === 'status_id' || field === 'priority_id') payload[field] = newValue;
+    else payload[field] = newValue;
 
     if (payload.start_date) payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
     if (payload.due_date) payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
@@ -320,46 +304,32 @@ const updateProject = (newValue: any, field: string, editField?: keyof typeof ed
 };
 
 const onTitleBlur = () => {
-    if (localProject.value.title !== props.project.title) {
-        updateProject(localProject.value.title, 'title', 'title');
-    } else {
-        disableEditMode('title');
-    }
+    localProject.value.title !== props.project.title ? updateProject(localProject.value.title, 'title', 'title') : disableEditMode('title');
 };
-
 const onStatusChange = (event: any) => {
     localProject.value.status_id = event.value.id;
     updateProject(event.value.id, 'status_id', 'status');
 };
-
 const onPriorityChange = (event: any) => {
     localProject.value.priority_id = event.value.id;
     updateProject(event.value.id, 'priority_id', 'priority');
 };
-
 const onStartDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
     if (value instanceof Date) updateProject(value, 'start_date', 'startDate');
 };
-
 const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
     if (value instanceof Date) updateProject(value, 'due_date', 'dueDate');
 };
-
 const onDescriptionBlur = () => {
-    if (localProject.value.description !== props.project.description) {
-        updateProject(localProject.value.description, 'description', 'description');
-    } else {
-        disableEditMode('description');
-    }
+    localProject.value.description !== props.project.description
+        ? updateProject(localProject.value.description, 'description', 'description')
+        : disableEditMode('description');
 };
-
 const cancelEdit = (field: keyof typeof editMode.value) => {
     localProject.value = { ...props.project };
     disableEditMode(field);
 };
-
-// ✅ Kanban status update handler
-const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
+const onKanbanStatusUpdate = () => {
     router.reload({ only: ['tasks'] });
 };
 </script>
@@ -388,9 +358,7 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                             @click="enableEditMode('title')"
                             :class="canEdit ? '-mx-2 -my-1 cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
                         >
-                            <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">
-                                {{ props.project.title }}
-                            </h1>
+                            <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">{{ props.project.title }}</h1>
                         </div>
                         <div v-else class="flex items-center gap-2" ref="titleInputRef" @click.stop>
                             <InputText
@@ -404,8 +372,8 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                         </div>
                         <p class="text-sm text-surface-600 dark:text-surface-400">
                             Software project
-                            <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"> <i class="pi pi-check-circle"></i> Member </span>
-                            <span v-else class="ml-2 text-gray-500 dark:text-gray-400"> <i class="pi pi-eye"></i> Viewer </span>
+                            <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"><i class="pi pi-check-circle"></i> Member</span>
+                            <span v-else class="ml-2 text-gray-500 dark:text-gray-400"><i class="pi pi-eye"></i> Viewer</span>
                         </p>
                     </div>
                 </div>
@@ -447,7 +415,6 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
 
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <!-- Status Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
@@ -469,19 +436,18 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                     class="w-full"
                                     autofocus
                                 >
-                                    <template #value="slotProps">
-                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'" />
-                                    </template>
-                                    <template #option="slotProps">
-                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'" />
-                                    </template>
+                                    <template #value="slotProps"
+                                        ><Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'"
+                                    /></template>
+                                    <template #option="slotProps"
+                                        ><Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'"
+                                    /></template>
                                 </Select>
                             </div>
                         </div>
                     </template>
                 </Card>
 
-                <!-- Priority Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
@@ -503,19 +469,18 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                     class="w-full"
                                     autofocus
                                 >
-                                    <template #value="slotProps">
-                                        <Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'" />
-                                    </template>
-                                    <template #option="slotProps">
-                                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'" />
-                                    </template>
+                                    <template #value="slotProps"
+                                        ><Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'"
+                                    /></template>
+                                    <template #option="slotProps"
+                                        ><Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'"
+                                    /></template>
                                 </Dropdown>
                             </div>
                         </div>
                     </template>
                 </Card>
 
-                <!-- Timeline Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
@@ -568,53 +533,42 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                     </template>
                 </Card>
 
-                <!-- Progress Card -->
                 <Card class="shadow-sm">
                     <template #content>
                         <div class="flex flex-col gap-2">
                             <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
-                            <div class="flex items-center gap-2">
-                                <ProgressBar :value="props.project.progress" class="flex-1" :showValue="true" />
-                            </div>
+                            <ProgressBar :value="props.project.progress" class="flex-1" :showValue="true" />
                         </div>
                     </template>
                 </Card>
             </div>
 
-            <!-- Main Tabs Card -->
+            <!-- Main Tabs -->
             <Card class="shadow-sm">
                 <template #content>
                     <Tabs value="Kanban">
                         <TabList scrollable>
-                            <Tab value="Kanban" v-tooltip.bottom="'Kanban'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-th-large sm:mr-2"></i>
-                                <span class="hidden sm:inline">Kanban</span>
-                            </Tab>
-                            <Tab value="List" v-tooltip.bottom="'List'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-list sm:mr-2"></i>
-                                <span class="hidden sm:inline">List</span>
-                            </Tab>
-                            <!-- ✅ TAB BACKLOG -->
-                            <Tab value="Backlog" v-tooltip.bottom="'Backlog'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-inbox sm:mr-2"></i>
-                                <span class="hidden sm:inline">Backlog</span>
-                            </Tab>
-                            <Tab value="Details" v-tooltip.bottom="'Details'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-info-circle sm:mr-2"></i>
-                                <span class="hidden sm:inline">Details</span>
-                            </Tab>
-                            <Tab value="Team" v-tooltip.bottom="'Team'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-users sm:mr-2"></i>
-                                <span class="hidden sm:inline">Team</span>
-                            </Tab>
-                            <Tab value="Timeline" v-tooltip.bottom="'Timeline'" class="!px-3 sm:!px-4">
-                                <i class="pi pi-chart-bar sm:mr-2"></i>
-                                <span class="hidden sm:inline">Timeline</span>
-                            </Tab>
+                            <Tab value="Kanban" v-tooltip.bottom="'Kanban'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-th-large sm:mr-2"></i><span class="hidden sm:inline">Kanban</span></Tab
+                            >
+                            <Tab value="List" v-tooltip.bottom="'List'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-list sm:mr-2"></i><span class="hidden sm:inline">List</span></Tab
+                            >
+                            <Tab value="Backlog" v-tooltip.bottom="'Backlog'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-inbox sm:mr-2"></i><span class="hidden sm:inline">Backlog</span></Tab
+                            >
+                            <Tab value="Details" v-tooltip.bottom="'Details'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-info-circle sm:mr-2"></i><span class="hidden sm:inline">Details</span></Tab
+                            >
+                            <Tab value="Team" v-tooltip.bottom="'Team'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-users sm:mr-2"></i><span class="hidden sm:inline">Team</span></Tab
+                            >
+                            <Tab value="Timeline" v-tooltip.bottom="'Timeline'" class="!px-3 sm:!px-4"
+                                ><i class="pi pi-chart-bar sm:mr-2"></i><span class="hidden sm:inline">Timeline</span></Tab
+                            >
                         </TabList>
 
                         <TabPanels>
-                            <!-- Kanban Tab -->
                             <TabPanel value="Kanban">
                                 <div class="py-4">
                                     <KanbanBoard
@@ -634,14 +588,11 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                 </div>
                             </TabPanel>
 
-                            <!-- List Tab -->
                             <TabPanel value="List">
                                 <div class="py-4">
                                     <TaskTable
                                         :projectId="project.id"
                                         :tasks="tasks"
-                                        @add="openTaskAdd"
-                                        @edit="openTaskEdit"
                                         :isMember="isMember"
                                         :has-permission="isOwner || hasPermission()"
                                         :taskStatuses="taskStatuses"
@@ -649,17 +600,20 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                         :taskTypes="taskTypes"
                                         :taskCategories="taskCategories"
                                         :isDeveloper="isDeveloper"
+                                        @add="openTaskAdd"
+                                        @edit="openTaskEdit"
                                     />
                                 </div>
                             </TabPanel>
 
-                            <!-- ✅ BACKLOG TAB -->
+                            <!-- ✅ Backlog Tab — tambah :epics -->
                             <TabPanel value="Backlog">
                                 <div class="py-4">
                                     <BacklogBoard
                                         :project-id="project.id"
                                         :sprints="sprints"
                                         :backlog="backlog"
+                                        :epics="epics"
                                         :task-statuses="taskStatuses"
                                         :task-priorities="taskPriorities"
                                         :task-types="taskTypes"
@@ -673,13 +627,10 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                 </div>
                             </TabPanel>
 
-                            <!-- Details Tab -->
                             <TabPanel value="Details">
                                 <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
                                     <div class="lg:col-span-2">
-                                        <div class="mb-3 flex items-center justify-between">
-                                            <h3 class="text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
-                                        </div>
+                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
                                         <div
                                             v-if="!editMode.description"
                                             @click="enableEditMode('description')"
@@ -699,33 +650,30 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                                 <Editor v-model="localProject.description" editorStyle="height: 200px">
                                                     <template #toolbar>
                                                         <span class="ql-formats">
-                                                            <button class="ql-bold"></button>
-                                                            <button class="ql-italic"></button>
-                                                            <button class="ql-underline"></button>
-                                                            <button class="ql-list" value="ordered"></button>
-                                                            <button class="ql-list" value="bullet"></button>
+                                                            <button class="ql-bold"></button><button class="ql-italic"></button
+                                                            ><button class="ql-underline"></button> <button class="ql-list" value="ordered"></button
+                                                            ><button class="ql-list" value="bullet"></button>
                                                         </span>
                                                     </template>
                                                 </Editor>
                                             </div>
                                         </div>
                                     </div>
-
                                     <div class="flex flex-col gap-6">
                                         <div>
                                             <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
                                             <div class="flex flex-col gap-3">
                                                 <div class="flex items-start justify-between">
                                                     <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
-                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                        {{ moment(props.project.created_at).format('MMM DD, YYYY') }}
-                                                    </span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">{{
+                                                        moment(props.project.created_at).format('MMM DD, YYYY')
+                                                    }}</span>
                                                 </div>
                                                 <div class="flex items-start justify-between">
                                                     <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
-                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">
-                                                        {{ moment(props.project.updated_at).fromNow() }}
-                                                    </span>
+                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">{{
+                                                        moment(props.project.updated_at).fromNow()
+                                                    }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -733,7 +681,6 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                 </div>
                             </TabPanel>
 
-                            <!-- Team Tab -->
                             <TabPanel value="Team">
                                 <div class="py-4">
                                     <MembersTable
@@ -748,7 +695,6 @@ const onKanbanStatusUpdate = (taskId: string, newStatusId: string) => {
                                 </div>
                             </TabPanel>
 
-                            <!-- Timeline Tab -->
                             <TabPanel value="Timeline">
                                 <div class="py-4">
                                     <ProjectGanttChart :tasks="props.tasks" />

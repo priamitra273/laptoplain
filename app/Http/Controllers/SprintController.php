@@ -22,9 +22,9 @@ class SprintController extends Controller
 
         $sprints = ProjectSprint::with([
             'status',
-            'tasks.status',
-            'tasks.priority',
-            'tasks.category',
+            'tasks.status:id,name,severity',
+            'tasks.priority:id,name,severity',
+            'tasks.category:id,name,icon,severity',
             'tasks.users:id,name',
             'tasks.users.media',
         ])
@@ -44,13 +44,21 @@ class SprintController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Epics: task dengan category 'Epic' di project ini (tidak masuk sprint)
+        $epics = Task::with(['status:id,name,severity'])
+            ->where('project_id', $projectId)
+            ->epics()
+            ->get(['id', 'title', 'task_category_id', 'status_id', 'story_points']);
+
         return response()->json(
             Sqids::rec_encode_ids_in_list([
                 'sprints' => $sprints->toArray(),
                 'backlog' => $backlog->toArray(),
+                'epics'   => $epics->toArray(),
             ])
         );
     }
+
 
     // POST /project/{projectEncoded}/sprints
     public function store(Request $request, string $projectEncoded)
@@ -62,13 +70,12 @@ class SprintController extends Controller
             'goal'       => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date'   => 'nullable|date|after_or_equal:start_date',
-            // ✅ FIX: duration adalah string seperti "2 weeks", bukan integer
-            'duration'   => 'nullable|string|max:50',
+            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
         ]);
 
         $lastOrder = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
 
-        $sprint = ProjectSprint::create([
+        ProjectSprint::create([
             ...$validated,
             'project_id'       => $projectId,
             'sprint_status_id' => MsSprintStatus::planning()->id,
@@ -77,10 +84,8 @@ class SprintController extends Controller
             'updated_by'       => Auth::id(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'sprint'  => Sqids::rec_encode_ids_in_list($sprint->load('status')->toArray()),
-        ]);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Sprint created successfully');
     }
 
     // PUT /project/{projectEncoded}/sprints/{sprintEncoded}
@@ -95,8 +100,7 @@ class SprintController extends Controller
             'goal'       => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date'   => 'nullable|date|after_or_equal:start_date',
-            // ✅ FIX: duration adalah string seperti "2 weeks", bukan integer
-            'duration'   => 'nullable|string|max:50',
+            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
         ]);
 
         $sprint->update([
@@ -104,10 +108,8 @@ class SprintController extends Controller
             'updated_by' => Auth::id(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'sprint'  => Sqids::rec_encode_ids_in_list($sprint->fresh('status')->toArray()),
-        ]);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Sprint updated successfully');
     }
 
     // DELETE /project/{projectEncoded}/sprints/{sprintEncoded}
@@ -118,21 +120,18 @@ class SprintController extends Controller
         $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         if ($sprint->status?->name === 'Active') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sprint yang sedang berjalan tidak bisa dihapus. Selesaikan sprint terlebih dahulu.',
-            ], 422);
+            return back()->with('error', 'Sprint yang sedang berjalan tidak bisa dihapus. Selesaikan sprint terlebih dahulu.');
         }
 
-        // Kembalikan semua task ke backlog (detach dari pivot)
         $sprint->tasks()->detach();
         $sprint->delete();
 
-        return response()->json(['success' => true]);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Sprint deleted successfully');
     }
 
     // PATCH /project/{projectEncoded}/sprints/{sprintEncoded}/start
-    public function start(string $projectEncoded, string $sprintEncoded)
+    public function start(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
         $sprintId  = Sqids::decode($sprintEncoded);
@@ -143,22 +142,25 @@ class SprintController extends Controller
             ->exists();
 
         if ($hasActive) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Masih ada sprint yang sedang berjalan. Selesaikan dulu sebelum memulai sprint baru.',
-            ], 422);
+            return back()->with('error', 'Masih ada sprint yang sedang berjalan. Selesaikan dulu sebelum memulai sprint baru.');
         }
 
+        $validated = $request->validate([
+            'goal'       => 'nullable|string',
+            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
+        ]);
+
         $sprint->update([
+            ...$validated,
             'sprint_status_id' => MsSprintStatus::active()->id,
-            'start_date'       => $sprint->start_date ?? now()->toDateString(),
+            'start_date'       => $validated['start_date'] ?? $sprint->start_date ?? now()->toDateString(),
             'updated_by'       => Auth::id(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'sprint'  => Sqids::rec_encode_ids_in_list($sprint->fresh('status')->toArray()),
-        ]);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', "Sprint \"{$sprint->name}\" started");
     }
 
     // PATCH /project/{projectEncoded}/sprints/{sprintEncoded}/complete
@@ -170,11 +172,9 @@ class SprintController extends Controller
 
         $validated = $request->validate([
             'retrospective'      => 'nullable|string',
-            // ✅ FIX: frontend kirim encoded Sqids string (atau null untuk backlog)
             'move_incomplete_to' => 'nullable|string',
         ]);
 
-        // Decode dan pindahkan task yang belum complete
         if (!empty($validated['move_incomplete_to'])) {
             $targetSprintId = Sqids::decode($validated['move_incomplete_to']);
 
@@ -183,14 +183,11 @@ class SprintController extends Controller
                 ->pluck('tasks.id');
 
             if ($incompleteTasks->isNotEmpty()) {
-                $targetSprint = ProjectSprint::where('project_id', $projectId)
-                    ->findOrFail($targetSprintId);
+                $targetSprint = ProjectSprint::where('project_id', $projectId)->findOrFail($targetSprintId);
                 $targetSprint->tasks()->syncWithoutDetaching($incompleteTasks);
                 $sprint->tasks()->detach($incompleteTasks);
             }
         }
-        // Jika move_incomplete_to null → task otomatis jadi backlog karena tetap
-        // di pivot tapi sprint sudah Completed (atau bisa detach semua incomplete)
 
         $sprint->update([
             'sprint_status_id' => MsSprintStatus::completed()->id,
@@ -199,10 +196,8 @@ class SprintController extends Controller
             'updated_by'       => Auth::id(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'sprint'  => Sqids::rec_encode_ids_in_list($sprint->fresh('status')->toArray()),
-        ]);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', "Sprint \"{$sprint->name}\" completed");
     }
 
     // POST /project/{projectEncoded}/sprints/{sprintEncoded}/tasks
@@ -213,13 +208,11 @@ class SprintController extends Controller
 
         $validated = $request->validate([
             'task_ids'   => 'required|array',
-            // ✅ FIX: task_ids dikirim sebagai encoded string dari frontend
             'task_ids.*' => 'string',
         ]);
 
         $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
-        // Decode semua task IDs
         $rawTaskIds = collect($validated['task_ids'])
             ->map(fn($encoded) => Sqids::decode($encoded))
             ->filter()
@@ -227,30 +220,26 @@ class SprintController extends Controller
             ->toArray();
 
         if (empty($rawTaskIds)) {
-            return response()->json(['success' => false, 'message' => 'Tidak ada task yang valid.'], 422);
+            return back()->with('error', 'Tidak ada task yang valid.');
         }
 
-        // Pastikan task milik project ini
         $validTaskIds = Task::whereIn('id', $rawTaskIds)
             ->where('project_id', $projectId)
             ->pluck('id')
             ->toArray();
 
-        // Validasi: Epic tidak boleh masuk sprint
         $hasEpic = Task::whereIn('id', $validTaskIds)
             ->whereHas('category', fn($q) => $q->where('name', 'Epic'))
             ->exists();
 
         if ($hasEpic) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.',
-            ], 422);
+            return back()->with('error', 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.');
         }
 
         $sprint->tasks()->syncWithoutDetaching($validTaskIds);
 
-        return response()->json(['success' => true, 'message' => 'Task berhasil ditambahkan ke sprint.']);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Task berhasil ditambahkan ke sprint.');
     }
 
     // DELETE /project/{projectEncoded}/sprints/{sprintEncoded}/tasks/{taskEncoded}
@@ -263,6 +252,7 @@ class SprintController extends Controller
         $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
         $sprint->tasks()->detach($taskId);
 
-        return response()->json(['success' => true, 'message' => 'Task dipindahkan ke backlog.']);
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Task dipindahkan ke backlog.');
     }
 }

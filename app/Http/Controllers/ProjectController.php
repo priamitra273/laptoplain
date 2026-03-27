@@ -199,7 +199,6 @@ class ProjectController extends Controller
             })
             ->toArray();
 
-        // ✅ BARU — Sprints dengan tasks-nya untuk tab Backlog
         $sprints = ProjectSprint::with([
             'status:id,name,severity',
             'tasks' => function ($q) {
@@ -259,11 +258,16 @@ class ProjectController extends Controller
             return $arr;
         })->toArray();
 
-        // ✅ BARU — Task Categories (Epic, Story, Issue)
         $taskCategories = TaskCategory::select('id', 'name', 'icon', 'severity')
             ->orderBy('severity')
             ->get()
             ->toArray();
+
+        $epics = Task::whereHas('category', fn($q) => $q->where('name', 'Epic'))
+            ->where('project_id', $projectId)
+            ->whereNull('parent_id')
+            ->get(['id', 'title', 'story_points']);
+
 
         $data = [
             'project' => $projectArr,
@@ -278,10 +282,10 @@ class ProjectController extends Controller
             'assignableUsers' => $assignableUsers,
             'statuses' => $projectStatuses->toArray(),
             'priorities' => $projectPriorities->toArray(),
-            // ✅ BARU
             'sprints' => $formattedSprints,
             'backlog' => $formattedBacklog,
             'taskCategories' => $taskCategories,
+            'epics'          => Sqids::rec_encode_ids_in_list($epics->toArray()),
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));

@@ -80,7 +80,7 @@ const props = defineProps<Props>();
 const toast = useToast();
 
 const page = usePage();
-const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'))
+const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'));
 const authUser = computed(() => page.props.auth?.user);
 const isMember = computed(() => {
     if (!authUser.value) return false;
@@ -636,7 +636,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
                                     :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
                                     class="text-sm text-surface-700 dark:text-surface-300"
                                 >
-                                    Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
+                                    Due: {{ props.project.due_date ? moment(props.project.due_date).format('MMM DD, YYYY') : '' }}
                                 </div>
                             </div>
                             <div v-else class="flex flex-col gap-2">
@@ -656,7 +656,7 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
 
                                 <div v-if="editMode.dueDate" ref="dueDatePickerRef" @click.stop>
                                     <DatePicker
-                                        :modelValue="new Date(localProject.due_date || '')"
+                                        :modelValue="localProject.due_date ? new Date(localProject.due_date) : null"
                                         @update:modelValue="onDueDateChange"
                                         dateFormat="dd M yy"
                                         placeholder="Due Date"

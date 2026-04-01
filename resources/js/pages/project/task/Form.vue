@@ -561,7 +561,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-                <label class="font-semibold">Type</label>
+                <label class="font-semibold">Type <span class="text-red-500">*</span></label>
                 <Select
                     :disabled="isDeveloper"
                     class="w-full"
@@ -593,7 +593,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </div>
 
             <div>
-                <label class="font-semibold">Status</label>
+                <label class="font-semibold">Status <span class="text-red-500">*</span></label>
                 <Select
                     class="w-full"
                     v-model="form.status_id"
@@ -624,7 +624,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </div>
 
             <div>
-                <label class="font-semibold">Priority</label>
+                <label class="font-semibold">Priority <span class="text-red-500">*</span></label>
                 <Select
                     :disabled="isDeveloper"
                     class="w-full"

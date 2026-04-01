@@ -23,9 +23,9 @@ class TaskStoreRequest extends FormRequest
                 : 'sometimes|exists:projects,id',
 
             'parent_id'        => 'sometimes|nullable|exists:tasks,id',
-            'status_id'        => 'nullable|exists:ms_task_statuses,id',
-            'priority_id'      => 'nullable|exists:ms_task_priorities,id',
-            'type_id'          => 'nullable|exists:ms_task_types,id',
+            'status_id'        => 'required|exists:ms_task_statuses,id',
+            'priority_id'      => 'required|exists:ms_task_priorities,id',
+            'type_id'          => 'required|exists:ms_task_types,id',
             'task_category_id' => 'nullable|exists:task_categories,id',
             'owned_id'         => 'sometimes|exists:users,id',
 

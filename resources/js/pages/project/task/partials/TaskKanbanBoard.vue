@@ -71,6 +71,7 @@ const quickForm = ref({
     type_id: null as TaskType | null,
     priority_id: null as TaskPriority | null,
     assign_users: [] as AssignableUser[],
+    start_date: null as Date | null,
     due_date: null as Date | null,
 });
 const quickErrors = ref<Record<string, string>>({});
@@ -386,11 +387,14 @@ const deleteTask = (task: Task) => {
 
 // ─── Quick-add ────────────────────────────────────────────────────────────────
 const resetQuickForm = () => {
+    const currentUserOption = userOptions.value.find((u) => u.id === currentUser.value?.id);
+
     quickForm.value = {
         title: '',
         type_id: null,
         priority_id: null,
-        assign_users: currentUser.value ? [currentUser.value as AssignableUser] : [],
+        assign_users: currentUserOption ? [currentUserOption] : [],
+        start_date: null,
         due_date: null,
     };
     quickErrors.value = {};
@@ -415,6 +419,21 @@ const validateQuickForm = (): boolean => {
     if (!quickForm.value.type_id) errs.type_id = 'Type is required.';
     if (!quickForm.value.priority_id) errs.priority_id = 'Priority is required.';
     if (!quickForm.value.assign_users.length) errs.assign_users = 'At least one assignee is required.';
+
+    // Due date required jika kolom adalah In Progress
+    const currentStatus = props.statuses.find((s) => s.id === quickAddStatus.value);
+    const isInProgress = currentStatus?.name === 'In Progress';
+    if (isInProgress && !quickForm.value.due_date) {
+        errs.due_date = 'Due date is required for In Progress tasks.';
+    }
+
+    // Start date tidak boleh setelah due date jika keduanya diisi
+    if (quickForm.value.start_date && quickForm.value.due_date) {
+        if (quickForm.value.start_date > quickForm.value.due_date) {
+            errs.start_date = 'Start date cannot be after due date.';
+        }
+    }
+
     quickErrors.value = errs;
     return Object.keys(errs).length === 0;
 };
@@ -425,11 +444,13 @@ const submitQuickAdd = async () => {
     quickAddLoading.value = true;
     try {
         await axios.post(route('project.tasks.store', props.projectId), {
+            project_id: props.projectId,
             title: quickForm.value.title.trim(),
             status_id: quickAddStatus.value,
             type_id: quickForm.value.type_id?.id,
             priority_id: quickForm.value.priority_id?.id,
             assign_users: quickForm.value.assign_users.map((u) => u.id),
+            start_date: quickForm.value.start_date ? moment(quickForm.value.start_date).format('YYYY-MM-DD') : null,
             due_date: quickForm.value.due_date ? moment(quickForm.value.due_date).format('YYYY-MM-DD') : null,
         });
         toast.add({ severity: 'success', summary: 'Task created', life: 1800 });
@@ -736,16 +757,33 @@ const clearFilters = () => {
                                 <p v-if="quickErrors.assign_users" class="mt-0.5 text-[10px] text-rose-500">{{ quickErrors.assign_users }}</p>
                             </div>
 
-                            <!-- Due date (optional unless status requires) -->
+                            <!-- Start date (opsional) -->
+                            <div>
+                                <DatePicker
+                                    v-model="quickForm.start_date"
+                                    placeholder="Start date (optional)"
+                                    dateFormat="dd M yy"
+                                    class="w-full !text-xs"
+                                    :class="quickErrors.start_date ? '!border-rose-400' : ''"
+                                    showIcon
+                                    iconDisplay="input"
+                                />
+                                <p v-if="quickErrors.start_date" class="mt-0.5 text-[10px] text-rose-500">{{ quickErrors.start_date }}</p>
+                            </div>
+
+                            <!-- Due date — required jika In Progress -->
                             <div>
                                 <DatePicker
                                     v-model="quickForm.due_date"
-                                    placeholder="Due date (optional)"
+                                    :placeholder="
+                                        statuses.find((s) => s.id === quickAddStatus)?.name === 'In Progress' ? 'Due date *' : 'Due date (optional)'
+                                    "
                                     dateFormat="dd M yy"
                                     class="w-full !text-xs"
                                     :class="quickErrors.due_date ? '!border-rose-400' : ''"
                                     showIcon
                                     iconDisplay="input"
+                                    :minDate="quickForm.start_date ?? undefined"
                                 />
                                 <p v-if="quickErrors.due_date" class="mt-0.5 text-[10px] text-rose-500">{{ quickErrors.due_date }}</p>
                             </div>

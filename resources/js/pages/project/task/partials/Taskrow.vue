@@ -5,6 +5,7 @@ import Dropdown from 'primevue/dropdown';
 import Menu from 'primevue/menu';
 import Tag from 'primevue/tag';
 import { computed, nextTick, ref, watch } from 'vue';
+import { useSeverityColor } from '@/composables/useSeverityColor';
 
 interface TaskRowTask {
     id: string | number;
@@ -12,7 +13,7 @@ interface TaskRowTask {
     parent_id?: string | null;
     task_number?: string | null;
     story_points?: number | null;
-    category?: { name?: string; icon?: string; severity?: string | number | null } | null;
+    category?: { name?: string; icon?: string; severity?: string | null } | null;
     priority?: { id?: string; name?: string; severity?: string } | null;
     status?: { id?: string; name?: string; severity?: string } | null;
     users?: { id: string; name: string; avatar_url?: string | null }[];
@@ -50,6 +51,8 @@ const emit = defineEmits<{
     toggleSelect: [task: TaskRowTask, checked: boolean];
     menu: [event: MouseEvent, task: TaskRowTask];
 }>();
+
+const { getSeverityColorLight } = useSeverityColor()
 
 const isEpic = (task: TaskRowTask) => task.category?.name?.toLowerCase() === 'epic';
 
@@ -95,20 +98,10 @@ const categoryIcon = (task: TaskRowTask) => {
 };
 
 const categoryColor = (task: TaskRowTask): string => {
-    const severity = task.category?.severity;
-    const bySeverity: Record<string, string> = {
-        primary: '#3b82f6',
-        secondary: '#64748b',
-        success: '#16a34a',
-        info: '#0ea5e9',
-        warn: '#f59e0b',
-        danger: '#dc2626',
-        contrast: '#111827',
-        purple: '#7c3aed',
-    };
-
-    if (severity && bySeverity[String(severity)]) return bySeverity[String(severity)];
-    if (severity) return String(severity);
+    const severity = task.category?.severity
+    if (severity) {
+        return getSeverityColorLight(severity, 0.2);
+    }
 
     const byName: Record<string, string> = {
         Epic: '#7c3aed',
@@ -220,7 +213,7 @@ const onEpicDropdownHide = () => {
             :style="{ color: categoryColor(task) }"
             class="flex-shrink-0 text-sm"
         ></i>
-
+        
         <span class="min-w-0 flex-1 truncate text-sm text-surface-800 dark:text-surface-100" :title="task.title">{{
             task.title }}</span>
 

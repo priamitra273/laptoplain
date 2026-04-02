@@ -16,6 +16,7 @@ import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
 import type { TaskCategory } from '../task/type';
+import { useSeverityColor } from '@/composables/useSeverityColor';
 
 interface Props {
     projectId: string;
@@ -34,6 +35,8 @@ const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
     (e: 'edit', task: Task, parentId: string | null): void;
 }>();
+
+const { getSeverityColorLight } = useSeverityColor()
 
 const deleteLoading = ref(false);
 const currentUser = usePage().props.auth.user;
@@ -538,19 +541,9 @@ const getCategoryIcon = (category?: TaskCategory | null) => {
 
 const getCategoryColor = (category?: TaskCategory | null): string => {
     const severity = category?.severity;
-    const bySeverity: Record<string, string> = {
-        primary: '#3b82f6',
-        secondary: '#64748b',
-        success: '#16a34a',
-        info: '#0ea5e9',
-        warn: '#f59e0b',
-        danger: '#dc2626',
-        contrast: '#111827',
-        purple: '#7c3aed',
-    };
-
-    if (severity && bySeverity[String(severity)]) return bySeverity[String(severity)];
-    if (severity) return String(severity);
+    if (severity) {
+        return getSeverityColorLight(severity, 0.2);
+    }
 
     const byName: Record<string, string> = {
         Epic: '#7c3aed',

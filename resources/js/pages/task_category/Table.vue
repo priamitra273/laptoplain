@@ -126,6 +126,12 @@ watch(visibleForm, (newValue) => {
                         </Tag>
                     </template>
                 </Column>
+                
+                <Column field="severity" header="Severity" sortable>
+                    <template #body="{ data }">
+                        <Tag :severity="data.severity" :value="getSeverityLabel(data.severity)"></Tag>
+                    </template>
+                </Column>
 
                 <Column field="created_at" header="Created Date" sortable>
                     <template #body="{ data }">

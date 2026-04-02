@@ -10,9 +10,11 @@ class TaskCategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Epic',  'icon' => '⚡', 'severity' => 1],
-            ['name' => 'Story', 'icon' => '📖', 'severity' => 2],
-            ['name' => 'Issue', 'icon' => '🔧', 'severity' => 3],
+            ['name' => 'Epic',  'icon' => 'pi pi-bolt', 'severity' => 'primary'],
+            ['name' => 'Story', 'icon' => 'pi pi-bookmark', 'severity' => 'success'],
+            ['name' => 'Issue', 'icon' => 'pi pi-info-circle', 'severity' => 'warn'],
+            ['name' => 'Task', 'icon' => 'pi pi-check-square', 'severity' => 'info'],
+            ['name' => 'Bug', 'icon' => 'pi pi-exclamation-triangle', 'severity' => 'danger'],
         ];
 
         foreach ($categories as $category) {

@@ -18,6 +18,7 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskActivityController;
+use App\Http\Controllers\TaskCategoryController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TeamController;
@@ -54,6 +55,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
         Route::resource('task-status', MsTaskStatusController::class)->except($except);
         Route::resource('task-type', MsTaskTypeController::class)->except($except);
+        
+        Route::resource('task-category', TaskCategoryController::class)->except($except);
 
         Route::resource('tag', TagController::class)->except($except);
 

@@ -237,6 +237,16 @@ export interface TaskPriority {
     deleted_by?: string;
 }
 
+export interface TaskCategory {
+    id: number;
+    name: string;
+    icon: string;
+    severity: PrimeSeverity;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
 export interface AnalyticServer {
     id: number;
     uuid: string;

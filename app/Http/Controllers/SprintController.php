@@ -16,12 +16,21 @@ class SprintController extends Controller
     public function index(string $projectEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $project   = Project::findOrFail($projectId);
+        $user = Auth::user();
+        if (! $user) {
+            abort(403);
+        }
 
-        if (Auth::user()->cannot('view', $project)) abort(403);
+        $project = Project::visibleFor($user)->findOrFail($projectId);
 
         $sprints = ProjectSprint::with([
             'status',
+            'tasks' => function ($query) {
+                $query->where(function ($taskQuery) {
+                    $taskQuery->whereNull('parent_id')
+                        ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                });
+            },
             'tasks.status:id,name,severity',
             'tasks.priority:id,name,severity',
             'tasks.category:id,name,icon,severity',
@@ -41,6 +50,10 @@ class SprintController extends Controller
         ])
             ->where('project_id', $projectId)
             ->backlog()
+            ->where(function ($taskQuery) {
+                $taskQuery->whereNull('parent_id')
+                    ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+            })
             ->orderBy('id')
             ->get();
 
@@ -52,6 +65,7 @@ class SprintController extends Controller
 
         return response()->json(
             Sqids::rec_encode_ids_in_list([
+                'success' => true,
                 'sprints' => $sprints->toArray(),
                 'backlog' => $backlog->toArray(),
                 'epics'   => $epics->toArray(),
@@ -75,7 +89,7 @@ class SprintController extends Controller
 
         $lastOrder = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
 
-        ProjectSprint::create([
+        $sprint = ProjectSprint::create([
             ...$validated,
             'project_id'       => $projectId,
             'sprint_status_id' => MsSprintStatus::planning()->id,
@@ -83,6 +97,14 @@ class SprintController extends Controller
             'created_by'       => Auth::id(),
             'updated_by'       => Auth::id(),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Sprint created successfully',
+                'sprint' => Sqids::rec_encode_ids_in_list($sprint->toArray()),
+            ]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', 'Sprint created successfully');
@@ -113,18 +135,32 @@ class SprintController extends Controller
     }
 
     // DELETE /project/{projectEncoded}/sprints/{sprintEncoded}
-    public function destroy(string $projectEncoded, string $sprintEncoded)
+    public function destroy(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
         $sprintId  = Sqids::decode($sprintEncoded);
         $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         if ($sprint->status?->name === 'Active') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sprint yang sedang berjalan tidak bisa dihapus. Selesaikan sprint terlebih dahulu.',
+                ], 422);
+            }
+
             return back()->with('error', 'Sprint yang sedang berjalan tidak bisa dihapus. Selesaikan sprint terlebih dahulu.');
         }
 
         $sprint->tasks()->detach();
         $sprint->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Sprint deleted successfully',
+            ]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', 'Sprint deleted successfully');
@@ -220,6 +256,12 @@ class SprintController extends Controller
             ->toArray();
 
         if (empty($rawTaskIds)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada task yang valid.',
+                ], 422);
+            }
             return back()->with('error', 'Tidak ada task yang valid.');
         }
 
@@ -233,17 +275,30 @@ class SprintController extends Controller
             ->exists();
 
         if ($hasEpic) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.',
+                ], 422);
+            }
             return back()->with('error', 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.');
         }
 
         $sprint->tasks()->syncWithoutDetaching($validTaskIds);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Task berhasil ditambahkan ke sprint.',
+            ]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', 'Task berhasil ditambahkan ke sprint.');
     }
 
     // DELETE /project/{projectEncoded}/sprints/{sprintEncoded}/tasks/{taskEncoded}
-    public function removeTask(string $projectEncoded, string $sprintEncoded, string $taskEncoded)
+    public function removeTask(Request $request, string $projectEncoded, string $sprintEncoded, string $taskEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
         $sprintId  = Sqids::decode($sprintEncoded);
@@ -251,6 +306,13 @@ class SprintController extends Controller
 
         $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
         $sprint->tasks()->detach($taskId);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Task dipindahkan ke backlog.',
+            ]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', 'Task dipindahkan ke backlog.');

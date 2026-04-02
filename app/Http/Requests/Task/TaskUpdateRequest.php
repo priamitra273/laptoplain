@@ -75,7 +75,12 @@ class TaskUpdateRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $taskId = $this->route('task');
+            $taskRouteParam = $this->route('taskEncoded') ?? $this->route('task');
+            $taskId = is_string($taskRouteParam) ? Sqids::decode($taskRouteParam) : $taskRouteParam;
+
+            if (!$taskId) {
+                return;
+            }
 
             $statusId = $this->status_id
                 ?? DB::table('tasks')->where('id', $taskId)->value('status_id');

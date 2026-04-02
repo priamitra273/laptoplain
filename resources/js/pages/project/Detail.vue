@@ -108,6 +108,9 @@ const visibleTaskAdd = ref(false);
 const selectedMember = ref<ProjectMember | null>(null);
 const selectedTask = ref<Task | null>(null);
 const parentTaskId = ref<string | null>(null);
+const isBacklogCreate = ref(false);
+const isAddParentCreate = ref(false);
+const selectedSprintId = ref<string | null>(null);
 
 const editMode = ref({
     title: false,
@@ -191,20 +194,27 @@ const openEdit = (member: ProjectMember) => {
     visibleEdit.value = true;
 };
 
-const openTaskAdd = (parentId: string | null, _statusId?: string) => {
+const openTaskAdd = (parentId: string | null, _statusId?: string, source?: string, sprintId?: string | null) => {
     if (!isMember.value && !hasPermission()) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to create tasks', life: 3000 });
         return;
     }
+    selectedTask.value = null;
+    isBacklogCreate.value = source === 'backlog' || source === 'backlog-add-parent';
+    isAddParentCreate.value = source === 'backlog-add-parent' || source === 'sprint-add-parent';
+    selectedSprintId.value = sprintId ?? null;
     parentTaskId.value = parentId;
     visibleTaskAdd.value = true;
 };
 
-const openTaskEdit = (task: Task, parentId: string | null) => {
+const openTaskEdit = (task: Task, parentId: string | null, source?: string) => {
     if (!isMember.value && !hasPermission()) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to edit tasks', life: 3000 });
         return;
     }
+    isBacklogCreate.value = source === 'backlog';
+    isAddParentCreate.value = false;
+    selectedSprintId.value = null;
     parentTaskId.value = parentId;
     selectedTask.value = task;
     visibleTaskAdd.value = true;
@@ -214,10 +224,16 @@ const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
 };
+const onTaskSaved = () => {
+    router.reload({ only: ['tasks', 'sprints', 'backlog'] });
+};
 const onDialogClosed = () => {
     visibleTaskAdd.value = false;
     selectedTask.value = null;
     parentTaskId.value = null;
+    isBacklogCreate.value = false;
+    isAddParentCreate.value = false;
+    selectedSprintId.value = null;
 };
 
 const getInitials = (name: string) =>
@@ -622,7 +638,8 @@ const onKanbanStatusUpdate = () => {
                                         :has-permission="isOwner || hasPermission()"
                                         :assignable-users="assignableUsers"
                                         @add="openTaskAdd"
-                                        @edit="openTaskEdit"
+                                        @addBacklog="() => openTaskAdd(null, undefined, 'backlog')"
+                                        @edit="(task, parentId) => openTaskEdit(task, parentId, 'backlog')"
                                     />
                                 </div>
                             </TabPanel>
@@ -747,10 +764,18 @@ const onKanbanStatusUpdate = () => {
                 :isMember="isMember"
                 :isDeveloper="isDeveloper"
                 :taskCategories="taskCategories"
+                :excludeEpicCategory="isBacklogCreate || (!selectedTask && (!!selectedSprintId || !!parentTaskId))"
+                :onlyEpicCategory="!selectedTask && isAddParentCreate"
+                :hideParentTaskField="isBacklogCreate || isAddParentCreate || (!selectedTask && !!selectedSprintId)"
+                :sprintId="selectedSprintId"
+                @saved="onTaskSaved"
                 @close="
                     visibleTaskAdd = false;
                     selectedTask = null;
                     parentTaskId = null;
+                    isBacklogCreate = false;
+                    isAddParentCreate = false;
+                    selectedSprintId = null;
                 "
             />
         </Dialog>

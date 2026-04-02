@@ -6,10 +6,12 @@ use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Http\Requests\Task\TaskStoreRequest;
+use App\Http\Requests\Task\TaskUpdatePriorityRequest;
 use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
 use App\Models\MsTaskPriority;
+use App\Models\ProjectSprint;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\Project;
@@ -101,6 +103,7 @@ class TaskController extends Controller
             ])
             ->findOrFail($projectId);
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($user->cannot('create', [Task::class, $project])) {
             return back()->with('error', 'You do not have permission to create a task in this project.');
@@ -112,6 +115,7 @@ class TaskController extends Controller
         $validated['created_by'] = Auth::id();
 
         $assignUserIds = $validated['assign_users'] ?? [];
+        $sprintId = $validated['sprint_id'] ?? null;
 
         // Auto-assign current user if not in list
         if (!empty($assignUserIds) && !in_array(Auth::id(), $assignUserIds)) {
@@ -138,9 +142,16 @@ class TaskController extends Controller
         }
         $validated['progress'] = $progress;
 
-        unset($validated['assign_users'], $validated['add_tag']);
+        unset($validated['assign_users'], $validated['add_tag'], $validated['sprint_id']);
 
         $task = Task::create($validated);
+
+        if ($sprintId) {
+            $sprint = ProjectSprint::where('project_id', $projectId)->find($sprintId);
+            if ($sprint) {
+                $sprint->tasks()->syncWithoutDetaching([$task->id]);
+            }
+        }
 
         if (! empty($assignUserIds)) {
             $task->users()->syncWithoutDetaching($assignUserIds);
@@ -224,6 +235,7 @@ class TaskController extends Controller
             throw new NotFoundHttpException(404);
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($user->cannot('view', $task)) {
             throw new NotFoundHttpException(404);
@@ -318,6 +330,7 @@ class TaskController extends Controller
             return back()->with('error', 'Task not found.');
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($user->cannot('update', $task)) {
             return back()->with('error', 'You do not have permission to update this task.');
@@ -430,7 +443,9 @@ class TaskController extends Controller
     {
         $task = $this->findByEncodedId($encoded);
 
-        if (Auth::user()->cannot('update', $task)) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->cannot('update', $task)) {
             abort(403);
         }
 
@@ -444,6 +459,57 @@ class TaskController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Task status updated successfully',
+        ]);
+    }
+
+    public function updatePriority(TaskUpdatePriorityRequest $request, string $projectEncoded, string $taskEncoded)
+    {
+        try {
+            $projectId = Sqids::decode($projectEncoded);
+            $taskId = Sqids::decode($taskEncoded);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid task or project id.',
+            ], 422);
+        }
+
+        if (! $projectId || ! $taskId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid task or project id.',
+            ], 422);
+        }
+
+        $task = Task::where('project_id', $projectId)->find($taskId);
+
+        if (! $task) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Task not found.',
+            ], 404);
+        }
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->cannot('update', $task)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to update this task.',
+            ], 403);
+        }
+
+        $task->update([
+            'priority_id' => $request->priorityId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task priority updated successfully',
+            'data' => [
+                'task_id' => $taskEncoded,
+                'priority_id' => $request->input('priority_id'),
+            ],
         ]);
     }
 
@@ -468,7 +534,9 @@ class TaskController extends Controller
             ], 404);
         }
 
-        if (! Auth::user()->can('update', $task)) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (! $user->can('update', $task)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to move this task.',
@@ -557,6 +625,7 @@ class TaskController extends Controller
             return back()->with('error', 'Task not found.');
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($user->cannot('delete', $task)) {
             return back()->with('error', 'You do not have permission to delete this task.');

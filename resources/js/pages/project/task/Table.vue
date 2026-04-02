@@ -524,40 +524,43 @@ const onGlobalMouseUp = () => {
     cancelPointerHold();
 };
 
-// ─── Category styling ─────────────────────────────────────────────────────────
-const severityColorMap: Record<string, { bg: string; text: string; border: string }> = {
-    primary: { bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' },
-    secondary: { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' },
-    success: { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
-    info: { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
-    warn: { bg: '#fef9c3', text: '#a16207', border: '#fde68a' },
-    danger: { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' },
-    contrast: { bg: '#1e293b', text: '#f8fafc', border: '#334155' },
+// ─── Category icon style (same as backlog) ───────────────────────────────────
+const getCategoryIcon = (category?: TaskCategory | null) => {
+    const byName: Record<string, string> = {
+        Epic: 'pi pi-bolt',
+        Issue: 'pi pi-exclamation-circle',
+        Story: 'pi pi-book',
+        Task: 'pi pi-check-square',
+    };
+    const name = category?.name ?? '';
+    return category?.icon ?? byName[name] ?? 'pi pi-tag';
 };
 
-const DEFAULT_CATEGORY_STYLE = severityColorMap['secondary'];
-
-// Full badge style (kept for backward compat if needed elsewhere)
-const getCategoryStyle = (category: TaskCategory) => {
-    if (!category) return DEFAULT_CATEGORY_STYLE;
-    const colors = severityColorMap[category.severity ?? ''] ?? DEFAULT_CATEGORY_STYLE;
-    return {
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: `1px solid ${colors.border}`,
+const getCategoryColor = (category?: TaskCategory | null): string => {
+    const severity = category?.severity;
+    const bySeverity: Record<string, string> = {
+        primary: '#3b82f6',
+        secondary: '#64748b',
+        success: '#16a34a',
+        info: '#0ea5e9',
+        warn: '#f59e0b',
+        danger: '#dc2626',
+        contrast: '#111827',
+        purple: '#7c3aed',
     };
-};
 
-// Icon-only style — Jira style: small square chip with bg color, icon only
-const getCategoryIconStyle = (category: TaskCategory) => {
-    if (!category) return {};
-    const colors = severityColorMap[category.severity ?? ''] ?? DEFAULT_CATEGORY_STYLE;
-    return {
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: `1px solid ${colors.border}`,
-        borderRadius: '4px',
+    if (severity && bySeverity[String(severity)]) return bySeverity[String(severity)];
+    if (severity) return String(severity);
+
+    const byName: Record<string, string> = {
+        Epic: '#7c3aed',
+        Issue: '#dc2626',
+        Story: '#16a34a',
+        Task: '#3b82f6',
+        Bug: '#dc2626',
     };
+    const name = category?.name ?? '';
+    return byName[name] ?? '#64748b';
 };
 
 onMounted(() => {
@@ -699,21 +702,15 @@ onBeforeUnmount(() => {
                             @drop.stop.prevent="onRowDrop($event, node)"
                             @mouseenter="onPointerRowEnter(node)"
                         >
-                            <!-- Category icon — Jira style: icon-only chip with tooltip -->
-                            <span
+                            <i
                                 v-if="node.data.category?.id"
                                 v-tooltip.top="node.data.category.name"
-                                class="inline-flex shrink-0 cursor-default items-center justify-center"
-                                style="width: 20px; height: 20px; border-radius: 4px"
-                                :style="getCategoryIconStyle(node.data.category)"
-                            >
-                                <i v-if="node.data.category.icon" :class="node.data.category.icon" class="text-[11px]"></i>
-                                <span v-else class="text-[10px] font-bold leading-none">
-                                    {{ node.data.category.name?.charAt(0)?.toUpperCase() }}
-                                </span>
-                            </span>
+                                :class="getCategoryIcon(node.data.category)"
+                                :style="{ color: getCategoryColor(node.data.category) }"
+                                class="shrink-0 cursor-default text-sm"
+                            />
                             <!-- Placeholder so title stays aligned when no category -->
-                            <span v-else class="inline-block shrink-0" style="width: 20px; height: 20px"></span>
+                            <span v-else class="inline-block shrink-0" style="width: 14px"></span>
 
                             <div
                                 :title="node.data.title"

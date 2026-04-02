@@ -210,7 +210,10 @@ class ProjectController extends Controller
                     'users:id,name',
                     'users.media',
                 ])
-                    ->whereNull('parent_id')   // hanya top-level tasks di sprint
+                    ->where(function ($taskQuery) {
+                        $taskQuery->whereNull('parent_id')
+                            ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                    })
                     ->orderBy('id');
             },
         ])
@@ -243,7 +246,10 @@ class ProjectController extends Controller
             'users.media',
         ])
             ->where('project_id', $projectId)
-            ->whereNull('parent_id')
+            ->where(function ($taskQuery) {
+                $taskQuery->whereNull('parent_id')
+                    ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+            })
             ->doesntHave('sprints')
             ->orderBy('id')
             ->get();

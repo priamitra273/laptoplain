@@ -27,6 +27,7 @@ class TaskStoreRequest extends FormRequest
             'priority_id'      => 'required|exists:ms_task_priorities,id',
             'type_id'          => 'required|exists:ms_task_types,id',
             'task_category_id' => 'nullable|exists:task_categories,id',
+            'sprint_id'        => 'nullable|exists:project_sprints,id',
             'owned_id'         => 'sometimes|exists:users,id',
 
             'emoji'       => 'nullable|string|max:100',
@@ -135,12 +136,14 @@ class TaskStoreRequest extends FormRequest
 
         // ✅ FIX: task_category_id fallback ke $categoryId (bukan null) jika sudah integer
         $categoryId = $this->task_category_id;
+        $sprintId = $this->sprint_id;
 
         $this->merge([
             'status_id'        => $decode($this->status_id),
             'priority_id'      => $decode($this->priority_id),
             'type_id'          => $decode($this->type_id),
             'task_category_id' => $categoryId !== null && $categoryId !== '' ? $decode($categoryId) : null,
+            'sprint_id'        => $sprintId !== null && $sprintId !== '' ? $decode($sprintId) : null,
             'project_id'       => $decode($this->project_id),
             'owned_id'         => $decode($this->owned_id),
             'parent_id'        => $this->parent_id !== null ? $decode($this->parent_id) : null,

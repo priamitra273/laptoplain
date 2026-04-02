@@ -12,17 +12,22 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
 import moment from 'moment';
-import type { ProjectMember, Tag as TagData, Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
+import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { TaskCategory } from './type';
 
 interface Props {
     parentId: string | null;
     projectId: string;
     task: Task | null;
+    sprintId?: string | null;
     tasks: Task[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskCategories?: TaskCategory[]; // ← OPTIONAL dengan default value
+    excludeEpicCategory?: boolean;
+    onlyEpicCategory?: boolean;
+    hideParentTaskField?: boolean;
     tags: TagData[];
     members: ProjectMember[];
     isDeveloper: boolean;
@@ -37,6 +42,7 @@ interface Form {
     status_id: string | null;
     priority_id: string | null;
     task_category_id: string | null;
+    sprint_id: string | null;
     parent_id: string | null;
     start_date: Date | null;
     due_date: Date | null;
@@ -66,12 +72,17 @@ interface TreeNodeOption {
     children?: TreeNodeOption[];
 }
 
+
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
 
 const props = withDefaults(defineProps<Props>(), {
     taskCategories: () => [], // ← Default value jika tidak dikirim
+    excludeEpicCategory: false,
+    onlyEpicCategory: false,
+    hideParentTaskField: false,
+    sprintId: null,
 });
 
 const emit = defineEmits(['close', 'saved']);
@@ -84,8 +95,6 @@ const selectedMembers = ref<ProjectMemberSimple[]>([]);
 const authUser = computed(() => usePage().props.auth.user);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
-
-const selectedParent = ref<Record<string, boolean> | null>(props.task?.parent_id ? { [props.task.parent_id]: true } : null);
 
 const statusOption = computed(() => {
     return props.isDeveloper ? props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.taskStatuses;
@@ -106,6 +115,24 @@ const collectDescendants = (task: Task): string[] => {
     return ids;
 };
 
+const findTaskById = (tasks: Task[], id: string): Task | null => {
+    for (const task of tasks) {
+        if (task.id === id) return task;
+        const children = task.sub_task_recursive ?? [];
+        if (children.length > 0) {
+            const found = findTaskById(children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+};
+
+const isEpicParentContext = computed(() => {
+    if (!props.parentId) return false;
+    const parent = findTaskById(props.tasks, props.parentId);
+    return (parent?.category?.name ?? '').toLowerCase() === 'epic';
+});
+
 const parentTreeOptions = computed<TreeNodeOption[]>(() => {
     const excludeIds = new Set<string>();
 
@@ -125,6 +152,36 @@ const parentTreeOptions = computed<TreeNodeOption[]>(() => {
     };
 
     return build(props.tasks);
+});
+
+const parentOptions = computed<{ id: string; title: string }[]>(() => {
+    const flatten = (nodes: TreeNodeOption[], depth = 0): { id: string; title: string }[] =>
+        nodes.flatMap((node) => {
+            const prefix = depth > 0 ? `${'— '.repeat(depth)} ` : '';
+            const current = { id: node.key, title: `${prefix}${node.label}` };
+            const children = node.children ? flatten(node.children, depth + 1) : [];
+            return [current, ...children];
+        });
+
+    return flatten(parentTreeOptions.value);
+});
+
+const categoryOptions = computed<TaskCategory[]>(() => {
+    if (props.onlyEpicCategory) {
+        return props.taskCategories.filter((category) => category.name?.toLowerCase() === 'epic');
+    }
+    if (!props.excludeEpicCategory && !isEpicParentContext.value) return props.taskCategories;
+    return props.taskCategories.filter((category) => category.name?.toLowerCase() !== 'epic');
+});
+
+
+const defaultBacklogCategoryId = computed<string | null>(() => {
+    const taskCategory = categoryOptions.value.find((category) => category.name?.toLowerCase() === 'task');
+    return taskCategory?.id ?? null;
+});
+const defaultEpicCategoryId = computed<string | null>(() => {
+    const epicCategory = props.taskCategories.find((category) => category.name?.toLowerCase() === 'epic');
+    return epicCategory?.id ?? null;
 });
 
 watch(
@@ -160,8 +217,9 @@ const form: InertiaForm<Form> = useForm({
     type_id: props?.task?.type?.id ?? null,
     status_id: props?.task?.status?.id ?? null,
     priority_id: props?.task?.priority?.id ?? null,
-    task_category_id: props?.task?.category?.id ?? null,
-    parent_id: props?.parentId ?? null,
+    task_category_id: props?.task?.category?.id ?? (props.excludeEpicCategory ? defaultBacklogCategoryId.value : null),
+    sprint_id: props.sprintId,
+    parent_id: props.onlyEpicCategory ? null : (props?.parentId ?? null),
     start_date: toDate(props?.task?.start_date),
     due_date: toDate(props?.task?.due_date),
     is_archived: props?.task?.is_archived ?? false,
@@ -174,6 +232,25 @@ const form: InertiaForm<Form> = useForm({
     },
     remove_tag: [],
 });
+
+
+watch(
+    categoryOptions,
+    (options) => {
+        if (form.task_category_id && !options.some((category) => category.id === form.task_category_id)) {
+            form.task_category_id = null;
+        }
+
+        // Backlog create: default category to Task if user has not selected one.
+        if (!props.task && props.excludeEpicCategory && !form.task_category_id) {
+            form.task_category_id = defaultBacklogCategoryId.value;
+        }
+        if (!props.task && props.onlyEpicCategory && !form.task_category_id) {
+            form.task_category_id = defaultEpicCategoryId.value;
+        }
+    },
+    { immediate: true },
+);
 
 // =====================
 // Validation (Jira-style: only title is required)
@@ -330,8 +407,9 @@ const routeName = computed(() => (isEdit.value ? 'project.tasks.update' : 'proje
 const submit = () => {
     if (!validate()) return;
 
-    if (selectedParent.value) {
-        form.parent_id = Object.keys(selectedParent.value)[0];
+    // Add-parent flow creates Epic only; it must not carry parent_id.
+    if (props.onlyEpicCategory) {
+        form.parent_id = null;
     }
 
     const existed = existedMembers.value.map((u) => u.id);
@@ -367,7 +445,6 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                selectedParent.value = {};
                 validationErrors.value = {};
             },
             onError: () => {
@@ -387,7 +464,6 @@ const submit = () => {
                 emit('saved');
                 emit('close');
                 form.reset();
-                selectedParent.value = {};
                 validationErrors.value = {};
             },
             onError: () => {
@@ -412,18 +488,13 @@ const onProgressChange = (val: number | null) => {
     }
 };
 
-const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPriority[] | TaskCategory[]) => {
+const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T | null => {
     return options.find((option) => option.id === id) || null;
 };
 </script>
 
 <template>
     <div class="flex flex-col gap-4">
-        <div v-if="isEdit" class="flex flex-col">
-            <label class="font-semibold">Parent Task</label>
-            <TreeSelect v-model="selectedParent" :options="parentTreeOptions" placeholder="Select Parent Task" class="w-full" showClear />
-        </div>
-
         <div>
             <label class="font-semibold">Title <span class="text-red-500">*</span></label>
             <InputText
@@ -473,13 +544,13 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
         </div>
 
         <!-- Only show Category field if taskCategories is available -->
-        <div v-if="taskCategories && taskCategories.length > 0" class="flex flex-col">
+        <div v-if="categoryOptions.length > 0" class="flex flex-col">
             <label class="font-semibold">Category</label>
             <Select
                 :disabled="isDeveloper"
                 class="w-full"
                 v-model="form.task_category_id"
-                :options="taskCategories"
+                :options="categoryOptions"
                 optionValue="id"
                 placeholder="Select Category"
                 showClear
@@ -488,13 +559,13 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 <template #value="slotProps">
                     <div v-if="slotProps.value" class="flex items-center gap-2">
                         <i
-                            v-if="getSelectValue(slotProps.value, taskCategories)?.icon"
-                            :class="getSelectValue(slotProps.value, taskCategories)?.icon"
+                            v-if="getSelectValue(slotProps.value, categoryOptions)?.icon"
+                            :class="getSelectValue(slotProps.value, categoryOptions)?.icon"
                             class="text-lg"
                         ></i>
                         <Tag
-                            :value="getSelectValue(slotProps.value, taskCategories)?.name"
-                            :severity="getSelectValue(slotProps.value, taskCategories)?.severity"
+                            :value="getSelectValue(slotProps.value, categoryOptions)?.name"
+                            :severity="getSelectValue(slotProps.value, categoryOptions)?.severity"
                         />
                     </div>
                     <span v-else>{{ slotProps.placeholder }}</span>
@@ -511,6 +582,23 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
             </small>
         </div>
 
+        <div v-if="!props.hideParentTaskField" class="flex flex-col">
+            <label class="font-semibold">Parent Task</label>
+            <Select
+                :disabled="isDeveloper"
+                class="w-full"
+                v-model="form.parent_id"
+                :options="parentOptions"
+                optionLabel="title"
+                optionValue="id"
+                placeholder="Select Parent Task"
+                showClear
+            />
+            <small v-if="form.errors.parent_id" class="p-error text-red-500">
+                {{ form.errors.parent_id }}
+            </small>
+        </div>
+
         <div class="flex flex-col">
             <label class="font-semibold">Assigned Member</label>
             <MultiSelect
@@ -520,6 +608,7 @@ const getSelectValue = (id: string, options: TaskType[] | TaskStatus[] | TaskPri
                 :options="formattedMemberOption"
                 optionLabel="name"
                 filter
+                :showClear="false"
                 placeholder="Select Member"
                 :maxSelectedLabels="3"
                 class="w-full"

@@ -36,8 +36,13 @@ class ProjectUpdateRequest extends FormRequest
                 return;
             }
 
-            // ambil project id dari route
-            $projectId = $this->route('project'); // sesuaikan nama param
+            // Ambil project id dari route (resource route mengirim encoded id)
+            $projectRouteParam = $this->route('project');
+            $projectId = is_string($projectRouteParam) ? Sqids::decode($projectRouteParam) : $projectRouteParam;
+
+            if (!$projectId) {
+                return;
+            }
 
             // ambil status dari request atau dari DB
             $statusId = $this->status_id

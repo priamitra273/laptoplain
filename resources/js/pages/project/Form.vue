@@ -107,7 +107,7 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
         @show="show"
         @after-hide="hide"
         :blockScroll="true"
-        :dismissable="false"
+        :dismissable="true"
     >
         <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
             <div class="col-span-2 flex flex-col gap-2">

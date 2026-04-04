@@ -1,54 +1,19 @@
 <script setup lang="ts">
+// @ts-ignore
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
+
 import Label from '@/components/ui/label/Label.vue';
 import { useForm } from '@inertiajs/vue3';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
-import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import Select from 'primevue/select';
-import Editor from 'primevue/editor';
-import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch as vueWatch } from 'vue';
-import { PrimeSeverity } from '@/types';
+import { ProjectForm, ProjectFormProps, ProjectPriority, ProjectStatus } from '.';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
-interface ProjectStatus { 
-    id: string; 
-    name: string;
-    severity: PrimeSeverity 
-}
-
-interface ProjectPriority { 
-    id: string; 
-    name: string;
-    severity: PrimeSeverity 
-}
-
-interface Props {
-    value?: any;
-    visible: boolean;
-    statuses: ProjectStatus[];
-    priorities: ProjectPriority[];
-}
-
-interface ProjectForm {
-    title: string;
-    start_date: Date | null;
-    due_date: Date | null;
-    description: string;
-    emoji: string | null;
-    status_id: string | null;
-    priority_id: string | null;
-    owner_id?: number | null;
-    owned_id?: number | null;
-    [key: string]: any;
-}
-
-const props = defineProps<Props>();
+const props = defineProps<ProjectFormProps>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
@@ -256,11 +221,13 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
 
                 <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
             </div>
-
-            <div class="col-span-2 flex justify-end gap-2">
-                <Button label="Cancel" severity="secondary" @click="visible = false" />
-                <Button label="Save" type="submit" :loading="form.processing" :disabled="form.processing" />
-            </div>
         </form>
+
+        <template #footer>
+            <div class="flex justify-end gap-2">
+                <Button label="Cancel" severity="secondary" @click="visible = false" />
+                <Button label="Save" type="submit" class="w-20" :loading="form.processing" :disabled="form.processing" />
+            </div>
+        </template>
     </Drawer>
 </template>

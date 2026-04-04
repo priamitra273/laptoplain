@@ -1,43 +1,25 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
 import { can } from '@/lib/utils';
-import { PrimeSeverity, Project } from '@/types';
+import { Project } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
-import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
-// @ts-ignore
-import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
-import ProgressBar from 'primevue/progressbar';
-import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
+import { ProjectTableProps } from '.';
 import ProjectForm from './Form.vue';
+
+// @ts-ignore
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
+
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
-interface ProjectStatus {
-    id: string;
-    name: string;
-    severity: PrimeSeverity;
-}
-
-interface ProjectPriority {
-    id: string;
-    name: string;
-    severity: PrimeSeverity;
-}
-
-interface Props {
-    projects?: Project[];
-    statuses: ProjectStatus[];
-    priorities: ProjectPriority[];
-    progresses?: number;
-}
-
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<ProjectTableProps>(), {
     projects: () => [],
     statuses: () => [],
     priorities: () => [],
@@ -75,25 +57,6 @@ const goToCreate = () => {
     selected.value = undefined;
     visibleForm.value = true;
 };
-
-// const items: MenuItem[] = [
-//     {
-//         label: 'View Detail',
-//         command(event) {
-//             const data = event.item.data;
-//             router.visit(route('project.show', { encoded: data.id }));
-//         },
-//     },
-// ];
-
-// if (can('project.delete')) {
-//     items.push({
-//         label: 'Delete',
-//         command(event) {
-//             confirmDelete(event.item.data);
-//         },
-//     });
-// }
 
 const onCellEditComplete = ({ data, newValue, field }: { data: any; newValue: any; field: string }) => {
     if (data[field] === newValue) return;

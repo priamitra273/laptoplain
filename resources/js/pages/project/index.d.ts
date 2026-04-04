@@ -1,3 +1,5 @@
+import { PrimeSeverity } from '@/types';
+
 export interface ProjectMember {
     id: string;
     user: User;
@@ -188,22 +190,60 @@ export interface CommentUser {
 }
 
 export interface Comment {
-    id: string
-    commentable_type: string
-    commentable_id: string
-    user_id: string
-    body: string
-    reaction: unknown[]
-    owned_id: string
-    created_by: string | null
-    updated_by: string | null
-    deleted_by: string | null
-    created_at: string
-    updated_at: string
-    deleted_at: string | null
-    parent_id: string | null
+    id: string;
+    commentable_type: string;
+    commentable_id: string;
+    user_id: string;
+    body: string;
+    reaction: unknown[];
+    owned_id: string;
+    created_by: string | null;
+    updated_by: string | null;
+    deleted_by: string | null;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+    parent_id: string | null;
 
-    user: User
-    replies: Comment[]
+    user: User;
+    replies: Comment[];
 }
 
+export interface ProjectStatus {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
+export interface ProjectPriority {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
+}
+
+export interface ProjectTableProps {
+    projects?: Project[];
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
+    progresses?: number;
+}
+
+export interface ProjectFormProps {
+    value?: any;
+    visible: boolean;
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
+}
+
+export interface ProjectForm {
+    title: string;
+    start_date: Date | null;
+    due_date: Date | null;
+    description: string;
+    emoji: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    owner_id?: number | null;
+    owned_id?: number | null;
+    [key: string]: any;
+}

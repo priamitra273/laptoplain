@@ -6,24 +6,59 @@ import Textarea from 'primevue/textarea';
 import { computed, ref, watch } from 'vue';
 import type { Sprint } from '../type';
 
-const props = defineProps<{ visible: boolean; sprint?: Sprint | null; sprints: Sprint[] }>();
+const props = defineProps<{ visible: boolean; sprint?: Sprint | null; sprints: Sprint[]; loading?: boolean; disabled?: boolean }>();
 const emit = defineEmits<{ 'update:visible': [v: boolean]; save: [form: object] }>();
 
-const form = ref({ retrospective: '', move_incomplete_to: null as string | null });
+const form = ref({
+    retrospective: '',
+    move_incomplete_to: {
+        existing_sprint: '',
+        other: '',
+    },
+});
+
+// Separate model for the Select component
+const selectedDestination = ref<string>('backlog');
+
+const SPECIAL_OPTIONS = [
+    { id: 'backlog', name: 'Leave in backlog' },
+    { id: 'new_sprint', name: 'Create new Sprint' },
+];
+
+const SPECIAL_IDS = SPECIAL_OPTIONS.map((o) => o.id);
+
+// Sync selectedDestination → form
+watch(selectedDestination, (val) => {
+    if (!val) {
+        form.value.move_incomplete_to = { existing_sprint: '', other: '' };
+    } else if (SPECIAL_IDS.includes(val)) {
+        form.value.move_incomplete_to = { existing_sprint: '', other: val };
+    } else {
+        form.value.move_incomplete_to = { existing_sprint: val, other: '' };
+    }
+});
 
 // Reset form when dialog opens
-watch(
-    () => props.visible,
-    (v) => {
-        if (v) form.value = { retrospective: '', move_incomplete_to: null };
-    },
-);
+watch(selectedDestination, (val) => {
+    if (!val) {
+        form.value.move_incomplete_to = { existing_sprint: '', other: '' };
+    } else if (SPECIAL_IDS.includes(val)) {
+        form.value.move_incomplete_to = { existing_sprint: '', other: val };
+    } else {
+        form.value.move_incomplete_to = { existing_sprint: val, other: '' };
+    }
+}, { immediate: true });
 
-// Other sprints to move incomplete tasks to (exclude current)
-const otherSprints = computed(() => props.sprints.filter((s) => s.id !== props.sprint?.id));
+// Other sprints to move incomplete tasks to (exclude current) + special options
+const otherSprints = computed(() => [
+    ...SPECIAL_OPTIONS,
+    ...props.sprints.filter((s) => s.id !== props.sprint?.id),
+]);
 
 // Count incomplete tasks in current sprint
-const incompleteCount = computed(() => props.sprint?.tasks?.filter((t) => !['Done', 'Completed'].includes(t.status?.name ?? '')).length ?? 0);
+const incompleteCount = computed(
+    () => props.sprint?.tasks?.filter((t) => !['Done', 'Completed'].includes(t.status?.name ?? '')).length ?? 0,
+);
 </script>
 
 <template>
@@ -53,12 +88,11 @@ const incompleteCount = computed(() => props.sprint?.tasks?.filter((t) => !['Don
             <div v-if="incompleteCount > 0" class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Move incomplete issues to</label>
                 <Select
-                    v-model="form.move_incomplete_to"
+                    v-model="selectedDestination"
                     :options="otherSprints"
                     optionLabel="name"
                     optionValue="id"
-                    placeholder="Leave in backlog"
-                    showClear
+                    placeholder="Select option"
                 />
             </div>
 
@@ -70,8 +104,8 @@ const incompleteCount = computed(() => props.sprint?.tasks?.filter((t) => !['Don
         </div>
 
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" />
-            <Button label="Complete Sprint" icon="pi pi-flag" severity="success" @click="emit('save', { ...form })" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="disabled" />
+            <Button label="Complete Sprint" icon="pi pi-flag" severity="success" @click="emit('save', { ...form })" :loading="loading" :disabled="disabled" />
         </template>
     </Dialog>
 </template>

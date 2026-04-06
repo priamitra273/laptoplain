@@ -7,7 +7,7 @@ import Textarea from 'primevue/textarea';
 import { computed, ref, watch } from 'vue';
 import type { Sprint } from '../type';
 
-const props = defineProps<{ visible: boolean; sprint: Sprint | null }>();
+const props = defineProps<{ visible: boolean; sprint: Sprint | null; loading?: boolean; disabled?: boolean }>();
 const emit = defineEmits<{ 'update:visible': [v: boolean]; save: [form: object] }>();
 
 const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', 'Custom'];
@@ -15,6 +15,11 @@ const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', 'Custom'];
 const form = ref({ goal: '', duration: '2 weeks', start_date: '', end_date: '' });
 
 const isCustom = computed(() => form.value.duration === 'Custom');
+
+const handleEnter = () => {
+    if (props.disabled || props.loading) return;
+    emit('save', { ...form.value });
+};
 
 const calcEndDate = () => {
     if (isCustom.value || !form.value.start_date) return;
@@ -70,7 +75,7 @@ watch(() => form.value.start_date, calcEndDate);
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Start Date</label>
-                    <InputText v-model="form.start_date" type="date" />
+                    <InputText v-model="form.start_date" type="date" @keydown.enter="handleEnter" />
                 </div>
             </div>
 
@@ -82,6 +87,7 @@ watch(() => form.value.start_date, calcEndDate);
                 <InputText
                     v-model="form.end_date"
                     type="date"
+                    @keydown.enter="handleEnter"
                     :readonly="!isCustom"
                     :class="!isCustom ? 'cursor-not-allowed bg-surface-50 dark:bg-surface-800' : ''"
                 />
@@ -89,8 +95,8 @@ watch(() => form.value.start_date, calcEndDate);
         </div>
 
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" />
-            <Button label="Start Sprint" icon="pi pi-play" severity="success" @click="emit('save', { ...form })" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="disabled" />
+            <Button label="Start Sprint" icon="pi pi-play" severity="success" @click="emit('save', { ...form })" :loading="loading" :disabled="disabled" />
         </template>
     </Dialog>
 </template>

@@ -6,6 +6,7 @@ import Menu from 'primevue/menu';
 import Tag from 'primevue/tag';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useSeverityColor } from '@/composables/useSeverityColor';
+import Select from 'primevue/select';
 
 interface TaskRowTask {
     id: string | number;
@@ -254,7 +255,7 @@ const onEpicDropdownHide = () => {
                     v-tooltip.top="'Pilih epic'"
                     class="block min-w-0 flex-1"
                 >
-                    <Dropdown
+                    <Select
                         ref="epicDropdown"
                         v-model="selectedEpicId"
                         :options="props.epics"
@@ -271,7 +272,7 @@ const onEpicDropdownHide = () => {
             </div>
 
             <!-- Priority -->
-            <Dropdown v-if="canAct && (props.taskPriorities?.length ?? 0) > 0" v-model="selectedPriorityId"
+            <Select v-if="canAct && (props.taskPriorities?.length ?? 0) > 0" v-model="selectedPriorityId"
                 :options="props.taskPriorities" optionLabel="name" optionValue="id" placeholder="Priority"
                 class="w-24 min-w-[5.5rem] shrink-0 !border-0 !bg-transparent !shadow-none [&_.p-dropdown-trigger]:hidden [&_.p-dropdown-trigger-icon]:hidden [&_.p-select-dropdown]:hidden [&_.p-select-dropdown-icon]:hidden [&_.p-dropdown-clear-icon]:hidden [&_.p-dropdown-label]:px-0 [&_.p-dropdown-label]:pr-0 [&_.p-select-label]:px-0 [&_.p-select-label]:pr-0">
                 <template #value="slotProps">
@@ -285,7 +286,7 @@ const onEpicDropdownHide = () => {
                         :severity="slotProps.option.severity ?? prioritySeverity(slotProps.option.name)"
                         class="text-xs" />
                 </template>
-            </Dropdown>
+            </Select>
 
             <!-- Status -->
             <Tag v-if="task.status" :value="task.status.name" :severity="statusSeverity(task.status.name)"

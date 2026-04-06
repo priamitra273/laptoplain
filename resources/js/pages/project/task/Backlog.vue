@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import axios from 'axios';
 import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
@@ -33,7 +33,17 @@ const props = defineProps<{
     assignableUsers: User[];
 }>();
 
-const emit = defineEmits(['add', 'addBacklog', 'edit']);
+const emit = defineEmits([
+    'add', 
+    'addBacklog', 
+    'edit',
+    'activeSprintTaskIds', // ← tambahkan ini
+]);
+
+const startLoading = ref(false);
+const editLoading = ref(false);
+const completeLoading = ref(false);
+
 const toast = useToast();
 const canAct = computed(() => props.isMember || props.hasPermission);
 const localSprints = ref<Sprint[]>([...props.sprints]);
@@ -73,6 +83,18 @@ const getErrorMessage = (error: any, fallback = 'Something went wrong') => {
     return fallback;
 };
 
+const activeSprintTaskIds = computed(() => {
+    const activeSprint = localSprints.value.find(
+        (s) => s.status?.name === 'Active'
+    );
+    return (activeSprint?.tasks ?? [])
+        .filter((t) => t.category?.name?.toLowerCase() !== 'epic')
+        .map((t) => String(t.id));
+});
+
+watch(activeSprintTaskIds, (ids) => {
+    emit('activeSprintTaskIds', ids);
+}, { immediate: true });
 watch(
     () => props.sprints,
     (sprints) => {
@@ -136,10 +158,14 @@ const openStartDialog = (sprint: Sprint) => {
 };
 
 const saveStartSprint = (form: object) => {
+    startLoading.value = true;
     router.patch(r('start', startingSprint.value!.id), form as any, {
         ...opts,
         onSuccess: () => {
             showStartDialog.value = false;
+        },
+        onFinish: () => {
+            startLoading.value = false;
         },
     });
 };
@@ -154,10 +180,14 @@ const openEditDialog = (sprint: Sprint) => {
 };
 
 const saveEditSprint = (form: object) => {
+    editLoading.value = true;
     router.put(r('update', editingSprint.value!.id), form as any, {
         ...opts,
         onSuccess: () => {
             showEditDialog.value = false;
+        },
+        onFinish: () => {
+            editLoading.value = false;
         },
     });
 };
@@ -172,10 +202,14 @@ const openCompleteDialog = (sprint: Sprint) => {
 };
 
 const saveCompleteSprint = (form: object) => {
+    completeLoading.value = true;
     router.patch(r('complete', completingSprint.value!.id), form as any, {
         ...opts,
         onSuccess: () => {
             showCompleteDialog.value = false;
+        },
+        onFinish: () => {
+            completeLoading.value = false;
         },
     });
 };
@@ -210,10 +244,7 @@ const deleteSprint = (sprint: Sprint) => {
 // null = backlog
 const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprintId: string | null) => {
     const taskFromBacklog = localBacklog.value.find((task) => String(task.id) === taskId) ?? null;
-    const taskFromSprints =
-        localSprints.value
-            .flatMap((sprint) => sprint.tasks ?? [])
-            .find((task) => String(task.id) === taskId) ?? null;
+    const taskFromSprints = localSprints.value.flatMap((sprint) => sprint.tasks ?? []).find((task) => String(task.id) === taskId) ?? null;
     const movingTask = taskFromBacklog ?? taskFromSprints;
 
     if (toSprintId) {
@@ -472,19 +503,32 @@ const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskI
         <span class="rounded bg-surface-100 px-2 py-0.5 text-xs font-semibold text-surface-700 dark:bg-surface-800 dark:text-surface-200">
             {{ selectedCount }} selected
         </span>
-        <Button
-            :label="isAllSelected ? 'Unselect all' : 'Select all'"
-            text
-            size="small"
-            class="!px-2"
-            @click="toggleSelectAll"
-        />
+        <Button :label="isAllSelected ? 'Unselect all' : 'Select all'" text size="small" class="!px-2" @click="toggleSelectAll" />
         <Button label="Clear" text size="small" class="!px-2" @click="clearSelection" />
     </div>
 
-    <StartSprintDialog v-model:visible="showStartDialog" :sprint="startingSprint" @save="saveStartSprint" />
-    <EditSprintDialog v-model:visible="showEditDialog" :sprint="editingSprint" @save="saveEditSprint" />
-    <CompleteSprintDialog v-model:visible="showCompleteDialog" :sprint="completingSprint" :sprints="localSprints" @save="saveCompleteSprint" />
+    <StartSprintDialog
+        v-model:visible="showStartDialog"
+        :sprint="startingSprint"
+        :loading="startLoading"
+        :disabled="startLoading"
+        @save="saveStartSprint"
+    />
+    <EditSprintDialog
+        v-model:visible="showEditDialog"
+        :sprint="editingSprint"
+        :loading="editLoading"
+        :disabled="editLoading"
+        @save="saveEditSprint"
+    />
+    <CompleteSprintDialog
+        v-model:visible="showCompleteDialog"
+        :sprint="completingSprint"
+        :sprints="localSprints"
+        :loading="completeLoading"
+        :disabled="completeLoading"
+        @save="saveCompleteSprint"
+    />
 
     <Menu ref="sprintMenu" :model="sprintMenuItems" popup />
     <Menu ref="taskMenu" :model="taskMenuItems" popup />

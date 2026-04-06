@@ -2,7 +2,7 @@
 import Icon from '@/components/Icon.vue';
 import { can } from '@/lib/utils';
 import { Project } from '@/types';
-import { router } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import moment from 'moment';
@@ -352,14 +352,15 @@ watch(visibleForm, (val) => {
                 <Column header="Action" frozen alignFrozen="right" style="min-width: 100px">
                     <template #body="{ data }">
                         <div class="flex gap-2">
-                            <Button
-                                icon="pi pi-eye"
-                                severity="secondary"
-                                size="small"
-                                :disabled="deleteLoading || !can('project.read')"
-                                @click="router.visit(route('project.show', { encoded: data.id }))"
-                                v-tooltip.bottom="'View Details'"
-                            />
+                            <Link :href="route('project.show', { encoded: data.id })">
+                                <Button
+                                    icon="pi pi-eye"
+                                    severity="secondary"
+                                    size="small"
+                                    :disabled="deleteLoading || !can('project.read')"
+                                    v-tooltip.bottom="'View Details'"
+                                />
+                            </Link>
                             <Button
                                 icon="pi pi-trash"
                                 severity="danger"

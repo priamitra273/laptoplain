@@ -12,7 +12,6 @@ import Button from 'primevue/button';
 import Card from 'primevue/card';
 import DatePicker from 'primevue/datepicker';
 import Dialog from 'primevue/dialog';
-import Dropdown from 'primevue/dropdown';
 import Editor from 'primevue/editor';
 import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
@@ -102,6 +101,7 @@ const isOwner = computed(() => {
     return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
 });
 
+const activeSprintTaskIds = ref<string[]>([]);
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
@@ -131,6 +131,12 @@ const startDatePickerRef = ref<HTMLElement | null>(null);
 const dueDatePickerRef = ref<HTMLElement | null>(null);
 
 const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
+
+const activeSprintTasks = computed(() =>
+    activeSprintTaskIds.value.length > 0
+        ? props.tasks.filter((t) => activeSprintTaskIds.value.includes(String(t.id)))
+        : []
+);
 
 watch(
     () => props.project,
@@ -476,7 +482,7 @@ const onKanbanStatusUpdate = () => {
                                 />
                             </div>
                             <div v-else ref="priorityDropdownRef" @click.stop>
-                                <Dropdown
+                                <Select
                                     v-model="localProject.priority"
                                     :options="props.priorities"
                                     optionLabel="name"
@@ -491,7 +497,7 @@ const onKanbanStatusUpdate = () => {
                                     <template #option="slotProps"
                                         ><Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'"
                                     /></template>
-                                </Dropdown>
+                                </Select>
                             </div>
                         </div>
                     </template>
@@ -589,7 +595,7 @@ const onKanbanStatusUpdate = () => {
                                 <div class="py-4">
                                     <KanbanBoard
                                         :projectId="project.id"
-                                        :tasks="tasks"
+                                        :tasks="activeSprintTasks"
                                         :statuses="taskStatuses"
                                         :taskStatuses="taskStatuses"
                                         :taskPriorities="taskPriorities"
@@ -640,6 +646,7 @@ const onKanbanStatusUpdate = () => {
                                         @add="openTaskAdd"
                                         @addBacklog="() => openTaskAdd(null, undefined, 'backlog')"
                                         @edit="(task, parentId) => openTaskEdit(task, parentId, 'backlog')"
+                                        @activeSprintTaskIds="(ids) => activeSprintTaskIds = ids"
                                     />
                                 </div>
                             </TabPanel>

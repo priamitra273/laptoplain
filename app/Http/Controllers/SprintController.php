@@ -38,6 +38,7 @@ class SprintController extends Controller
             'tasks.users.media',
         ])
             ->where('project_id', $projectId)
+            ->whereNot('sprint_status_id', MsSprintStatus::completed()->id)
             ->orderBy('order')
             ->get();
 
@@ -207,12 +208,17 @@ class SprintController extends Controller
         $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         $validated = $request->validate([
-            'retrospective'      => 'nullable|string',
-            'move_incomplete_to' => 'nullable|string',
+            'retrospective'                        => 'nullable|string',
+            'move_incomplete_to.existing_sprint'   => 'nullable|string',
+            'move_incomplete_to.other'             => 'nullable|string|in:backlog,new_sprint',
         ]);
 
-        if (!empty($validated['move_incomplete_to'])) {
-            $targetSprintId = Sqids::decode($validated['move_incomplete_to']);
+        $moveIncompleteTo = $validated['move_incomplete_to'] ?? [];
+        $existingSprint   = $moveIncompleteTo['existing_sprint'] ?? null;
+        $other            = $moveIncompleteTo['other'] ?? null;
+
+        if (!empty($existingSprint)) {
+            $targetSprintId = Sqids::decode($existingSprint);
 
             $incompleteTasks = $sprint->tasks()
                 ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
@@ -221,6 +227,38 @@ class SprintController extends Controller
             if ($incompleteTasks->isNotEmpty()) {
                 $targetSprint = ProjectSprint::where('project_id', $projectId)->findOrFail($targetSprintId);
                 $targetSprint->tasks()->syncWithoutDetaching($incompleteTasks);
+                $sprint->tasks()->detach($incompleteTasks);
+            }
+        } elseif ($other === 'backlog') {
+            $incompleteTasks = $sprint->tasks()
+                ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
+                ->pluck('tasks.id');
+
+            if ($incompleteTasks->isNotEmpty()) {
+                $sprint->tasks()->detach($incompleteTasks);
+            }
+        } elseif ($other === 'new_sprint') {
+            $incompleteTasks = $sprint->tasks()
+                ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
+                ->pluck('tasks.id');
+
+            if ($incompleteTasks->isNotEmpty()) {
+                $lastOrder    = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
+                $sprintCount  = ProjectSprint::where('project_id', $projectId)->count();
+
+                $newSprint = ProjectSprint::create([
+                    'name'              => 'Sprint ' . ($sprintCount + 1),
+                    'goal'              => null,
+                    'start_date'        => null,
+                    'end_date'          => null,
+                    'duration'          => null,
+                    'project_id'        => $projectId,
+                    'sprint_status_id'  => MsSprintStatus::planning()->id,
+                    'order'             => $lastOrder + 1,
+                    'created_by'        => Auth::id(),
+                    'updated_by'        => Auth::id(),
+                ]);
+                $newSprint->tasks()->syncWithoutDetaching($incompleteTasks);
                 $sprint->tasks()->detach($incompleteTasks);
             }
         }

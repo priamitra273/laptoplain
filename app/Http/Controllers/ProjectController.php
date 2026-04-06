@@ -10,6 +10,7 @@ use App\Http\Requests\Project\ProjectUpdateRequest;
 use App\Models\MsProjectPriority;
 use App\Models\MsProjectRole;
 use App\Models\MsProjectStatus;
+use App\Models\MsSprintStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
@@ -218,6 +219,7 @@ class ProjectController extends Controller
             },
         ])
             ->where('project_id', $projectId)
+            ->whereNot('sprint_status_id', MsSprintStatus::completed()->id)
             ->orderBy('order')
             ->orderBy('id')
             ->get();

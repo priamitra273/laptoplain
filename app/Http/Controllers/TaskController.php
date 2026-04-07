@@ -10,6 +10,7 @@ use App\Http\Requests\Task\TaskUpdatePriorityRequest;
 use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\ProjectSprint;
 use App\Models\MsTaskStatus;
@@ -97,11 +98,20 @@ class TaskController extends Controller
         }
 
         // Validasi: Cek apakah user adalah anggota project
-        $project = Project::with('projectMembers:id,project_id,user_id')
+        $project = Project::with(
+            'projectMembers:id,project_id,user_id',
+            'status:id,name'
+            )
             ->withExists([
                 'projectMembers as is_project_member' => fn($q) => $q->where('user_id', Auth::id())
             ])
             ->findOrFail($projectId);
+        if ($project->status->name === 'Not Started') {
+            $InProgressProjectStatus = MsProjectStatus::where('name', 'In Progress')->first();
+            $project->update([
+                'status_id' => $InProgressProjectStatus->id,
+            ]);
+        }
 
         /** @var \App\Models\User $user */
         $user = Auth::user();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Task\CreateTaskAction;
+use App\Actions\Task\UpdateTaskAction;
 use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
 use App\Facades\TaskNotification;
@@ -11,8 +12,6 @@ use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
-use App\Models\MsTaskStatus;
-use App\Models\Tag;
 use App\Models\Task;
 use App\Services\ProjectService;
 use App\Services\TaskService;
@@ -76,7 +75,7 @@ class TaskController extends Controller
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
-    public function update(TaskUpdateRequest $request, string $encoded, string $taskEncoded)
+    public function update(TaskUpdateRequest $request, string $encoded, string $taskEncoded, UpdateTaskAction $updateTaskAction)
     {
         try {
             $taskId = Sqids::decode($taskEncoded);
@@ -100,106 +99,12 @@ class TaskController extends Controller
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         if ($user->cannot('update', $task)) {
             return back()->with('error', 'You do not have permission to update this task.');
         }
 
-        $data = $request->validated();
-
-        if (isset($data['status_id']) && $data['status_id'] !== $task->status_id) {
-
-            $completedStatusId = MsTaskStatus::where('name', 'Completed')->value('id');
-
-            if ((int) $data['status_id'] === (int) $completedStatusId) {
-                $data['completed_at'] = now();
-
-                if (! $task->children()->exists()) {
-                    $data['progress'] = 100;
-                }
-            } else {
-                $data['completed_at'] = null;
-            }
-        }
-        $assignUserIds = $data['assign_users'] ?? [];
-        $unassignUserIds = $data['unassign_users'] ?? [];
-
-        if (! empty($data['add_tag']['exists'])) {
-            $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
-        }
-
-        $newTagIds = [];
-        foreach ($data['add_tag']['new'] ?? [] as $newTag) {
-            $tag = Tag::create([
-                'name' => $newTag['name'],
-                'severity' => $newTag['severity'],
-            ]);
-
-            $newTagIds[] = $tag->id;
-        }
-
-        if (! empty($newTagIds)) {
-            $task->tags()->syncWithoutDetaching($newTagIds);
-        }
-
-        if (! empty($data['remove_tag'])) {
-            $task->tags()->detach($data['remove_tag']);
-        }
-
-        if (
-            isset($data['status_id']) &&
-            $data['status_id'] !== $task->status_id &&
-            ! isset($data['completed_at'])
-        ) {
-            $taskStatus = MsTaskStatus::find($data['status_id']);
-            $data['progress'] = $taskStatus ? $taskStatus->score : 0;
-        }
-
-        if ($task->children()->exists() && isset($data['progress'])) {
-            unset($data['progress']);
-        }
-
-        unset(
-            $data['assign_users'],
-            $data['unassign_users'],
-            $data['add_tag'],
-            $data['remove_tag'],
-        );
-
-        $task->update($data);
-
-        $existingUserIds = $task->users()
-            ->whereNotNull('users.id')
-            ->pluck('users.id')
-            ->toArray();
-
-        $allUserIds = array_merge($existingUserIds, $assignUserIds);
-
-        foreach ($assignUserIds as $userId) {
-            $task->assignUser($userId);
-        }
-
-        if (! empty($unassignUserIds)) {
-            $task->users()->detach($unassignUserIds);
-        }
-
-        $hasChildren = $task->children()->exists();
-        if (! $hasChildren && isset($data['progress'])) {
-            $parent = $task->parent;
-            while ($parent) {
-                $parent->update(['progress' => $parent->calculateProgress()]);
-                $parent = $parent->parent;
-            }
-        }
-
-        try {
-            TaskNotification::createTaskNotification(
-                $task,
-                $allUserIds,
-                TaskNotificationType::UPDATED
-            );
-        } catch (\Throwable $th) {
-            // throw $th;
-        }
+        $updateTaskAction->execute($task, $request->validated());
 
         return back()->with('success', 'Task updated successfully');
     }
@@ -213,6 +118,7 @@ class TaskController extends Controller
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         if ($user->cannot('update', $task)) {
             abort(403);
         }

@@ -4,11 +4,51 @@ namespace App\Services;
 
 use App\Enums\TaskNotificationType;
 use App\Facades\TaskNotification;
+use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
+use App\Models\MsTaskType;
+use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskCategory;
+use App\Repositories\TaskRepository;
 
 class TaskService
 {
+    public function __construct(
+        protected TaskRepository $repository
+    ) {}
+
+    /**
+     * Get props for task index page
+     */
+    public function indexProps(int $userId): array
+    {
+        $tasks = $this->repository->getAssignedRecursive($userId);
+
+        $totalAssigned = $tasks->where('is_assigned', true)->count();
+
+        $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
+        $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
+        $types = MsTaskType::select('id', 'name', 'severity')->get();
+        $categories = TaskCategory::select('id', 'name', 'icon', 'severity')->get();
+
+        $projects = Project::visibleFor($userId)
+            ->select('id', 'title')
+            ->get();
+
+        $props = [
+            'tasks' => $tasks->toArray(),
+            'statuses' => $statuses->toArray(),
+            'priorities' => $priorities->toArray(),
+            'types' => $types->toArray(),
+            'categories' => $categories->toArray(),
+            'projects' => $projects->toArray(),
+            'totalAssigned' => $totalAssigned,
+        ];
+
+        return $props;
+    }
+
     public function updateStatus(Task $task, MsTaskStatus $status): void
     {
         $taskHasChildren = $task->children()->exists();

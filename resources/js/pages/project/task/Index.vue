@@ -2,20 +2,20 @@
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
-import AutoComplete from 'primevue/autocomplete';
 import { computed, onMounted, ref, watch } from 'vue';
 import TaskKanban from './partials/TaskKanban.vue';
-import { Task, TaskStatusOption, TaskPriorityOption, TaskTypeOption } from './type';
+import { Task, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from './type';
 
 interface Props {
     tasks: Task[];
-    projects: { id: string; title: string}[];
+    projects: { id: string; title: string }[];
     statuses: TaskStatusOption[];
     priorities: TaskPriorityOption[];
     types: TaskTypeOption[];
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const tasksData = ref<Task[]>([]);
-const projectsData = ref<{ id: string; title: string}[]>([]);
+const projectsData = ref<{ id: string; title: string }[]>([]);
 const filteredTasks = ref<Task[]>([]);
 const totalAssigned = ref<number>(props.totalAssigned || 0);
 
@@ -43,7 +43,7 @@ const searchQuery = ref<string>('');
 const filterStatus = ref<TaskStatusOption | null>(null);
 const filterPriority = ref<TaskPriorityOption | null>(null);
 const filterType = ref<TaskTypeOption | null>(null);
-const filterProject = ref<{ id: string; title: string} | null>(null);
+const filterProject = ref<{ id: string; title: string } | null>(null);
 
 // View mode
 const viewMode = ref<'list' | 'board'>('board');
@@ -84,8 +84,8 @@ const isOverdue = (date?: string) => {
 
 const searchProjects = (event: { query: string }) => {
     const query = event.query.toLowerCase();
-    projectsData.value = props.projects.filter((p) => p.title.toLowerCase().includes(query))
-}
+    projectsData.value = props.projects.filter((p) => p.title.toLowerCase().includes(query));
+};
 
 onMounted(() => {
     tasksData.value = JSON.parse(JSON.stringify(props.tasks));
@@ -180,123 +180,105 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
         <div class="space-y-6 p-4">
             <Heading title="My Task" :description="`Manage and track your work items - ${user?.name ?? 'User'}`" />
             <div class="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-<!-- Toolbar -->
-<div class="flex flex-col gap-3">
-    <!-- Row 1: Search + View Mode -->
-    <div class="flex items-center gap-3">
-        <div class="relative flex-1">
-            <InputText
-                v-model="searchQuery"
-                placeholder="Search assignments..."
-                class="w-full pl-9"
-            />
-        </div>
+                <!-- Toolbar -->
+                <div class="flex flex-col gap-3">
+                    <!-- Row 1: Search + View Mode -->
+                    <div class="flex items-center gap-3">
+                        <div class="relative flex-1">
+                            <InputText v-model="searchQuery" placeholder="Search assignments..." class="w-full pl-9" />
+                        </div>
 
-        <div class="flex items-center gap-3 shrink-0">
-            <span class="hidden sm:block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {{ totalText }}
-            </span>
-            <SelectButton
-                v-model="viewMode"
-                :options="viewModeOptions"
-                option-label="value"
-                option-value="value"
-                data-key="value"
-                aria-labelledby="custom"
-                :allow-empty="false"
-            >
-                <template #option="slotProps">
-                    <i :class="slotProps.option.icon"></i>
-                </template>
-            </SelectButton>
-        </div>
-    </div>
+                        <div class="flex shrink-0 items-center gap-3">
+                            <span class="hidden whitespace-nowrap text-sm text-gray-500 sm:block dark:text-gray-400">
+                                {{ totalText }}
+                            </span>
+                            <SelectButton
+                                v-model="viewMode"
+                                :options="viewModeOptions"
+                                option-label="value"
+                                option-value="value"
+                                data-key="value"
+                                aria-labelledby="custom"
+                                :allow-empty="false"
+                            >
+                                <template #option="slotProps">
+                                    <i :class="slotProps.option.icon"></i>
+                                </template>
+                            </SelectButton>
+                        </div>
+                    </div>
 
-    <!-- Row 2: Filters -->
-    <div class="flex flex-wrap items-center gap-2">
-        <AutoComplete
-            v-model="filterProject"
-            :suggestions="projectsData"
-            @complete="searchProjects"
-            @change="applyFilters"
-            optionLabel="title"
-            placeholder="Project"
-            dropdown
-            class="lg:w-96"
-        />
-        <Select
-            v-model="filterStatus"
-            :options="statuses"
-            optionLabel="name"
-            placeholder="Status"
-            :showClear="true"
-            class="w-48"
-        >
-            <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center">
-                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                    <!-- Row 2: Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <AutoComplete
+                            v-model="filterProject"
+                            :suggestions="projectsData"
+                            @complete="searchProjects"
+                            @change="applyFilters"
+                            optionLabel="title"
+                            placeholder="Project"
+                            dropdown
+                            class="lg:w-96"
+                        />
+                        <Select v-model="filterStatus" :options="statuses" optionLabel="name" placeholder="Status" :showClear="true" class="w-48">
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex items-center">
+                                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                                </div>
+                                <span v-else>{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                            </template>
+                        </Select>
+                        <Select
+                            v-model="filterPriority"
+                            :options="priorities"
+                            optionLabel="name"
+                            placeholder="Priority"
+                            :showClear="true"
+                            class="w-48"
+                        >
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex items-center">
+                                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                                </div>
+                                <span v-else>{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                            </template>
+                        </Select>
+                        <Select v-model="filterType" :options="types" optionLabel="name" placeholder="Type" :showClear="true" class="w-48">
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex items-center">
+                                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
+                                </div>
+                                <span v-else>{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
+                            </template>
+                        </Select>
+
+                        <!-- Total (mobile only) -->
+                        <span class="ml-auto text-sm text-gray-500 sm:hidden dark:text-gray-400">
+                            {{ totalText }}
+                        </span>
+
+                        <!-- Clear Button -->
+                        <Button
+                            v-if="searchQuery || filterProject || filterStatus || filterPriority || filterType"
+                            label="Clear"
+                            icon="pi pi-filter-slash"
+                            text
+                            severity="secondary"
+                            size="small"
+                            class="ml-auto"
+                            @click="clearFilters"
+                        />
+                    </div>
                 </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
-            <template #option="slotProps">
-                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-            </template>
-        </Select>
-        <Select
-            v-model="filterPriority"
-            :options="priorities"
-            optionLabel="name"
-            placeholder="Priority"
-            :showClear="true"
-            class="w-48"
-        >
-            <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center">
-                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
-                </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
-            <template #option="slotProps">
-                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-            </template>
-        </Select>
-        <Select
-            v-model="filterType"
-            :options="types"
-            optionLabel="name"
-            placeholder="Type"
-            :showClear="true"
-            class="w-48"
-        >
-            <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center">
-                    <Tag :value="slotProps.value.name" :severity="slotProps.value.severity" />
-                </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
-            <template #option="slotProps">
-                <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-            </template>
-        </Select>
-
-        <!-- Total (mobile only) -->
-        <span class="sm:hidden text-sm text-gray-500 dark:text-gray-400 ml-auto">
-            {{ totalText }}
-        </span>
-
-        <!-- Clear Button -->
-        <Button
-            v-if="searchQuery || filterProject || filterStatus || filterPriority || filterType"
-            label="Clear"
-            icon="pi pi-filter-slash"
-            text
-            severity="secondary"
-            size="small"
-            class="ml-auto"
-            @click="clearFilters"
-        />
-    </div>
-</div>
 
                 <!-- Status Summary -->
                 <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-4 dark:border-gray-700">

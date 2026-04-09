@@ -11,12 +11,9 @@ use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
-use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
-use App\Models\MsTaskType;
 use App\Models\Tag;
 use App\Models\Task;
-use App\Models\TaskCategory;
 use App\Services\ProjectService;
 use App\Services\TaskService;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +28,9 @@ class TaskController extends Controller
         private ProjectService $projectService
     ) {}
 
+    /**
+     * Get all tasks for the authenticated user.
+     */
     public function index(): Response
     {
         $data = $this->service->indexProps(Auth::id());
@@ -38,6 +38,9 @@ class TaskController extends Controller
         return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($data));
     }
 
+    /**
+     * Store a newly created task in storage.
+     */
     public function store(TaskStoreRequest $request, string $encoded, CreateTaskAction $createTaskAction)
     {
         $project = $this->projectService->findByEncodedId($encoded);
@@ -56,116 +59,19 @@ class TaskController extends Controller
     {
         try {
             $taskId = Sqids::decode($encoded);
-
-            $task = Task::with([
-                'project:id,title,emoji',
-
-                'status:id,name,severity',
-                'priority:id,name,severity',
-                'type:id,name,severity',
-                'users:id,name',
-                'users.media',
-
-                'tags:id,name,severity',
-
-                'subTaskRecursive',
-                'subTaskRecursive.status:id,name,severity',
-                'subTaskRecursive.priority:id,name,severity',
-                'subTaskRecursive.type:id,name,severity',
-                'subTaskRecursive.category:id,name,icon,severity',
-                'subTaskRecursive.users:id,name',
-                'creator:id,name', // Add creator relationship
-                'creator.media',
-                'comments' => function ($query) {
-                    $query->whereNull('parent_id')
-                        ->orderBy('id', 'asc')
-                        ->with([
-                            'user',
-                            'replies' => function ($q) {
-                                $q->orderBy('id', 'asc');
-                            },
-                            'replies.user',
-                        ]);
-                },
-            ])->withExists([
-                'project as is_project_member' => function ($q) {
-                    $q->whereHas('projectMembers', function ($q) {
-                        $q->where('user_id', Auth::id());
-                    });
-                },
-            ])->findOrFail($taskId);
+            $task = $this->service->getTaskForDetail($taskId, Auth::id());
         } catch (\Exception $e) {
             throw new NotFoundHttpException(404);
         }
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         if ($user->cannot('view', $task)) {
             throw new NotFoundHttpException(404);
         }
 
-        $task->update(['progress' => $task->calculateProgress()]);
-
-        $project = $task->project;
-
-        // Get assignable users with avatar_url - filter out null users
-        $assignableUsers = collect($project->projectMembers)
-            ->filter(fn ($member) => $member->user !== null)
-            ->map(fn ($member) => [
-                'id' => $member->user->id,
-                'name' => $member->user->name,
-                'email' => $member->user->email,
-                'avatar_url' => $member->user->avatar_url,
-            ])
-            ->unique('id')
-            ->values()
-            ->toArray();
-
-        // Format assigned users with avatar_url
-        $assignedUsers = $task->users
-            ->filter(fn ($user) => $user !== null)
-            ->map(fn ($user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'avatar_url' => $user->avatar_url ?? null,
-            ])
-            ->values()
-            ->toArray();
-
-        // Format creator with avatar_url
-        $creator = null;
-        if ($task->creator) {
-            $creator = [
-                'id' => $task->creator->id,
-                'name' => $task->creator->name,
-                'avatar_url' => $task->creator->avatar_url ?? null,
-            ];
-        }
-
-        $isOwner = $task->project
-            ->projectMembers
-            ->contains(function ($member) use ($user) {
-                return $member->user_id === $user->id
-                    && $member->role?->name === 'Owner';
-            });
-
-        $isTaskMember = $task->users
-            ->contains('id', $user->id);
-
-        $data = [
-            'task' => $task->toArray(),
-            'project' => $project->toArray(),
-            'assignedUsers' => $assignedUsers,
-            'assignableUsers' => $assignableUsers,
-            'creator' => $creator,
-            'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
-            'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
-            'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
-            'categories' => TaskCategory::select('id', 'name', 'icon', 'severity')->get()->toArray(),
-            'isTaskMember' => $isTaskMember,
-            'isOwner' => $isOwner,
-            'comments' => $task->comments?->toArray() ?? [],
-        ];
+        $data = $this->service->getTaskDetailProps($task, $user);
 
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }

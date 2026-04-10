@@ -93,7 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
             Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
             Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
-            Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+            Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
             Route::prefix('sprints')->name('sprints.')->group(function () {
                 Route::post('/', [SprintController::class, 'store'])->name('store');

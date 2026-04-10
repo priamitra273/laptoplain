@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Task\CreateTaskAction;
 use App\Actions\Task\UpdateTaskAction;
-use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
-use App\Facades\TaskNotification;
 use App\Http\Requests\Task\TaskStoreRequest;
 use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
@@ -166,82 +164,16 @@ class TaskController extends Controller
         ]);
     }
 
-    public function destroy(string $encoded, string $taskEncoded)
+    public function destroy(Request $request, string $encoded, Task $task)
     {
-        try {
-            $projectId = Sqids::decode($encoded);
-            $taskId = Sqids::decode($taskEncoded);
-            $task = Task::with([
-                'subTaskRecursive.users:id',
-                'users:id',
-            ])->withExists([
-                'users as is_task_member' => fn ($q) => $q->where('user_id', Auth::id()),
+        $project = $this->projectService->findByEncodedId($encoded);
 
-                'project as is_owner' => fn ($q) => $q->whereHas(
-                    'projectMembers',
-                    fn ($q) => $q->where('user_id', Auth::id())
-                        ->whereHas('role', fn ($r) => $r->where('name', 'Owner'))
-                ),
-            ])->findOrFail($taskId);
-        } catch (\Exception $e) {
-            return back()->with('error', 'Task not found.');
-        }
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        if ($user->cannot('delete', $task)) {
-            return back()->with('error', 'You do not have permission to delete this task.');
-        }
-
-        foreach ($task->subTaskRecursive as $subTask) {
-            $allUserIds = $subTask->users->pluck('id')->toArray();
-
-            TaskNotification::createTaskNotification(
-                $subTask,
-                $allUserIds,
-                TaskNotificationType::DELETED
-            );
-
-            $subTask->delete();
-        }
-
-        $allUserIds = $task->users->pluck('id')->toArray();
-
-        TaskNotification::createTaskNotification(
-            $task,
-            $allUserIds,
-            TaskNotificationType::DELETED
-        );
-
-        $parent = $task->parent;
+        abort_if($project->id !== $task->project_id, 404);
+        abort_if($request->user()->cannot('delete', $task), 403);
 
         $task->delete();
 
-        if ($parent) {
-            $task->parent()->dissociate();
-            if ($parent->children()->exists()) {
-                $parent->update(['progress' => $parent->calculateProgress()]);
-            } else {
-                $parent->update(['progress' => $parent->status->score]);
-            }
-        }
-
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');
-    }
-
-    /**
-     * Find task by encoded id
-     */
-    protected function findByEncodedId(string $encoded): Task
-    {
-        try {
-            $taskId = Sqids::decode($encoded);
-            $task = Task::findOrFail($taskId);
-        } catch (\Exception $e) {
-            abort(404);
-        }
-
-        return $task;
     }
 }

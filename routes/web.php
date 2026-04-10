@@ -78,7 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('reports.tasks.export');
     });
 
-    Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
+    Route::get('/task/{task}', [TaskController::class, 'show'])->name('task.show');
     Route::put('/task/{task}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
     Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 

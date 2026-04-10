@@ -16,10 +16,10 @@ use App\Models\MsTaskStatus;
 use App\Models\Task;
 use App\Services\ProjectService;
 use App\Services\TaskService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TaskController extends Controller
 {
@@ -55,23 +55,17 @@ class TaskController extends Controller
             ->with('success', 'Task created successfully');
     }
 
-    public function show(string $encoded)
+    /**
+     * Show the spesific resource.
+     */
+    public function show(Request $request, Task $task)
     {
-        try {
-            $taskId = Sqids::decode($encoded);
-            $task = $this->service->getTaskForDetail($taskId, Auth::id());
-        } catch (\Exception $e) {
-            throw new NotFoundHttpException(404);
-        }
+        abort_if($request->user()->cannot('view', $task), 403);
 
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        if ($user->cannot('view', $task)) {
-            throw new NotFoundHttpException(404);
-        }
-
-        $data = $this->service->getTaskDetailProps($task, $user);
+        $data = $this->service->getTaskDetailProps(
+            $this->service->getTaskForDetail($task->id, Auth::id()),
+            $request->user()
+        );
 
         return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }

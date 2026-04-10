@@ -32,7 +32,7 @@ class TaskRepository
         return $tasks;
     }
 
-    public function findByIdForDetail(mixed $taskId, int $userId): Task
+    public function findByIdForDetail(int $taskId, int $userId): Task
     {
         return Task::with([
             'project:id,title,emoji',

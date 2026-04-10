@@ -21,7 +21,7 @@ class TaskService
     /**
      * Get task by id for detail view
      */
-    public function getTaskForDetail(mixed $taskId, int $userId): Task
+    public function getTaskForDetail(int $taskId, int $userId): Task
     {
         return $this->repository->findByIdForDetail($taskId, $userId);
     }

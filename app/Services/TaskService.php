@@ -91,6 +91,20 @@ class TaskService
         $this->dispatchNotification($task);
     }
 
+    public function updateParent(Task $task, ?int $parentId): void
+    {
+        $old_parent = $task->parent->children_count > 1
+            ? $task->parent->children()->where('id', '!=', $task->id)->first()
+            : $task->parent;
+
+        $task->update([
+            'parent_id' => $parentId,
+        ]);
+
+        $this->calculateParentProgress($task);
+        $this->calculateParentProgress($old_parent);
+    }
+
     protected function calculateParentProgress(Task $task): void
     {
         $parent = $task->parent;

@@ -146,87 +146,19 @@ class TaskController extends Controller
         ]);
     }
 
-    public function updateParent(TaskUpdateParentRequest $request, string $encoded, string $taskEncoded)
+    /**
+     * Update parent resource.
+     */
+    public function updateParent(TaskUpdateParentRequest $request, string $encoded, Task $task)
     {
-        try {
-            $projectId = Sqids::decode($encoded);
-            $taskId = Sqids::decode($taskEncoded);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid task or project id.',
-            ], 422);
-        }
+        $project = $this->projectService->findByEncodedId($encoded);
 
-        $task = Task::where('project_id', $projectId)->find($taskId);
+        abort_if($project->id !== $task->project_id, 404);
+        abort_if($request->user()->cannot('update', $task), 403);
 
-        if (! $task) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Task not found.',
-            ], 404);
-        }
+        $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
 
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        if (! $user->can('update', $task)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to move this task.',
-            ], 403);
-        }
-
-        $parentId = $request->validated('parent_id');
-        $oldParentId = $task->parent_id;
-
-        if ($parentId === $task->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Task cannot be its own parent.',
-            ], 422);
-        }
-
-        if ($parentId) {
-            $newParent = Task::where('project_id', $projectId)->find($parentId);
-            if (! $newParent) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Target parent task not found in this project.',
-                ], 422);
-            }
-
-            $cursor = $newParent;
-            while ($cursor) {
-                if ($cursor->id === $task->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Invalid move: cannot move task under its own descendant.',
-                    ], 422);
-                }
-                $cursor = $cursor->parent;
-            }
-        }
-
-        $task->update([
-            'parent_id' => $parentId,
-        ]);
-
-        $recalculateParents = function (?int $startParentId): void {
-            if (! $startParentId) {
-                return;
-            }
-
-            $current = Task::find($startParentId);
-            while ($current) {
-                $current->update([
-                    'progress' => $current->calculateProgress(),
-                ]);
-                $current = $current->parent;
-            }
-        };
-
-        $recalculateParents($oldParentId);
-        $recalculateParents($parentId);
+        $this->service->updateParent($task, $parentId);
 
         return response()->json([
             'success' => true,

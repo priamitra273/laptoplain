@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
+import { useSeverityColor } from '@/composables/useSeverityColor';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
@@ -16,7 +17,6 @@ import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
 import type { TaskCategory } from '../task/type';
-import { useSeverityColor } from '@/composables/useSeverityColor';
 
 interface Props {
     projectId: string;
@@ -36,7 +36,7 @@ const emit = defineEmits<{
     (e: 'edit', task: Task, parentId: string | null): void;
 }>();
 
-const { getSeverityColorLight } = useSeverityColor()
+const { getSeverityColorLight } = useSeverityColor();
 
 const deleteLoading = ref(false);
 const currentUser = usePage().props.auth.user;
@@ -205,7 +205,7 @@ const remove = (t: Task) => {
             router.delete(
                 route('project.tasks.destroy', {
                     projectEncoded: props.projectId,
-                    taskEncoded: t.id,
+                    task: t.id,
                 }),
                 {
                     preserveScroll: true,
@@ -397,7 +397,7 @@ const updateTaskParent = async (taskId: string, parentId: string | null) => {
         await axios.put(
             route('project.tasks.parent.update', {
                 projectEncoded: props.projectId,
-                taskEncoded: taskId,
+                task: taskId,
             }),
             { parent_id: parentId },
         );

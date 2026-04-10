@@ -34,8 +34,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits([
-    'add', 
-    'addBacklog', 
+    'add',
+    'addBacklog',
     'edit',
     'activeSprintTaskIds', // ← tambahkan ini
 ]);
@@ -84,17 +84,17 @@ const getErrorMessage = (error: any, fallback = 'Something went wrong') => {
 };
 
 const activeSprintTaskIds = computed(() => {
-    const activeSprint = localSprints.value.find(
-        (s) => s.status?.name === 'Active'
-    );
-    return (activeSprint?.tasks ?? [])
-        .filter((t) => t.category?.name?.toLowerCase() !== 'epic')
-        .map((t) => String(t.id));
+    const activeSprint = localSprints.value.find((s) => s.status?.name === 'Active');
+    return (activeSprint?.tasks ?? []).filter((t) => t.category?.name?.toLowerCase() !== 'epic').map((t) => String(t.id));
 });
 
-watch(activeSprintTaskIds, (ids) => {
-    emit('activeSprintTaskIds', ids);
-}, { immediate: true });
+watch(
+    activeSprintTaskIds,
+    (ids) => {
+        emit('activeSprintTaskIds', ids);
+    },
+    { immediate: true },
+);
 watch(
     () => props.sprints,
     (sprints) => {
@@ -347,7 +347,7 @@ const assignTaskToEpic = async (taskId: string | number, epicId: string | null) 
         await axios.put(
             route('project.tasks.parent.update', {
                 projectEncoded: props.projectId,
-                taskEncoded: String(taskId),
+                task: String(taskId),
             }),
             { parent_id: epicId },
         );
@@ -376,7 +376,7 @@ const updateTaskInline = async (taskId: string | number, payload: { status_id?: 
             await axios.put(
                 route('project.tasks.priority.update', {
                     projectEncoded: props.projectId,
-                    taskEncoded: String(taskId),
+                    task: String(taskId),
                 }),
                 { priority_id: payload.priority_id },
             );

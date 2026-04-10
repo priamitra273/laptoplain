@@ -27,7 +27,7 @@ use App\Http\Controllers\WorkLoadUserController;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-Route::get('/', fn() => to_route('login'))->name('home');
+Route::get('/', fn () => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -55,7 +55,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
         Route::resource('task-status', MsTaskStatusController::class)->except($except);
         Route::resource('task-type', MsTaskTypeController::class)->except($except);
-        
+
         Route::resource('task-category', TaskCategoryController::class)->except($except);
 
         Route::resource('tag', TagController::class)->except($except);
@@ -79,7 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
-    Route::put('/task/{encoded}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
+    Route::put('/task/{task}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
     Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 
     Route::prefix('project/{projectEncoded}')
@@ -126,8 +126,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifications.clear');
 });
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';
 
 Route::fallback(function () {
     throw new NotFoundHttpException(404);

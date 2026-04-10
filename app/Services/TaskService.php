@@ -57,7 +57,7 @@ class TaskService
         return $props;
     }
 
-    public function updateStatus(Task $task, MsTaskStatus $status): void
+    public function updateStatus(Task $task, MsTaskStatus $status, ?string $due_date): void
     {
         $taskHasChildren = $task->children()->exists();
 
@@ -65,6 +65,7 @@ class TaskService
 
         $data = [
             'status_id' => $status->id,
+            'due_date' => $due_date,
         ];
 
         if ((int) $status->id === (int) $completedStatusId) {

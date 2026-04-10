@@ -12,6 +12,7 @@ use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
 use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
+use App\Models\MsTaskStatus;
 use App\Models\Task;
 use App\Services\ProjectService;
 use App\Services\TaskService;
@@ -112,23 +113,17 @@ class TaskController extends Controller
     /**
      * Update task status
      */
-    public function updateStatus(TaskUpdateStatusRequest $request, string $encoded)
+    public function updateStatus(TaskUpdateStatusRequest $request, Task $task)
     {
-        $task = $this->findByEncodedId($encoded);
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        if ($user->cannot('update', $task)) {
+        if ($request->user()->cannot('update', $task)) {
             abort(403);
         }
 
-        $status = $request->status;
-        $this->service->updateStatus($task, $status);
-
-        if ($request->due_date) {
-            $task->update(['due_date' => $request->due_date]);
-        }
+        $this->service->updateStatus(
+            task: $task,
+            status: MsTaskStatus::find(Sqids::decode($request->status_id)),
+            due_date: $request->due_date
+        );
 
         return response()->json([
             'success' => true,

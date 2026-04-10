@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
 use App\Traits\LogsActivityTask;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes, LogUsers, LogsActivityTask;
+    use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
 
     protected $table = 'tasks';
 
@@ -62,6 +63,26 @@ class Task extends Model
                 $child->restore();
             }
         });
+    }
+
+    /**
+     * Retrieve the model for a bound value.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                abort(404);
+            }
+        }
+
+        return $this->where('id', $value)->firstOrFail();
     }
 
     public function owner()
@@ -207,6 +228,7 @@ class Task extends Model
             if ($pivot->trashed()) {
                 $pivot->restore();
             }
+
             return $pivot;
         }
 
@@ -236,13 +258,13 @@ class Task extends Model
 
     public function scopeIssues($query)
     {
-        return $query->whereHas('category', fn($q) => $q->where('name', 'Issue'))
+        return $query->whereHas('category', fn ($q) => $q->where('name', 'Issue'))
             ->whereDoesntHave('sprints');
     }
 
     public function scopeEpics($query)
     {
-        return $query->whereHas('category', fn($q) => $q->where('name', 'Epic'))
+        return $query->whereHas('category', fn ($q) => $q->where('name', 'Epic'))
             ->whereNull('parent_id');
     }
 }

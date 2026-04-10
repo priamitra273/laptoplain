@@ -26,6 +26,14 @@ class TaskController extends Controller
         private ProjectService $projectService
     ) {}
 
+    protected function authorize(string $action, string $encoded_project_id, Task $task): void
+    {
+        $project = $this->projectService->findByEncodedId($encoded_project_id);
+
+        abort_if($project->id !== $task->project_id, 404);
+        abort_if(Auth::user()->cannot($action, $task), 403);
+    }
+
     /**
      * Get all tasks for the authenticated user.
      */
@@ -125,10 +133,7 @@ class TaskController extends Controller
 
     public function updatePriority(TaskUpdatePriorityRequest $request, string $projectEncoded, Task $task)
     {
-        $project = $this->projectService->findByEncodedId($projectEncoded);
-
-        abort_if($project->id !== $task->project_id, 404);
-        abort_if($request->user()->cannot('update', $task), 403);
+        $this->authorize('update', $projectEncoded, $task);
 
         $task->update([
             'priority_id' => Sqids::decode($request->priority_id),
@@ -149,10 +154,7 @@ class TaskController extends Controller
      */
     public function updateParent(TaskUpdateParentRequest $request, string $encoded, Task $task)
     {
-        $project = $this->projectService->findByEncodedId($encoded);
-
-        abort_if($project->id !== $task->project_id, 404);
-        abort_if($request->user()->cannot('update', $task), 403);
+        $this->authorize('update', $encoded, $task);
 
         $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
 
@@ -166,10 +168,7 @@ class TaskController extends Controller
 
     public function destroy(Request $request, string $encoded, Task $task)
     {
-        $project = $this->projectService->findByEncodedId($encoded);
-
-        abort_if($project->id !== $task->project_id, 404);
-        abort_if($request->user()->cannot('delete', $task), 403);
+        $this->authorize('delete', $encoded, $task);
 
         $task->delete();
 

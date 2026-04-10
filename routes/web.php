@@ -91,7 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
-            Route::put('tasks/{taskEncoded}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
+            Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
             Route::put('tasks/{taskEncoded}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
             Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 

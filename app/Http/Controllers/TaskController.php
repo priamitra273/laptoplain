@@ -131,52 +131,22 @@ class TaskController extends Controller
         ]);
     }
 
-    public function updatePriority(TaskUpdatePriorityRequest $request, string $projectEncoded, string $taskEncoded)
+    public function updatePriority(TaskUpdatePriorityRequest $request, string $projectEncoded, Task $task)
     {
-        try {
-            $projectId = Sqids::decode($projectEncoded);
-            $taskId = Sqids::decode($taskEncoded);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid task or project id.',
-            ], 422);
-        }
+        $project = $this->projectService->findByEncodedId($projectEncoded);
 
-        if (! $projectId || ! $taskId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid task or project id.',
-            ], 422);
-        }
-
-        $task = Task::where('project_id', $projectId)->find($taskId);
-
-        if (! $task) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Task not found.',
-            ], 404);
-        }
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        if ($user->cannot('update', $task)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to update this task.',
-            ], 403);
-        }
+        abort_if($project->id !== $task->project_id, 404);
+        abort_if($request->user()->cannot('update', $task), 403);
 
         $task->update([
-            'priority_id' => $request->priorityId,
+            'priority_id' => Sqids::decode($request->priority_id),
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Task priority updated successfully',
             'data' => [
-                'task_id' => $taskEncoded,
+                'task_id' => Sqids::encode($task->id),
                 'priority_id' => $request->input('priority_id'),
             ],
         ]);

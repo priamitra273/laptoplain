@@ -2,6 +2,10 @@
 
 namespace App\Listeners;
 
+use App\Enums\TaskNotificationType;
+use App\Events\TaskCreated;
+use App\Facades\TaskNotification;
+
 class NotifyAssignedUsers
 {
     /**
@@ -15,17 +19,17 @@ class NotifyAssignedUsers
     /**
      * Handle the event.
      */
-    public function handle(\App\Events\TaskCreated $event): void
+    public function handle(TaskCreated $event): void
     {
         if (empty($event->assignUserIds)) {
             return;
         }
 
         try {
-            \App\Facades\TaskNotification::createTaskNotification(
+            TaskNotification::createTaskNotification(
                 $event->task,
                 $event->assignUserIds,
-                \App\Enums\TaskNotificationType::CREATED
+                TaskNotificationType::CREATED
             );
         } catch (\Throwable $th) {
             // Fail silently for notification errors

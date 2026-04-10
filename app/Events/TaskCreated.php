@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\Task;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -15,7 +16,7 @@ class TaskCreated
      * Create a new event instance.
      */
     public function __construct(
-        public \App\Models\Task $task,
+        public Task $task,
         public array $assignUserIds = []
     ) {}
 

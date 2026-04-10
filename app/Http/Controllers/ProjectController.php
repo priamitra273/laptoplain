@@ -17,10 +17,11 @@ use App\Models\MsTaskType;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\ProjectSprint;    // ✅ BARU
-use App\Models\Task;             // ✅ BARU
-use App\Models\Tag;
+use App\Models\Tag;             // ✅ BARU
+use App\Models\Task;
 use App\Models\TaskCategory;     // ✅ BARU
 use App\Models\User;
+use App\Services\ProjectService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -33,26 +34,14 @@ class ProjectController extends Controller
         'FINISHED',
     ];
 
+    public function __construct(private ProjectService $projectService) {}
+
+    /**
+     * Show the resources
+     */
     public function index()
     {
-        $user = Auth::user();
-
-        $projects = Project::with([
-            'status:id,name,severity',
-            'priority:id,name,severity',
-        ])
-            ->visibleFor($user)
-            ->orderByDesc('id')
-            ->get();
-
-        $statuses = MsProjectStatus::select('id', 'name', 'severity')->get();
-        $priorities = MsProjectPriority::select('id', 'name', 'severity')->get();
-
-        $response = [
-            'projects' => $projects->toArray(),
-            'statuses' => $statuses->toArray(),
-            'priorities' => $priorities->toArray(),
-        ];
+        $response = $this->projectService->getIndexData();
 
         return Inertia::render('project/Index', Sqids::rec_encode_ids_in_list($response));
     }
@@ -213,7 +202,7 @@ class ProjectController extends Controller
                 ])
                     ->where(function ($taskQuery) {
                         $taskQuery->whereNull('parent_id')
-                            ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                            ->orWhereHas('parent.category', fn ($categoryQuery) => $categoryQuery->where('name', 'Epic'));
                     })
                     ->orderBy('id');
             },
@@ -231,10 +220,13 @@ class ProjectController extends Controller
                 $task['users'] = collect($task['users'] ?? [])->map(function ($user) {
                     $u = User::with('media')->find($user['id']);
                     $user['avatar_url'] = $u?->avatar_url;
+
                     return $user;
                 })->toArray();
+
                 return $task;
             })->toArray();
+
             return $sprintArr;
         })->toArray();
 
@@ -250,7 +242,7 @@ class ProjectController extends Controller
             ->where('project_id', $projectId)
             ->where(function ($taskQuery) {
                 $taskQuery->whereNull('parent_id')
-                    ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                    ->orWhereHas('parent.category', fn ($categoryQuery) => $categoryQuery->where('name', 'Epic'));
             })
             ->doesntHave('sprints')
             ->orderBy('id')
@@ -261,8 +253,10 @@ class ProjectController extends Controller
             $arr['users'] = collect($arr['users'] ?? [])->map(function ($user) {
                 $u = User::with('media')->find($user['id']);
                 $user['avatar_url'] = $u?->avatar_url;
+
                 return $user;
             })->toArray();
+
             return $arr;
         })->toArray();
 
@@ -271,11 +265,10 @@ class ProjectController extends Controller
             ->get()
             ->toArray();
 
-        $epics = Task::whereHas('category', fn($q) => $q->where('name', 'Epic'))
+        $epics = Task::whereHas('category', fn ($q) => $q->where('name', 'Epic'))
             ->where('project_id', $projectId)
             ->whereNull('parent_id')
             ->get(['id', 'title', 'story_points']);
-
 
         $data = [
             'project' => $projectArr,
@@ -293,7 +286,7 @@ class ProjectController extends Controller
             'sprints' => $formattedSprints,
             'backlog' => $formattedBacklog,
             'taskCategories' => $taskCategories,
-            'epics'          => Sqids::rec_encode_ids_in_list($epics->toArray()),
+            'epics' => Sqids::rec_encode_ids_in_list($epics->toArray()),
         ];
 
         return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
@@ -362,7 +355,7 @@ class ProjectController extends Controller
         ]);
 
         $referer = $request->header('referer');
-        $isFromDetail = $referer && str_contains($referer, '/project/' . $encoded);
+        $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);
 
         if ($isFromDetail) {
             return to_route('project.show', ['encoded' => $encoded]);

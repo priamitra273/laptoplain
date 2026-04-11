@@ -308,7 +308,7 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
                         "
                         row-hover
                         class="p-datatable-sm cursor-pointer"
-                        @row-click="(e) => router.get(route('task.show', { encoded: e.data.id }))"
+                        @row-click="(e) => router.get(route('task.show', e.data.id))"
                     >
                         <!-- SUMMARY -->
                         <Column header="Summary" style="width: 35%">

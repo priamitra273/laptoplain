@@ -2,8 +2,8 @@
 import { Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
-import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref, watch } from 'vue';
@@ -26,7 +26,7 @@ const toast = useToast();
 const grouped = ref<Record<string, Task[]>>({});
 const draggingItem = ref(false);
 const preDragSnapshot = ref<Record<string, Task[]> | null>(null);
- 
+
 const onDragStart = () => {
     draggingItem.value = true;
 
@@ -104,7 +104,7 @@ const getStatusName = (id: string) => {
 
     return 'Unknown';
 };
- 
+
 /** Perform the actual API call, optionally with a due_date */
 const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string | null) => {
     try {
@@ -121,18 +121,18 @@ const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string |
         grouped.value = getGroupedTasks();
     }
 };
- 
+
 const onGroupChange = async (task: Task, newStatusId: string) => {
     const targetStatus = props.statuses.find((s) => s.id === newStatusId);
     const isInProgress = targetStatus?.name === 'In Progress';
     const dueDateMissing = !task.due_date;
- 
+
     if (isInProgress && dueDateMissing) {
         // // Revert visual ke posisi sebelum drag menggunakan snapshot pre-drag
         // if (preDragSnapshot.value) {
         //     grouped.value = preDragSnapshot.value;
         // }
- 
+
         inProgressDialog.value = {
             visible: true,
             task,
@@ -142,10 +142,10 @@ const onGroupChange = async (task: Task, newStatusId: string) => {
         };
         return;
     }
- 
+
     await doStatusUpdate(task, newStatusId, null);
 };
- 
+
 const submitInProgressDialog = async () => {
     if (!inProgressDialog.value.dueDate) {
         toast.add({
@@ -156,27 +156,27 @@ const submitInProgressDialog = async () => {
         });
         return;
     }
- 
+
     inProgressLoading.value = true;
- 
+
     const formattedDueDate = moment(inProgressDialog.value.dueDate).format('YYYY-MM-DD');
     await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.newStatusId!, formattedDueDate);
- 
+
     inProgressLoading.value = false;
     inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
 };
- 
+
 const cancelInProgressDialog = () => {
     // Restore snapshot agar card tidak hilang
     if (inProgressDialog.value.snapshot) {
         grouped.value = inProgressDialog.value.snapshot;
     }
-    inProgressDialog.value = { 
-        visible: false, 
-        task: null, 
-        newStatusId: null, 
-        dueDate: null, 
-        snapshot: null, 
+    inProgressDialog.value = {
+        visible: false,
+        task: null,
+        newStatusId: null,
+        dueDate: null,
+        snapshot: null,
     };
 };
 
@@ -216,7 +216,7 @@ watch(
                         :key="item.id"
                         class="!rounded-lg border !shadow-none"
                         :class="[draggingItem ? 'cursor-grabbing' : 'cursor-pointer']"
-                        @click="router.get(route('task.show', { encoded: item.id }))"
+                        @click="router.get(route('task.show', item.id))"
                     >
                         <template #subtitle>
                             <Link :href="route('project.show', item.project?.id)" @click.stop>
@@ -229,9 +229,9 @@ watch(
                             <div class="space-y-4">
                                 <div class="break-all">
                                     <Link :href="route('task.show', item.id)" @click.stop>
-                                    <span class="hover:underline">
-                                        {{ item.title }}
-                                    </span>
+                                        <span class="hover:underline">
+                                            {{ item.title }}
+                                        </span>
                                     </Link>
                                 </div>
                                 <div class="flex justify-between gap-1">
@@ -254,15 +254,9 @@ watch(
             </div>
         </div>
     </div>
- 
+
     <!-- ── In Progress: Due Date Dialog ─────────────────────────────────────── -->
-    <Dialog
-        v-model:visible="inProgressDialog.visible"
-        modal
-        :closable="false"
-        :draggable="false"
-        class="w-full max-w-md"
-    >
+    <Dialog v-model:visible="inProgressDialog.visible" modal :closable="false" :draggable="false" class="w-full max-w-md">
         <template #header>
             <div class="flex items-center gap-3">
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
@@ -274,16 +268,14 @@ watch(
                 </div>
             </div>
         </template>
- 
+
         <div class="flex flex-col gap-4 py-2">
             <p class="text-sm text-gray-600 dark:text-gray-300">
-                <span class="font-medium text-surface-800 dark:text-surface-100">
-                    "{{ inProgressDialog.task?.title }}"
-                </span>
+                <span class="font-medium text-surface-800 dark:text-surface-100"> "{{ inProgressDialog.task?.title }}" </span>
                 doesn't have a due date yet. Please set one before moving it to
                 <span class="font-semibold text-blue-600 dark:text-blue-400">In Progress</span>.
             </p>
- 
+
             <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
                     <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
@@ -298,15 +290,10 @@ watch(
                 />
             </div>
         </div>
- 
+
         <template #footer>
             <div class="flex justify-end gap-2 pt-2">
-                <Button
-                    label="Cancel"
-                    severity="secondary"
-                    text
-                    @click="cancelInProgressDialog"
-                />
+                <Button label="Cancel" severity="secondary" text @click="cancelInProgressDialog" />
                 <Button
                     label="Confirm & Move"
                     icon="pi pi-check"

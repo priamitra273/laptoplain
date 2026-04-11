@@ -136,7 +136,7 @@ const goToProject = () => {
 
 const goToSubTask = (subTaskId: string) => {
     if (subTaskId) {
-        router.visit(route('task.show', { encoded: subTaskId }));
+        router.visit(route('task.show', subTaskId));
     }
 };
 
@@ -827,14 +827,7 @@ const submitComment = () => {
         </div>
 
         <!-- In Progress: Due Date Required Dialog -->
-        <Dialog
-            v-model:visible="inProgressDialogVisible"
-            modal
-            :closable="false"
-            :draggable="false"
-            header="Set Due Date"
-            class="w-full max-w-md"
-        >
+        <Dialog v-model:visible="inProgressDialogVisible" modal :closable="false" :draggable="false" header="Set Due Date" class="w-full max-w-md">
             <template #header>
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
@@ -870,18 +863,8 @@ const submitComment = () => {
 
             <template #footer>
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button
-                        label="Cancel"
-                        severity="secondary"
-                        text
-                        @click="cancelInProgressDialog"
-                    />
-                    <Button
-                        label="Confirm & Save"
-                        icon="pi pi-check"
-                        :disabled="!inProgressDueDate"
-                        @click="submitInProgressDialog"
-                    />
+                    <Button label="Cancel" severity="secondary" text @click="cancelInProgressDialog" />
+                    <Button label="Confirm & Save" icon="pi pi-check" :disabled="!inProgressDueDate" @click="submitInProgressDialog" />
                 </div>
             </template>
         </Dialog>

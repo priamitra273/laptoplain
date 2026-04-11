@@ -125,7 +125,7 @@ const showFilters = ref<boolean>(false);
  * @param encodedTaskId - Already encoded task ID from backend
  */
 const navigateToTask = (encodedTaskId: string) => {
-    router.visit(route('task.show', { encoded: encodedTaskId }));
+    router.visit(route('task.show', encodedTaskId));
 };
 
 /**
@@ -497,7 +497,7 @@ const onPageChange = (event: any) => {
                         <Column field="summary" header="Summary" style="min-width: 300px">
                             <template #body="{ data }">
                                 <Link
-                                    :href="route('task.show', { encoded: data.id })"
+                                    :href="route('task.show', data.id)"
                                     class="-m-2 block cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <p

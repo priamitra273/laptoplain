@@ -9,12 +9,14 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__ . '/../routes/web.php',
-        commands: __DIR__ . '/../routes/console.php',
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
@@ -33,19 +35,22 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->respond(function ($response, \Throwable $exception, Request $request) {
-            if ($response->getStatusCode() === 404) {
-                // Cek apakah user sudah login
-                $isAuthenticated = auth()->check();
-
-                // Pilih view berdasarkan status autentikasi
-                $view = $isAuthenticated ? 'errors/NotFound' : 'errors/404';
-
-                return Inertia::render($view)
-                    ->toResponse($request)
-                    ->setStatusCode(404);
+            if (! $exception instanceof NotFoundHttpException) {
+                return $response;
             }
 
-            return $response;
+            if ($request->expectsJson()) {
+                return $response;
+            }
+
+            $view = Auth::check() ? 'errors/NotFound' : 'errors/404';
+
+            return app(HandleInertiaRequests::class)->handle(
+                $request,
+                fn (Request $request) => Inertia::render($view)
+                    ->toResponse($request)
+                    ->setStatusCode(404)
+            );
         });
     })
     ->create();

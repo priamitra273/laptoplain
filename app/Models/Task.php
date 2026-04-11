@@ -7,6 +7,7 @@ use App\Traits\LogsActivityTask;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
@@ -78,7 +79,7 @@ class Task extends Model
             try {
                 $value = Sqids::decode($value);
             } catch (\Throwable $e) {
-                abort(404);
+                throw (new ModelNotFoundException)->setModel(static::class);
             }
         }
 

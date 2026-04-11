@@ -115,9 +115,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('profile.avatar.destroy');
 
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
-    Route::delete('/comments/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
-    Route::post('/comments/{id}/reaction', [CommentController::class, 'react'])->name('comments.react');
+    Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('/comments/{comment}/reaction', [CommentController::class, 'react'])->name('comments.react');
+
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/stream', [NotificationController::class, 'stream'])->name('notifications.stream');

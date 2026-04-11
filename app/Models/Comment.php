@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comment extends Model
@@ -24,6 +26,22 @@ class Comment extends Model
         'deleted_by',
         'parent_id',
     ];
+
+    /**
+     * Resolve route binding for comment
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                throw (new ModelNotFoundException)->setModel(static::class);
+            }
+        }
+
+        return $this->where('id', $value)->firstOrFail();
+    }
 
     /**
      * Relasi morph (polymorphic) ke model lain

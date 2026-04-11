@@ -20,6 +20,7 @@ import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 const emojiIndex = new EmojiIndex(emojiData);
 
 import MentionEditor from '@/components/Mentioneditor.vue';
+import { ProjectUserOption } from '@/types/task-comment';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Comment, ProjectMember, Task, TaskPriority, TaskStatus, TaskType } from '..';
 import CommentItem from './CommentItem.vue';
@@ -86,10 +87,12 @@ const statusOption = computed(() => {
 
 // Compute flat list of project members for mention
 const mentionMembers = computed(() =>
-    props.project.project_members.map((m) => ({
-        id: m.user.id,
-        name: m.user.name,
-    })),
+    props.project.project_members.map((m) => {
+        return {
+            id: m.user.id,
+            name: m.user.name,
+        } as ProjectUserOption;
+    }),
 );
 
 const breadcrumbItems = computed(() => [

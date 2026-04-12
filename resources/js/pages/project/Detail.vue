@@ -6,24 +6,9 @@ import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
-import Avatar from 'primevue/avatar';
-import AvatarGroup from 'primevue/avatargroup';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
-import DatePicker from 'primevue/datepicker';
-import Dialog from 'primevue/dialog';
-import Editor from 'primevue/editor';
-import InputText from 'primevue/inputtext';
-import ProgressBar from 'primevue/progressbar';
-import Tab from 'primevue/tab';
-import TabList from 'primevue/tablist';
-import TabPanel from 'primevue/tabpanel';
-import TabPanels from 'primevue/tabpanels';
-import Tabs from 'primevue/tabs';
-import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
+import { ProjectMember, TabListItem, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
@@ -132,10 +117,17 @@ const dueDatePickerRef = ref<HTMLElement | null>(null);
 
 const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
 
+const tabListItems: TabListItem[] = [
+    { label: 'Kanban', icon: 'pi pi-th-large' },
+    { label: 'List', icon: 'pi pi-list' },
+    { label: 'Backlog', icon: 'pi pi-inbox' },
+    { label: 'Details', icon: 'pi pi-info-circle' },
+    { label: 'Team', icon: 'pi pi-users' },
+    { label: 'Timeline', icon: 'pi pi-chart-bar' },
+];
+
 const activeSprintTasks = computed(() =>
-    activeSprintTaskIds.value.length > 0
-        ? props.tasks.filter((t) => activeSprintTaskIds.value.includes(String(t.id)))
-        : []
+    activeSprintTaskIds.value.length > 0 ? props.tasks.filter((t) => activeSprintTaskIds.value.includes(String(t.id))) : [],
 );
 
 watch(
@@ -354,6 +346,23 @@ const cancelEdit = (field: keyof typeof editMode.value) => {
 const onKanbanStatusUpdate = () => {
     router.reload({ only: ['tasks'] });
 };
+
+const isUserHasAvatar = (user: User): boolean => {
+    return !!user.avatar_url && user.avatar_url !== '/images/default-avatar.png';
+};
+
+const getUserAvatarImage = (user: User): string | undefined => {
+    return isUserHasAvatar(user) ? (user.avatar_url as string) : undefined;
+};
+
+const getUserAvatarLabel = (user: User): string | undefined => {
+    if (!isUserHasAvatar(user)) return getInitials(user.name);
+    return undefined;
+};
+
+const getUserAvatarStyle = (user: User, index: number): object => {
+    return !isUserHasAvatar(user) ? { backgroundColor: getMemberColor(index), color: 'white', fontSize: '1.25rem', fontWeight: '600' } : {};
+};
 </script>
 
 <template>
@@ -405,21 +414,11 @@ const onKanbanStatusUpdate = () => {
                         <Avatar
                             v-for="(member, index) in props.members.slice(0, 3)"
                             :key="member.id"
-                            :image="
-                                member.user.avatar_url && member.user.avatar_url !== '/images/default-avatar.png' ? member.user.avatar_url : undefined
-                            "
-                            :label="
-                                !member.user.avatar_url || member.user.avatar_url === '/images/default-avatar.png'
-                                    ? getInitials(member.user.name)
-                                    : undefined
-                            "
+                            :image="getUserAvatarImage(member.user)"
+                            :label="getUserAvatarLabel(member.user)"
                             size="large"
                             shape="circle"
-                            :style="
-                                !member.user.avatar_url || member.user.avatar_url === '/images/default-avatar.png'
-                                    ? { backgroundColor: getMemberColor(index), color: 'white', fontSize: '1.25rem', fontWeight: '600' }
-                                    : {}
-                            "
+                            :style="getUserAvatarStyle(member.user, index)"
                             :title="member.user.name"
                             class="border-3 border-white dark:border-surface-900"
                         />
@@ -481,6 +480,7 @@ const onKanbanStatusUpdate = () => {
                                     class="w-fit"
                                 />
                             </div>
+
                             <div v-else ref="priorityDropdownRef" @click.stop>
                                 <Select
                                     v-model="localProject.priority"
@@ -491,12 +491,13 @@ const onKanbanStatusUpdate = () => {
                                     class="w-full"
                                     autofocus
                                 >
-                                    <template #value="slotProps"
-                                        ><Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'warning'"
-                                    /></template>
-                                    <template #option="slotProps"
-                                        ><Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'warning'"
-                                    /></template>
+                                    <template #value="{ value }">
+                                        <Tag v-if="value" :value="value.name" :severity="value.severity || 'warning'" />
+                                    </template>
+
+                                    <template #option="{ option }">
+                                        <Tag :value="option.name" :severity="option.severity || 'warning'" />
+                                    </template>
                                 </Select>
                             </div>
                         </div>
@@ -570,24 +571,10 @@ const onKanbanStatusUpdate = () => {
                 <template #content>
                     <Tabs value="Kanban">
                         <TabList scrollable>
-                            <Tab value="Kanban" v-tooltip.bottom="'Kanban'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-th-large sm:mr-2"></i><span class="hidden sm:inline">Kanban</span></Tab
-                            >
-                            <Tab value="List" v-tooltip.bottom="'List'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-list sm:mr-2"></i><span class="hidden sm:inline">List</span></Tab
-                            >
-                            <Tab value="Backlog" v-tooltip.bottom="'Backlog'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-inbox sm:mr-2"></i><span class="hidden sm:inline">Backlog</span></Tab
-                            >
-                            <Tab value="Details" v-tooltip.bottom="'Details'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-info-circle sm:mr-2"></i><span class="hidden sm:inline">Details</span></Tab
-                            >
-                            <Tab value="Team" v-tooltip.bottom="'Team'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-users sm:mr-2"></i><span class="hidden sm:inline">Team</span></Tab
-                            >
-                            <Tab value="Timeline" v-tooltip.bottom="'Timeline'" class="!px-3 sm:!px-4"
-                                ><i class="pi pi-chart-bar sm:mr-2"></i><span class="hidden sm:inline">Timeline</span></Tab
-                            >
+                            <Tab v-for="tab in tabListItems" :key="tab.label" :value="tab.label" v-tooltip.bottom="tab.label" class="!px-3 sm:!px-4">
+                                <i :class="tab.icon" class="sm:mr-2"></i>
+                                <span class="hidden sm:inline">{{ tab.label }}</span>
+                            </Tab>
                         </TabList>
 
                         <TabPanels>
@@ -646,7 +633,7 @@ const onKanbanStatusUpdate = () => {
                                         @add="openTaskAdd"
                                         @addBacklog="() => openTaskAdd(null, undefined, 'backlog')"
                                         @edit="(task, parentId) => openTaskEdit(task, parentId, 'backlog')"
-                                        @activeSprintTaskIds="(ids) => activeSprintTaskIds = ids"
+                                        @activeSprintTaskIds="(ids) => (activeSprintTaskIds = ids)"
                                     />
                                 </div>
                             </TabPanel>

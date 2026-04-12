@@ -247,3 +247,8 @@ export interface ProjectForm {
     owned_id?: number | null;
     [key: string]: any;
 }
+
+interface TabListItem {
+    label: string;
+    icon: string;
+}

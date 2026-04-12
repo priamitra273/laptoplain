@@ -15,8 +15,7 @@ import TreeTable from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
-import type { TaskCategory } from '../task/type';
+import type { Task, TaskPriority, TaskStatus, TaskType, TaskCategory, TaskUser, TaskFormatted, TaskFormattedData } from '..';
 
 interface Props {
     projectId: string;

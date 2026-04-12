@@ -12,8 +12,7 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
 import moment from 'moment';
-import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '..';
-import type { TaskCategory } from './type';
+import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType, TaskCategory } from '..';
 
 interface Props {
     parentId: string | null;
@@ -24,7 +23,7 @@ interface Props {
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
-    taskCategories?: TaskCategory[]; // ← OPTIONAL dengan default value
+    taskCategories?: TaskCategory[];
     excludeEpicCategory?: boolean;
     onlyEpicCategory?: boolean;
     hideParentTaskField?: boolean;

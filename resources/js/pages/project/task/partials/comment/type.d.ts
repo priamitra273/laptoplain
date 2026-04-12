@@ -1,9 +1,8 @@
-import { Comment } from '@/pages/project';
-import { ProjectUserOption } from '@/types/task-comment';
+import { Comment, User } from '@/pages/project';
 
 export interface EditorProps {
     modelValue: string;
-    projectMembers?: ProjectUserOption[];
+    projectMembers?: User[];
     placeholder?: string;
     submitLabel?: string;
     submitIcon?: string;
@@ -34,5 +33,5 @@ export interface ReplyProps {
     taskId: string;
     currentLevel: number;
     currentUserId?: number;
-    projectMembers?: ProjectUserOption[];
+    projectMembers?: User[];
 }

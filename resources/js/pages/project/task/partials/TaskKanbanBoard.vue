@@ -17,13 +17,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import type { Task, TaskPriority, TaskStatus, TaskType } from '../..';
-
-interface AssignableUser {
-    id: string;
-    name: string;
-    avatar_url?: string | null;
-}
+import type { Task, TaskPriority, TaskStatus, TaskType, User } from '../..';
 
 interface Props {
     projectId: string;
@@ -34,7 +28,7 @@ interface Props {
     taskTypes: TaskType[];
     isMember: boolean;
     hasPermission: boolean;
-    assignableUsers?: AssignableUser[];
+    assignableUsers?: User[];
 }
 
 const props = defineProps<Props>();
@@ -70,7 +64,7 @@ const quickForm = ref({
     title: '',
     type_id: null as TaskType | null,
     priority_id: null as TaskPriority | null,
-    assign_users: [] as AssignableUser[],
+    assign_users: [] as User[],
     start_date: null as Date | null,
     due_date: null as Date | null,
 });
@@ -114,15 +108,15 @@ const inProgressLoading = ref(false);
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const canAct = computed(() => props.isMember || props.hasPermission);
 
-const currentUser = computed(() => page.props.auth?.user as AssignableUser | undefined);
+const currentUser = computed(() => page.props.auth?.user as User | undefined);
 
 const allAssignees = computed(() => {
-    const map = new Map<string, AssignableUser>();
-    props.tasks.forEach((t) => (t.users || []).forEach((u) => map.set(u.id, u)));
+    const map = new Map<string, User>();
+    props.tasks.forEach((t) => (t.users || []).forEach((u) => map.set(u.id, u as unknown as User)));
     return Array.from(map.values());
 });
 
-const userOptions = computed<AssignableUser[]>(() => {
+const userOptions = computed<User[]>(() => {
     if (props.assignableUsers?.length) return props.assignableUsers;
     // fallback: collect from tasks
     return allAssignees.value;

@@ -3,12 +3,14 @@ import InputError from '@/components/InputError.vue';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
+import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
+import type { User } from '..';
 
 interface Props {
     projectId: string;
-    users: { id: string; name: string }[];
+    users: User[];
     roles: { id: string; name: string }[];
 }
 

@@ -1,17 +1,70 @@
-import { PrimeSeverity } from '@/types';
+import { PrimeSeverity, ProjectRoleOption } from '@/types';
+
+export interface User {
+    id: string | number;
+    name: string;
+    email?: string;
+    avatar_url?: string | null;
+}
 
 export interface ProjectMember {
     id: string;
     user: User;
-    role: { id: string; name: string };
+    role: ProjectRoleOption;
     project_role_id: string;
     is_active: boolean;
 }
 
+export interface MemberWithAvatar extends ProjectMember {
+    user: User;
+}
+
 export interface ProjectMembersData {
     members: ProjectMember[];
-    roles: { id: string; name: string }[];
-    users: { id: string; name: string }[];
+    roles: ProjectRoleOption[];
+    users: User[];
+}
+
+export interface Project {
+    id: string;
+    title: string;
+    description?: string;
+    emoji: string;
+    progress: number;
+    start_date?: string;
+    due_date?: string;
+    status?: ProjectStatus;
+    priority?: ProjectPriority;
+    status_id?: string;
+    priority_id?: string;
+    created_at?: string;
+    updated_at?: string;
+    project_members: ProjectMember[];
+}
+
+export interface Epic {
+    id: string;
+    title: string;
+    story_points?: number | null;
+}
+
+export interface SprintStatus {
+    id: string;
+    name: string; // 'Planning' | 'Active' | 'Completed'
+    severity?: number;
+}
+
+export interface Sprint {
+    id: string;
+    name: string;
+    goal?: string;
+    duration?: string;
+    start_date?: string;
+    end_date?: string;
+    order?: number;
+    retrospective?: string;
+    status?: SprintStatus;
+    tasks?: Task[];
 }
 
 export interface CellEditEvent<T> {
@@ -76,7 +129,7 @@ export interface TaskCategory {
     id: string;
     name: string; // 'Epic' | 'Story' | 'Issue'
     icon?: string;
-    severity?: number;
+    severity?: PrimeSeverity;
 }
 
 export interface TaskStatus {
@@ -104,11 +157,7 @@ export interface Tag {
     severity: string;
 }
 
-export interface TaskUser {
-    id: string;
-    name: string;
-    email?: string;
-    avatar_url?: string | null;
+export interface TaskUser extends User {
     pivot: TaskPivot;
 }
 
@@ -134,17 +183,20 @@ export interface TaskFormatted {
 
 export interface TaskFormattedData {
     id: string;
+    parent_id: string | null;
     title: string;
     status?: TaskStatus;
     priority?: TaskPriority;
     type?: TaskType;
+    category?: TaskCategory;
     users: TaskUser[];
     progress: number;
-    start_date: string;
-    due_date: string;
+    start_date: string | null;
+    due_date: string | null;
     created_by: string | null;
     completed_at: string | null;
     is_overdue: boolean;
+    level?: number;
 }
 
 export interface Comment {
@@ -153,7 +205,7 @@ export interface Comment {
     commentable_id: string;
     user_id: string;
     body: string;
-    reaction?: Record<string, string>;
+    reaction?: Record<string, any>;
     owned_id: string | null;
 
     created_by: string | null;
@@ -164,45 +216,6 @@ export interface Comment {
     updated_at: string | null;
     deleted_at: string | null;
 
-    parent_id: string | null;
-
-    user: CommentUser;
-    replies: Comment[];
-}
-
-export interface CommentUser {
-    id: string;
-    uuid: string;
-    name: string;
-    email: string;
-    avatar_url: string | null;
-
-    email_verified_at: string | null;
-    is_active: boolean;
-
-    created_by: number | string;
-    updated_by: number | string;
-    deleted_by: number | string | null;
-
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-}
-
-export interface Comment {
-    id: string;
-    commentable_type: string;
-    commentable_id: string;
-    user_id: string;
-    body: string;
-    reaction: unknown[];
-    owned_id: string;
-    created_by: string | null;
-    updated_by: string | null;
-    deleted_by: string | null;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
     parent_id: string | null;
 
     user: User;
@@ -248,7 +261,33 @@ export interface ProjectForm {
     [key: string]: any;
 }
 
-interface TabListItem {
+export interface TabListItem {
     label: string;
     icon: string;
+}
+
+export interface ProjectDetailProps {
+    project: Project;
+    members: MemberWithAvatar[];
+    roles: ProjectRoleOption[];
+    users: User[];
+    tasks: Task[];
+    taskTypes: TaskType[];
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    tags: Tag[];
+    assignableUsers: User[];
+    statuses?: ProjectStatus[];
+    priorities?: ProjectPriority[];
+    sprints: Sprint[];
+    backlog: Task[];
+    taskCategories: TaskCategory[];
+    epics: Epic[];
+}
+
+export interface ProjectDetailHeaderProps {
+    project: Project;
+    members: MemberWithAvatar[];
+    canEdit: boolean;
+    isMember: boolean;
 }

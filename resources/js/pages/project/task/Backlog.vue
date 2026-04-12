@@ -6,19 +6,13 @@ import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
 import Swal from 'sweetalert2';
 import { computed, ref, watch } from 'vue';
-import type { Task, TaskPriority, TaskStatus, TaskType } from '..';
+import type { User, Task, TaskPriority, TaskStatus, TaskType, Sprint, TaskCategory } from '..';
 import BacklogSection from './partials/BacklogSection.vue';
 import CompleteSprintDialog from './partials/CompleteSprintDialog.vue';
 import EditSprintDialog from './partials/EditSprintDialog.vue';
 import SprintSection from './partials/SprintSection.vue';
 import StartSprintDialog from './partials/StartSprintDialog.vue';
-import type { Sprint, TaskCategory } from './type';
 
-interface User {
-    id: string;
-    name: string;
-    avatar_url?: string | null;
-}
 const props = defineProps<{
     projectId: string;
     sprints: Sprint[];

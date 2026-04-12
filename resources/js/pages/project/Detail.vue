@@ -2,79 +2,26 @@
 import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import 'emoji-mart-vue-fast/css/emoji-mart.css';
-import emojiData from 'emoji-mart-vue-fast/data/all.json';
-import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
-import { computed, onUnmounted, ref, watch } from 'vue';
-import { ProjectMember, TabListItem, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType } from '.';
+import { computed, ref } from 'vue';
+import type { MemberWithAvatar, ProjectDetailProps, ProjectMember, TabListItem, Task } from './index';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
+import ProjectDetailsTab from './partials/ProjectDetailsTab.vue';
+import ProjectHeader from './partials/ProjectHeader.vue';
+import ProjectStats from './partials/ProjectStats.vue';
 import BacklogBoard from './task/Backlog.vue';
 import TaskForm from './task/Form.vue';
 import KanbanBoard from './task/partials/TaskKanbanBoard.vue';
 import TaskTable from './task/Table.vue';
-import type { Sprint, TaskCategory } from './task/type';
 
-interface User {
-    id: string;
-    name: string;
-    email?: string;
-    avatar_url?: string | null;
-}
-
-interface MemberWithAvatar extends ProjectMember {
-    user: User;
-}
-
-// ─── Tambah Epic interface ─────────────────────────────────────────
-interface Epic {
-    id: string;
-    title: string;
-    story_points?: number | null;
-}
-
-interface Props {
-    project: {
-        id: string;
-        title: string;
-        description?: string;
-        emoji: string;
-        progress: number;
-        start_date?: string;
-        due_date?: string;
-        status?: { id: string; name: string; severity?: string };
-        priority?: { id: string; name: string; severity?: string };
-        status_id?: string;
-        priority_id?: string;
-        created_at?: string;
-        updated_at?: string;
-        project_members: ProjectMember[];
-    };
-    members: MemberWithAvatar[];
-    roles: { id: string; name: string }[];
-    users: User[];
-    tasks: Task[];
-    taskTypes: TaskType[];
-    taskStatuses: TaskStatus[];
-    taskPriorities: TaskPriority[];
-    tags: TagData[];
-    assignableUsers: User[];
-    statuses?: { id: string; name: string; severity?: string }[];
-    priorities?: { id: string; name: string; severity?: string }[];
-    sprints: Sprint[];
-    backlog: Task[];
-    taskCategories: TaskCategory[];
-    epics: Epic[]; // ← BARU
-}
-
-const props = defineProps<Props>();
+const props = defineProps<ProjectDetailProps>();
 
 const toast = useToast();
-
 const page = usePage();
+
 const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'));
 const authUser = computed(() => page.props.auth?.user);
 const isMember = computed(() => {
@@ -86,7 +33,14 @@ const isOwner = computed(() => {
     return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
 });
 
-const activeSprintTaskIds = ref<string[]>([]);
+const hasPermission = (): boolean => {
+    const role = page.props.auth.role;
+    return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
+};
+
+const canEdit = computed(() => (isOwner.value || hasPermission()) && !isDeveloper.value);
+
+// Dialog State
 const visibleAdd = ref(false);
 const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
@@ -96,26 +50,7 @@ const parentTaskId = ref<string | null>(null);
 const isBacklogCreate = ref(false);
 const isAddParentCreate = ref(false);
 const selectedSprintId = ref<string | null>(null);
-
-const editMode = ref({
-    title: false,
-    status: false,
-    priority: false,
-    startDate: false,
-    dueDate: false,
-    description: false,
-});
-
-const localProject = ref({ ...props.project });
-let emojiIndex = new EmojiIndex(emojiData);
-
-const titleInputRef = ref<HTMLElement | null>(null);
-const statusDropdownRef = ref<HTMLElement | null>(null);
-const priorityDropdownRef = ref<HTMLElement | null>(null);
-const startDatePickerRef = ref<HTMLElement | null>(null);
-const dueDatePickerRef = ref<HTMLElement | null>(null);
-
-const clickOutsideListeners = new Map<string, (e: MouseEvent) => void>();
+const activeSprintTaskIds = ref<string[]>([]);
 
 const tabListItems: TabListItem[] = [
     { label: 'Kanban', icon: 'pi pi-th-large' },
@@ -130,61 +65,39 @@ const activeSprintTasks = computed(() =>
     activeSprintTaskIds.value.length > 0 ? props.tasks.filter((t) => activeSprintTaskIds.value.includes(String(t.id))) : [],
 );
 
-watch(
-    () => props.project,
-    (newProject) => {
-        localProject.value = { ...newProject };
-    },
-    { deep: true },
-);
-
-const setupClickOutside = (field: keyof typeof editMode.value, elementRef: any) => {
-    const existingListener = clickOutsideListeners.get(field);
-    if (existingListener) document.removeEventListener('click', existingListener);
-    const listener = (event: MouseEvent) => {
-        const element = elementRef.value;
-        const target = event.target as Node;
-        if (!element) return;
-        const domElement = element.$el || element;
-        if (domElement && !domElement.contains(target)) cancelEdit(field);
-    };
-    clickOutsideListeners.set(field, listener);
-    setTimeout(() => document.addEventListener('click', listener), 100);
-};
-
-const removeClickOutside = (field: keyof typeof editMode.value) => {
-    const listener = clickOutsideListeners.get(field);
-    if (listener) {
-        document.removeEventListener('click', listener);
-        clickOutsideListeners.delete(field);
+const updateProject = (newValue: any, field: string) => {
+    if (!canEdit.value) {
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You do not have permission to edit this project', life: 3000 });
+        return;
     }
+
+    let payload: any = {
+        title: props.project.title,
+        description: props.project.description || '',
+        emoji: props.project.emoji,
+        start_date: props.project.start_date,
+        due_date: props.project.due_date,
+        status_id: props.project.status_id || props.project.status?.id,
+        priority_id: props.project.priority_id || props.project.priority?.id,
+    };
+
+    if (field === 'start_date' || field === 'due_date') payload[field] = moment(newValue).format('YYYY-MM-DD');
+    else payload[field] = newValue;
+
+    if (payload.start_date && typeof payload.start_date !== 'string') payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
+    if (payload.due_date && typeof payload.due_date !== 'string') payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
+
+    router.put(route('project.update', props.project.id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Project updated successfully', life: 3000 });
+        },
+        onError: (errors) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: errors[Object.keys(errors)[0]] || 'Failed to update project', life: 3000 });
+        },
+    });
 };
-
-watch(
-    () => editMode.value.title,
-    (v) => (v ? setupClickOutside('title', titleInputRef) : removeClickOutside('title')),
-);
-watch(
-    () => editMode.value.status,
-    (v) => (v ? setupClickOutside('status', statusDropdownRef) : removeClickOutside('status')),
-);
-watch(
-    () => editMode.value.priority,
-    (v) => (v ? setupClickOutside('priority', priorityDropdownRef) : removeClickOutside('priority')),
-);
-watch(
-    () => editMode.value.startDate,
-    (v) => (v ? setupClickOutside('startDate', startDatePickerRef) : removeClickOutside('startDate')),
-);
-watch(
-    () => editMode.value.dueDate,
-    (v) => (v ? setupClickOutside('dueDate', dueDatePickerRef) : removeClickOutside('dueDate')),
-);
-
-onUnmounted(() => {
-    clickOutsideListeners.forEach((l) => document.removeEventListener('click', l));
-    clickOutsideListeners.clear();
-});
 
 const openAdd = () => (visibleAdd.value = true);
 const openEdit = (member: ProjectMember) => {
@@ -234,18 +147,6 @@ const onDialogClosed = () => {
     selectedSprintId.value = null;
 };
 
-const getInitials = (name: string) =>
-    name
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-const getMemberColor = (index: number) => {
-    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f43f5e'];
-    return colors[index % colors.length];
-};
-
 const formattedMembers = computed(() =>
     props.assignableUsers.map(
         (user) =>
@@ -262,106 +163,8 @@ const taskDialogHeader = computed(() => {
     return parentTaskId.value ? 'Create Subtask' : 'Create Task';
 });
 
-const hasPermission = (): boolean => {
-    const role = page.props.auth.role;
-    return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
-};
-
-const canEdit = computed(() => (isOwner || hasPermission()) && !isDeveloper.value);
-
-const enableEditMode = (field: keyof typeof editMode.value) => {
-    if (!canEdit.value) {
-        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You do not have permission to edit this project', life: 3000 });
-        return;
-    }
-    editMode.value[field] = true;
-};
-
-const disableEditMode = (field: keyof typeof editMode.value) => {
-    editMode.value[field] = false;
-};
-
-const updateProject = (newValue: any, field: string, editField?: keyof typeof editMode.value) => {
-    if (!canEdit.value) {
-        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You do not have permission to edit this project', life: 3000 });
-        return;
-    }
-
-    let payload: any = {
-        title: localProject.value.title,
-        description: localProject.value.description || '',
-        emoji: localProject.value.emoji,
-        start_date: localProject.value.start_date,
-        due_date: localProject.value.due_date,
-        status_id: localProject.value.status_id || localProject.value.status?.id,
-        priority_id: localProject.value.priority_id || localProject.value.priority?.id,
-    };
-
-    if (field === 'start_date' || field === 'due_date') payload[field] = moment(newValue).format('YYYY-MM-DD');
-    else if (field === 'status_id' || field === 'priority_id') payload[field] = newValue;
-    else payload[field] = newValue;
-
-    if (payload.start_date) payload.start_date = moment(payload.start_date).format('YYYY-MM-DD');
-    if (payload.due_date) payload.due_date = moment(payload.due_date).format('YYYY-MM-DD');
-
-    router.put(route('project.update', props.project.id), payload, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-            if (editField) disableEditMode(editField);
-            toast.add({ severity: 'success', summary: 'Success', detail: 'Project updated successfully', life: 3000 });
-        },
-        onError: (errors) => {
-            toast.add({ severity: 'error', summary: 'Error', detail: errors[Object.keys(errors)[0]] || 'Failed to update project', life: 3000 });
-        },
-    });
-};
-
-const onTitleBlur = () => {
-    localProject.value.title !== props.project.title ? updateProject(localProject.value.title, 'title', 'title') : disableEditMode('title');
-};
-const onStatusChange = (event: any) => {
-    localProject.value.status_id = event.value.id;
-    updateProject(event.value.id, 'status_id', 'status');
-};
-const onPriorityChange = (event: any) => {
-    localProject.value.priority_id = event.value.id;
-    updateProject(event.value.id, 'priority_id', 'priority');
-};
-const onStartDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
-    if (value instanceof Date) updateProject(value, 'start_date', 'startDate');
-};
-const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefined) => {
-    if (value instanceof Date) updateProject(value, 'due_date', 'dueDate');
-};
-const onDescriptionBlur = () => {
-    localProject.value.description !== props.project.description
-        ? updateProject(localProject.value.description, 'description', 'description')
-        : disableEditMode('description');
-};
-const cancelEdit = (field: keyof typeof editMode.value) => {
-    localProject.value = { ...props.project };
-    disableEditMode(field);
-};
 const onKanbanStatusUpdate = () => {
     router.reload({ only: ['tasks'] });
-};
-
-const isUserHasAvatar = (user: User): boolean => {
-    return !!user.avatar_url && user.avatar_url !== '/images/default-avatar.png';
-};
-
-const getUserAvatarImage = (user: User): string | undefined => {
-    return isUserHasAvatar(user) ? (user.avatar_url as string) : undefined;
-};
-
-const getUserAvatarLabel = (user: User): string | undefined => {
-    if (!isUserHasAvatar(user)) return getInitials(user.name);
-    return undefined;
-};
-
-const getUserAvatarStyle = (user: User, index: number): object => {
-    return !isUserHasAvatar(user) ? { backgroundColor: getMemberColor(index), color: 'white', fontSize: '1.25rem', fontWeight: '600' } : {};
 };
 </script>
 
@@ -370,201 +173,9 @@ const getUserAvatarStyle = (user: User, index: number): object => {
 
     <AppLayout>
         <div class="flex flex-col gap-4">
-            <!-- Header -->
-            <div class="flex items-center justify-between border-b border-surface-200 pb-4 dark:border-surface-700">
-                <div class="flex items-center gap-3">
-                    <Button
-                        icon="pi pi-arrow-left"
-                        text
-                        rounded
-                        severity="secondary"
-                        @click="router.get(route('project.index'))"
-                        class="hover:bg-surface-100 dark:hover:bg-surface-800"
-                    />
-                    <Emoji v-if="props.project?.emoji.startsWith(':')" :data="emojiIndex" :emoji="props.project.emoji" set="google" :size="36" />
-                    <span v-else class="text-4xl">{{ props.project?.emoji }}</span>
-                    <div class="flex-1">
-                        <div
-                            v-if="!editMode.title"
-                            @click="enableEditMode('title')"
-                            :class="canEdit ? '-mx-2 -my-1 cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
-                        >
-                            <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">{{ props.project.title }}</h1>
-                        </div>
-                        <div v-else class="flex items-center gap-2" ref="titleInputRef" @click.stop>
-                            <InputText
-                                v-model="localProject.title"
-                                class="text-2xl font-semibold"
-                                @blur="onTitleBlur"
-                                @keyup.enter="onTitleBlur"
-                                @keyup.escape="cancelEdit('title')"
-                                autofocus
-                            />
-                        </div>
-                        <p class="text-sm text-surface-600 dark:text-surface-400">
-                            Software project
-                            <span v-if="isMember" class="ml-2 text-green-600 dark:text-green-400"><i class="pi pi-check-circle"></i> Member</span>
-                            <span v-else class="ml-2 text-gray-500 dark:text-gray-400"><i class="pi pi-eye"></i> Viewer</span>
-                        </p>
-                    </div>
-                </div>
+            <ProjectHeader :project="project" :members="members" :canEdit="canEdit" :isMember="isMember" @update="updateProject" />
 
-                <div class="flex items-center gap-2">
-                    <AvatarGroup v-if="props.members.length > 0">
-                        <Avatar
-                            v-for="(member, index) in props.members.slice(0, 3)"
-                            :key="member.id"
-                            :image="getUserAvatarImage(member.user)"
-                            :label="getUserAvatarLabel(member.user)"
-                            size="large"
-                            shape="circle"
-                            :style="getUserAvatarStyle(member.user, index)"
-                            :title="member.user.name"
-                            class="border-3 border-white dark:border-surface-900"
-                        />
-                        <Avatar
-                            v-if="props.members.length > 3"
-                            :label="`+${props.members.length - 3}`"
-                            size="large"
-                            shape="circle"
-                            style="background-color: #64748b; color: white; font-size: 1.25rem; font-weight: 600"
-                            class="border-3 border-white dark:border-surface-900"
-                        />
-                    </AvatarGroup>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Status</span>
-                            <div v-if="!editMode.status" @click="enableEditMode('status')" :class="canEdit ? 'cursor-pointer' : ''">
-                                <Tag
-                                    :value="props.project.status?.name || 'In Progress'"
-                                    :severity="props.project.status?.severity || 'info'"
-                                    class="w-fit"
-                                />
-                            </div>
-                            <div v-else ref="statusDropdownRef" @click.stop>
-                                <Select
-                                    v-model="localProject.status"
-                                    :options="props.statuses"
-                                    optionLabel="name"
-                                    placeholder="Select Status"
-                                    @change="onStatusChange"
-                                    class="w-full"
-                                    autofocus
-                                >
-                                    <template #value="slotProps"
-                                        ><Tag v-if="slotProps.value" :value="slotProps.value.name" :severity="slotProps.value.severity || 'info'"
-                                    /></template>
-                                    <template #option="slotProps"
-                                        ><Tag :value="slotProps.option.name" :severity="slotProps.option.severity || 'info'"
-                                    /></template>
-                                </Select>
-                            </div>
-                        </div>
-                    </template>
-                </Card>
-
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Priority</span>
-                            <div v-if="!editMode.priority" @click="enableEditMode('priority')" :class="canEdit ? 'cursor-pointer' : ''">
-                                <Tag
-                                    :value="props.project.priority?.name || 'Medium'"
-                                    :severity="props.project.priority?.severity || 'warning'"
-                                    class="w-fit"
-                                />
-                            </div>
-
-                            <div v-else ref="priorityDropdownRef" @click.stop>
-                                <Select
-                                    v-model="localProject.priority"
-                                    :options="props.priorities"
-                                    optionLabel="name"
-                                    placeholder="Select Priority"
-                                    @change="onPriorityChange"
-                                    class="w-full"
-                                    autofocus
-                                >
-                                    <template #value="{ value }">
-                                        <Tag v-if="value" :value="value.name" :severity="value.severity || 'warning'" />
-                                    </template>
-
-                                    <template #option="{ option }">
-                                        <Tag :value="option.name" :severity="option.severity || 'warning'" />
-                                    </template>
-                                </Select>
-                            </div>
-                        </div>
-                    </template>
-                </Card>
-
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Timeline</span>
-                            <div v-if="!editMode.startDate && !editMode.dueDate" class="flex flex-col gap-2">
-                                <div
-                                    @click="enableEditMode('startDate')"
-                                    :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
-                                    class="text-sm text-surface-700 dark:text-surface-300"
-                                >
-                                    Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
-                                </div>
-                                <div
-                                    @click="enableEditMode('dueDate')"
-                                    :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
-                                    class="text-sm text-surface-700 dark:text-surface-300"
-                                >
-                                    Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
-                                </div>
-                            </div>
-                            <div v-else class="flex flex-col gap-2">
-                                <div v-if="editMode.startDate" ref="startDatePickerRef" @click.stop>
-                                    <DatePicker
-                                        :modelValue="new Date(localProject.start_date || '')"
-                                        @update:modelValue="onStartDateChange"
-                                        dateFormat="dd M yy"
-                                        placeholder="Start Date"
-                                        class="w-full text-sm"
-                                        autofocus
-                                    />
-                                </div>
-                                <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
-                                    Start: {{ moment(props.project.start_date).format('MMM DD, YYYY') }}
-                                </div>
-                                <div v-if="editMode.dueDate" ref="dueDatePickerRef" @click.stop>
-                                    <DatePicker
-                                        :modelValue="new Date(localProject.due_date || '')"
-                                        @update:modelValue="onDueDateChange"
-                                        dateFormat="dd M yy"
-                                        placeholder="Due Date"
-                                        class="w-full text-sm"
-                                        autofocus
-                                    />
-                                </div>
-                                <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
-                                    Due: {{ moment(props.project.due_date).format('MMM DD, YYYY') }}
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                </Card>
-
-                <Card class="shadow-sm">
-                    <template #content>
-                        <div class="flex flex-col gap-2">
-                            <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
-                            <ProgressBar :value="props.project.progress" class="flex-1" :showValue="true" />
-                        </div>
-                    </template>
-                </Card>
-            </div>
+            <ProjectStats :project="project" :statuses="statuses || []" :priorities="priorities || []" :canEdit="canEdit" @update="updateProject" />
 
             <!-- Main Tabs -->
             <Card class="shadow-sm">
@@ -615,7 +226,6 @@ const getUserAvatarStyle = (user: User, index: number): object => {
                                 </div>
                             </TabPanel>
 
-                            <!-- ✅ Backlog Tab — tambah :epics -->
                             <TabPanel value="Backlog">
                                 <div class="py-4">
                                     <BacklogBoard
@@ -639,57 +249,7 @@ const getUserAvatarStyle = (user: User, index: number): object => {
                             </TabPanel>
 
                             <TabPanel value="Details">
-                                <div class="grid grid-cols-1 gap-8 py-4 lg:grid-cols-3">
-                                    <div class="lg:col-span-2">
-                                        <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Description</h3>
-                                        <div
-                                            v-if="!editMode.description"
-                                            @click="enableEditMode('description')"
-                                            :class="canEdit ? 'cursor-pointer rounded p-2 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
-                                        >
-                                            <div
-                                                class="prose dark:prose-invert max-w-none break-words text-surface-700 dark:text-surface-300"
-                                                v-html="
-                                                    props.project.description ||
-                                                    '<p class=\'text-surface-500 italic\'>No description provided. Click to add.</p>'
-                                                "
-                                            />
-                                        </div>
-                                        <div v-else class="relative">
-                                            <div class="fixed inset-0 z-10" @click="onDescriptionBlur"></div>
-                                            <div class="relative z-20" @click.stop>
-                                                <Editor v-model="localProject.description" editorStyle="height: 200px">
-                                                    <template #toolbar>
-                                                        <span class="ql-formats">
-                                                            <button class="ql-bold"></button><button class="ql-italic"></button
-                                                            ><button class="ql-underline"></button> <button class="ql-list" value="ordered"></button
-                                                            ><button class="ql-list" value="bullet"></button>
-                                                        </span>
-                                                    </template>
-                                                </Editor>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col gap-6">
-                                        <div>
-                                            <h3 class="mb-3 text-sm font-semibold uppercase text-surface-500 dark:text-surface-400">Details</h3>
-                                            <div class="flex flex-col gap-3">
-                                                <div class="flex items-start justify-between">
-                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Created</span>
-                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">{{
-                                                        moment(props.project.created_at).format('MMM DD, YYYY')
-                                                    }}</span>
-                                                </div>
-                                                <div class="flex items-start justify-between">
-                                                    <span class="text-sm text-surface-600 dark:text-surface-400">Updated</span>
-                                                    <span class="text-sm font-medium text-surface-800 dark:text-surface-200">{{
-                                                        moment(props.project.updated_at).fromNow()
-                                                    }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <ProjectDetailsTab :project="project" :canEdit="canEdit" @update="updateProject" />
                             </TabPanel>
 
                             <TabPanel value="Team">
@@ -724,8 +284,9 @@ const getUserAvatarStyle = (user: User, index: number): object => {
 
         <Dialog v-model:visible="visibleEdit" header="Edit Member" modal class="w-96">
             <MemberEditForm
+                v-if="selectedMember"
                 :projectId="props.project.id"
-                :member="selectedMember as ProjectMember"
+                :member="selectedMember"
                 :roles="props.roles"
                 :users="props.users"
                 @close="visibleEdit = false"
@@ -763,14 +324,7 @@ const getUserAvatarStyle = (user: User, index: number): object => {
                 :hideParentTaskField="isBacklogCreate || isAddParentCreate || (!selectedTask && !!selectedSprintId)"
                 :sprintId="selectedSprintId"
                 @saved="onTaskSaved"
-                @close="
-                    visibleTaskAdd = false;
-                    selectedTask = null;
-                    parentTaskId = null;
-                    isBacklogCreate = false;
-                    isAddParentCreate = false;
-                    selectedSprintId = null;
-                "
+                @close="onDialogClosed"
             />
         </Dialog>
     </AppLayout>

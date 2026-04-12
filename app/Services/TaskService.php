@@ -10,6 +10,7 @@ use App\Models\MsTaskType;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskCategory;
+use App\Models\User;
 use App\Repositories\TaskRepository;
 
 class TaskService
@@ -40,7 +41,7 @@ class TaskService
         $types = MsTaskType::select('id', 'name', 'severity')->get();
         $categories = TaskCategory::select('id', 'name', 'icon', 'severity')->get();
 
-        $projects = Project::visibleFor($userId)
+        $projects = Project::visibleFor(User::find($userId))
             ->select('id', 'title')
             ->get();
 

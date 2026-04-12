@@ -15,6 +15,7 @@ declare module 'vue' {
     Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
+    Chip: typeof import('primevue/chip')['default']
     Column: typeof import('primevue/column')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     DataTable: typeof import('primevue/datatable')['default']

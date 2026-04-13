@@ -23,7 +23,7 @@ class TaskUpdateParentRequest extends FormRequest
                         // validate exists parent id
                         try {
                             $parent_id = Sqids::decode($value);
-                            $project_id = Sqids::decode($this->route('encoded'));
+                            $project_id = Sqids::decode($this->route('projectEncoded'));
                             $parent = Task::where('id', $parent_id)->where('project_id', $project_id)->firstOrFail();
                         } catch (\Throwable $th) {
                             $fail("The $attribute must be a valid task id.");

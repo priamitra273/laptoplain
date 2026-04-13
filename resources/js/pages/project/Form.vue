@@ -109,7 +109,7 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
         :blockScroll="true"
         :dismissable="true"
     >
-        <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
+        <div class="grid gap-8 md:grid-cols-2" >
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputGroup>
@@ -221,12 +221,12 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
 
                 <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
             </div>
-        </form>
+        </div>
 
         <template #footer>
             <div class="flex justify-end gap-2">
                 <Button label="Cancel" severity="secondary" @click="visible = false" />
-                <Button label="Save" type="submit" class="w-20" :loading="form.processing" :disabled="form.processing" />
+                <Button label="Save" @click="save" class="w-20" :loading="form.processing" :disabled="form.processing" />
             </div>
         </template>
     </Drawer>

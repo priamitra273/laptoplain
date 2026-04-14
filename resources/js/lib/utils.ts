@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/vue3';
+import { $dt } from '@primeuix/themes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -41,4 +42,17 @@ export function getInitials(name: string): string {
 
 export function randomHexColor(): string {
     return '#' + Math.floor(Math.random() * 16777215).toString(16);
+}
+
+export function randomBgColor(dark: boolean = false): string {
+    const getStep = (min: number, max: number) => {
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    };
+
+    const colors = ['indigo', 'blue', 'green', 'yellow', 'orange', 'red', 'pink', 'purple', 'gray'];
+    const color = Math.floor(Math.random() * colors.length);
+
+    const step = dark ? `${getStep(6, 9)}00` : `${getStep(1, 5)}00`;
+
+    return $dt(`${colors[color]}.${step}`).variable;
 }

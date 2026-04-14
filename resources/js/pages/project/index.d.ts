@@ -291,3 +291,29 @@ export interface ProjectDetailHeaderProps {
     canEdit: boolean;
     isMember: boolean;
 }
+
+export interface TaskFormInput {
+    status_id: string;
+    priority_id: string;
+    type_id: string;
+    start_date: string | null;
+    due_date: string | null;
+    progress_value: number;
+
+    [key: string]: any;
+}
+
+export type TaskFormField = keyof TaskFormInput;
+
+export interface TaskDetailProps {
+    task: Task;
+    project: Project;
+    assignedUsers: User[];
+    comments: Comment[];
+    statuses: TaskStatus[];
+    priorities: TaskPriority[];
+    types: TaskType[];
+
+    isTaskMember: boolean;
+    creator?: User;
+}

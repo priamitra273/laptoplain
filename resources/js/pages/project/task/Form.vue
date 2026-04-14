@@ -12,7 +12,7 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
 import moment from 'moment';
-import type { ProjectMember, Tag as TagData, Task, TaskPriority, TaskStatus, TaskType, TaskCategory } from '..';
+import type { ProjectMember, Tag as TagData, Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
     parentId: string | null;
@@ -71,7 +71,6 @@ interface TreeNodeOption {
     children?: TreeNodeOption[];
 }
 
-
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
@@ -87,13 +86,13 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
 
-const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.map((u) => ({ id: u.id, name: u.name })) ?? []);
+const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.map((u) => ({ id: u.id as string, name: u.name })) ?? []);
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
 const authUser = computed(() => usePage().props.auth.user);
 
-const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id, name: m.user.name })));
+const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id as string, name: m.user.name })));
 
 const statusOption = computed(() => {
     return props.isDeveloper ? props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.taskStatuses;
@@ -173,7 +172,6 @@ const categoryOptions = computed<TaskCategory[]>(() => {
     return props.taskCategories.filter((category) => category.name?.toLowerCase() !== 'epic');
 });
 
-
 const defaultBacklogCategoryId = computed<string | null>(() => {
     const taskCategory = categoryOptions.value.find((category) => category.name?.toLowerCase() === 'task');
     return taskCategory?.id ?? null;
@@ -231,7 +229,6 @@ const form: InertiaForm<Form> = useForm({
     },
     remove_tag: [],
 });
-
 
 watch(
     categoryOptions,

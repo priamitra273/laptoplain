@@ -1,9 +1,8 @@
 <script setup lang="ts">
-interface User {
-    id: number;
-    name: string;
-    avatar_url?: string | null;
-}
+import Avatar from 'primevue/avatar';
+import AvatarGroup from 'primevue/avatargroup';
+import Card from 'primevue/card';
+import type { User } from '../../index.d.ts';
 
 interface Props {
     values: User[];

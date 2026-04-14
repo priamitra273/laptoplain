@@ -174,8 +174,8 @@ class TaskService
     protected function formatAssignableUsers($projectMembers): array
     {
         return collect($projectMembers)
-            ->filter(fn($member) => $member->user !== null)
-            ->map(fn($member) => [
+            ->filter(fn ($member) => $member->user !== null)
+            ->map(fn ($member) => [
                 'id' => $member->user->id,
                 'name' => $member->user->name,
                 'email' => $member->user->email,
@@ -189,8 +189,8 @@ class TaskService
     protected function formatAssignedUsers($users): array
     {
         return collect($users)
-            ->filter(fn($user) => $user !== null)
-            ->map(fn($user) => [
+            ->filter(fn ($user) => $user !== null)
+            ->map(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'avatar_url' => $user->avatar_url ?? null,
@@ -199,7 +199,7 @@ class TaskService
             ->toArray();
     }
 
-    protected function formatCreator($creator): ?array
+    protected function formatCreator(User $creator): ?array
     {
         if (! $creator) {
             return null;

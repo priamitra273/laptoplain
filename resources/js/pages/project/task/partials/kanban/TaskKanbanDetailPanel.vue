@@ -86,8 +86,10 @@ const doneSubtaskCount = (task: Task) => {
                     </div>
 
                     <div class="mb-4 py-4">
-                        <h3 class="mb-2 text-lg font-semibold text-surface-600">Deskripsi</h3>
-                        <div v-html="task.description"></div>
+                        <div class="rounded-xl bg-surface-100 p-4 dark:bg-surface-800">
+                            <h3 class="mb-2 text-lg font-semibold text-surface-600 dark:text-surface-300">Task Description</h3>
+                            <div v-html="task.description"></div>
+                        </div>
                     </div>
 
                     <!-- Subtasks -->

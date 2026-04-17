@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MentionEditor from '@/components/Mentioneditor.vue';
+import { useLayout } from '@/composables/useLayouts.js';
 import { ProjectUserOption } from '@/types/task-comment';
 import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
@@ -11,6 +12,10 @@ import { ref } from 'vue';
 import type { Comment, Task } from '../../index.d.ts';
 import CommentItem from '../CommentItem.vue';
 
+import 'emoji-mart-vue-fast/css/emoji-mart.css';
+import emojiData from 'emoji-mart-vue-fast/data/all.json';
+import { EmojiIndex } from 'emoji-mart-vue-fast/src';
+
 interface Props {
     task: Task;
     comments: Comment[];
@@ -21,6 +26,10 @@ interface Props {
 const props = defineProps<Props>();
 
 const toast = useToast();
+const { isDarkTheme } = useLayout();
+
+const emojiIndex = new EmojiIndex(emojiData);
+
 const commentLoading = ref(false);
 const newComment = ref('');
 
@@ -78,7 +87,17 @@ const submitComment = () => {
 </script>
 
 <template>
-    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
+    <div v-for="comment in props.comments" :key="comment.id">
+        <div class="w-full pl-8">
+            <div class="h-6 border-l-2 border-gray-200 dark:border-gray-700"></div>
+        </div>
+
+        <div class="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm dark:bg-surface-900">
+            <CommentItem :currentUserId="props.currentUserId" :comment="comment" :taskId="props.task.id" :projectMembers="props.mentionMembers" />
+        </div>
+    </div>
+
+    <Card class="mt-4 rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
         <template #title>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -109,21 +128,6 @@ const submitComment = () => {
                         class="shadow-md"
                     />
                 </div>
-            </div>
-            <div v-if="props.comments?.length" class="space-y-4">
-                <CommentItem
-                    v-for="comment in props.comments"
-                    :currentUserId="props.currentUserId"
-                    :key="comment.id"
-                    :comment="comment"
-                    :taskId="props.task.id"
-                    :projectMembers="props.mentionMembers"
-                    class="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                />
-            </div>
-            <div v-else class="flex flex-col items-center justify-center py-8 text-gray-400">
-                <i class="pi pi-comment mb-3 text-4xl opacity-50"></i>
-                <p class="italic">No comments yet. Be the first to comment!</p>
             </div>
         </template>
     </Card>

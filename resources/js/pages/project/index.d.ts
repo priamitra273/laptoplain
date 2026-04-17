@@ -201,25 +201,20 @@ export interface TaskFormattedData {
 
 export interface Comment {
     id: string;
-    commentable_type: string;
-    commentable_id: string;
-    user_id: string;
     body: string;
-    reaction?: Record<string, any>;
-    owned_id: string | null;
-
-    created_by: string | null;
-    updated_by: string | null;
-    deleted_by: string | null;
+    reactions: CommentReaction[];
+    current_user_reaction: string | null;
 
     created_at: string;
     updated_at: string | null;
-    deleted_at: string | null;
-
-    parent_id: string | null;
 
     user: User;
     replies: Comment[];
+}
+
+export interface CommentReaction {
+    reaction: string;
+    count: number;
 }
 
 export interface ProjectStatus {

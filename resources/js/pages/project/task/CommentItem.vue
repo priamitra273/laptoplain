@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ProjectUserOption } from '@/types/task-comment';
+import { getInitials } from '@/lib/utils';
+import { CommentReaction, User } from '@/pages/project';
 import { router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { Comment } from '..';
-import CommentAvatar from './partials/comment/CommentAvatar.vue';
 import CommentEditor from './partials/comment/CommentEditor.vue';
 import CommentHeader from './partials/comment/CommentHeader.vue';
 import CommentItemSkeleton from './partials/comment/CommentItemSkeleton.vue';
@@ -18,10 +18,13 @@ interface Props {
     taskId: string;
     level?: number;
     currentUserId?: number;
-    projectMembers?: ProjectUserOption[];
+    projectMembers?: User[];
+    showReply?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    showReply: () => true,
+});
 
 const CurrentUser = usePage().props.auth.user;
 
@@ -38,37 +41,56 @@ const deleteLoadingId = ref<string | null>(null);
 const confirm = useConfirm();
 const toast = useToast();
 
-const normalizeReactions = (reactions: any) => {
-    if (!reactions) return {};
-    const normalized: { [key: string]: string } = {};
-    for (const [key, value] of Object.entries(reactions)) {
-        normalized[String(key)] = value as string;
-    }
-    return normalized;
-};
-
-const localReactions = ref<{ [key: string]: string }>(normalizeReactions(props.comment.reaction));
-
-const getCurrentUserId = () => String(CurrentUser.id);
+const currentUserReaction = ref(props.comment.current_user_reaction);
+const localReactions = ref<CommentReaction[]>(props.comment.reactions);
 
 const reactToComment = async (reaction: string) => {
     try {
-        const userId = getCurrentUserId();
-
-        if (localReactions.value[userId] === reaction) {
-            delete localReactions.value[userId];
-        } else {
-            localReactions.value[userId] = reaction;
-        }
+        toggleReaction(reaction);
 
         const response = await axios.post(route('comments.react', props.comment.id), { reaction });
 
         if (response.data.success) {
-            localReactions.value = normalizeReactions(response.data.reactions);
+            localReactions.value = response.data.data;
         }
     } catch (error) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update reaction', life: 3000 });
         console.error('Failed to react:', error);
+    }
+};
+
+const toggleReaction = (reaction: string) => {
+    if (currentUserReaction.value === reaction) {
+        decreaseReactionCount(reaction);
+        currentUserReaction.value = null;
+    } else {
+        decreaseReactionCount(currentUserReaction.value);
+
+        const newReaction: CommentReaction = {
+            reaction,
+            count: 1,
+        };
+
+        const index = localReactions.value.findIndex((r) => r.reaction === reaction);
+
+        if (index !== -1) {
+            localReactions.value[index].count++;
+        } else {
+            localReactions.value.push(newReaction);
+        }
+
+        currentUserReaction.value = reaction;
+    }
+
+    // remote empty reaction
+    localReactions.value = localReactions.value.filter((r) => r.count > 0);
+};
+
+const decreaseReactionCount = (reaction: string | null) => {
+    const index = localReactions.value.findIndex((r) => r.reaction === reaction);
+
+    if (index !== -1) {
+        localReactions.value[index].count--;
     }
 };
 
@@ -175,76 +197,77 @@ const deleteComment = (id: string) => {
         },
     });
 };
-
-watch(
-    () => props.comment.reaction,
-    (newReactions) => {
-        localReactions.value = normalizeReactions(newReactions);
-    },
-    { deep: true, immediate: true },
-);
 </script>
 
 <template>
     <div class="w-full">
         <CommentItemSkeleton v-if="deleteLoadingId === comment.id" :comment="comment" />
 
-        <div
-            v-else
-            class="group rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-        >
-            <div class="flex gap-2">
-                <CommentAvatar :user="comment.user" />
+        <div v-else class="group">
+            <div class="">
+                <div class="flex w-full gap-2">
+                    <Avatar :image="comment.user?.avatar_url ?? undefined" :label="getInitials(comment.user?.name ?? '')" shape="circle" />
 
-                <div class="min-w-0 flex-1">
-                    <div v-if="editingCommentId === comment.id">
-                        <CommentEditor
-                            v-model="replyText"
-                            :projectMembers="props.projectMembers"
-                            :loading="editLoading"
-                            placeholder="Edit your comment..."
-                            @submit="updateComment"
-                            @cancel="cancelEdit"
-                        />
-                    </div>
-
-                    <div v-else class="space-y-1">
+                    <div class="min-w-0 flex-1 space-y-3">
                         <CommentHeader
                             :comment="comment"
                             :currentUserId="CurrentUser.id"
                             :currentLevel="currentLevel"
+                            class="flex-1"
                             @reply="setReply"
                             @edit="startEdit"
                             @delete="deleteComment"
                         />
 
-                        <div
-                            class="prose prose-sm dark:prose-invert overflow-wrap-anywhere max-w-none break-words text-xs leading-relaxed text-gray-700 dark:text-gray-300"
-                            v-html="comment.body"
-                        ></div>
-
-                        <CommentReactions :reactions="localReactions" :currentUserId="getCurrentUserId()" @react="reactToComment" />
-
-                        <div v-if="replyTarget === comment.id && currentLevel < 1" class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+                        <div v-if="editingCommentId === comment.id">
                             <CommentEditor
                                 v-model="replyText"
                                 :projectMembers="props.projectMembers"
-                                :loading="replyLoading"
-                                placeholder="Write a reply... Use @ to mention someone"
-                                submitLabel="Reply"
-                                submitIcon="pi pi-send"
-                                @submit="submitReply(comment.id)"
-                                @cancel="cancelReply"
+                                :loading="editLoading"
+                                placeholder="Edit your comment..."
+                                @submit="updateComment"
+                                @cancel="cancelEdit"
                             />
                         </div>
 
-                        <CommentReplies
-                            :comment="comment"
-                            :taskId="props.taskId"
-                            :currentLevel="currentLevel"
-                            :currentUserId="props.currentUserId"
-                            :projectMembers="props.projectMembers"
-                        />
+                        <div v-else class="space-y-3">
+                            <div
+                                class="prose prose-sm dark:prose-invert overflow-wrap-anywhere max-w-none break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                                v-html="comment.body"
+                            ></div>
+
+                            <CommentReactions
+                                :reactions="localReactions"
+                                :current-user-reaction
+                                :show-reply="props.showReply"
+                                @react="reactToComment"
+                                @reply="setReply(comment.id)"
+                            />
+
+                            <div
+                                v-if="replyTarget === comment.id && currentLevel < 1"
+                                class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700"
+                            >
+                                <CommentEditor
+                                    v-model="replyText"
+                                    :projectMembers="props.projectMembers"
+                                    :loading="replyLoading"
+                                    placeholder="Write a reply... Use @ to mention someone"
+                                    submitLabel="Reply"
+                                    submitIcon="pi pi-send"
+                                    @submit="submitReply(comment.id)"
+                                    @cancel="cancelReply"
+                                />
+                            </div>
+
+                            <CommentReplies
+                                :comment="comment"
+                                :taskId="props.taskId"
+                                :currentLevel="currentLevel"
+                                :currentUserId="props.currentUserId"
+                                :projectMembers="props.projectMembers"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

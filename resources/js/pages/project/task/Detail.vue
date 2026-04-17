@@ -105,8 +105,8 @@ const cancelInProgressDialog = () => {
                 </div>
 
                 <!-- Right Column -->
-                <div class="space-y-6 lg:col-span-2">
-                    <TaskDescription :task="props.task" />
+                <div class="lg:col-span-2">
+                    <TaskDescription :task="props.task" :creator="props.creator" />
 
                     <TaskComments :task="props.task" :comments="props.comments" :currentUserId="currentUserId" :mentionMembers="mentionMembers" />
                 </div>

@@ -41,12 +41,12 @@ const formattedTime = computed(() => moment(props.comment.created_at).fromNow())
 </script>
 
 <template>
-    <div class="flex items-start justify-between gap-2">
-        <div class="min-w-0 flex-1">
-            <span class="text-xs font-semibold text-gray-900 dark:text-gray-100">
+    <div class="flex items-center justify-between gap-2">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+            <span class="font-semibold text-gray-900 dark:text-gray-100">
                 {{ comment.user?.name }}
             </span>
-            <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <span class="text-sm text-gray-400 dark:text-gray-500">
                 {{ formattedTime }}
             </span>
         </div>

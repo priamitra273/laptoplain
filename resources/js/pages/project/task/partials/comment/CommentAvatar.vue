@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import { User } from '@pages/project';
 import Avatar from 'primevue/avatar';
 import { computed } from 'vue';
-import { CommentUser } from '../../..';
 
 interface Props {
-    user?: CommentUser;
+    user?: User;
 }
 
 const props = defineProps<Props>();
 
 const initials = computed(() => {
     if (!props.user?.name) return 'U';
+
     return props.user.name
         .split(' ')
         .map((w) => w[0])

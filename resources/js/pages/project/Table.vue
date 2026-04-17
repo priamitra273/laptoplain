@@ -2,10 +2,11 @@
 import Icon from '@/components/Icon.vue';
 import { can } from '@/lib/utils';
 import { Project } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import moment from 'moment';
+import { DataTablePageEvent } from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
@@ -28,6 +29,7 @@ const props = withDefaults(defineProps<ProjectTableProps>(), {
 
 const toast = useToast();
 const confirm = useConfirm();
+const page = usePage();
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -158,7 +160,7 @@ const toggleEmojiPicker = (dataId: string) => {
 const currentPage = ref(0);
 const rowsPerPage = ref(10);
 
-const onPage = (event: any) => {
+const onPage = (event: DataTablePageEvent) => {
     currentPage.value = event.page;
     rowsPerPage.value = event.rows;
 };
@@ -196,6 +198,8 @@ watch(visibleForm, (val) => {
                 row-hover
                 removable-sort
                 :closeOnEscape="false"
+                state-storage="session"
+                :state-key="`project-table-${page.props.auth.user.id}`"
                 @page="onPage"
                 @cell-edit-complete="onCellEditComplete"
                 scrollable

@@ -49,10 +49,28 @@ export function randomBgColor(dark: boolean = false): string {
         return Math.floor(Math.random() * (max - min + 1) + min);
     };
 
-    const colors = ['indigo', 'blue', 'green', 'yellow', 'orange', 'red', 'pink', 'purple', 'gray'];
+    const colors = [
+        'indigo',
+        'blue',
+        'green',
+        'yellow',
+        'orange',
+        'red',
+        'pink',
+        'purple',
+        'gray',
+        'zinc',
+        'teal',
+        'sky',
+        'fuchsia',
+        'rose',
+        'slate',
+        'lime',
+    ];
+
     const color = Math.floor(Math.random() * colors.length);
 
-    const step = dark ? `${getStep(6, 9)}00` : `${getStep(1, 5)}00`;
+    const step = dark ? `${getStep(6, 9)}00` : `${getStep(1, 3)}00`;
 
     return $dt(`${colors[color]}.${step}`).variable;
 }

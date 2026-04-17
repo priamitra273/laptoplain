@@ -27,6 +27,7 @@ export interface ProjectMembersData {
 
 export interface Project {
     id: string;
+    project_no: string;
     title: string;
     description?: string;
     emoji: string;

@@ -29,7 +29,7 @@ class CommentService
             'owned_id' => Auth::id(),
         ]);
 
-        if (!empty($mentionedUserIds)) {
+        if (! empty($mentionedUserIds)) {
             $task = Task::find($commentableId);
 
             TaskNotification::createTaskNotification(
@@ -52,7 +52,7 @@ class CommentService
             'updated_by' => Auth::id(),
         ]);
 
-        if (!empty($newMentionedUserIds)) {
+        if (! empty($newMentionedUserIds)) {
             $task = Task::find($comment->commentable_id);
 
             TaskNotification::createTaskNotification(
@@ -76,30 +76,31 @@ class CommentService
     /**
      * Toggle a reaction on a comment.
      */
-    public function toggleReaction(Comment $comment, string $reactionType): array
+    public function toggleReaction(Comment $comment, string $reactionType): void
     {
         $userId = Auth::id();
-        $reactions = $comment->reaction ?? [];
+
+        $existingReaction = $comment->reactions()->where('user_id', $userId)->where('reaction', $reactionType)->first();
 
         // If user already gave the same reaction, remove it
-        if (isset($reactions[$userId]) && $reactions[$userId] === $reactionType) {
-            unset($reactions[$userId]);
+        if ($existingReaction) {
+            $existingReaction->delete();
         } else {
-            $reactions[$userId] = $reactionType;
+            $comment->reactions()->updateOrCreate(
+                ['user_id' => $userId],
+                ['reaction' => $reactionType]
+            );
         }
+    }
 
-        $comment->update([
-            'reaction' => $reactions,
-            'updated_by' => $userId,
+    public function loadRelations(Comment $comment): Comment
+    {
+        return $comment->load([
+            'user',
+            'replies' => fn ($q) => $q->orderBy('id', 'asc'),
+            'replies.user',
+            'replies.reaction_group_count',
+            'reaction_group_count',
         ]);
-
-        // Manually encode keys (user IDs) from reactions for the frontend
-        $encodedReactions = [];
-        foreach ($reactions as $uid => $type) {
-            $encodedUserId = Sqids::encode((int) $uid);
-            $encodedReactions[$encodedUserId] = $type;
-        }
-
-        return $encodedReactions;
     }
 }

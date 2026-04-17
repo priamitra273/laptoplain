@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Comment\CommentReactionData;
 use App\Http\Requests\Comment\StoreCommentRequest;
 use App\Http\Requests\Comment\UpdateCommentRequest;
 use App\Models\Comment;
@@ -9,12 +10,9 @@ use App\Services\CommentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
-
 class CommentController extends Controller
 {
-    public function __construct(protected CommentService $commentService)
-    {
-    }
+    public function __construct(protected CommentService $commentService) {}
 
     public function store(StoreCommentRequest $request)
     {
@@ -54,15 +52,16 @@ class CommentController extends Controller
             'reaction' => 'required|string',
         ]);
 
-        $reactions = $this->commentService->toggleReaction(
+        $this->commentService->toggleReaction(
             $comment,
             $request->get('reaction')
         );
 
         return response()->json([
             'success' => true,
-            'reactions' => $reactions,
+            'data' => CommentReactionData::collect(
+                $comment->reaction_group_count,
+            ),
         ]);
     }
 }
-

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\Task\TaskCommentData;
 use App\Enums\TaskNotificationType;
 use App\Facades\TaskNotification;
 use App\Models\MsTaskPriority;
@@ -12,6 +13,7 @@ use App\Models\Task;
 use App\Models\TaskCategory;
 use App\Models\User;
 use App\Repositories\TaskRepository;
+use Spatie\LaravelData\DataCollection;
 
 class TaskService
 {
@@ -142,7 +144,7 @@ class TaskService
     /**
      * Get task details with all required properties for the detail view
      */
-    public function getTaskDetailProps(Task $task, \App\Models\User $user): array
+    public function getTaskDetailProps(Task $task, User $user): array
     {
         $task->update(['progress' => $task->calculateProgress()]);
 
@@ -154,6 +156,8 @@ class TaskService
 
         $isOwner = $this->isProjectOwner($project->projectMembers, $user);
         $isTaskMember = $task->users->contains('id', $user->id);
+
+        $comments = TaskCommentData::collect($task->comments ?? [], DataCollection::class);
 
         return [
             'task' => $task->toArray(),
@@ -167,7 +171,7 @@ class TaskService
             'categories' => TaskCategory::select('id', 'name', 'icon', 'severity')->get()->toArray(),
             'isTaskMember' => $isTaskMember,
             'isOwner' => $isOwner,
-            'comments' => $task->comments?->toArray() ?? [],
+            'comments' => $comments->toArray(),
         ];
     }
 
@@ -212,7 +216,7 @@ class TaskService
         ];
     }
 
-    protected function isProjectOwner($projectMembers, \App\Models\User $user): bool
+    protected function isProjectOwner($projectMembers, User $user): bool
     {
         return collect($projectMembers)->contains(function ($member) use ($user) {
             return $member->user_id === $user->id

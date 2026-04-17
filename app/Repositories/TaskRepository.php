@@ -55,10 +55,10 @@ class TaskRepository
                     ->orderBy('id', 'asc')
                     ->with([
                         'user',
-                        'replies' => function ($q) {
-                            $q->orderBy('id', 'asc');
-                        },
+                        'replies' => fn ($q) => $q->orderBy('id', 'asc'),
                         'replies.user',
+                        'replies.reaction_group_count',
+                        'reaction_group_count',
                     ]);
             },
         ])->withExists([

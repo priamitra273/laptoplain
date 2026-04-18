@@ -2,6 +2,7 @@
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
 import { useSeverityColor } from '@/composables/useSeverityColor';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { useSessionStorage } from '@vueuse/core';
 import axios from 'axios';
 import moment from 'moment';
 import { TreeTableFilterMeta } from 'primevue/treetable';
@@ -31,7 +32,7 @@ const currentUser = usePage().props.auth.user;
 const selectedKey = ref<{ [key: string]: any }>({});
 const expandedKeys = ref<{ [key: string]: boolean }>({});
 
-const filters = ref<ProjectTaskTableFilter>({
+const filters = useSessionStorage<ProjectTaskTableFilter>('task-table-filters-' + currentUser.id, {
     global: '',
     'status.name': null,
     'type.name': null,

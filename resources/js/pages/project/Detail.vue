@@ -2,6 +2,7 @@
 import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
+import { useSessionStorage } from '@vueuse/core';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
@@ -51,6 +52,8 @@ const isBacklogCreate = ref(false);
 const isAddParentCreate = ref(false);
 const selectedSprintId = ref<string | null>(null);
 const activeSprintTaskIds = ref<string[]>([]);
+
+const activeTab = useSessionStorage('project-detail-active-tab-' + authUser.value.id, 'Kanban');
 
 const tabListItems: TabListItem[] = [
     { label: 'Kanban', icon: 'pi pi-th-large' },
@@ -180,7 +183,7 @@ const onKanbanStatusUpdate = () => {
             <!-- Main Tabs -->
             <Card class="shadow-sm">
                 <template #content>
-                    <Tabs value="Kanban">
+                    <Tabs v-model:value="activeTab">
                         <TabList scrollable>
                             <Tab v-for="tab in tabListItems" :key="tab.label" :value="tab.label" v-tooltip.bottom="tab.label" class="!px-3 sm:!px-4">
                                 <i :class="tab.icon" class="sm:mr-2"></i>

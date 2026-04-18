@@ -4,47 +4,38 @@ import { useSeverityColor } from '@/composables/useSeverityColor';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
-import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import Column from 'primevue/column';
-import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
-import ProgressBar from 'primevue/progressbar';
-import Tag from 'primevue/tag';
-import TreeTable from 'primevue/treetable';
+import { TreeTableFilterMeta } from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { Task, TaskPriority, TaskStatus, TaskType, TaskCategory, TaskUser, TaskFormatted, TaskFormattedData } from '..';
+import type {
+    ProjectTaskTableEmits,
+    ProjectTaskTableFilter,
+    ProjectTaskTableProps,
+    Task,
+    TaskCategory,
+    TaskFormatted,
+    TaskFormattedData,
+    TaskUser,
+} from '..';
+import TaskTableFilters from './partials/TaskTableFilters.vue';
+import TaskTableToolbar from './partials/TaskTableToolbar.vue';
 
-interface Props {
-    projectId: string;
-    tasks: Task[];
-    isMember: boolean;
-    hasPermission: boolean;
-    taskStatuses: TaskStatus[];
-    taskPriorities: TaskPriority[];
-    taskTypes: TaskType[];
-    taskCategories?: TaskCategory[];
-    isDeveloper: boolean;
-}
-
-const props = defineProps<Props>();
-const emit = defineEmits<{
-    (e: 'add', parentId: string | null): void;
-    (e: 'edit', task: Task, parentId: string | null): void;
-}>();
+const props = defineProps<ProjectTaskTableProps>();
+const emit = defineEmits<ProjectTaskTableEmits>();
 
 const { getSeverityColorLight } = useSeverityColor();
 
 const deleteLoading = ref(false);
 const currentUser = usePage().props.auth.user;
-const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 const expandedKeys = ref<{ [key: string]: boolean }>({});
 
-const selectedStatuses = ref<string[]>([]);
-const selectedTypes = ref<string[]>([]);
+const filters = ref<ProjectTaskTableFilter>({
+    global: '',
+    'status.name': null,
+    'type.name': null,
+});
 
 const activityModal = ref({
     visible: false,
@@ -84,8 +75,6 @@ const formatDate = (date: string | null | undefined): string => {
     return moment(date).format('DD MMM YYYY');
 };
 
-const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
-
 // ─── Pure function, tidak ada side effects ────────────────────────────────────
 const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
@@ -96,10 +85,10 @@ const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
             id: t.id,
             parent_id: t.parent_id ?? null,
             title: t.title,
-            status: t.status ?? null,
-            priority: t.priority ?? null,
-            type: t.type ?? null,
-            category: t.category ?? null,
+            status: t.status ?? undefined,
+            priority: t.priority ?? undefined,
+            type: t.type ?? undefined,
+            category: t.category ?? undefined,
             progress: Number(t.progress) || 0,
             users: t.users || [],
             start_date: t.start_date ?? null,
@@ -135,58 +124,18 @@ watch(
     { immediate: true, deep: false },
 );
 
-// ─── Filter tetap pakai computed tapi sumbernya dari ref, bukan props langsung ──
-const statusOptions = computed(() => props.taskStatuses ?? []);
-const typeOptions = computed(() => props.taskTypes ?? []);
-
-const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
-    const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
-    const matchesStatus =
-        selectedStatuses.value.length === 0 || (task.data.status?.name != null && selectedStatuses.value.includes(task.data.status.name));
-    const matchesType = selectedTypes.value.length === 0 || (task.data.type?.name != null && selectedTypes.value.includes(task.data.type.name));
-
-    const currentMatches = matchesSearch && matchesStatus && matchesType;
-    const hasMatchingChildren = task.children?.some((child) => filterTaskRecursive(child, query)) ?? false;
-    return currentMatches || hasMatchingChildren;
-};
-
-const filteredTasks = computed(() => {
-    const query = searchQuery.value.toLowerCase();
-    if (!query && selectedStatuses.value.length === 0 && selectedTypes.value.length === 0) {
-        return formattedTasks.value;
-    }
-    return formattedTasks.value.filter((task) => filterTaskRecursive(task, query));
-});
-
 const isAllSelected = computed(() => {
-    if (!filteredTasks.value.length) return false;
+    if (!formattedTasks.value.length) return false;
     const allKeys: string[] = [];
     const collectKeys = (node: TaskFormatted) => {
         allKeys.push(node.key);
         if (node.children) node.children.forEach(collectKeys);
     };
-    filteredTasks.value.forEach(collectKeys);
+    formattedTasks.value.forEach(collectKeys);
     return allKeys.every((key) => selectedKey.value[key]?.checked);
 });
 
 const hasSelectedTasks = computed(() => Object.keys(selectedKey.value).length > 0);
-
-const hasActiveFilters = computed(() => {
-    return searchQuery.value !== '' || selectedStatuses.value.length > 0 || selectedTypes.value.length > 0;
-});
-
-const clearFilters = () => {
-    searchQuery.value = '';
-    selectedStatuses.value = [];
-    selectedTypes.value = [];
-};
-
-const handleClearStatuses = () => {
-    selectedStatuses.value = [];
-};
-const handleClearTypes = () => {
-    selectedTypes.value = [];
-};
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -234,7 +183,7 @@ const selectAll = () => {
         keys[node.key] = { checked: true, partialChecked: false };
         if (node.children) node.children.forEach(mark);
     };
-    filteredTasks.value.forEach(mark);
+    formattedTasks.value.forEach(mark);
     selectedKey.value = { ...keys };
 };
 
@@ -565,85 +514,16 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
-                <Button
-                    label="Add Task"
-                    icon="pi pi-plus"
-                    @click="emit('add', null)"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    :disabled="(!isMember && !hasPermission) || isDeveloper"
-                />
-                <Button
-                    v-if="hasSelectedTasks"
-                    label="Delete Selected"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    @click="removeSelected"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    variant="outlined"
-                    :disabled="!isMember && !hasPermission"
-                />
-            </div>
-        </div>
+        <TaskTableToolbar
+            :hasSelectedTasks="hasSelectedTasks"
+            :isMember="isMember"
+            :hasPermission="hasPermission"
+            :isDeveloper="isDeveloper"
+            @add="(parentId) => emit('add', parentId)"
+            @removeSelected="removeSelected"
+        />
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Search</label>
-                <InputText v-model="searchQuery" placeholder="Search by title..." class="w-full" />
-            </div>
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Status</label>
-                <MultiSelect
-                    v-model="selectedStatuses"
-                    :options="statusOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Status"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearStatuses"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Type</label>
-                <MultiSelect
-                    v-model="selectedTypes"
-                    :options="typeOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Type"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearTypes"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-        </div>
-
-        <div v-if="hasActiveFilters" class="flex justify-end">
-            <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
-        </div>
+        <TaskTableFilters v-model:filters="filters" :statusOptions="props.taskStatuses" :typeOptions="props.taskTypes" />
 
         <div
             class="overflow-x-auto"
@@ -660,11 +540,21 @@ onBeforeUnmount(() => {
             @mousemove="onPointerContainerMove"
             @mouseleave="onPointerRootLeave"
         >
-            <TreeTable v-model:expandedKeys="expandedKeys" :value="filteredTasks" class="min-w-full" scrollable scrollHeight="600px" removableSort>
-                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
+            <TreeTable
+                v-model:expandedKeys="expandedKeys"
+                :value="formattedTasks"
+                :filters="filters as unknown as TreeTableFilterMeta"
+                filterMode="lenient"
+                class="min-w-full"
+                scrollable
+                scrollHeight="600px"
+                removableSort
+            >
+                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen align-frozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
+
                     <template #body="{ node }">
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
@@ -727,13 +617,13 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <Column field="status.name" header="Status" style="min-width: 120px" sortable>
+                <Column field="status.name" header="Status" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
 
-                <Column field="type.name" header="Type" style="min-width: 120px" sortable>
+                <Column field="type.name" header="Type" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
                     </template>

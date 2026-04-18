@@ -200,6 +200,29 @@ export interface TaskFormattedData {
     level?: number;
 }
 
+export interface ProjectTaskTableProps {
+    projectId: string;
+    tasks: Task[];
+    isMember: boolean;
+    hasPermission: boolean;
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    taskTypes: TaskType[];
+    taskCategories?: TaskCategory[];
+    isDeveloper: boolean;
+}
+
+export interface ProjectTaskTableEmits {
+    (e: 'add', parentId: string | null): void;
+    (e: 'edit', task: Task, parentId: string | null): void;
+}
+
+export interface ProjectTaskTableFilter {
+    global: string;
+    'status.name': string[] | null;
+    'type.name': string[] | null;
+}
+
 export interface Comment {
     id: string;
     body: string;

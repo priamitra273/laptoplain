@@ -68,7 +68,7 @@ class ProjectRepository
                 },
             ])->findOrFail($projectId);
         } catch (\Exception $e) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
     }
 

@@ -6,7 +6,7 @@ import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
 import Swal from 'sweetalert2';
 import { computed, ref, watch } from 'vue';
-import type { User, Task, TaskPriority, TaskStatus, TaskType, Sprint, TaskCategory } from '..';
+import type { Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
 import BacklogSection from './partials/BacklogSection.vue';
 import CompleteSprintDialog from './partials/CompleteSprintDialog.vue';
 import EditSprintDialog from './partials/EditSprintDialog.vue';
@@ -89,6 +89,7 @@ watch(
     },
     { immediate: true },
 );
+
 watch(
     () => props.sprints,
     (sprints) => {
@@ -96,6 +97,7 @@ watch(
     },
     { deep: true },
 );
+
 watch(
     () => props.backlog,
     (backlog) => {
@@ -103,6 +105,7 @@ watch(
     },
     { deep: true },
 );
+
 watch(
     () => [localSprints.value, localBacklog.value],
     () => {

@@ -64,9 +64,35 @@ const tabListItems: TabListItem[] = [
     { label: 'Timeline', icon: 'pi pi-chart-bar' },
 ];
 
-const activeSprintTasks = computed(() =>
-    activeSprintTaskIds.value.length > 0 ? props.tasks.filter((t) => activeSprintTaskIds.value.includes(String(t.id))) : [],
-);
+const activeSprintTasks = computed(() => {
+    if (!activeSprintTaskIds.value.length) {
+        return [];
+    }
+
+    const tasks = [];
+
+    for (const id of activeSprintTaskIds.value) {
+        const task = findTaskById(props.tasks, id);
+
+        if (task) {
+            tasks.push(task);
+        }
+    }
+
+    return tasks;
+});
+
+const findTaskById = (tasks: Task[], id: string): Task | null => {
+    for (const task of tasks) {
+        if (task.id === id) return task;
+        if (task.sub_task_recursive && task.sub_task_recursive.length > 0) {
+            const found = findTaskById(task.sub_task_recursive, id);
+            if (found) return found;
+        }
+    }
+
+    return null;
+};
 
 const updateProject = (newValue: any, field: string) => {
     if (!canEdit.value) {

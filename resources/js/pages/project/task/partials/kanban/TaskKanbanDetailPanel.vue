@@ -5,23 +5,27 @@ import moment from 'moment';
 import type { Task } from '../../..';
 import KanbanRow from './KanbanRow.vue';
 
-const props = defineProps<{
+interface Props {
     task: Task | null;
     canAct: boolean;
-}>();
+}
 
-const visible = defineModel<boolean>('visible', { default: false });
-
-const emit = defineEmits<{
+interface Emits {
     edit: [task: Task, parentId: string | null];
     delete: [task: Task];
     add: [taskId: string];
-}>();
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
+
+const visible = defineModel<boolean>('visible', { default: false });
 
 const isOverdue = (task: Task) =>
     !!task.due_date && moment(task.due_date).isBefore(moment(), 'day') && !task.status?.name?.toLowerCase().includes('done');
 
 const subtaskCount = (task: Task) => task.sub_task_recursive?.length || 0;
+
 const doneSubtaskCount = (task: Task) => {
     return (task.sub_task_recursive || []).filter((s) => s.status?.name?.toLowerCase().includes('done')).length;
 };
@@ -147,34 +151,6 @@ const doneSubtaskCount = (task: Task) => {
                         </div>
                         <p v-else class="mt-1 text-xs text-surface-400">No subtasks yet.</p>
                     </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="flex items-center justify-between border-t border-surface-100 px-4 py-3 dark:border-surface-700">
-                    <Button
-                        v-if="canAct"
-                        label="Edit Task"
-                        icon="pi pi-pencil"
-                        size="small"
-                        severity="secondary"
-                        outlined
-                        @click="
-                            emit('edit', task, task.parent_id);
-                            visible = false;
-                        "
-                    />
-                    <Button
-                        v-if="canAct"
-                        label="Delete"
-                        icon="pi pi-trash"
-                        size="small"
-                        severity="danger"
-                        text
-                        @click="
-                            emit('delete', task);
-                            visible = false;
-                        "
-                    />
                 </div>
             </div>
         </template>

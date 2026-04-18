@@ -14,8 +14,6 @@ class Task extends Model
 {
     use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
 
-    protected $table = 'tasks';
-
     protected $fillable = [
         'owned_id',
         'parent_id',

@@ -283,10 +283,12 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
 
 const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
     const canMove = hasAccessToEditAndDelete(node.data) && !props.isDeveloper;
+
     if (!canMove || dragArmedTaskId.value !== node.key) {
         event.preventDefault();
         return;
     }
+
     onPointerDragStart(node);
     draggedTaskId.value = node.key;
     dropTargetTaskId.value = null;
@@ -591,8 +593,6 @@ onBeforeUnmount(() => {
                                 :style="{ color: getCategoryColor(node.data.category) }"
                                 class="shrink-0 cursor-default text-sm"
                             />
-                            <!-- Placeholder so title stays aligned when no category -->
-                            <span v-else class="inline-block shrink-0" style="width: 14px"></span>
 
                             <div
                                 :title="node.data.title"

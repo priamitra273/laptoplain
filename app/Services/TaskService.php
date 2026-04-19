@@ -175,6 +175,28 @@ class TaskService
         ];
     }
 
+    /**
+     * Get comments for a task
+     *
+     * @return DataCollection<int, TaskCommentData>
+     */
+    public function getComments(Task $task): DataCollection
+    {
+        $comments = $this->repository->getComments($task);
+
+        return TaskCommentData::collect($comments, DataCollection::class);
+    }
+
+    /**
+     * Get parent hierarchy for a task
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Task>
+     */
+    public function getParents(Task $task)
+    {
+        return $this->repository->getParents($task->id);
+    }
+
     protected function formatAssignableUsers($projectMembers): array
     {
         return collect($projectMembers)

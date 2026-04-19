@@ -74,6 +74,8 @@ class CreateTaskAction
         $taskData['created_by'] = $userId;
         $taskData['progress'] = $this->calculateInitialProgress($data['status_id'] ?? null);
 
+        $taskData['sequence_number'] ??= Task::where('project_id', $project->id)->max('sequence_number') + 1;
+
         // Remove non-model attributes
         unset($taskData['assign_users'], $taskData['add_tag'], $taskData['sprint_id']);
 

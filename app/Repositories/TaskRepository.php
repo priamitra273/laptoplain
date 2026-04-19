@@ -69,4 +69,50 @@ class TaskRepository
             },
         ])->findOrFail($taskId);
     }
+
+    /**
+     * Get comments for a task
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Comment>
+     */
+    public function getComments(Task $task)
+    {
+        return $task->comments()
+            ->whereNull('parent_id')
+            ->orderBy('id', 'asc')
+            ->with([
+                'user',
+                'replies' => fn ($q) => $q->orderBy('id', 'asc'),
+                'replies.user',
+                'replies.reaction_group_count',
+                'reaction_group_count',
+            ])
+            ->get();
+    }
+
+    public function getParents(int $taskId)
+    {
+        $query = '
+            WITH RECURSIVE ParentHierarchy AS (
+                SELECT *, 1 as depth
+                FROM tasks
+                WHERE id = :id
+                
+                UNION ALL
+                
+                SELECT c.*, ph.depth + 1
+                FROM tasks c
+                INNER JOIN ParentHierarchy ph ON c.id = ph.parent_id
+            )
+            SELECT * FROM ParentHierarchy
+            ORDER BY depth DESC;
+        ';
+
+        return Task::with([
+            'category:id,name,icon,severity',
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+        ])->fromQuery($query, ['id' => $taskId]);
+    }
 }

@@ -111,6 +111,36 @@ class TaskController extends Controller
     }
 
     /**
+     * Get task comments
+     */
+    public function comments(Request $request, Task $task)
+    {
+        abort_if($request->user()->cannot('view', $task), 403);
+
+        $comments = $this->service->getComments($task);
+
+        return response()->json([
+            'success' => true,
+            'data' => Sqids::rec_encode_ids_in_list($comments->toArray()),
+        ]);
+    }
+
+    /**
+     * Get task parents hierarchy
+     */
+    public function parents(Request $request, Task $task)
+    {
+        abort_if($request->user()->cannot('view', $task), 403);
+
+        $parents = $this->service->getParents($task);
+
+        return response()->json([
+            'success' => true,
+            'data' => Sqids::rec_encode_ids_in_list($parents->toArray()),
+        ]);
+    }
+
+    /**
      * Update task status
      */
     public function updateStatus(TaskUpdateStatusRequest $request, Task $task)

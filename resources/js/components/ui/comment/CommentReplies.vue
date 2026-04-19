@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
-import CommentItem from '../../CommentItem.vue';
+import CommentItem from './CommentItem.vue';
 import { ReplyProps } from './type';
 
 const props = defineProps<ReplyProps>();

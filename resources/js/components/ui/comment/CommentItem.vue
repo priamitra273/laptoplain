@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { getInitials } from '@/lib/utils';
-import { CommentReaction, User } from '@/pages/project';
 import { router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
-import { Comment } from '..';
-import CommentEditor from './partials/comment/CommentEditor.vue';
-import CommentHeader from './partials/comment/CommentHeader.vue';
-import CommentItemSkeleton from './partials/comment/CommentItemSkeleton.vue';
-import CommentReactions from './partials/comment/CommentReactions.vue';
-import CommentReplies from './partials/comment/CommentReplies.vue';
+import CommentEditor from './CommentEditor.vue';
+import CommentHeader from './CommentHeader.vue';
+import CommentItemSkeleton from './CommentItemSkeleton.vue';
+import CommentReactions from './CommentReactions.vue';
+import CommentReplies from './CommentReplies.vue';
+import { Comment, CommentReaction, User } from './type';
 
 interface Props {
     comment: Comment;

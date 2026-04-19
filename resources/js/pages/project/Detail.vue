@@ -139,6 +139,7 @@ const openTaskAdd = (parentId: string | null, _statusId?: string, source?: strin
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to create tasks', life: 3000 });
         return;
     }
+
     selectedTask.value = null;
     isBacklogCreate.value = source === 'backlog' || source === 'backlog-add-parent';
     isAddParentCreate.value = source === 'backlog-add-parent' || source === 'sprint-add-parent';

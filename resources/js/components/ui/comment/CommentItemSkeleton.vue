@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Comment } from '@/pages/project';
+import { Comment } from './type';
 
 const props = defineProps<{
     comment: Comment;

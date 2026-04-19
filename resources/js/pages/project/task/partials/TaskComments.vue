@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MentionEditor from '@/components/Mentioneditor.vue';
+import CommentItem from '@/components/ui/comment/CommentItem.vue';
 import { useLayout } from '@/composables/useLayouts.js';
 import { ProjectUserOption } from '@/types/task-comment';
 import { router } from '@inertiajs/vue3';
@@ -10,7 +11,6 @@ import Divider from 'primevue/divider';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 import type { Comment, Task } from '../../index.d.ts';
-import CommentItem from '../CommentItem.vue';
 
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';

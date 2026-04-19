@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
-import { CommentReaction } from '@/pages/project';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
 import { useTemplateRef } from 'vue';
+import { CommentReaction } from './type';
 
 interface Props {
     reactions: CommentReaction[];

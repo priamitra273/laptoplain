@@ -1,4 +1,27 @@
-import { Comment, User } from '@/pages/project';
+export interface User {
+    id: string | number;
+    name: string;
+    email?: string;
+    avatar_url?: string | null;
+}
+
+export interface Comment {
+    id: string;
+    body: string;
+    reactions: CommentReaction[];
+    current_user_reaction: string | null;
+
+    created_at: string;
+    updated_at: string | null;
+
+    user: User;
+    replies: Comment[];
+}
+
+export interface CommentReaction {
+    reaction: string;
+    count: number;
+}
 
 export interface EditorProps {
     modelValue: string;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { User } from '@pages/project';
 import Avatar from 'primevue/avatar';
 import { computed } from 'vue';
+import { User } from './type';
 
 interface Props {
     user?: User;

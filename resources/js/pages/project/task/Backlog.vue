@@ -34,8 +34,6 @@ const emit = defineEmits([
     'activeSprintTaskIds', // ← tambahkan ini
 ]);
 
-const completeLoading = ref(false);
-
 const toast = useToast();
 const canAct = computed(() => props.isMember || props.hasPermission);
 const localSprints = ref<Sprint[]>([...props.sprints]);
@@ -168,19 +166,6 @@ const completingSprint = ref<Sprint | null>(null);
 const openCompleteDialog = (sprint: Sprint) => {
     completingSprint.value = sprint;
     showCompleteDialog.value = true;
-};
-
-const saveCompleteSprint = (form: object) => {
-    completeLoading.value = true;
-    router.patch(r('complete', completingSprint.value!.id), form as any, {
-        ...opts,
-        onSuccess: () => {
-            showCompleteDialog.value = false;
-        },
-        onFinish: () => {
-            completeLoading.value = false;
-        },
-    });
 };
 
 // ─── Delete Sprint ────────────────────────────────────────────────
@@ -478,14 +463,7 @@ const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskI
 
     <StartSprintDialog v-model:visible="showStartDialog" :sprint="startingSprint" :projectId="props.projectId" />
     <EditSprintDialog v-model:visible="showEditDialog" :sprint="editingSprint" :projectId="props.projectId" />
-    <CompleteSprintDialog
-        v-model:visible="showCompleteDialog"
-        :sprint="completingSprint"
-        :sprints="localSprints"
-        :loading="completeLoading"
-        :disabled="completeLoading"
-        @save="saveCompleteSprint"
-    />
+    <CompleteSprintDialog v-model:visible="showCompleteDialog" :sprint="completingSprint" :sprints="localSprints" :projectId="props.projectId" />
 
     <Menu ref="sprintMenu" :model="sprintMenuItems" popup />
     <Menu ref="taskMenu" :model="taskMenuItems" popup />

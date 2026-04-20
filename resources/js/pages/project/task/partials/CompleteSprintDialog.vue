@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { InertiaForm, useForm } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
@@ -6,19 +7,39 @@ import Textarea from 'primevue/textarea';
 import { computed, ref, watch } from 'vue';
 import type { Sprint } from '../type';
 
-const props = defineProps<{ visible: boolean; sprint?: Sprint | null; sprints: Sprint[]; loading?: boolean; disabled?: boolean }>();
-const emit = defineEmits<{ 'update:visible': [v: boolean]; save: [form: object] }>();
+interface MoveIncompleteTo {
+    existing_sprint: string | number;
+    other: string;
+}
 
-const form = ref({
+interface CompleteSprintForm {
+    retrospective: string;
+    move_incomplete_to: MoveIncompleteTo;
+    [key: string]: any;
+}
+
+interface CompleteSprintProps {
+    visible: boolean;
+    projectId: string;
+    sprint?: Sprint | null;
+    sprints: Sprint[];
+}
+
+const form: InertiaForm<CompleteSprintForm> = useForm({
     retrospective: '',
     move_incomplete_to: {
         existing_sprint: '',
-        other: '',
+        other: 'backlog',
     },
 });
 
-// Separate model for the Select component
-const selectedDestination = ref<string>('backlog');
+const props = defineProps<CompleteSprintProps>();
+
+const emit = defineEmits<{
+    'update:visible': [v: boolean];
+}>();
+
+const selectedDestination = ref<string | number>('backlog');
 
 const SPECIAL_OPTIONS = [
     { id: 'backlog', name: 'Leave in backlog' },
@@ -27,37 +48,41 @@ const SPECIAL_OPTIONS = [
 
 const SPECIAL_IDS = SPECIAL_OPTIONS.map((o) => o.id);
 
-// Sync selectedDestination → form
-watch(selectedDestination, (val) => {
+const otherSprints = computed(() => [...SPECIAL_OPTIONS, ...props.sprints.filter((s) => s.id !== props.sprint?.id)]);
+
+const incompleteCount = computed(() => props.sprint?.tasks?.filter((t) => !['Done', 'Completed'].includes(t.status?.name ?? '')).length ?? 0);
+
+const handleDestinationChange = (val: string | number) => {
     if (!val) {
-        form.value.move_incomplete_to = { existing_sprint: '', other: '' };
-    } else if (SPECIAL_IDS.includes(val)) {
-        form.value.move_incomplete_to = { existing_sprint: '', other: val };
+        form.move_incomplete_to = { existing_sprint: '', other: '' };
+    } else if (typeof val === 'string' && SPECIAL_IDS.includes(val)) {
+        form.move_incomplete_to = { existing_sprint: '', other: val };
     } else {
-        form.value.move_incomplete_to = { existing_sprint: val, other: '' };
+        form.move_incomplete_to = { existing_sprint: val, other: '' };
     }
-});
+};
 
-// Reset form when dialog opens
-watch(selectedDestination, (val) => {
-    if (!val) {
-        form.value.move_incomplete_to = { existing_sprint: '', other: '' };
-    } else if (SPECIAL_IDS.includes(val)) {
-        form.value.move_incomplete_to = { existing_sprint: '', other: val };
-    } else {
-        form.value.move_incomplete_to = { existing_sprint: val, other: '' };
-    }
-}, { immediate: true });
+const submit = () => {
+    if (!props.sprint?.id) return;
 
-// Other sprints to move incomplete tasks to (exclude current) + special options
-const otherSprints = computed(() => [
-    ...SPECIAL_OPTIONS,
-    ...props.sprints.filter((s) => s.id !== props.sprint?.id),
-]);
+    form.patch(route('project.sprints.complete', { projectEncoded: props.projectId, sprintEncoded: props.sprint.id }), {
+        onSuccess: () => {
+            emit('update:visible', false);
+            form.reset();
+            selectedDestination.value = 'backlog';
+        },
+    });
+};
 
-// Count incomplete tasks in current sprint
-const incompleteCount = computed(
-    () => props.sprint?.tasks?.filter((t) => !['Done', 'Completed'].includes(t.status?.name ?? '')).length ?? 0,
+watch(
+    () => props.visible,
+    (isVisible) => {
+        if (isVisible) {
+            form.reset();
+            selectedDestination.value = 'backlog';
+            handleDestinationChange('backlog');
+        }
+    },
 );
 </script>
 
@@ -93,6 +118,7 @@ const incompleteCount = computed(
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Select option"
+                    @change="handleDestinationChange($event.value)"
                 />
             </div>
 
@@ -104,8 +130,15 @@ const incompleteCount = computed(
         </div>
 
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="disabled" />
-            <Button label="Complete Sprint" icon="pi pi-flag" severity="success" @click="emit('save', { ...form })" :loading="loading" :disabled="disabled" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="form.processing" />
+            <Button
+                label="Complete Sprint"
+                icon="pi pi-flag"
+                severity="success"
+                @click="submit"
+                :loading="form.processing"
+                :disabled="form.processing"
+            />
         </template>
     </Dialog>
 </template>

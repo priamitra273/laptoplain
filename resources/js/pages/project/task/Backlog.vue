@@ -6,7 +6,7 @@ import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
 import Swal from 'sweetalert2';
 import { computed, ref, watch } from 'vue';
-import type { Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
+import type { Epic, Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
 import BacklogSection from './partials/BacklogSection.vue';
 import CompleteSprintDialog from './partials/CompleteSprintDialog.vue';
 import EditSprintDialog from './partials/EditSprintDialog.vue';
@@ -17,7 +17,7 @@ const props = defineProps<{
     projectId: string;
     sprints: Sprint[];
     backlog: Task[];
-    epics: { id: string; title: string }[];
+    epics: Epic[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
@@ -34,7 +34,6 @@ const emit = defineEmits([
     'activeSprintTaskIds', // ← tambahkan ini
 ]);
 
-const startLoading = ref(false);
 const editLoading = ref(false);
 const completeLoading = ref(false);
 
@@ -152,19 +151,6 @@ const startingSprint = ref<Sprint | null>(null);
 const openStartDialog = (sprint: Sprint) => {
     startingSprint.value = sprint;
     showStartDialog.value = true;
-};
-
-const saveStartSprint = (form: object) => {
-    startLoading.value = true;
-    router.patch(r('start', startingSprint.value!.id), form as any, {
-        ...opts,
-        onSuccess: () => {
-            showStartDialog.value = false;
-        },
-        onFinish: () => {
-            startLoading.value = false;
-        },
-    });
 };
 
 // ─── Edit Sprint ──────────────────────────────────────────────────
@@ -507,9 +493,7 @@ const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskI
     <StartSprintDialog
         v-model:visible="showStartDialog"
         :sprint="startingSprint"
-        :loading="startLoading"
-        :disabled="startLoading"
-        @save="saveStartSprint"
+        :projectId="props.projectId"
     />
     <EditSprintDialog
         v-model:visible="showEditDialog"

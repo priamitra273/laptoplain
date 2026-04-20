@@ -28,7 +28,7 @@ class SprintController extends Controller
             'tasks' => function ($query) {
                 $query->where(function ($taskQuery) {
                     $taskQuery->whereNull('parent_id')
-                        ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                        ->orWhereHas('parent.category', fn ($categoryQuery) => $categoryQuery->where('name', 'Epic'));
                 });
             },
             'tasks.status:id,name,severity',
@@ -53,7 +53,7 @@ class SprintController extends Controller
             ->backlog()
             ->where(function ($taskQuery) {
                 $taskQuery->whereNull('parent_id')
-                    ->orWhereHas('parent.category', fn($categoryQuery) => $categoryQuery->where('name', 'Epic'));
+                    ->orWhereHas('parent.category', fn ($categoryQuery) => $categoryQuery->where('name', 'Epic'));
             })
             ->orderBy('id')
             ->get();
@@ -69,11 +69,10 @@ class SprintController extends Controller
                 'success' => true,
                 'sprints' => $sprints->toArray(),
                 'backlog' => $backlog->toArray(),
-                'epics'   => $epics->toArray(),
+                'epics' => $epics->toArray(),
             ])
         );
     }
-
 
     // POST /project/{projectEncoded}/sprints
     public function store(Request $request, string $projectEncoded)
@@ -81,22 +80,22 @@ class SprintController extends Controller
         $projectId = Sqids::decode($projectEncoded);
 
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'goal'       => 'nullable|string',
+            'name' => 'required|string|max:255',
+            'goal' => 'nullable|string',
             'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'duration' => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
         ]);
 
         $lastOrder = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
 
         $sprint = ProjectSprint::create([
             ...$validated,
-            'project_id'       => $projectId,
+            'project_id' => $projectId,
             'sprint_status_id' => MsSprintStatus::planning()->id,
-            'order'            => $lastOrder + 1,
-            'created_by'       => Auth::id(),
-            'updated_by'       => Auth::id(),
+            'order' => $lastOrder + 1,
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
         ]);
 
         if ($request->expectsJson()) {
@@ -115,15 +114,15 @@ class SprintController extends Controller
     public function update(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
-        $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
+        $sprintId = Sqids::decode($sprintEncoded);
+        $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'goal'       => 'nullable|string',
+            'name' => 'required|string|max:255',
+            'goal' => 'nullable|string',
             'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'duration' => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
         ]);
 
         $sprint->update([
@@ -139,8 +138,8 @@ class SprintController extends Controller
     public function destroy(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
-        $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
+        $sprintId = Sqids::decode($sprintEncoded);
+        $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         if ($sprint->status?->name === 'Active') {
             if ($request->expectsJson()) {
@@ -171,29 +170,21 @@ class SprintController extends Controller
     public function start(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
-        $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
-
-        $hasActive = ProjectSprint::where('project_id', $projectId)
-            ->whereHas('status', fn($q) => $q->where('name', 'Active'))
-            ->exists();
-
-        if ($hasActive) {
-            return back()->with('error', 'Masih ada sprint yang sedang berjalan. Selesaikan dulu sebelum memulai sprint baru.');
-        }
+        $sprintId = Sqids::decode($sprintEncoded);
+        $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         $validated = $request->validate([
-            'goal'       => 'nullable|string',
-            'duration'   => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
+            'goal' => 'nullable|string',
+            'duration' => 'nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom',
             'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $sprint->update([
             ...$validated,
             'sprint_status_id' => MsSprintStatus::active()->id,
-            'start_date'       => $validated['start_date'] ?? $sprint->start_date ?? now()->toDateString(),
-            'updated_by'       => Auth::id(),
+            'start_date' => $validated['start_date'] ?? $sprint->start_date ?? now()->toDateString(),
+            'updated_by' => Auth::id(),
         ]);
 
         return to_route('project.show', ['encoded' => $projectEncoded])
@@ -204,24 +195,24 @@ class SprintController extends Controller
     public function complete(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
-        $sprint    = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
+        $sprintId = Sqids::decode($sprintEncoded);
+        $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         $validated = $request->validate([
-            'retrospective'                        => 'nullable|string',
-            'move_incomplete_to.existing_sprint'   => 'nullable|string',
-            'move_incomplete_to.other'             => 'nullable|string|in:backlog,new_sprint',
+            'retrospective' => 'nullable|string',
+            'move_incomplete_to.existing_sprint' => 'nullable|string',
+            'move_incomplete_to.other' => 'nullable|string|in:backlog,new_sprint',
         ]);
 
         $moveIncompleteTo = $validated['move_incomplete_to'] ?? [];
-        $existingSprint   = $moveIncompleteTo['existing_sprint'] ?? null;
-        $other            = $moveIncompleteTo['other'] ?? null;
+        $existingSprint = $moveIncompleteTo['existing_sprint'] ?? null;
+        $other = $moveIncompleteTo['other'] ?? null;
 
-        if (!empty($existingSprint)) {
+        if (! empty($existingSprint)) {
             $targetSprintId = Sqids::decode($existingSprint);
 
             $incompleteTasks = $sprint->tasks()
-                ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
+                ->whereHas('status', fn ($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
                 ->pluck('tasks.id');
 
             if ($incompleteTasks->isNotEmpty()) {
@@ -231,7 +222,7 @@ class SprintController extends Controller
             }
         } elseif ($other === 'backlog') {
             $incompleteTasks = $sprint->tasks()
-                ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
+                ->whereHas('status', fn ($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
                 ->pluck('tasks.id');
 
             if ($incompleteTasks->isNotEmpty()) {
@@ -239,24 +230,24 @@ class SprintController extends Controller
             }
         } elseif ($other === 'new_sprint') {
             $incompleteTasks = $sprint->tasks()
-                ->whereHas('status', fn($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
+                ->whereHas('status', fn ($q) => $q->whereNotIn('name', ['Completed', 'Finished', 'Done']))
                 ->pluck('tasks.id');
 
             if ($incompleteTasks->isNotEmpty()) {
-                $lastOrder    = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
-                $sprintCount  = ProjectSprint::where('project_id', $projectId)->count();
+                $lastOrder = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
+                $sprintCount = ProjectSprint::where('project_id', $projectId)->count();
 
                 $newSprint = ProjectSprint::create([
-                    'name'              => 'Sprint ' . ($sprintCount + 1),
-                    'goal'              => null,
-                    'start_date'        => null,
-                    'end_date'          => null,
-                    'duration'          => null,
-                    'project_id'        => $projectId,
-                    'sprint_status_id'  => MsSprintStatus::planning()->id,
-                    'order'             => $lastOrder + 1,
-                    'created_by'        => Auth::id(),
-                    'updated_by'        => Auth::id(),
+                    'name' => 'Sprint '.($sprintCount + 1),
+                    'goal' => null,
+                    'start_date' => null,
+                    'end_date' => null,
+                    'duration' => null,
+                    'project_id' => $projectId,
+                    'sprint_status_id' => MsSprintStatus::planning()->id,
+                    'order' => $lastOrder + 1,
+                    'created_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
                 ]);
                 $newSprint->tasks()->syncWithoutDetaching($incompleteTasks);
                 $sprint->tasks()->detach($incompleteTasks);
@@ -265,9 +256,9 @@ class SprintController extends Controller
 
         $sprint->update([
             'sprint_status_id' => MsSprintStatus::completed()->id,
-            'end_date'         => $sprint->end_date ?? now()->toDateString(),
-            'retrospective'    => $validated['retrospective'] ?? null,
-            'updated_by'       => Auth::id(),
+            'end_date' => $sprint->end_date ?? now()->toDateString(),
+            'retrospective' => $validated['retrospective'] ?? null,
+            'updated_by' => Auth::id(),
         ]);
 
         return to_route('project.show', ['encoded' => $projectEncoded])
@@ -278,17 +269,17 @@ class SprintController extends Controller
     public function assignTask(Request $request, string $projectEncoded, string $sprintEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
+        $sprintId = Sqids::decode($sprintEncoded);
 
         $validated = $request->validate([
-            'task_ids'   => 'required|array',
+            'task_ids' => 'required|array',
             'task_ids.*' => 'string',
         ]);
 
         $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
 
         $rawTaskIds = collect($validated['task_ids'])
-            ->map(fn($encoded) => Sqids::decode($encoded))
+            ->map(fn ($encoded) => Sqids::decode($encoded))
             ->filter()
             ->values()
             ->toArray();
@@ -300,6 +291,7 @@ class SprintController extends Controller
                     'message' => 'Tidak ada task yang valid.',
                 ], 422);
             }
+
             return back()->with('error', 'Tidak ada task yang valid.');
         }
 
@@ -309,7 +301,7 @@ class SprintController extends Controller
             ->toArray();
 
         $hasEpic = Task::whereIn('id', $validTaskIds)
-            ->whereHas('category', fn($q) => $q->where('name', 'Epic'))
+            ->whereHas('category', fn ($q) => $q->where('name', 'Epic'))
             ->exists();
 
         if ($hasEpic) {
@@ -319,6 +311,7 @@ class SprintController extends Controller
                     'message' => 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.',
                 ], 422);
             }
+
             return back()->with('error', 'Epic tidak bisa langsung dimasukkan ke sprint. Gunakan Story atau Issue.');
         }
 
@@ -339,8 +332,8 @@ class SprintController extends Controller
     public function removeTask(Request $request, string $projectEncoded, string $sprintEncoded, string $taskEncoded)
     {
         $projectId = Sqids::decode($projectEncoded);
-        $sprintId  = Sqids::decode($sprintEncoded);
-        $taskId    = Sqids::decode($taskEncoded);
+        $sprintId = Sqids::decode($sprintEncoded);
+        $taskId = Sqids::decode($taskEncoded);
 
         $sprint = ProjectSprint::where('project_id', $projectId)->findOrFail($sprintId);
         $sprint->tasks()->detach($taskId);

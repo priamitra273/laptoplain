@@ -1,57 +1,89 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import Textarea from 'primevue/textarea';
+import { useForm } from '@inertiajs/vue3';
+import moment from 'moment';
 import { computed, ref, watch } from 'vue';
 import type { Sprint } from '../type';
 
-const props = defineProps<{ visible: boolean; sprint: Sprint | null; loading?: boolean; disabled?: boolean }>();
-const emit = defineEmits<{ 'update:visible': [v: boolean]; save: [form: object] }>();
+interface Props {
+    visible: boolean;
+    sprint: Sprint | null;
+    projectId: string;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<{
+    'update:visible': [v: boolean];
+}>();
 
 const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', 'Custom'];
 
-const form = ref({ goal: '', duration: '2 weeks', start_date: '', end_date: '' });
+const loading = ref(false);
 
-const isCustom = computed(() => form.value.duration === 'Custom');
+const form = useForm({
+    goal: '',
+    duration: '2 weeks',
+    start_date: null as Date | null,
+    end_date: null as Date | null,
+});
+
+const isCustom = computed(() => form.duration === 'Custom');
+
+const submit = () => {
+    if (!props.sprint) return;
+
+    form.transform((data) => ({
+        ...data,
+        start_date: moment(form.start_date).format('YYYY-MM-DD'),
+        end_date: moment(form.end_date).format('YYYY-MM-DD'),
+    })).patch(route('project.sprints.start', { projectEncoded: props.projectId, sprintEncoded: props.sprint.id }), {
+        preserveScroll: true,
+        onBefore: () => {
+            loading.value = true;
+        },
+        onSuccess: () => {
+            emit('update:visible', false);
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
+};
 
 const handleEnter = () => {
-    if (props.disabled || props.loading) return;
-    emit('save', { ...form.value });
+    if (loading.value) return;
+    submit();
 };
 
 const calcEndDate = () => {
-    if (isCustom.value || !form.value.start_date) return;
-    const weeks = parseInt(form.value.duration);
-    const start = new Date(form.value.start_date);
+    if (isCustom.value || !form.start_date) return;
+    const weeks = parseInt(form.duration);
+    const start = form.start_date instanceof Date ? new Date(form.start_date) : new Date(form.start_date);
     start.setDate(start.getDate() + weeks * 7);
-    form.value.end_date = start.toISOString().slice(0, 10);
+    form.end_date = start;
 };
 
 watch(
     () => props.sprint,
-    (s) => {
-        form.value = {
-            goal: s?.goal ?? '',
-            duration: s?.duration ?? '2 weeks',
-            start_date: s?.start_date ?? new Date().toISOString().slice(0, 10),
-            end_date: s?.end_date ?? '',
-        };
+    (value) => {
+        form.goal = value?.goal ?? '';
+        form.duration = value?.duration ?? '2 weeks';
+        form.start_date = value?.start_date ? new Date(value.start_date) : new Date();
+        form.end_date = value?.end_date ? new Date(value.end_date) : null;
         calcEndDate();
     },
     { immediate: true },
 );
 
 watch(
-    () => form.value.duration,
+    () => form.duration,
     (val) => {
         if (val !== 'Custom') calcEndDate();
-        else form.value.end_date = ''; // reset agar user isi sendiri
+        else form.end_date = null;
     },
 );
 
-watch(() => form.value.start_date, calcEndDate);
+watch(() => form.start_date, calcEndDate);
 </script>
 
 <template>
@@ -66,16 +98,20 @@ watch(() => form.value.start_date, calcEndDate);
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Sprint Goal</label>
                 <Textarea v-model="form.goal" rows="2" autoResize placeholder="What is the goal of this sprint?" autofocus />
+                <div v-if="form.errors.goal" class="mt-1 text-xs text-red-500">{{ form.errors.goal }}</div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Duration</label>
-                    <Select v-model="form.duration" :options="DURATION_OPTIONS" />
+                    <Select v-model="form.duration" :options="DURATION_OPTIONS" fluid />
+                    <div v-if="form.errors.duration" class="mt-1 text-xs text-red-500">{{ form.errors.duration }}</div>
                 </div>
+
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Start Date</label>
-                    <InputText v-model="form.start_date" type="date" @keydown.enter="handleEnter" />
+                    <DatePicker v-model="form.start_date" dateFormat="yy-mm-dd" showIcon fluid @keydown.enter="handleEnter" />
+                    <div v-if="form.errors.start_date" class="mt-1 text-xs text-red-500">{{ form.errors.start_date }}</div>
                 </div>
             </div>
 
@@ -84,19 +120,22 @@ watch(() => form.value.start_date, calcEndDate);
                     End Date
                     <span v-if="!isCustom" class="text-xs font-normal text-surface-400">(auto)</span>
                 </label>
-                <InputText
+                <DatePicker
                     v-model="form.end_date"
-                    type="date"
+                    :disabled="!isCustom"
+                    dateFormat="yy-mm-dd"
+                    showIcon
+                    fluid
                     @keydown.enter="handleEnter"
-                    :readonly="!isCustom"
                     :class="!isCustom ? 'cursor-not-allowed bg-surface-50 dark:bg-surface-800' : ''"
                 />
+                <div v-if="form.errors.end_date" class="mt-1 text-xs text-red-500">{{ form.errors.end_date }}</div>
             </div>
         </div>
 
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="disabled" />
-            <Button label="Start Sprint" icon="pi pi-play" severity="success" @click="emit('save', { ...form })" :loading="loading" :disabled="disabled" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="loading" />
+            <Button label="Start Sprint" icon="pi pi-play" severity="success" @click="submit" :loading="loading" :disabled="loading" />
         </template>
     </Dialog>
 </template>

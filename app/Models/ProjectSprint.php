@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogUsers;
 
 class ProjectSprint extends Model
 {
-    use SoftDeletes, LogUsers;
+    use LogUsers, SoftDeletes;
 
     protected $fillable = [
         'project_id',
@@ -27,7 +27,7 @@ class ProjectSprint extends Model
 
     protected $casts = [
         'start_date' => 'date',
-        'end_date'   => 'date',
+        'end_date' => 'date',
     ];
 
     public function project()
@@ -50,7 +50,7 @@ class ProjectSprint extends Model
     public function sprintTasks()
     {
         return $this->tasks()
-            ->whereHas('category', fn($q) => $q->whereIn('name', ['Story', 'Task']));
+            ->whereHas('category', fn ($q) => $q->whereIn('name', ['Story', 'Task']));
     }
 
     public function isActive(): bool
@@ -61,10 +61,12 @@ class ProjectSprint extends Model
     public function calculateProgress(): float
     {
         $tasks = $this->tasks()->with('status')->get();
-        if ($tasks->isEmpty()) return 0;
+        if ($tasks->isEmpty()) {
+            return 0;
+        }
 
         $completed = $tasks->filter(
-            fn($t) => strtoupper($t->status?->name) === 'Completed'
+            fn ($t) => strtoupper($t->status?->name) === 'Completed'
         )->count();
 
         return round(($completed / $tasks->count()) * 100, 2);

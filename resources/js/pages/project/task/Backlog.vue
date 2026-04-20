@@ -34,7 +34,6 @@ const emit = defineEmits([
     'activeSprintTaskIds', // ← tambahkan ini
 ]);
 
-const editLoading = ref(false);
 const completeLoading = ref(false);
 
 const toast = useToast();
@@ -160,19 +159,6 @@ const editingSprint = ref<Sprint | null>(null);
 const openEditDialog = (sprint: Sprint) => {
     editingSprint.value = sprint;
     showEditDialog.value = true;
-};
-
-const saveEditSprint = (form: object) => {
-    editLoading.value = true;
-    router.put(r('update', editingSprint.value!.id), form as any, {
-        ...opts,
-        onSuccess: () => {
-            showEditDialog.value = false;
-        },
-        onFinish: () => {
-            editLoading.value = false;
-        },
-    });
 };
 
 // ─── Complete Sprint ──────────────────────────────────────────────
@@ -490,18 +476,8 @@ const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskI
         <Button label="Clear" text size="small" class="!px-2" @click="clearSelection" />
     </div>
 
-    <StartSprintDialog
-        v-model:visible="showStartDialog"
-        :sprint="startingSprint"
-        :projectId="props.projectId"
-    />
-    <EditSprintDialog
-        v-model:visible="showEditDialog"
-        :sprint="editingSprint"
-        :loading="editLoading"
-        :disabled="editLoading"
-        @save="saveEditSprint"
-    />
+    <StartSprintDialog v-model:visible="showStartDialog" :sprint="startingSprint" :projectId="props.projectId" />
+    <EditSprintDialog v-model:visible="showEditDialog" :sprint="editingSprint" :projectId="props.projectId" />
     <CompleteSprintDialog
         v-model:visible="showCompleteDialog"
         :sprint="completingSprint"

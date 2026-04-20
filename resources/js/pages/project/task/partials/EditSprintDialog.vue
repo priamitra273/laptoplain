@@ -1,30 +1,61 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import Textarea from 'primevue/textarea';
-import { ref, watch } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import moment from 'moment';
+import { watch } from 'vue';
 import type { Sprint } from '../type';
 
-const props = defineProps<{ visible: boolean; sprint?: Sprint | null; loading?: boolean; disabled?: boolean }>();
-const emit = defineEmits<{ 'update:visible': [v: boolean]; save: [form: object] }>();
+interface Props {
+    visible: boolean;
+    sprint: Sprint | null;
+    projectId: string;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<{
+    'update:visible': [v: boolean];
+}>();
 
 const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks'];
 
-const form = ref({ name: '', goal: '', duration: '2 weeks', start_date: '', end_date: '' });
+const form = useForm({
+    name: '',
+    goal: '',
+    duration: '2 weeks',
+    start_date: null as Date | null,
+    end_date: null as Date | null,
+});
 
-const handleEnter = () => {
-    if (props.disabled || props.loading) return;
-    emit('save', { ...form.value });
+const submit = () => {
+    if (!props.sprint) return;
+
+    form.transform((data) => ({
+        ...data,
+        start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
+        end_date: data.end_date ? moment(data.end_date).format('YYYY-MM-DD') : null,
+    })).put(
+        route('project.sprints.update', {
+            projectEncoded: props.projectId,
+            sprintEncoded: props.sprint.id,
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                emit('update:visible', false);
+            },
+        },
+    );
 };
 
 watch(
     () => props.sprint,
     (s) => {
-        form.value = s
-            ? { name: s.name, goal: s.goal ?? '', duration: s.duration ?? '2 weeks', start_date: s.start_date ?? '', end_date: s.end_date ?? '' }
-            : { name: '', goal: '', duration: '2 weeks', start_date: '', end_date: '' };
+        form.name = s?.name ?? '';
+        form.goal = s?.goal ?? '';
+        form.duration = s?.duration ?? '2 weeks';
+        form.start_date = s?.start_date ? new Date(s.start_date) : null;
+        form.end_date = s?.end_date ? new Date(s.end_date) : null;
+        form.clearErrors();
     },
     { immediate: true },
 );
@@ -32,33 +63,38 @@ watch(
 
 <template>
     <Dialog :visible="visible" @update:visible="emit('update:visible', $event)" header="Edit Sprint" modal :style="{ width: '28rem' }">
-        <div class="flex flex-col gap-4 pt-2">
+        <form class="flex flex-col gap-4 pt-2" @submit.prevent="submit">
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Sprint Name <span class="text-red-500">*</span></label>
-                <InputText v-model="form.name" autofocus @keydown.enter="handleEnter" />
+                <InputText v-model="form.name" autofocus :disabled="form.processing" />
+                <div v-if="form.errors.name" class="text-xs text-red-500">{{ form.errors.name }}</div>
             </div>
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Sprint Goal</label>
-                <Textarea v-model="form.goal" rows="2" autoResize placeholder="What is the goal of this sprint?" />
+                <Textarea v-model="form.goal" rows="2" autoResize placeholder="What is the goal of this sprint?" :disabled="form.processing" />
+                <div v-if="form.errors.goal" class="text-xs text-red-500">{{ form.errors.goal }}</div>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Duration</label>
-                    <Select v-model="form.duration" :options="DURATION_OPTIONS" />
+                    <Select v-model="form.duration" :options="DURATION_OPTIONS" fluid :disabled="form.processing" />
+                    <div v-if="form.errors.duration" class="text-xs text-red-500">{{ form.errors.duration }}</div>
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Start Date</label>
-                    <InputText v-model="form.start_date" type="date" @keydown.enter="handleEnter" />
+                    <DatePicker v-model="form.start_date" dateFormat="yy-mm-dd" showIcon fluid :disabled="form.processing" />
+                    <div v-if="form.errors.start_date" class="text-xs text-red-500">{{ form.errors.start_date }}</div>
                 </div>
             </div>
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">End Date</label>
-                <InputText v-model="form.end_date" type="date" @keydown.enter="handleEnter" />
+                <DatePicker v-model="form.end_date" dateFormat="yy-mm-dd" showIcon fluid :disabled="form.processing" />
+                <div v-if="form.errors.end_date" class="text-xs text-red-500">{{ form.errors.end_date }}</div>
             </div>
-        </div>
+        </form>
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="disabled" />
-            <Button label="Update" icon="pi pi-check" @click="emit('save', { ...form })" :loading="loading" :disabled="disabled" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="form.processing" />
+            <Button label="Update" icon="pi pi-check" @click="submit" :loading="form.processing" :disabled="form.processing" />
         </template>
     </Dialog>
 </template>

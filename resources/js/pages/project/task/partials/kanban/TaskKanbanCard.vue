@@ -61,10 +61,10 @@ const emit = defineEmits<{
             </p>
 
             <!-- Due date -->
-            <div v-if="task.due_date" class="mb-2 flex items-center gap-1 text-[11px]" :class="isOverdue ? 'text-rose-500' : 'text-surface-400'">
+            <div v-if="task.due_date" class="mb-2 flex items-center gap-1 text-[11px]" :class="isOverdue ? 'text-rose-500' : 'text-surface-700'">
                 <i class="pi pi-calendar text-[10px]" />
                 {{ moment(task.due_date).format('DD MMM') }}
-                <span class="text-surface-300 dark:text-surface-600">· {{ moment(task.due_date).fromNow() }}</span>
+                <span class="text-surface-500 dark:text-surface-300">· {{ moment(task.due_date).fromNow() }}</span>
             </div>
 
             <!-- Subtask progress -->

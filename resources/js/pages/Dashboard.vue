@@ -18,6 +18,7 @@ import Tag from 'primevue/tag';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
+import moment from 'moment';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
@@ -270,14 +271,8 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                             <i class="pi pi-briefcase text-2xl text-purple-500"></i>
                             <span class="text-xl font-bold">Latest Projects</span>
                         </div>
-                        <Link :href="route('project.index')" >
-                            <Button
-                                label="View All"
-                                icon="pi pi-arrow-right"
-                                iconPos="right"
-                                text
-                                size="small"
-                            />
+                        <Link :href="route('project.index')">
+                            <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" />
                         </Link>
                     </div>
                 </template>
@@ -311,9 +306,22 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                                 <Tag :value="data.status.name" :severity="data.status.severity" rounded class="font-semibold" />
                             </template>
                         </Column>
+
                         <Column field="priority" header="Priority" style="min-width: 150px">
                             <template #body="{ data }">
                                 <Tag :value="data.priority.name" :severity="data.priority.severity" rounded class="font-semibold" />
+                            </template>
+                        </Column>
+
+                        <Column field="due_date" header="Due date">
+                            <template #body="{ data }">
+                                <span v-if="moment(data.due_date).isAfter(moment())" class="">
+                                    {{ moment(data.due_date).fromNow() }}
+                                </span>
+
+                                <span v-else class="text-rose-500">
+                                    {{ moment(data.due_date).format('DD MMM YYYY') }}
+                                </span>
                             </template>
                         </Column>
 
@@ -333,13 +341,7 @@ const validMembers = computed(() => props.stats.members.list.filter((member) => 
                             <span class="text-xl font-bold">Latest Tasks</span>
                         </div>
                         <Link :href="route('task.index')">
-                            <Button
-                                label="View All"
-                                icon="pi pi-arrow-right"
-                                iconPos="right"
-                                text
-                                size="small"
-                            />
+                            <Button label="View All" icon="pi pi-arrow-right" iconPos="right" text size="small" />
                         </Link>
                     </div>
                 </template>

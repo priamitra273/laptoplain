@@ -7,7 +7,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import type { Task, TaskPriority, TaskStatus, TaskType, User } from '../..';
+import type { Epic, Task, TaskPriority, TaskStatus, TaskType, User } from '../..';
 import TaskKanbanCard from './kanban/TaskKanbanCard.vue';
 import TaskKanbanColumn from './kanban/TaskKanbanColumn.vue';
 import TaskKanbanDetailPanel from './kanban/TaskKanbanDetailPanel.vue';
@@ -17,6 +17,7 @@ import TaskKanbanToolbar from './kanban/TaskKanbanToolbar.vue';
 interface Props {
     projectId: string;
     tasks: Task[];
+    epicTasks: Epic[];
     statuses: TaskStatus[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
@@ -508,7 +509,9 @@ const openCardMenu = (e: MouseEvent, task: Task) => {
     <TaskKanbanDetailPanel
         v-model:visible="detailPanel.visible"
         :task="detailPanel.task"
+        :epic-tasks="epicTasks"
         :canAct="canAct"
+        :project-members="assignableUsers"
         @edit="(t, pid) => emit('edit', t, pid)"
         @add="emit('add', $event)"
         @delete="deleteTask"

@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios';
 import moment from 'moment';
-import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import ProgressSpinner from 'primevue/progressspinner';
 import { computed, ref, watch } from 'vue';
 
 interface ActivityCauser {
@@ -65,8 +61,10 @@ const uniqueActors = computed(() => {
 
 const fetchActivities = async () => {
     if (!props.taskId) return;
+
     loading.value = true;
     error.value = null;
+
     try {
         const { data } = await axios.get(route('task.activities', { encoded: props.taskId }));
         activities.value = data.activities ?? [];

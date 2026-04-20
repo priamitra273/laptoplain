@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use App\Data\Task\TaskActivityData;
+use App\Data\Task\TaskActivityFieldData;
 use App\Data\Task\TaskCommentData;
+use App\Data\Task\TaskParentData;
+use App\Data\UserData;
 use App\Enums\TaskNotificationType;
 use App\Facades\TaskNotification;
 use App\Models\MsTaskPriority;
@@ -190,11 +194,11 @@ class TaskService
     /**
      * Get parent hierarchy for a task
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Task>
+     * @return \Illuminate\Database\Eloquent\Collection<int, TaskParentData>
      */
     public function getParents(Task $task)
     {
-        return $this->repository->getParents($task->id);
+        return TaskParentData::collect($this->repository->getParents($task->id), DataCollection::class);
     }
 
     protected function formatAssignableUsers($projectMembers): array
@@ -244,5 +248,87 @@ class TaskService
             return $member->user_id === $user->id
                 && $member->role?->name === 'Owner';
         });
+    }
+
+    /**
+     * Get activity logs for a task
+     *
+     * @return DataCollection<int, TaskActivityData>
+     */
+    public function getActivities(Task $task, ?string $event = null): DataCollection
+    {
+        $rawActivities = $this->repository->getActivities($task->id, $event);
+        $labels = $this->activityFieldLabels();
+
+        // Optimize status loading to avoid N+1 queries
+        $foreignKeys = [
+            'status_id' => MsTaskStatus::all()->keyBy('id'),
+            'priority_id' => MsTaskPriority::all()->keyBy('id'),
+            'type_id' => MsTaskType::all()->keyBy('id'),
+        ];
+
+        $formattedActivities = $rawActivities->map(function ($activity) use ($labels, $foreignKeys) {
+            $old = $activity->properties['old'] ?? [];
+            $attributes = $activity->properties['attributes'] ?? [];
+
+            $changedFields = [];
+            foreach ($attributes as $field => $newRaw) {
+                $oldRaw = $old[$field] ?? null;
+                if ($oldRaw === $newRaw) {
+                    continue;
+                }
+
+                if (in_array($field, array_keys($foreignKeys))) {
+                    $changedFields[] = [
+                        'field' => $labels[$field] ?? $field,
+                        'old_value' => $oldRaw ? ($foreignKeys[$field]->get($oldRaw)?->name ?? (string) $oldRaw) : 'None',
+                        'new_value' => $newRaw ? ($foreignKeys[$field]->get($newRaw)?->name ?? (string) $newRaw) : null,
+                        'has_value' => true,
+                    ];
+                } elseif ($field == 'parent_id') {
+                    $changedFields[] = [
+                        'field' => $labels[$field] ?? $field,
+                        'old_value' => $oldRaw ? (Task::find($oldRaw)?->title ?? (string) $oldRaw) : 'None',
+                        'new_value' => $newRaw ? (Task::find($newRaw)?->title ?? (string) $newRaw) : null,
+                        'has_value' => true,
+                    ];
+                } else {
+                    $changedFields[] = [
+                        'field' => $labels[$field] ?? $field,
+                        'old_value' => $oldRaw,
+                        'new_value' => $newRaw,
+                        'has_value' => true,
+                    ];
+                }
+            }
+
+            return [
+                'id' => $activity->id,
+                'event' => $activity->event ?? 'updated',
+                'causer' => $activity->causer ? UserData::from($activity->causer) : null,
+                'changed_fields' => TaskActivityFieldData::collect($changedFields, DataCollection::class),
+                'created_at' => $activity->created_at,
+            ];
+        })->filter(fn ($activity) => count($activity['changed_fields']) > 0)->values()->toArray();
+
+        return TaskActivityData::collect($formattedActivities, DataCollection::class);
+    }
+
+    protected function activityFieldLabels(): array
+    {
+        return [
+            'project_id' => 'Project',
+            'parent_id' => 'Parent Task',
+            'status_id' => 'Status',
+            'priority_id' => 'Priority',
+            'type_id' => 'Type',
+            'owned_id' => 'Owner',
+            'title' => 'Title',
+            'description' => 'Description',
+            'start_date' => 'Start Date',
+            'due_date' => 'Due Date',
+            'progress' => 'Progress',
+            'is_archived' => 'Archived',
+        ];
     }
 }

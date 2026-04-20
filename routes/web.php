@@ -81,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/task/{task}', [TaskController::class, 'show'])->name('task.show');
     Route::get('/task/{task}/comment', [TaskController::class, 'comments'])->name('task.comments');
     Route::get('/task/{task}/parents', [TaskController::class, 'parents'])->name('task.parents');
+    Route::put('/task/{task}/parents', [TaskController::class, 'update_parents'])->name('task.parents.update');
     Route::put('/task/{task}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
     Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 

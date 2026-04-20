@@ -92,27 +92,56 @@ class TaskRepository
 
     public function getParents(int $taskId)
     {
-        $query = '
+        $query = "
             WITH RECURSIVE ParentHierarchy AS (
-                SELECT *, 1 as depth
+                SELECT tasks.*,
+                    CONCAT(projects.code, '-', tasks.sequence_number) as key,
+                    tc.name as task_category_name,
+                    tc.icon as task_category_icon,
+                    tc.severity as task_category_severity,
+                    1 as depth
                 FROM tasks
-                WHERE id = :id
+                INNER JOIN projects ON tasks.project_id = projects.id
+                LEFT JOIN task_categories tc ON tasks.task_category_id = tc.id
+                WHERE tasks.id = :id
                 
                 UNION ALL
                 
-                SELECT c.*, ph.depth + 1
+                SELECT c.*,
+                    CONCAT(projects.code, '-', c.sequence_number) as key, 
+                    tc.name as task_category_name,
+                    tc.icon as task_category_icon,
+                    tc.severity as task_category_severity,
+                    ph.depth + 1
                 FROM tasks c
+                INNER JOIN projects ON c.project_id = projects.id
+                LEFT JOIN task_categories tc ON c.task_category_id = tc.id
                 INNER JOIN ParentHierarchy ph ON c.id = ph.parent_id
             )
             SELECT * FROM ParentHierarchy
             ORDER BY depth DESC;
-        ';
+        ";
 
-        return Task::with([
-            'category:id,name,icon,severity',
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'type:id,name,severity',
-        ])->fromQuery($query, ['id' => $taskId]);
+        return Task::fromQuery($query, ['id' => $taskId]);
+    }
+
+    /**
+     * Get activity logs for a task
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getActivities(int $taskId, ?string $event = null)
+    {
+        $query = \Spatie\Activitylog\Models\Activity::query()
+            ->with('causer:id,name,email')
+            ->where('subject_type', Task::class)
+            ->where('subject_id', $taskId)
+            ->orderByDesc('created_at');
+
+        if ($event !== null) {
+            $query->where('event', $event);
+        }
+
+        return $query->get();
     }
 }

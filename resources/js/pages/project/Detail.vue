@@ -231,6 +231,7 @@ const onKanbanStatusUpdate = () => {
                                         :isMember="isMember"
                                         :hasPermission="isOwner || hasPermission()"
                                         :assignableUsers="assignableUsers"
+                                        :epic-tasks="epics"
                                         @statusUpdate="onKanbanStatusUpdate"
                                         @add="openTaskAdd"
                                         @edit="openTaskEdit"

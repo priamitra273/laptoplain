@@ -12,6 +12,7 @@ use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
 use App\Models\MsTaskStatus;
 use App\Models\Task;
+use App\Rules\SqidExists;
 use App\Services\ProjectService;
 use App\Services\TaskService;
 use Illuminate\Http\Request;
@@ -138,6 +139,23 @@ class TaskController extends Controller
             'success' => true,
             'data' => Sqids::rec_encode_ids_in_list($parents->toArray()),
         ]);
+    }
+
+    public function update_parents(Request $request, Task $task)
+    {
+        abort_if($request->user()->cannot('update', $task), 403);
+
+        $request->validate([
+            'parent_id' => ['required', 'string', new SqidExists(Task::class)],
+        ]);
+
+        $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
+
+        $task->update([
+            'parent_id' => $parentId,
+        ]);
+
+        return back()->with('success', 'Task updated successfully');
     }
 
     /**

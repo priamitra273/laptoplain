@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import moment from 'moment';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import type { Sprint } from '../type';
 
 interface Props {
@@ -17,8 +17,6 @@ const emit = defineEmits<{
 }>();
 
 const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', 'Custom'];
-
-const loading = ref(false);
 
 const form = useForm({
     goal: '',
@@ -38,21 +36,10 @@ const submit = () => {
         end_date: moment(form.end_date).format('YYYY-MM-DD'),
     })).patch(route('project.sprints.start', { projectEncoded: props.projectId, sprintEncoded: props.sprint.id }), {
         preserveScroll: true,
-        onBefore: () => {
-            loading.value = true;
-        },
         onSuccess: () => {
             emit('update:visible', false);
         },
-        onFinish: () => {
-            loading.value = false;
-        },
     });
-};
-
-const handleEnter = () => {
-    if (loading.value) return;
-    submit();
 };
 
 const calcEndDate = () => {
@@ -89,12 +76,12 @@ watch(() => form.start_date, calcEndDate);
 <template>
     <Dialog
         :visible="visible"
-        @update:visible="emit('update:visible', $event)"
         :header="`Start Sprint: ${sprint?.name}`"
         modal
         :style="{ width: '28rem' }"
+        @update:visible="emit('update:visible', $event)"
     >
-        <div class="flex flex-col gap-4 pt-2">
+        <form class="flex flex-col gap-4 pt-2" @submit.prevent="submit">
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Sprint Goal</label>
                 <Textarea v-model="form.goal" rows="2" autoResize placeholder="What is the goal of this sprint?" autofocus />
@@ -110,7 +97,7 @@ watch(() => form.start_date, calcEndDate);
 
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">Start Date</label>
-                    <DatePicker v-model="form.start_date" dateFormat="yy-mm-dd" showIcon fluid @keydown.enter="handleEnter" />
+                    <DatePicker v-model="form.start_date" dateFormat="yy-mm-dd" showIcon fluid />
                     <div v-if="form.errors.start_date" class="mt-1 text-xs text-red-500">{{ form.errors.start_date }}</div>
                 </div>
             </div>
@@ -126,16 +113,24 @@ watch(() => form.start_date, calcEndDate);
                     dateFormat="yy-mm-dd"
                     showIcon
                     fluid
-                    @keydown.enter="handleEnter"
-                    :class="!isCustom ? 'cursor-not-allowed bg-surface-50 dark:bg-surface-800' : ''"
+                    :class="{
+                        'cursor-not-allowed bg-surface-50 dark:bg-surface-800': !isCustom,
+                    }"
                 />
                 <div v-if="form.errors.end_date" class="mt-1 text-xs text-red-500">{{ form.errors.end_date }}</div>
             </div>
-        </div>
+        </form>
 
         <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="loading" />
-            <Button label="Start Sprint" icon="pi pi-play" severity="success" @click="submit" :loading="loading" :disabled="loading" />
+            <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" :disabled="form.processing" />
+            <Button
+                label="Start Sprint"
+                icon="pi pi-play"
+                severity="success"
+                @click="submit"
+                :loading="form.processing"
+                :disabled="form.processing"
+            />
         </template>
     </Dialog>
 </template>

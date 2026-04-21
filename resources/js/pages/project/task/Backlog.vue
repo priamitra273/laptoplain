@@ -74,8 +74,13 @@ const getErrorMessage = (error: any, fallback = 'Something went wrong') => {
 };
 
 const activeSprintTaskIds = computed(() => {
-    const activeSprint = localSprints.value.find((s) => s.status?.name === 'Active');
-    return (activeSprint?.tasks ?? []).filter((t) => t.category?.name?.toLowerCase() !== 'epic').map((t) => String(t.id));
+    const activeSprint = localSprints.value.filter((s) => s.status?.name === 'Active');
+
+    // return (activeSprint?.tasks ?? []).filter((t) => t.category?.name?.toLowerCase() !== 'epic').map((t) => String(t.id));
+    return activeSprint
+        .filter((spirnt) => spirnt?.tasks?.length)
+        .map((sprint) => sprint.tasks)
+        .flatMap((tasks) => tasks?.filter((task) => task.category?.name?.toLowerCase() !== 'epic').map((task) => String(task.id)));
 });
 
 watch(

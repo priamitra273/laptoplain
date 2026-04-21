@@ -129,6 +129,7 @@ const updateProject = (newValue: any, field: string) => {
 };
 
 const openAdd = () => (visibleAdd.value = true);
+
 const openEdit = (member: ProjectMember) => {
     selectedMember.value = member;
     visibleEdit.value = true;
@@ -165,9 +166,11 @@ const onSaved = () => {
     visibleAdd.value = false;
     visibleEdit.value = false;
 };
+
 const onTaskSaved = () => {
     router.reload({ only: ['tasks', 'sprints', 'backlog'] });
 };
+
 const onDialogClosed = () => {
     visibleTaskAdd.value = false;
     selectedTask.value = null;

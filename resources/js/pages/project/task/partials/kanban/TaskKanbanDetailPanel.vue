@@ -104,6 +104,7 @@ const fetchParents = async () => {
                     value: null,
                     icon: 'pi pi-pen-to-square',
                     command: (event) => {
+                        event.originalEvent.preventDefault();
                         epicPopover.value?.toggle(event.originalEvent);
                     },
                 });
@@ -207,7 +208,16 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
 </script>
 
 <template>
-    <Drawer v-model:visible="visible" modal dismissable position="right" class="!w-full md:!w-1/2 lg:!w-[40%]" @show="onShow" @hide="onHide">
+    <Drawer
+        v-model:visible="visible"
+        modal
+        dismissable
+        position="right"
+        class="!w-full md:!w-1/2 lg:!w-[40%]"
+        :block-scroll="true"
+        @show="onShow"
+        @hide="onHide"
+    >
         <template #container="{ closeCallback }">
             <div v-if="task" class="flex h-full flex-col overflow-hidden">
                 <!-- Header -->

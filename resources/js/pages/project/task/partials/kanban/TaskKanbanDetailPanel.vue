@@ -389,11 +389,15 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
                                                     </span>
                                                     :
                                                     <span class="mr-1 text-surface-500 line-through" v-if="field.old_value">
-                                                        {{ field.old_value }}
+                                                        <span v-if="field.field == 'Description'" v-html="field.old_value"></span>
+                                                        <span v-else>{{ field.old_value }}</span>
                                                     </span>
 
                                                     <span class="text-surface-900 dark:text-surface-100">
-                                                        <template v-if="field.new_value">{{ field.new_value }}</template>
+                                                        <template v-if="field.new_value">
+                                                            <span v-if="field.field == 'Description'" v-html="field.new_value"></span>
+                                                            <span v-else>{{ field.new_value }}</span>
+                                                        </template>
                                                         <template v-else-if="field.has_value && !field.new_value">Removed</template>
                                                         <template v-else>—</template>
                                                     </span>

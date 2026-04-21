@@ -2,6 +2,7 @@
 
 namespace App\Data\Task;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
@@ -12,7 +13,7 @@ class TaskReportIndexData extends Data
 {
     public function __construct(
         #[DataCollectionOf(TaskReportData::class)]
-        public DataCollection $tasks,
+        public DataCollection|LengthAwarePaginator $tasks,
         public array $filters,
         public array $filterOptions,
     ) {}

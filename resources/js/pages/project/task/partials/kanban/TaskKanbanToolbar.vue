@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import TaskPriorityIcon from '@/components/TaskPriorityIcon.vue';
+import { Label } from '@/components/ui/label';
 import UserAvatar from '@/components/UserAvatar.vue';
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import type { TaskPriority, TaskType, User } from '../../..';
 
 const props = defineProps<{
@@ -18,8 +18,14 @@ const filterAssignee = defineModel<string[]>('filterAssignee', { default: () => 
 const filterPriority = defineModel<string[]>('filterPriority', { default: () => [] });
 const filterType = defineModel<string[]>('filterType', { default: () => [] });
 
+const op = useTemplateRef('op');
+
 const hasActiveFilter = computed(() => {
     return !!searchQuery.value || filterAssignee.value.length > 0 || filterPriority.value.length > 0 || filterType.value.length > 0;
+});
+
+const countActiveFilter = computed(() => {
+    return filterPriority.value.length + filterType.value.length;
 });
 
 const clearFilters = () => {
@@ -34,22 +40,6 @@ const toggleAssignee = (id: string) => {
         filterAssignee.value = filterAssignee.value.filter((u) => u !== id);
     } else {
         filterAssignee.value = [...filterAssignee.value, id];
-    }
-};
-
-const togglePriority = (id: string) => {
-    if (filterPriority.value.includes(id)) {
-        filterPriority.value = filterPriority.value.filter((p) => p !== id);
-    } else {
-        filterPriority.value = [...filterPriority.value, id];
-    }
-};
-
-const toggleType = (id: string) => {
-    if (filterType.value.includes(id)) {
-        filterType.value = filterType.value.filter((t) => t !== id);
-    } else {
-        filterType.value = [...filterType.value, id];
     }
 };
 </script>
@@ -75,39 +65,16 @@ const toggleType = (id: string) => {
             </button>
         </div>
 
-        <!-- Priority pills -->
-        <div class="flex flex-wrap gap-1">
-            <button
-                v-for="p in taskPriorities"
-                :key="p.id"
-                @click="togglePriority(p.id)"
-                class="flex h-7 items-center gap-1 rounded-full border px-2 text-xs transition-all"
-                :class="
-                    filterPriority.includes(p.id)
-                        ? 'border-blue-400 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
-                        : 'border-surface-200 bg-white text-surface-600 hover:border-surface-300 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400'
-                "
-            >
-                <TaskPriorityIcon :priority="p" /> <span class="pl-1">{{ p.name }}</span>
-            </button>
-        </div>
-
-        <!-- Type pills -->
-        <div class="flex flex-wrap gap-1">
-            <button
-                v-for="tp in taskTypes"
-                :key="tp.id"
-                @click="toggleType(tp.id)"
-                class="h-7 rounded-full border px-2 text-xs transition-all"
-                :class="
-                    filterType.includes(tp.id)
-                        ? 'border-blue-400 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
-                        : 'border-surface-200 bg-white text-surface-600 hover:border-surface-300 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400'
-                "
-            >
-                {{ tp.name }}
-            </button>
-        </div>
+        <Button
+            icon="pi pi-filter"
+            label="Filter"
+            :severity="countActiveFilter ? 'info' : 'secondary'"
+            :badge="countActiveFilter ? countActiveFilter.toString() : undefined"
+            badgeSeverity="info"
+            size="small"
+            outlined
+            @click="(event) => op?.toggle(event)"
+        />
 
         <div class="ml-auto flex items-center gap-2">
             <button
@@ -124,4 +91,36 @@ const toggleType = (id: string) => {
             </div>
         </div>
     </div>
+
+    <Popover ref="op">
+        <div class="flex flex-col gap-4 p-1">
+            <div class="flex flex-col gap-2">
+                <Label class="text-surface-500 dark:text-surface-400">Priority</Label>
+                <MultiSelect
+                    v-model="filterPriority"
+                    :options="props.taskPriorities"
+                    optionLabel="name"
+                    optionValue="id"
+                    filter
+                    placeholder="Filter Priority"
+                    :maxSelectedLabels="3"
+                    class="w-full md:w-80"
+                />
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <Label class="text-surface-500 dark:text-surface-400">Type</Label>
+                <MultiSelect
+                    v-model="filterType"
+                    :options="props.taskTypes"
+                    optionLabel="name"
+                    optionValue="id"
+                    filter
+                    placeholder="Filter Type"
+                    :maxSelectedLabels="3"
+                    class="w-full md:w-80"
+                />
+            </div>
+        </div>
+    </Popover>
 </template>

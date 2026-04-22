@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProjectSprint extends Model
@@ -29,6 +31,26 @@ class ProjectSprint extends Model
         'start_date' => 'date',
         'end_date' => 'date',
     ];
+
+    /**
+     * Retrieve the model for a bound value.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                throw (new ModelNotFoundException)->setModel(static::class);
+            }
+        }
+
+        return $this->where('id', $value)->firstOrFail();
+    }
 
     public function project()
     {

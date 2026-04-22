@@ -2,19 +2,17 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
+use App\Traits\LogsActivityProject;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\MsProjectPriority;
-use App\Models\MsProjectStatus;
-use App\Models\ProjectMember;
-use App\Models\User;
-use App\Traits\LogsActivityProject;
 use Illuminate\Support\Facades\DB;
 
 class Project extends Model
 {
-    use SoftDeletes, LogUsers, LogsActivityProject;
+    use LogsActivityProject, LogUsers, SoftDeletes;
 
     protected $table = 'projects';
 
@@ -41,7 +39,6 @@ class Project extends Model
         'due_date' => 'date',
         'progress' => 'double',
     ];
-
 
     protected $with = [
         'status',
@@ -79,12 +76,30 @@ class Project extends Model
                 : 1;
 
             $project->project_no = 'IT'
-                . $year
-                . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+                .$year
+                .str_pad($sequence, 3, '0', STR_PAD_LEFT);
         });
     }
 
+    /**
+     * Retrieve the model for a bound value.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                throw (new ModelNotFoundException)->setModel(static::class);
+            }
+        }
 
+        return $this->where('id', $value)->firstOrFail();
+    }
 
     public function status()
     {
@@ -96,7 +111,6 @@ class Project extends Model
         return $this->belongsTo(MsProjectPriority::class, 'priority_id');
     }
 
-
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -106,7 +120,6 @@ class Project extends Model
     {
         return $this->belongsTo(User::class, 'owned_id');
     }
-
 
     public function projectMembers()
     {
@@ -171,7 +184,7 @@ class Project extends Model
 
     public function scopeVisibleFor($query, User $user)
     {
-        $allowedRoles = ["super-admin-admin", "watcher-admin"];
+        $allowedRoles = ['super-admin-admin', 'watcher-admin'];
         $roles = $user->getRoleNames();
 
         if ($roles->intersect($allowedRoles)->isNotEmpty()) {

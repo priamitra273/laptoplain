@@ -219,6 +219,14 @@ class SprintController extends Controller
                 $targetSprint = ProjectSprint::where('project_id', $projectId)->findOrFail($targetSprintId);
                 $targetSprint->tasks()->syncWithoutDetaching($incompleteTasks);
                 $sprint->tasks()->detach($incompleteTasks);
+
+                activity('move_incomplete_to_other_sprint')
+                    ->performedOn($sprint)
+                    ->withProperties([
+                        'target_sprint_id' => $targetSprintId,
+                        'detached' => $incompleteTasks,
+                    ])
+                    ->log('Move incomplete tasks to other sprint');
             }
         } elseif ($other === 'backlog') {
             $incompleteTasks = $sprint->tasks()
@@ -227,6 +235,13 @@ class SprintController extends Controller
 
             if ($incompleteTasks->isNotEmpty()) {
                 $sprint->tasks()->detach($incompleteTasks);
+
+                activity('move_incomplete_to_backlog')
+                    ->performedOn($sprint)
+                    ->withProperties([
+                        'detached' => $incompleteTasks,
+                    ])
+                    ->log('Move incomplete tasks to backlog');
             }
         } elseif ($other === 'new_sprint') {
             $incompleteTasks = $sprint->tasks()
@@ -251,6 +266,14 @@ class SprintController extends Controller
                 ]);
                 $newSprint->tasks()->syncWithoutDetaching($incompleteTasks);
                 $sprint->tasks()->detach($incompleteTasks);
+
+                activity('move_incomplete_to_new_sprint')
+                    ->performedOn($sprint)
+                    ->withProperties([
+                        'target_sprint_id' => $newSprint->id,
+                        'detached' => $incompleteTasks,
+                    ])
+                    ->log('Move incomplete tasks to new sprint');
             }
         }
 

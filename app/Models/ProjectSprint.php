@@ -7,10 +7,12 @@ use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class ProjectSprint extends Model
 {
-    use LogUsers, SoftDeletes;
+    use LogsActivity, LogUsers, SoftDeletes;
 
     protected $fillable = [
         'project_id',
@@ -92,5 +94,13 @@ class ProjectSprint extends Model
         )->count();
 
         return round(($completed / $tasks->count()) * 100, 2);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['sprint_status_id', 'name', 'goal', 'duration', 'start_date', 'end_date', 'order', 'retrospective'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

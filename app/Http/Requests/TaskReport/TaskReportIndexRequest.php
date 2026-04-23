@@ -3,6 +3,7 @@
 namespace App\Http\Requests\TaskReport;
 
 use App\Facades\Sqids;
+use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
@@ -70,6 +71,12 @@ class TaskReportIndexRequest extends FormRequest
         if ($this->input('types')) {
             $this->merge([
                 'types' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('types')),
+            ]);
+        }
+
+        if ($this->input('project_statuses')) {
+            $this->merge([
+                'project_statuses' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('project_statuses')),
             ]);
         }
     }

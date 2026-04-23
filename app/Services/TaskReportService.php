@@ -16,7 +16,7 @@ class TaskReportService
 {
     public function __construct(
         protected TaskReportRepository $repository,
-        protected ProjectRepository $projectRepository,
+        protected ProjectRepository $projectRepository
     ) {}
 
     public function getIndexData(array $filters, int $perPage): TaskReportIndexData
@@ -26,37 +26,42 @@ class TaskReportService
 
         $filterOptions = $this->repository->getFilterOptions();
 
+        $project_statuses = ProjectStatusData::collect(
+            $this->projectRepository->getProjectStatuses(),
+            DataCollection::class
+        );
+
         $formattedOptions = [
             'creators' => FilterOptionData::collect($filterOptions['creators']->map(fn ($user) => [
                 'id' => Sqids::encode($user->id),
                 'name' => $user->name,
                 'avatar_url' => $user->avatar_url,
             ])),
+
             'statuses' => FilterOptionData::collect($filterOptions['statuses']->map(fn ($status) => [
                 'id' => Sqids::encode($status->id),
                 'name' => $status->name,
                 'severity' => $status->severity,
             ])),
+
             'priorities' => FilterOptionData::collect($filterOptions['priorities']->map(fn ($priority) => [
                 'id' => Sqids::encode($priority->id),
                 'name' => $priority->name,
                 'severity' => $priority->severity,
             ])),
+
             'types' => FilterOptionData::collect($filterOptions['types']->map(fn ($type) => [
                 'id' => Sqids::encode($type->id),
                 'name' => $type->name,
                 'severity' => $type->severity,
             ])),
-        ];
 
-        $project_statuses = ProjectStatusData::collect(
-            $this->projectRepository->getProjectStatuses(),
-            DataCollection::class
-        );
+            'project_statuses' => Sqids::rec_encode_ids_in_list($project_statuses->toArray()),
+        ];
 
         return new TaskReportIndexData(
             tasks: $tasks,
-            filters: $filters,
+            filters: array_map(fn ($item) => array_map(fn ($value) => Sqids::encode($value), $item), $filters),
             filterOptions: $formattedOptions,
             project_statuses: Sqids::rec_encode_ids_in_list($project_statuses->toArray()),
         );

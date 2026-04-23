@@ -101,7 +101,7 @@ const cancelInProgressDialog = () => {
                         @showInProgressDialog="onShowInProgressDialog"
                     />
 
-                    <TaskMembers :values="props.assignedUsers" />
+                    <TaskMembers :users="props.assignedUsers" />
                 </div>
 
                 <!-- Right Column -->

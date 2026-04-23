@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\SprintReportController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
@@ -113,6 +114,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::delete('/{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
             });
         });
+
+    Route::get('project/{project}/sprints/{projectSprint}/burndown', [SprintReportController::class, 'burndown'])->name('sprints.burndown');
+    Route::get('project/{project}/sprints/{projectSprint}/status-report', [SprintReportController::class, 'statusReport'])->name('sprints.status-report');
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->name('profile.avatar.destroy');

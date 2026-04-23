@@ -11,9 +11,10 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class SprintStatusReportData extends Data
 {
     public function __construct(
-        /** @var DataCollection<TaskData> */
+        /** @var TaskData[] */
         public DataCollection $completed_tasks,
-        /** @var DataCollection<TaskData> */
+
+        /** @var TaskData[] */
         public DataCollection $incomplete_tasks,
     ) {}
 }

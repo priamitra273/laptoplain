@@ -22,8 +22,11 @@ class TaskData extends Data
         public ?TaskStatusData $status,
         public ?TaskPriorityData $priority,
         public ?TaskCategoryData $category,
-        /** @var DataCollection<int, UserData> | Collection<int, UserData> */
+
+        #[TypeScriptType('Array<UserData>|null')]
+        /** @var DataCollection<int, UserData> */
         public DataCollection|Collection|Optional|null $users,
+
         public ?float $progress,
         public ?int $story_points,
     ) {}

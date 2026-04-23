@@ -38,7 +38,11 @@ class SprintData extends Data
         public int $order,
         public ?string $retrospective,
         public ?StatusData $status,
+
+        #[TypeScriptType('string')]
         public Carbon $created_at,
+
+        #[TypeScriptType('string')]
         public ?Carbon $updated_at,
     ) {}
 }

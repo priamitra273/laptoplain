@@ -44,9 +44,34 @@ declare namespace App {
                 name: string;
             };
             export type ProjectStatusData = {
-                id: number;
+                id: string;
                 name: string;
                 severity: string | null;
+            };
+        }
+        namespace Sprint {
+            export type SprintData = {
+                id: string;
+                project_id: string;
+                name: string;
+                goal: string | null;
+                duration: string | null;
+                start_date: string;
+                end_date: string;
+                order: number;
+                retrospective: string | null;
+                status: App.Data.Sprint.StatusData | null;
+                created_at: string;
+                updated_at: string;
+            };
+            export type SprintStatusReportData = {
+                completed_tasks: App.Data.Task.TaskData[];
+                incomplete_tasks: App.Data.Task.TaskData[];
+            };
+            export type StatusData = {
+                id: string;
+                name: string;
+                severity: string;
             };
         }
         namespace Task {
@@ -80,6 +105,17 @@ declare namespace App {
                 icon: string | null;
                 severity: string | null;
             };
+            export type TaskData = {
+                id: string;
+                title: string;
+                description: string | null;
+                status: App.Data.Task.TaskStatusData | null;
+                priority: App.Data.Task.TaskPriorityData | null;
+                category: App.Data.Task.TaskCategoryData | null;
+                users: App.Data.UserData[] | null;
+                progress: number | null;
+                story_points: number | null;
+            };
             export type TaskParentData = {
                 id: string;
                 key: string;
@@ -108,9 +144,10 @@ declare namespace App {
                 updated_at: string;
             };
             export type TaskReportIndexData = {
-                tasks: undefined;
+                tasks: undefined | undefined;
                 filters: Array<any>;
                 filterOptions: Array<any>;
+                project_statuses: Array<any>;
             };
             export type TaskStatusData = {
                 id: number;

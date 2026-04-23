@@ -369,7 +369,7 @@ initializeFilters();
             <!-- Data Table -->
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
-                    <DataTable :value="tasks.data" stripedRows class="rounded-lg" :rows="tasks.per_page" responsiveLayout="scroll">
+                    <DataTable :value="tasks.data" stripedRows class="rounded-lg" :rows="tasks.meta.per_page" responsiveLayout="scroll">
                         <!-- Creator Column -->
                         <Column field="creator.name" header="Name" style="min-width: 200px">
                             <template #body="{ data }">
@@ -480,10 +480,10 @@ initializeFilters();
                     <!-- Pagination -->
                     <div class="mt-4">
                         <Paginator
-                            :rows="tasks.per_page"
-                            :totalRecords="tasks.total"
+                            :rows="tasks.meta.per_page"
+                            :totalRecords="tasks.meta.total"
                             :rowsPerPageOptions="[10, 25, 50, 100]"
-                            :first="(tasks.current_page - 1) * tasks.per_page"
+                            :first="(tasks.meta.current_page - 1) * tasks.meta.per_page"
                             @page="onPageChange"
                         />
                     </div>

@@ -50,6 +50,12 @@ declare namespace App {
             };
         }
         namespace Sprint {
+            export type BurndownChartData = {
+                date: string;
+                label: string;
+                total_plan: number;
+                total_actual: number;
+            };
             export type SprintData = {
                 id: string;
                 project_id: string;

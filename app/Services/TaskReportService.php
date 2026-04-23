@@ -61,7 +61,7 @@ class TaskReportService
 
         return new TaskReportIndexData(
             tasks: $tasks,
-            filters: array_map(fn ($item) => array_map(fn ($value) => Sqids::encode($value), $item), $filters),
+            filters: array_map(fn ($item) => is_array($item) ? array_map(fn ($value) => Sqids::encode($value), $item) : $item, $filters),
             filterOptions: $formattedOptions,
             project_statuses: Sqids::rec_encode_ids_in_list($project_statuses->toArray()),
         );

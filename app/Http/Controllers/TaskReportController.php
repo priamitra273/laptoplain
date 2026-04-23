@@ -16,6 +16,7 @@ class TaskReportController extends Controller
     public function index(TaskReportIndexRequest $request, TaskReportService $service): \Inertia\Response
     {
         $filters = $request->all();
+
         $perPage = (int) $request->get('per_page', 25);
 
         $response = $service->getIndexData($filters, $perPage);

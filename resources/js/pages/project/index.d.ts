@@ -1,4 +1,4 @@
-import { PrimeSeverity, ProjectRoleOption } from '@/types';
+import { LengthAwarePaginator, PrimeSeverity, ProjectRoleOption } from '@/types';
 
 export interface User {
     id: string | number;
@@ -414,7 +414,7 @@ export interface TaskReportFilters {
 }
 
 export interface TaskReportProps {
-    tasks: TaskReportPaginatedTasks;
+    tasks: LengthAwarePaginator<TaskReportTask>;
     project_statuses: TaskReportStatus[];
     filters: TaskReportFilters;
     filterOptions: TaskReportFilterOptions;

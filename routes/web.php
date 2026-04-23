@@ -115,8 +115,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         });
 
-    Route::get('project/{project}/sprints/{projectSprint}/burndown', [SprintReportController::class, 'burndown'])->name('sprints.burndown');
-    Route::get('project/{project}/sprints/{projectSprint}/status-report', [SprintReportController::class, 'statusReport'])->name('sprints.status-report');
+    Route::prefix('project/{project}/sprints')->name('sprints.')->group(function () {
+        Route::get('all', [SprintReportController::class, 'index'])->name('all');
+
+        Route::get('{projectSprint}/burndown', [SprintReportController::class, 'burndown'])->name('burndown');
+        Route::get('{projectSprint}/status-report', [SprintReportController::class, 'statusReport'])->name('status-report');
+    });
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->name('profile.avatar.destroy');

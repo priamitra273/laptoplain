@@ -8,11 +8,11 @@ import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import { Task, TaskStatusOption } from '../type';
+import { Task, TaskStatus } from '../type';
 
 interface Props {
     tasks: Task[];
-    statuses: TaskStatusOption[];
+    statuses: TaskStatus[];
 }
 
 const props = defineProps<Props>();

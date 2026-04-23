@@ -11,14 +11,14 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { computed, onMounted, ref, watch } from 'vue';
 import TaskKanban from './partials/TaskKanban.vue';
-import { Task, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from './type';
+import { Task, TaskPriority, TaskStatus, TaskType } from './type';
 
 interface Props {
     tasks: Task[];
     projects: { id: string; title: string }[];
-    statuses: TaskStatusOption[];
-    priorities: TaskPriorityOption[];
-    types: TaskTypeOption[];
+    statuses: TaskStatus[];
+    priorities: TaskPriority[];
+    types: TaskType[];
     totalAssigned?: number;
 }
 
@@ -40,9 +40,9 @@ const first = ref<number>(0);
 
 // Search & Filter
 const searchQuery = ref<string>('');
-const filterStatus = ref<TaskStatusOption | null>(null);
-const filterPriority = ref<TaskPriorityOption | null>(null);
-const filterType = ref<TaskTypeOption | null>(null);
+const filterStatus = ref<TaskStatus | null>(null);
+const filterPriority = ref<TaskPriority | null>(null);
+const filterType = ref<TaskType | null>(null);
 const filterProject = ref<{ id: string; title: string } | null>(null);
 
 // View mode

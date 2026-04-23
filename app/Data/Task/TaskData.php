@@ -4,8 +4,10 @@ namespace App\Data\Task;
 
 use App\Data\UserData;
 use App\Models\Task;
+use Illuminate\Database\Eloquent\Collection;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Optional;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 use Spatie\TypeScriptTransformer\Attributes\TypeScriptType;
 
@@ -20,8 +22,8 @@ class TaskData extends Data
         public ?TaskStatusData $status,
         public ?TaskPriorityData $priority,
         public ?TaskCategoryData $category,
-        /** @var DataCollection<UserData> */
-        public ?DataCollection $users,
+        /** @var DataCollection<int, UserData> | Collection<int, UserData> */
+        public DataCollection|Collection|Optional|null $users,
         public ?float $progress,
         public ?int $story_points,
     ) {}

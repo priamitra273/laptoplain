@@ -38,7 +38,17 @@ const hasActiveFilters = computed(() => {
     );
 });
 
-const activeFilterCount = computed(() => Object.keys(props.filters).length);
+/**
+ * Navigate to task detail page
+ * @param encodedTaskId - Already encoded task ID from backend
+ */
+const navigateToTask = (encodedTaskId: string) => {
+    router.visit(route('task.show', encodedTaskId));
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 const truncateText = (text: string | null, length: number = 15): string => {
     if (!text) return '-';
@@ -192,7 +202,6 @@ initializeFilters();
                                 :label="showFilters ? 'Hide Filters' : 'Show Filters'"
                                 :icon="showFilters ? 'pi pi-times' : 'pi pi-filter'"
                                 :severity="hasActiveFilters ? 'primary' : 'secondary'"
-                                :badge="hasActiveFilters ? String(activeFilterCount) : undefined"
                                 @click="toggleFilters"
                             />
                             <!-- <Button label="Export CSV" icon="pi pi-download" severity="success" @click="exportReport" /> -->
@@ -405,7 +414,7 @@ initializeFilters();
                         <Column field="summary" header="Summary" style="width: 300px; min-width: 300px; max-width: 300px">
                             <template #body="{ data }">
                                 <Link
-                                    :href="route('task.show', { encoded: data.id })"
+                                    :href="route('task.show', data.id)"
                                     class="-m-2 block cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <p
@@ -477,15 +486,6 @@ initializeFilters();
                             :first="(tasks.current_page - 1) * tasks.per_page"
                             @page="onPageChange"
                         />
-                    </div>
-
-                    <!-- Stats -->
-                    <div class="mt-4 flex items-center justify-between border-t pt-4">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Showing {{ tasks.from }} to {{ tasks.to }} of {{ tasks.total }} tasks</p>
-                        <div v-if="hasActiveFilters" class="flex items-center gap-2">
-                            <i class="pi pi-filter text-blue-500"></i>
-                            <span class="text-sm font-medium text-blue-600">{{ activeFilterCount }} filter(s) active</span>
-                        </div>
                     </div>
                 </template>
             </Card>

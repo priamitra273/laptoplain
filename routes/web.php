@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\SprintReportController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
@@ -12,10 +13,13 @@ use App\Http\Controllers\MsTaskTypeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskActivityController;
+use App\Http\Controllers\TaskCategoryController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskReportController;
 use App\Http\Controllers\TeamController;
@@ -24,7 +28,7 @@ use App\Http\Controllers\WorkLoadUserController;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-Route::get('/', fn() => to_route('login'))->name('home');
+Route::get('/', fn () => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -53,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('task-status', MsTaskStatusController::class)->except($except);
         Route::resource('task-type', MsTaskTypeController::class)->except($except);
 
+        Route::resource('task-category', TaskCategoryController::class)->except($except);
+
         Route::resource('tag', TagController::class)->except($except);
 
         Route::resource('project', ProjectController::class)
@@ -60,6 +66,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('project/{encoded}', [ProjectController::class, 'show'])
             ->name('project.show');
+
+        Route::get('project/{encoded}/summary', ProjectSummaryController::class)
+            ->name('project.summary');
 
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
@@ -70,8 +79,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('reports.tasks.export');
     });
 
-    Route::get('/task/{encoded}', [TaskController::class, 'show'])->name('task.show');
-    Route::put('/task/{encoded}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
+    Route::get('/task/{task}', [TaskController::class, 'show'])->name('task.show');
+    Route::get('/task/{task}/comment', [TaskController::class, 'comments'])->name('task.comments');
+    Route::get('/task/{task}/parents', [TaskController::class, 'parents'])->name('task.parents');
+    Route::put('/task/{task}/parents', [TaskController::class, 'update_parents'])->name('task.parents.update');
+    Route::put('/task/{task}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
     Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
 
     Route::prefix('project/{projectEncoded}')
@@ -83,17 +95,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
             Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
-            Route::put('tasks/{taskEncoded}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
-            Route::delete('tasks/{taskEncoded}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+            Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
+            Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
+            Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+            Route::prefix('sprints')->name('sprints.')->group(function () {
+                Route::post('/', [SprintController::class, 'store'])->name('store');
+                Route::get('/', [SprintController::class, 'index'])->name('index');
+                Route::put('/{sprintEncoded}', [SprintController::class, 'update'])->name('update');
+                Route::delete('/{sprintEncoded}', [SprintController::class, 'destroy'])->name('destroy');
+
+                // Lifecycle
+                Route::patch('/{sprintEncoded}/start', [SprintController::class, 'start'])->name('start');
+                Route::patch('/{sprintEncoded}/complete', [SprintController::class, 'complete'])->name('complete');
+
+                // Task management dalam sprint
+                Route::post('/{sprintEncoded}/tasks', [SprintController::class, 'assignTask'])->name('tasks.assign');
+                Route::delete('/{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
+            });
         });
+
+    Route::get('project/{project}/sprints/{projectSprint}/burndown', [SprintReportController::class, 'burndown'])->name('sprints.burndown');
+    Route::get('project/{project}/sprints/{projectSprint}/status-report', [SprintReportController::class, 'statusReport'])->name('sprints.status-report');
 
     Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->name('profile.avatar.destroy');
 
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::put('/comments/{id}', [CommentController::class, 'update'])->name('comments.update');
-    Route::delete('/comments/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
-    Route::post('/comments/{id}/reaction', [CommentController::class, 'react'])->name('comments.react');
+    Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('/comments/{comment}/reaction', [CommentController::class, 'react'])->name('comments.react');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/stream', [NotificationController::class, 'stream'])->name('notifications.stream');
@@ -102,8 +133,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifications.clear');
 });
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';
 
 Route::fallback(function () {
     throw new NotFoundHttpException(404);

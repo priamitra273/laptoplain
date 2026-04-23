@@ -3,12 +3,14 @@ import InputError from '@/components/InputError.vue';
 import { InertiaForm, useForm } from '@inertiajs/vue3';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
+import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
+import type { User } from '..';
 
 interface Props {
     projectId: string;
-    users: { id: string; name: string }[];
+    users: User[];
     roles: { id: string; name: string }[];
 }
 
@@ -71,8 +73,8 @@ const save = () => {
         <InputError :message="form.errors?.project_role_id" />
 
         <div class="mt-4 flex justify-end gap-2">
-            <Button label="Cancel" severity="secondary" @click="emit('close')" />
-            <Button label="Save" icon="pi pi-check" @click="save" />
+            <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
+            <Button label="Save" icon="pi pi-check" @click="save" :disabled="form.processing" :loading="form.processing" />
         </div>
     </div>
 </template>

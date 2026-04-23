@@ -70,6 +70,8 @@ export interface Pagination {
     };
 }
 
+export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
+
 export interface User {
     id: string;
     name: string;
@@ -232,6 +234,16 @@ export interface TaskPriority {
     name: string;
     severity: PrimeSeverity;
     owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskCategory {
+    id: number;
+    name: string;
+    icon: string;
+    severity: PrimeSeverity;
     created_by?: string;
     updated_by?: string;
     deleted_by?: string;
@@ -418,8 +430,6 @@ export interface MsTaskType {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
-export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
-
 export interface SeverityOption {
     label: string;
     value: PrimeSeverityEnum;
@@ -430,4 +440,18 @@ export interface Notification {
     message: string;
     task_id: string;
     is_read: boolean;
+}
+
+export interface BaseOption {
+    id: string;
+    name: string;
+    severity?: PrimeSeverity;
+}
+
+export interface StatusOption extends BaseOption {}
+export interface PriorityOption extends BaseOption {}
+
+export interface ProjectRoleOption {
+    id: string;
+    name: string;
 }

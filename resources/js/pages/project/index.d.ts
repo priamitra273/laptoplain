@@ -1,15 +1,71 @@
+import { PrimeSeverity, ProjectRoleOption } from '@/types';
+
+export interface User {
+    id: string | number;
+    name: string;
+    email?: string;
+    avatar_url?: string | null;
+}
+
 export interface ProjectMember {
     id: string;
     user: User;
-    role: { id: string; name: string };
+    role: ProjectRoleOption;
     project_role_id: string;
     is_active: boolean;
 }
 
+export interface MemberWithAvatar extends ProjectMember {
+    user: User;
+}
+
 export interface ProjectMembersData {
     members: ProjectMember[];
-    roles: { id: string; name: string }[];
-    users: { id: string; name: string }[];
+    roles: ProjectRoleOption[];
+    users: User[];
+}
+
+export interface Project {
+    id: string;
+    project_no: string;
+    title: string;
+    description?: string;
+    emoji: string;
+    progress: number;
+    start_date?: string;
+    due_date?: string;
+    status?: ProjectStatus;
+    priority?: ProjectPriority;
+    status_id?: string;
+    priority_id?: string;
+    created_at?: string;
+    updated_at?: string;
+    project_members: ProjectMember[];
+}
+
+export interface Epic {
+    id: string;
+    title: string;
+    story_points?: number | null;
+}
+
+export interface SprintStatus {
+    id: string;
+    name: string; // 'Planning' | 'Active' | 'Completed'
+    severity?: number;
+}
+
+export interface Sprint {
+    id: string;
+    name: string;
+    goal?: string;
+    duration?: string;
+    start_date?: string;
+    end_date?: string;
+    order?: number;
+    retrospective?: string;
+    status?: SprintStatus;
+    tasks?: Task[];
 }
 
 export interface CellEditEvent<T> {
@@ -57,6 +113,25 @@ export interface Task {
     sub_task: Task[];
     sub_task_recursive: Task[];
     tags: Tag[];
+
+    project?: ProjectOptions;
+    category?: TaskCategory;
+    creator?: User;
+    is_assigned?: boolean;
+    is_created_by_me?: boolean;
+    story_points?: number;
+}
+
+export interface ProjectOptions {
+    id: string;
+    title: string;
+}
+
+export interface TaskCategory {
+    id: string;
+    name: string; // 'Epic' | 'Story' | 'Issue'
+    icon?: string;
+    severity?: PrimeSeverity;
 }
 
 export interface TaskStatus {
@@ -84,9 +159,7 @@ export interface Tag {
     severity: string;
 }
 
-export interface TaskUser {
-    id: string;
-    name: string;
+export interface TaskUser extends User {
     pivot: TaskPivot;
 }
 
@@ -112,78 +185,155 @@ export interface TaskFormatted {
 
 export interface TaskFormattedData {
     id: string;
+    parent_id: string | null;
     title: string;
     status?: TaskStatus;
     priority?: TaskPriority;
     type?: TaskType;
+    category?: TaskCategory;
     users: TaskUser[];
     progress: number;
-    start_date: string;
-    due_date: string;
+    start_date: string | null;
+    due_date: string | null;
     created_by: string | null;
     completed_at: string | null;
     is_overdue: boolean;
+    level?: number;
+}
+
+export interface ProjectTaskTableProps {
+    projectId: string;
+    tasks: Task[];
+    isMember: boolean;
+    hasPermission: boolean;
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    taskTypes: TaskType[];
+    taskCategories?: TaskCategory[];
+    isDeveloper: boolean;
+}
+
+export interface ProjectTaskTableEmits {
+    (e: 'add', parentId: string | null): void;
+    (e: 'edit', task: Task, parentId: string | null): void;
+}
+
+export interface ProjectTaskTableFilter {
+    global: string;
+    'status.name': string[] | null;
+    'type.name': string[] | null;
 }
 
 export interface Comment {
     id: string;
-    commentable_type: string;
-    commentable_id: string;
-    user_id: string;
     body: string;
-    reaction?: Record<string, string>;
-    owned_id: string | null;
-
-    created_by: string | null;
-    updated_by: string | null;
-    deleted_by: string | null;
+    reactions: CommentReaction[];
+    current_user_reaction: string | null;
 
     created_at: string;
     updated_at: string | null;
-    deleted_at: string | null;
 
-    parent_id: string | null;
-
-    user: CommentUser;
+    user: User;
     replies: Comment[];
 }
 
-export interface CommentUser {
+export interface CommentReaction {
+    reaction: string;
+    count: number;
+}
+
+export interface ProjectStatus {
     id: string;
-    uuid: string;
     name: string;
-    email: string;
-    avatar_url: string | null;
-
-    email_verified_at: string | null;
-    is_active: boolean;
-
-    created_by: number | string;
-    updated_by: number | string;
-    deleted_by: number | string | null;
-
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
+    severity: PrimeSeverity;
 }
 
-export interface Comment {
-    id: string
-    commentable_type: string
-    commentable_id: string
-    user_id: string
-    body: string
-    reaction: unknown[]
-    owned_id: string
-    created_by: string | null
-    updated_by: string | null
-    deleted_by: string | null
-    created_at: string
-    updated_at: string
-    deleted_at: string | null
-    parent_id: string | null
-
-    user: User
-    replies: Comment[]
+export interface ProjectPriority {
+    id: string;
+    name: string;
+    severity: PrimeSeverity;
 }
 
+export interface ProjectTableProps {
+    projects?: Project[];
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
+    progresses?: number;
+}
+
+export interface ProjectFormProps {
+    value?: any;
+    visible: boolean;
+    statuses: ProjectStatus[];
+    priorities: ProjectPriority[];
+}
+
+export interface ProjectForm {
+    title: string;
+    start_date: Date | null;
+    due_date: Date | null;
+    description: string;
+    emoji: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    owner_id?: number | null;
+    owned_id?: number | null;
+    [key: string]: any;
+}
+
+export interface TabListItem {
+    label: string;
+    icon: string;
+}
+
+export interface ProjectDetailProps {
+    project: Project;
+    members: MemberWithAvatar[];
+    roles: ProjectRoleOption[];
+    users: User[];
+    tasks: Task[];
+    taskTypes: TaskType[];
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    tags: Tag[];
+    assignableUsers: User[];
+    statuses?: ProjectStatus[];
+    priorities?: ProjectPriority[];
+    sprints: Sprint[];
+    backlog: Task[];
+    taskCategories: TaskCategory[];
+    epics: Epic[];
+}
+
+export interface ProjectDetailHeaderProps {
+    project: Project;
+    members: MemberWithAvatar[];
+    canEdit: boolean;
+    isMember: boolean;
+}
+
+export interface TaskFormInput {
+    status_id: string;
+    priority_id: string;
+    type_id: string;
+    start_date: string | null;
+    due_date: string | null;
+    progress_value: number;
+
+    [key: string]: any;
+}
+
+export type TaskFormField = keyof TaskFormInput;
+
+export interface TaskDetailProps {
+    task: Task;
+    project: Project;
+    assignedUsers: User[];
+    comments: Comment[];
+    statuses: TaskStatus[];
+    priorities: TaskPriority[];
+    types: TaskType[];
+
+    isTaskMember: boolean;
+    creator?: User;
+}

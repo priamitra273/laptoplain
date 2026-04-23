@@ -2,6 +2,8 @@
 
 namespace App\Observers;
 
+use App\Enums\TaskNotificationType;
+use App\Facades\TaskNotification;
 use App\Models\Task;
 
 class TaskObserver
@@ -16,6 +18,12 @@ class TaskObserver
         $this->updateProjectProgress($task);
     }
 
+    public function deleting(Task $task)
+    {
+        // delete all associative children
+        $task->children?->each->delete();
+    }
+
     /**
      * Saat task dihapus (soft delete)
      */
@@ -23,6 +31,7 @@ class TaskObserver
     {
         $this->updateParentTaskProgress($task);
         $this->updateProjectProgress($task);
+        $this->notify($task, TaskNotificationType::DELETED);
     }
 
     /**
@@ -42,12 +51,12 @@ class TaskObserver
      */
     protected function updateProjectProgress(Task $task)
     {
-        if (!$task->project_id) {
+        if (! $task->project_id) {
             return;
         }
 
         $project = $task->project;
-        if (!$project) {
+        if (! $project) {
             return;
         }
 
@@ -70,12 +79,9 @@ class TaskObserver
      */
     protected function updateParentTaskProgress(Task $task)
     {
-        if (!$task->parent_id) {
-            return;
-        }
-
         $parent = $task->parent;
-        if (!$parent) {
+
+        if (! $parent) {
             return;
         }
 
@@ -85,7 +91,7 @@ class TaskObserver
 
         $averageProgress = $children->count() > 0
             ? round($children->avg('progress'), 2)
-            : 0;
+            : $parent->status->score;
 
         $parent->updateQuietly(['progress' => $averageProgress]);
 
@@ -93,5 +99,16 @@ class TaskObserver
         if ($parent->parent_id) {
             $this->updateParentTaskProgress($parent);
         }
+    }
+
+    protected function notify(Task $task, TaskNotificationType $type)
+    {
+        $users = $task->users->pluck('id')->toArray();
+
+        TaskNotification::createTaskNotification(
+            $task,
+            $users,
+            $type,
+        );
     }
 }

@@ -1,63 +1,43 @@
 <script setup lang="ts">
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
+import { useSeverityColor } from '@/composables/useSeverityColor';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { useSessionStorage } from '@vueuse/core';
 import axios from 'axios';
 import moment from 'moment';
-import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import Column from 'primevue/column';
-import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
-import ProgressBar from 'primevue/progressbar';
-import Tag from 'primevue/tag';
-import TreeTable, { TreeTableFilterMeta } from 'primevue/treetable';
+import { TreeTableFilterMeta } from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ComputedRef, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Task, TaskFormatted, TaskFormattedData, TaskPriority, TaskStatus, TaskType, TaskUser } from '..';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type {
+    ProjectTaskTableEmits,
+    ProjectTaskTableFilter,
+    ProjectTaskTableProps,
+    Task,
+    TaskCategory,
+    TaskFormatted,
+    TaskFormattedData,
+    TaskUser,
+} from '..';
+import TaskTableFilters from './partials/TaskTableFilters.vue';
+import TaskTableToolbar from './partials/TaskTableToolbar.vue';
 
-interface Props {
-    projectId: string;
-    tasks: Task[];
-    isMember: boolean;
-    hasPermission: boolean;
-    taskStatuses: TaskStatus[];
-    taskPriorities: TaskPriority[];
-    taskTypes: TaskType[];
-    isDeveloper: boolean;
-}
+const props = defineProps<ProjectTaskTableProps>();
+const emit = defineEmits<ProjectTaskTableEmits>();
 
-interface TableFilter {
-    global: string;
-    'status.name': string[];
-    'type.name': string[];
-}
-
-const props = defineProps<Props>();
-const emit = defineEmits<{
-    (e: 'add', parentId: string | null): void;
-    (e: 'edit', task: Task, parentId: string | null): void;
-}>();
+const { getSeverityColorLight } = useSeverityColor();
 
 const deleteLoading = ref(false);
 const currentUser = usePage().props.auth.user;
-const searchQuery = ref<string>('');
 const selectedKey = ref<{ [key: string]: any }>({});
 const expandedKeys = ref<{ [key: string]: boolean }>({});
 
-const filters = ref<TableFilter>({
+const filters = useSessionStorage<ProjectTaskTableFilter>('task-table-filters-' + currentUser.id, {
     global: '',
-    'status.name': [],
-    'type.name': [],
+    'status.name': null,
+    'type.name': null,
 });
 
-// Filter refs
-const selectedStatuses = ref<string[]>([]);
-// const selectedPriorities = ref<string[]>([]);
-const selectedTypes = ref<string[]>([]);
-
-// Activity modal state
 const activityModal = ref({
     visible: false,
     taskId: '',
@@ -96,16 +76,7 @@ const formatDate = (date: string | null | undefined): string => {
     return moment(date).format('DD MMM YYYY');
 };
 
-const getInitials = (name: string) =>
-    name
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-
-const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
-
+// ─── Pure function, tidak ada side effects ────────────────────────────────────
 const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
@@ -113,103 +84,64 @@ const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
         original: t,
         data: {
             id: t.id,
-            parent_id: t.parent_id,
+            parent_id: t.parent_id ?? null,
             title: t.title,
-            status: t.status,
-            priority: t.priority,
-            type: t.type,
-            progress: Number(t.progress) ?? 0,
+            status: t.status ?? undefined,
+            priority: t.priority ?? undefined,
+            type: t.type ?? undefined,
+            category: t.category ?? undefined,
+            progress: Number(t.progress) || 0,
             users: t.users || [],
-            start_date: t.start_date,
-            due_date: t.due_date,
-            created_by: t.created_by,
-            completed_at: t.completed_at,
-            is_overdue: t.is_overdue,
+            start_date: t.start_date ?? null,
+            due_date: t.due_date ?? null,
+            created_by: t.created_by ?? null,
+            completed_at: t.completed_at ?? null,
+            is_overdue: t.is_overdue ?? false,
             level,
         },
         children: t.sub_task_recursive ? formatTasks(t.sub_task_recursive, level + 1) : [],
     }));
 };
 
-const statusOptions = computed(() => props.taskStatuses ?? []);
-// const priorityOptions = computed(() => props.taskPriorities ?? []);
-const typeOptions = computed(() => props.taskTypes ?? []);
+// ─── FIX: Gunakan ref + watch instead of computed untuk menghindari recursive update ───
+const formattedTasks = ref<TaskFormatted[]>([]);
 
-const filterTaskRecursive = (task: TaskFormatted, query: string): boolean => {
-    const matchesSearch = !query || task.data.title.toLowerCase().includes(query);
-    const matchesStatus =
-        !selectedStatuses.value ||
-        selectedStatuses.value.length === 0 ||
-        (task.data.status?.name && selectedStatuses.value.includes(task.data.status.name));
-    // const matchesPriority =
-    //     !selectedPriorities.value ||
-    //     selectedPriorities.value.length === 0 ||
-    //     (task.data.priority?.name && selectedPriorities.value.includes(task.data.priority.name));
-    const matchesType =
-        !selectedTypes.value || selectedTypes.value.length === 0 || (task.data.type?.name && selectedTypes.value.includes(task.data.type.name));
+watch(
+    () => props.tasks,
+    (tasks) => {
+        if (!tasks || !Array.isArray(tasks)) {
+            formattedTasks.value = [];
+            return;
+        }
 
-    const currentMatches = matchesSearch && matchesStatus && /* matchesPriority && */ matchesType;
-    const hasMatchingChildren = task.children && task.children.some((child) => filterTaskRecursive(child, query));
-    return currentMatches || hasMatchingChildren;
-};
+        const sorted = [...formatTasks(tasks)].sort((a, b) => {
+            const dateA = new Date(a.original.updated_at || a.original.created_at || 0).getTime();
+            const dateB = new Date(b.original.updated_at || b.original.created_at || 0).getTime();
+            return dateB - dateA;
+        });
 
-const filteredTasks: ComputedRef<TaskFormatted[]> = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) return [];
-    let tasks = formatTasks(props.tasks);
-    tasks = tasks.sort((a, b) => {
-        const dateA = new Date(a.original.updated_at || a.original.created_at).getTime();
-        const dateB = new Date(b.original.updated_at || b.original.created_at).getTime();
-        return dateB - dateA;
-    });
-    const query = searchQuery.value.toLowerCase();
-    tasks = tasks.filter((task) => filterTaskRecursive(task, query));
-    return tasks;
-});
+        formattedTasks.value = sorted;
+    },
+    { immediate: true, deep: false },
+);
 
 const isAllSelected = computed(() => {
-    if (!filteredTasks.value.length) return false;
+    if (!formattedTasks.value.length) return false;
     const allKeys: string[] = [];
     const collectKeys = (node: TaskFormatted) => {
         allKeys.push(node.key);
         if (node.children) node.children.forEach(collectKeys);
     };
-    filteredTasks.value.forEach(collectKeys);
+    formattedTasks.value.forEach(collectKeys);
     return allKeys.every((key) => selectedKey.value[key]?.checked);
 });
 
 const hasSelectedTasks = computed(() => Object.keys(selectedKey.value).length > 0);
 
-const hasActiveFilters = computed(() => {
-    return (
-        searchQuery.value !== '' ||
-        (selectedStatuses.value && selectedStatuses.value.length > 0) ||
-        // (selectedPriorities.value && selectedPriorities.value.length > 0) ||
-        (selectedTypes.value && selectedTypes.value.length > 0)
-    );
-});
-
-const clearFilters = () => {
-    searchQuery.value = '';
-    selectedStatuses.value = [];
-    // selectedPriorities.value = [];
-    selectedTypes.value = [];
-};
-
-const handleClearStatuses = () => {
-    selectedStatuses.value = [];
-};
-// const handleClearPriorities = () => {
-//     selectedPriorities.value = [];
-// };
-const handleClearTypes = () => {
-    selectedTypes.value = [];
-};
-
 const confirm = useConfirm();
 const toast = useToast();
 
 const remove = (t: Task) => {
-    deleteLoading.value = true;
     confirm.require({
         message: `Remove ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -218,15 +150,23 @@ const remove = (t: Task) => {
         acceptClass: 'p-button-danger',
         rejectLabel: 'Cancel',
         accept: () => {
-            router.delete(route('project.tasks.destroy', { projectEncoded: props.projectId, taskEncoded: t.id }), {
-                preserveScroll: true,
-                onError: () => {
-                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
+            deleteLoading.value = true;
+            router.delete(
+                route('project.tasks.destroy', {
+                    projectEncoded: props.projectId,
+                    task: t.id,
+                }),
+                {
+                    preserveScroll: true,
+                    onError: () => {
+                        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task', life: 3000 });
+                    },
+                    onFinish: () => {
+                        deleteLoading.value = false;
+                    },
                 },
-                onFinish: () => (deleteLoading.value = false),
-            });
+            );
         },
-        reject: () => (deleteLoading.value = false),
     });
 };
 
@@ -244,13 +184,12 @@ const selectAll = () => {
         keys[node.key] = { checked: true, partialChecked: false };
         if (node.children) node.children.forEach(mark);
     };
-    filteredTasks.value.forEach(mark);
+    formattedTasks.value.forEach(mark);
     selectedKey.value = { ...keys };
 };
 
 const clearSelection = () => {
     selectedKey.value = {};
-    selectedKey.value = { ...selectedKey.value };
 };
 
 const removeSelected = () => {
@@ -273,7 +212,6 @@ const removeSelected = () => {
                 });
             });
             selectedKey.value = {};
-            selectedKey.value = { ...selectedKey.value };
             toast.add({ severity: 'success', summary: 'Success', detail: `${ids.length} tasks deleted successfully`, life: 3000 });
         },
     });
@@ -282,8 +220,7 @@ const removeSelected = () => {
 const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
     if (props.hasPermission) return true;
     const taskUsers: TaskUser[] = task.users || [];
-    const isMember = taskUsers.some((tu) => tu.id === currentUser.id);
-    return isMember;
+    return taskUsers.some((tu) => tu.id === currentUser.id);
 };
 
 const clearAutoExpandSchedule = () => {
@@ -300,7 +237,6 @@ const scheduleAutoExpand = (node: TaskFormatted) => {
         clearAutoExpandSchedule();
         return;
     }
-
     if (autoExpandTargetKey.value === node.key && autoExpandTimerId.value) return;
     clearAutoExpandSchedule();
     autoExpandTargetKey.value = node.key;
@@ -336,7 +272,6 @@ const findTaskById = (list: Task[], taskId: string): Task | null => {
 const isDescendant = (sourceId: string, targetId: string): boolean => {
     const source = findTaskById(props.tasks, sourceId);
     if (!source) return false;
-
     const walk = (nodes: Task[]): boolean => {
         for (const n of nodes) {
             if (n.id === targetId) return true;
@@ -344,12 +279,12 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
         }
         return false;
     };
-
     return walk(source.sub_task_recursive || []);
 };
 
 const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
     const canMove = hasAccessToEditAndDelete(node.data) && !props.isDeveloper;
+
     if (!canMove || dragArmedTaskId.value !== node.key) {
         event.preventDefault();
         return;
@@ -359,14 +294,11 @@ const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
     draggedTaskId.value = node.key;
     dropTargetTaskId.value = null;
     if (event.dataTransfer) {
-        // Use multiple MIME keys because browsers handle drag payload types differently.
         event.dataTransfer.setData(TASK_DRAG_TEXT_MIME, node.key);
         event.dataTransfer.setData(TASK_DRAG_LEGACY_TEXT_MIME, node.key);
         try {
             event.dataTransfer.setData(TASK_DRAG_MIME, node.key);
-        } catch {
-            // Some browsers reject custom MIME types, built-in text keys are still enough.
-        }
+        } catch {}
         event.dataTransfer.effectAllowed = 'move';
     }
 };
@@ -378,17 +310,13 @@ const onHandleDragEnd = () => {
 const getDraggedTaskIdFromEvent = (event: DragEvent): string | null => {
     const transfer = event.dataTransfer;
     if (!transfer) return draggedTaskId.value;
-
     const candidates = [TASK_DRAG_MIME, TASK_DRAG_TEXT_MIME, TASK_DRAG_LEGACY_TEXT_MIME];
     for (const mime of candidates) {
         try {
             const value = transfer.getData(mime)?.trim();
             if (value) return value;
-        } catch {
-            // Ignore unsupported MIME reads and continue with next fallback.
-        }
+        } catch {}
     }
-
     return draggedTaskId.value;
 };
 
@@ -405,48 +333,30 @@ const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
     if (!hasTaskDragPayload(event)) return;
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (sourceTaskId && targetNode.key === sourceTaskId) return;
-
     event.preventDefault();
-    if (!draggedTaskId.value) {
-        draggedTaskId.value = sourceTaskId;
-    }
+    if (!draggedTaskId.value) draggedTaskId.value = sourceTaskId;
     pointerOnRootDropzone.value = false;
     dropTargetTaskId.value = targetNode.key;
-    if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-    }
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     scheduleAutoExpand(targetNode);
 };
 
 const updateTaskParent = async (taskId: string, parentId: string | null) => {
     if (updateParentLoading.value) return;
     updateParentLoading.value = true;
-
     try {
         await axios.put(
             route('project.tasks.parent.update', {
                 projectEncoded: props.projectId,
-                taskEncoded: taskId,
+                task: taskId,
             }),
             { parent_id: parentId },
         );
-
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Task parent updated successfully.',
-            life: 2200,
-        });
-
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Task parent updated successfully.', life: 2200 });
         router.reload();
     } catch (error: any) {
         const message = error?.response?.data?.message || 'Failed to update task parent.';
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: message,
-            life: 3000,
-        });
+        toast.add({ severity: 'error', summary: 'Error', detail: message, life: 3000 });
     } finally {
         updateParentLoading.value = false;
         resetDragState();
@@ -458,23 +368,15 @@ const moveTaskWithValidation = async (sourceTaskId: string | null, targetTaskId:
         resetDragState();
         return;
     }
-
     if (targetTaskId && sourceTaskId === targetTaskId) {
         resetDragState();
         return;
     }
-
     if (targetTaskId && isDescendant(sourceTaskId, targetTaskId)) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Invalid move',
-            detail: 'Cannot move task under its own descendant.',
-            life: 2500,
-        });
+        toast.add({ severity: 'warn', summary: 'Invalid move', detail: 'Cannot move task under its own descendant.', life: 2500 });
         resetDragState();
         return;
     }
-
     await updateTaskParent(sourceTaskId, targetTaskId);
 };
 
@@ -491,12 +393,9 @@ const onRootDragOver = (event: DragEvent) => {
     const target = event.target as Element | null;
     const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
     if (insideTaskRow) return;
-
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     event.preventDefault();
-    if (!draggedTaskId.value && sourceTaskId) {
-        draggedTaskId.value = sourceTaskId;
-    }
+    if (!draggedTaskId.value && sourceTaskId) draggedTaskId.value = sourceTaskId;
     pointerOnRootDropzone.value = true;
     dropTargetTaskId.value = null;
     clearAutoExpandSchedule();
@@ -523,9 +422,7 @@ const cancelPointerHold = () => {
         holdTimerId.value = null;
     }
     holdCandidateTaskId.value = null;
-    if (!pointerDraggedTaskId.value) {
-        dragArmedTaskId.value = null;
-    }
+    if (!pointerDraggedTaskId.value) dragArmedTaskId.value = null;
 };
 
 const onPointerHoldStart = (node: TaskFormatted) => {
@@ -581,10 +478,38 @@ const onGlobalMouseUp = () => {
     cancelPointerHold();
 };
 
+// ─── Category icon style (same as backlog) ───────────────────────────────────
+const getCategoryIcon = (category?: TaskCategory | null) => {
+    const byName: Record<string, string> = {
+        Epic: 'pi pi-bolt',
+        Issue: 'pi pi-exclamation-circle',
+        Story: 'pi pi-book',
+        Task: 'pi pi-check-square',
+    };
+    const name = category?.name ?? '';
+    return category?.icon ?? byName[name] ?? 'pi pi-tag';
+};
+
+const getCategoryColor = (category?: TaskCategory | null): string => {
+    const severity = category?.severity;
+    if (severity) {
+        return getSeverityColorLight(severity, 0.2);
+    }
+
+    const byName: Record<string, string> = {
+        Epic: '#7c3aed',
+        Issue: '#dc2626',
+        Story: '#16a34a',
+        Task: '#3b82f6',
+        Bug: '#dc2626',
+    };
+    const name = category?.name ?? '';
+    return byName[name] ?? '#64748b';
+};
+
 onMounted(() => {
     window.addEventListener('mouseup', onGlobalMouseUp);
 });
-
 onBeforeUnmount(() => {
     window.removeEventListener('mouseup', onGlobalMouseUp);
 });
@@ -592,115 +517,17 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <!-- Header with buttons -->
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 class="text-lg font-semibold">Tasks</h3>
-            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
-                <Button
-                    label="Add Task"
-                    icon="pi pi-plus"
-                    @click="emit('add', null)"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    :disabled="(!isMember && !hasPermission) || isDeveloper"
-                />
-                <Button
-                    v-if="hasSelectedTasks"
-                    label="Delete Selected"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    @click="removeSelected"
-                    class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                    variant="outlined"
-                    :disabled="!isMember && !hasPermission"
-                />
-            </div>
-        </div>
+        <TaskTableToolbar
+            :hasSelectedTasks="hasSelectedTasks"
+            :isMember="isMember"
+            :hasPermission="hasPermission"
+            :isDeveloper="isDeveloper"
+            @add="(parentId) => emit('add', parentId)"
+            @removeSelected="removeSelected"
+        />
 
-        <!-- Filters Section -->
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Search</label>
-                <InputText v-model="filters.global as string" placeholder="Search by title..." class="w-full" />
-            </div>
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Status</label>
-                <MultiSelect
-                    v-model="filters['status.name']"
-                    :options="statusOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Status"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearStatuses"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-            <!-- Priority Filter (commented out)
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Priority</label>
-                <MultiSelect
-                    v-model="selectedPriorities"
-                    :options="priorityOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Priority"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearPriorities"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-            -->
-            <div class="w-full">
-                <label class="mb-2 block text-sm font-medium">Type</label>
-                <MultiSelect
-                    v-model="filters['type.name']"
-                    :options="typeOptions"
-                    optionLabel="name"
-                    optionValue="name"
-                    placeholder="Select Type"
-                    class="w-full"
-                    :maxSelectedLabels="2"
-                    showClear
-                    @clear="handleClearTypes"
-                >
-                    <template #option="slotProps">
-                        <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
-                </MultiSelect>
-            </div>
-        </div>
+        <TaskTableFilters v-model:filters="filters" :statusOptions="props.taskStatuses" :typeOptions="props.taskTypes" />
 
-        <!-- Clear Filters Button -->
-        <div v-if="hasActiveFilters" class="flex justify-end">
-            <Button label="Clear Filters" icon="pi pi-filter-slash" @click="clearFilters" severity="secondary" size="small" text />
-        </div>
-
-        <!-- TreeTable -->
         <div
             class="overflow-x-auto"
             :class="
@@ -718,19 +545,19 @@ onBeforeUnmount(() => {
         >
             <TreeTable
                 v-model:expandedKeys="expandedKeys"
-                :value="formatTasks(props.tasks)"
+                :value="formattedTasks"
                 :filters="filters as unknown as TreeTableFilterMeta"
-                filter-mode="lenient"
+                filterMode="lenient"
                 class="min-w-full"
                 scrollable
                 scrollHeight="600px"
                 removableSort
             >
-                <!-- Checkbox Column -->
-                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen alignFrozen="left">
+                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen align-frozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
+
                     <template #body="{ node }">
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
@@ -749,7 +576,6 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <!-- Title Column -->
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left">
                     <template #body="{ node }">
                         <div
@@ -761,9 +587,17 @@ onBeforeUnmount(() => {
                             @drop.stop.prevent="onRowDrop($event, node)"
                             @mouseenter="onPointerRowEnter(node)"
                         >
+                            <i
+                                v-if="node.data.category?.id"
+                                v-tooltip.top="node.data.category.name"
+                                :class="getCategoryIcon(node.data.category)"
+                                :style="{ color: getCategoryColor(node.data.category) }"
+                                class="shrink-0 cursor-default text-sm"
+                            />
+
                             <div
                                 :title="node.data.title"
-                                class="max-w-[300px] select-none truncate text-ellipsis rounded px-1 py-0.5"
+                                class="max-w-[150px] select-none truncate text-ellipsis rounded px-1 py-0.5"
                                 :class="[
                                     hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
@@ -784,21 +618,13 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <Column field="status.name" header="Status" filter-match-mode="in" style="min-width: 120px" sortable>
+                <Column field="status.name" header="Status" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
                     </template>
                 </Column>
 
-                <!-- Priority Column (commented out)
-                <Column field="priority.name" header="Priority" style="min-width: 120px" sortable>
-                    <template #body="{ node }">
-                        <Tag :value="node.data.priority?.name" :severity="node.data.priority?.severity" />
-                    </template>
-                </Column>
-                -->
-
-                <Column field="type.name" header="Type" style="min-width: 120px" sortable>
+                <Column field="type.name" header="Type" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
                         <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
                     </template>
@@ -828,36 +654,6 @@ onBeforeUnmount(() => {
                     </template>
                 </Column>
 
-                <!-- Created Column -->
-                <Column header="Created" style="min-width: 90px">
-                    <template #body="{ node }">
-                        <div v-if="node.original.creator" class="flex items-center gap-2">
-                            <Avatar
-                                :image="
-                                    node.original.creator.avatar_url && node.original.creator.avatar_url !== '/images/default-avatar.png'
-                                        ? node.original.creator.avatar_url
-                                        : undefined
-                                "
-                                :label="
-                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
-                                        ? getInitials(node.original.creator.name)
-                                        : undefined
-                                "
-                                shape="circle"
-                                size="small"
-                                :style="
-                                    !node.original.creator.avatar_url || node.original.creator.avatar_url === '/images/default-avatar.png'
-                                        ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
-                                        : {}
-                                "
-                                v-tooltip.bottom="node.original.creator.name"
-                            />
-                        </div>
-                        <span v-else class="text-sm text-gray-400">-</span>
-                    </template>
-                </Column>
-
-                <!-- Actions Column -->
                 <Column header="Actions" frozen alignFrozen="right">
                     <template #body="{ node }">
                         <div class="flex gap-1">
@@ -884,7 +680,7 @@ onBeforeUnmount(() => {
                                 icon="pi pi-trash"
                                 size="small"
                                 severity="danger"
-                                v-tooltip.top="'Deleted'"
+                                v-tooltip.top="'Delete'"
                                 :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
                                 @click="remove(node.original)"
                             />
@@ -905,7 +701,6 @@ onBeforeUnmount(() => {
             </TreeTable>
         </div>
 
-        <!-- Activity Log Modal — milik TaskTable, di sini tempatnya -->
         <TaskActivityLogModal v-model:visible="activityModal.visible" :taskId="activityModal.taskId" :taskTitle="activityModal.taskTitle" />
     </div>
 </template>

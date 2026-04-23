@@ -2,17 +2,21 @@
 
 namespace App\Services;
 
+use App\Data\Project\ProjectStatusData;
 use App\Data\Task\FilterOptionData;
 use App\Data\Task\TaskReportData;
 use App\Data\Task\TaskReportIndexData;
 use App\Facades\Sqids;
+use App\Repositories\ProjectRepository;
 use App\Repositories\TaskReportRepository;
 use Closure;
+use Spatie\LaravelData\DataCollection;
 
 class TaskReportService
 {
     public function __construct(
-        protected TaskReportRepository $repository
+        protected TaskReportRepository $repository,
+        protected ProjectRepository $projectRepository,
     ) {}
 
     public function getIndexData(array $filters, int $perPage): TaskReportIndexData
@@ -45,10 +49,16 @@ class TaskReportService
             ])),
         ];
 
+        $project_statuses = ProjectStatusData::collect(
+            $this->projectRepository->getProjectStatuses(),
+            DataCollection::class
+        );
+
         return new TaskReportIndexData(
             tasks: $tasks,
             filters: $filters,
-            filterOptions: $formattedOptions
+            filterOptions: $formattedOptions,
+            project_statuses: Sqids::rec_encode_ids_in_list($project_statuses->toArray()),
         );
     }
 

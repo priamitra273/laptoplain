@@ -14,7 +14,9 @@ class TaskReportIndexData extends Data
     public function __construct(
         #[DataCollectionOf(TaskReportData::class)]
         public DataCollection|LengthAwarePaginator $tasks,
+
         public array $filters,
         public array $filterOptions,
+        public array $project_statuses,
     ) {}
 }

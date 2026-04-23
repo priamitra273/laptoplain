@@ -5,8 +5,9 @@ import Button from 'primevue/button';
 import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
 import Swal from 'sweetalert2';
-import { computed, ref, watch } from 'vue';
+import { computed, provide, ref, watch } from 'vue';
 import type { Epic, Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
+import { BacklogKey } from './types';
 import BacklogSection from './partials/BacklogSection.vue';
 import CompleteSprintDialog from './partials/CompleteSprintDialog.vue';
 import EditSprintDialog from './partials/EditSprintDialog.vue';
@@ -31,7 +32,7 @@ const emit = defineEmits([
     'add',
     'addBacklog',
     'edit',
-    'activeSprintTaskIds', // ← tambahkan ini
+    'activeSprintTaskIds',
 ]);
 
 const toast = useToast();
@@ -48,8 +49,6 @@ const r = (name: string, sprintId?: string) =>
     });
 
 const notify = (severity: 'success' | 'error', summary: string) => toast.add({ severity, summary, life: 2500 });
-
-const opts = { preserveScroll: true, onError: (e: any) => notify('error', (Object.values(e)[0] as string) ?? 'Something went wrong') };
 
 const syncBoardData = (payload: { sprints?: Sprint[]; backlog?: Task[] }) => {
     localSprints.value = payload.sprints ?? [];
@@ -74,38 +73,18 @@ const getErrorMessage = (error: any, fallback = 'Something went wrong') => {
 };
 
 const activeSprintTaskIds = computed(() => {
-    const activeSprint = localSprints.value.filter((s) => s.status?.name === 'Active');
-
-    // return (activeSprint?.tasks ?? []).filter((t) => t.category?.name?.toLowerCase() !== 'epic').map((t) => String(t.id));
-    return activeSprint
-        .filter((spirnt) => spirnt?.tasks?.length)
-        .map((sprint) => sprint.tasks)
-        .flatMap((tasks) => tasks?.filter((task) => task.category?.name?.toLowerCase() !== 'epic').map((task) => String(task.id)));
+    return localSprints.value
+        .filter((s) => s.status?.name === 'Active' && s?.tasks?.length)
+        .flatMap((sprint) => (sprint.tasks ?? [])
+            .filter((task) => task.category?.name?.toLowerCase() !== 'epic')
+            .map((task) => String(task.id))
+        );
 });
 
-watch(
-    activeSprintTaskIds,
-    (ids) => {
-        emit('activeSprintTaskIds', ids);
-    },
-    { immediate: true },
-);
+watch(activeSprintTaskIds, (ids) => emit('activeSprintTaskIds', ids), { immediate: true });
 
-watch(
-    () => props.sprints,
-    (sprints) => {
-        localSprints.value = [...sprints];
-    },
-    { deep: true },
-);
-
-watch(
-    () => props.backlog,
-    (backlog) => {
-        localBacklog.value = [...backlog];
-    },
-    { deep: true },
-);
+watch(() => props.sprints, (sprints) => { localSprints.value = [...sprints]; }, { deep: true });
+watch(() => props.backlog, (backlog) => { localBacklog.value = [...backlog]; }, { deep: true });
 
 watch(
     () => [localSprints.value, localBacklog.value],
@@ -115,30 +94,26 @@ watch(
     },
     { deep: true },
 );
+
 const filteredBacklog = computed(() => {
     return localBacklog.value.filter((task) => task.category?.name?.toLowerCase() !== 'epic');
 });
+
 const visibleTaskIds = computed(() => {
     const sprintIds = localSprints.value.flatMap((sprint) => (sprint.tasks ?? []).map((task) => String(task.id)));
     const backlogIds = filteredBacklog.value.map((task) => String(task.id));
     return Array.from(new Set([...sprintIds, ...backlogIds]));
 });
+
 const selectedCount = computed(() => selectedTaskIds.value.length);
 const isAllSelected = computed(() => visibleTaskIds.value.length > 0 && visibleTaskIds.value.every((id) => selectedTaskIds.value.includes(id)));
 
-// ─── Create Sprint ────────────────────────────────────────────────
+// ─── Actions ──────────────────────────────────────────────────────
 const createSprint = async () => {
     try {
         const { data } = await axios.post(r('store'), { name: `Sprint ${localSprints.value.length + 1}` });
-
-        if (data?.success === false) {
-            throw new Error(data?.message || 'Failed to create sprint');
-        }
-
-        if (data?.sprint) {
-            localSprints.value = [...localSprints.value, data.sprint].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        }
-
+        if (data?.success === false) throw new Error(data?.message || 'Failed to create sprint');
+        if (data?.sprint) localSprints.value = [...localSprints.value, data.sprint].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         refreshBoardData().catch(() => null);
         notify('success', data?.message || 'Sprint created successfully');
     } catch (error) {
@@ -146,34 +121,18 @@ const createSprint = async () => {
     }
 };
 
-// ─── Start Sprint ─────────────────────────────────────────────────
 const showStartDialog = ref(false);
 const startingSprint = ref<Sprint | null>(null);
+const openStartDialog = (sprint: Sprint) => { startingSprint.value = sprint; showStartDialog.value = true; };
 
-const openStartDialog = (sprint: Sprint) => {
-    startingSprint.value = sprint;
-    showStartDialog.value = true;
-};
-
-// ─── Edit Sprint ──────────────────────────────────────────────────
 const showEditDialog = ref(false);
 const editingSprint = ref<Sprint | null>(null);
+const openEditDialog = (sprint: Sprint) => { editingSprint.value = sprint; showEditDialog.value = true; };
 
-const openEditDialog = (sprint: Sprint) => {
-    editingSprint.value = sprint;
-    showEditDialog.value = true;
-};
-
-// ─── Complete Sprint ──────────────────────────────────────────────
 const showCompleteDialog = ref(false);
 const completingSprint = ref<Sprint | null>(null);
+const openCompleteDialog = (sprint: Sprint) => { completingSprint.value = sprint; showCompleteDialog.value = true; };
 
-const openCompleteDialog = (sprint: Sprint) => {
-    completingSprint.value = sprint;
-    showCompleteDialog.value = true;
-};
-
-// ─── Delete Sprint ────────────────────────────────────────────────
 const deleteSprint = (sprint: Sprint) => {
     Swal.fire({
         icon: 'warning',
@@ -182,12 +141,9 @@ const deleteSprint = (sprint: Sprint) => {
         showCancelButton: true,
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300',
-        },
+        customClass: { confirmButton: '!bg-red-500 focus:!ring focus:!ring-red-300' },
     }).then(async (result) => {
         if (!result.isConfirmed) return;
-
         try {
             await axios.delete(r('destroy', sprint.id));
             localSprints.value = localSprints.value.filter((s) => s.id !== sprint.id);
@@ -198,16 +154,12 @@ const deleteSprint = (sprint: Sprint) => {
     });
 };
 
-// ─── Drag & Drop ─────────────────────────────────────────────────
-// taskMoved: (taskId, fromSprintId | null, toSprintId | null, newIndex)
-// null = backlog
 const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprintId: string | null) => {
     const taskFromBacklog = localBacklog.value.find((task) => String(task.id) === taskId) ?? null;
     const taskFromSprints = localSprints.value.flatMap((sprint) => sprint.tasks ?? []).find((task) => String(task.id) === taskId) ?? null;
     const movingTask = taskFromBacklog ?? taskFromSprints;
 
     if (toSprintId) {
-        // Optimistic: remove task from backlog and all sprint lists first.
         localBacklog.value = localBacklog.value.filter((task) => String(task.id) !== taskId);
         localSprints.value = localSprints.value.map((sprint) => ({
             ...sprint,
@@ -236,7 +188,6 @@ const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprint
         return;
     }
 
-    // Moved OUT to backlog
     localSprints.value = localSprints.value.map((sprint) => ({
         ...sprint,
         tasks: (sprint.tasks ?? []).filter((task) => String(task.id) !== taskId),
@@ -246,13 +197,11 @@ const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprint
     }
 
     try {
-        await axios.delete(
-            route('project.sprints.tasks.remove', {
-                projectEncoded: props.projectId,
-                sprintEncoded: fromSprintId,
-                taskEncoded: taskId,
-            }),
-        );
+        await axios.delete(route('project.sprints.tasks.remove', {
+            projectEncoded: props.projectId,
+            sprintEncoded: fromSprintId,
+            taskEncoded: taskId,
+        }));
         refreshBoardData().catch(() => null);
     } catch (error) {
         await refreshBoardData();
@@ -260,7 +209,6 @@ const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprint
     }
 };
 
-// ─── Context Menus ────────────────────────────────────────────────
 const sprintMenu = ref();
 const taskMenu = ref();
 const activeSprintForMenu = ref<Sprint | null>(null);
@@ -296,112 +244,92 @@ const onSprintMenu = (event: MouseEvent, sprint: Sprint) => {
     activeSprintForMenu.value = sprint;
     sprintMenu.value.toggle(event);
 };
-const onTaskMenu = (event: MouseEvent, task: any, sprintId: string | null) => {
-    activeTaskCtx.value = { task, sprintId };
-    taskMenu.value.toggle(event);
-};
 
-const assignTaskToEpic = async (taskId: string | number, epicId: string | null) => {
+const assignTaskToEpic = async (task: any, epicId: string | null) => {
     try {
         await axios.put(
-            route('project.tasks.parent.update', {
-                projectEncoded: props.projectId,
-                task: String(taskId),
-            }),
-            { parent_id: epicId },
+            route('project.tasks.parent.update', { projectEncoded: props.projectId, task: String(task.id) }),
+            { parent_id: epicId }
         );
         await refreshBoardData();
-        router.reload({
-            only: ['tasks'],
-        });
+        router.reload({ only: ['tasks'] });
         notify('success', 'Task updated successfully');
     } catch (error) {
         notify('error', getErrorMessage(error, 'Failed to update task'));
     }
 };
 
-const patchTaskInCollections = (taskId: string | number, patch: Partial<Task>) => {
-    const id = String(taskId);
-    localBacklog.value = localBacklog.value.map((task) => (String(task.id) === id ? { ...task, ...patch } : task));
-    localSprints.value = localSprints.value.map((sprint) => ({
-        ...sprint,
-        tasks: (sprint.tasks ?? []).map((task) => (String(task.id) === id ? { ...task, ...patch } : task)),
-    }));
-};
-
-const updateTaskInline = async (taskId: string | number, payload: { status_id?: string; priority_id?: string }) => {
+const updatePriority = async (task: any, priorityId: string) => {
     try {
-        if (payload.priority_id) {
-            await axios.put(
-                route('project.tasks.priority.update', {
-                    projectEncoded: props.projectId,
-                    task: String(taskId),
-                }),
-                { priority_id: payload.priority_id },
-            );
-        } else {
-            await axios.put(`/project/${props.projectId}/tasks/${String(taskId)}`, payload);
+        await axios.put(
+            route('project.tasks.priority.update', { projectEncoded: props.projectId, task: String(task.id) }),
+            { priority_id: priorityId }
+        );
+        const priority = props.taskPriorities.find((p) => p.id === priorityId);
+        if (priority) {
+            patchTaskInCollections(task.id, { priority });
         }
-
-        if (payload.status_id) {
-            const status = props.taskStatuses.find((item) => item.id === payload.status_id);
-            patchTaskInCollections(taskId, { status });
-        }
-        if (payload.priority_id) {
-            const priority = props.taskPriorities.find((item) => item.id === payload.priority_id);
-            patchTaskInCollections(taskId, { priority });
-        }
-
         refreshBoardData().catch(() => null);
         router.reload({ only: ['tasks', 'sprints', 'backlog'] });
     } catch (error) {
         await refreshBoardData();
-        notify('error', getErrorMessage(error, 'Failed to update task'));
+        notify('error', getErrorMessage(error, 'Failed to update priority'));
     }
 };
 
-const toggleTaskSelection = (task: { id: string | number }, checked: boolean) => {
+const patchTaskInCollections = (taskId: string | number, patch: Partial<Task>) => {
+    const id = String(taskId);
+    localBacklog.value = localBacklog.value.map((t) => (String(t.id) === id ? { ...t, ...patch } : t));
+    localSprints.value = localSprints.value.map((s) => ({
+        ...s,
+        tasks: (s.tasks ?? []).map((t) => (String(t.id) === id ? { ...t, ...patch } : t)),
+    }));
+};
+
+const toggleTaskSelection = (task: any, checked: boolean) => {
     const id = String(task.id);
     if (checked) {
-        if (!selectedTaskIds.value.includes(id)) {
-            selectedTaskIds.value = [...selectedTaskIds.value, id];
-        }
+        if (!selectedTaskIds.value.includes(id)) selectedTaskIds.value = [...selectedTaskIds.value, id];
         return;
     }
     selectedTaskIds.value = selectedTaskIds.value.filter((taskId) => taskId !== id);
 };
 
-const toggleSelectAll = () => {
-    selectedTaskIds.value = isAllSelected.value ? [] : [...visibleTaskIds.value];
-};
-const clearSelection = () => {
-    selectedTaskIds.value = [];
-};
-const viewEpic = (epicId: string) => {
-    router.get(route('task.show', epicId));
-};
-const toggleSectionSelection = (taskIds: string[], checked: boolean) => {
-    const next = new Set(selectedTaskIds.value);
-    taskIds.forEach((id) => {
-        if (checked) next.add(id);
-        else next.delete(id);
-    });
-    selectedTaskIds.value = Array.from(next);
-};
+const toggleSelectAll = () => { selectedTaskIds.value = isAllSelected.value ? [] : [...visibleTaskIds.value]; };
+const clearSelection = () => { selectedTaskIds.value = []; };
+const viewEpic = (epicId: string) => router.get(route('task.show', epicId));
 
-const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskId: string | null = null) => {
-    if (typeof sprintId === 'string' && sprintId) {
+const openCreateTask = (sprintId: string | null = null, parentTaskId: string | null = null) => {
+    if (sprintId) {
         emit('add', parentTaskId, undefined, 'sprint', sprintId);
         return;
     }
-
     if (parentTaskId) {
         emit('add', parentTaskId, undefined, 'backlog');
         return;
     }
-
     emit('addBacklog');
 };
+
+// ─── Provide Context ──────────────────────────────────────────────
+provide(BacklogKey, {
+    projectId: props.projectId,
+    epics: props.epics,
+    taskPriorities: props.taskPriorities,
+    taskStatuses: props.taskStatuses,
+    canAct: canAct.value,
+    editTask: (task) => emit('edit', task, null),
+    addEpic: assignTaskToEpic,
+    updatePriority,
+    viewEpic,
+    toggleSelect: toggleTaskSelection,
+    openTaskMenu: (event, task, sprintId) => {
+        activeTaskCtx.value = { task, sprintId };
+        taskMenu.value.toggle(event);
+    },
+    addTask: (task, sprintId) => openCreateTask(sprintId ?? null, task?.id ? String(task.id) : null),
+    addParent: (epicId, sprintId) => emit('add', epicId, undefined, sprintId ? 'sprint-add-parent' : 'backlog-add-parent', sprintId),
+});
 </script>
 
 <template>
@@ -411,47 +339,31 @@ const openCreateTask = (sprintId: string | MouseEvent | null = null, parentTaskI
             v-for="sprint in localSprints"
             :key="sprint.id"
             :sprint="sprint"
-            :canAct="canAct"
-            :epics="props.epics"
-            :taskStatuses="props.taskStatuses"
-            :taskPriorities="props.taskPriorities"
             :selectedIds="selectedTaskIds"
-            @edit="(task) => emit('edit', task, null)"
-            @taskMenu="(ev, task) => onTaskMenu(ev, task, sprint.id)"
-            @sprintMenu="(ev, s) => onSprintMenu(ev, s)"
+            @sprintMenu="onSprintMenu"
             @start="openStartDialog"
             @complete="openCompleteDialog"
-            @add="(task, sprintId) => openCreateTask(sprintId, String(task.id))"
-            @addParent="(epicId, sprintId) => emit('add', epicId, undefined, 'sprint-add-parent', sprintId)"
-            @addEpic="(task, epicId) => assignTaskToEpic(task.id, epicId)"
-            @updatePriority="(task, priorityId) => updateTaskInline(task.id, { priority_id: priorityId })"
-            @viewEpic="viewEpic"
-            @toggleSelect="(task, checked) => toggleTaskSelection(task, checked)"
-            @toggleSelectAll="(taskIds, checked) => toggleSectionSelection(taskIds, checked)"
-            @addIssue="(sprintId) => openCreateTask(sprintId)"
+            @addIssue="openCreateTask"
             @taskMoved="onTaskMoved"
+            @toggleSelectAll="(taskIds, checked) => {
+                const next = new Set(selectedTaskIds);
+                taskIds.forEach(id => checked ? next.add(id) : next.delete(id));
+                selectedTaskIds = Array.from(next);
+            }"
         />
 
         <!-- Backlog -->
         <BacklogSection
             :tasks="filteredBacklog"
-            :canAct="canAct"
-            :epics="props.epics"
-            :taskStatuses="props.taskStatuses"
-            :taskPriorities="props.taskPriorities"
             :selectedIds="selectedTaskIds"
-            @edit="(task) => emit('edit', task, null)"
-            @add="(task) => openCreateTask(null, String(task.id))"
-            @addParent="(epicId) => emit('add', epicId, undefined, 'backlog-add-parent')"
-            @addEpic="(task, epicId) => assignTaskToEpic(task.id, epicId)"
-            @updatePriority="(task, priorityId) => updateTaskInline(task.id, { priority_id: priorityId })"
-            @viewEpic="viewEpic"
-            @toggleSelect="(task, checked) => toggleTaskSelection(task, checked)"
-            @toggleSelectAll="(taskIds, checked) => toggleSectionSelection(taskIds, checked)"
-            @taskMenu="(ev, task) => onTaskMenu(ev, task, null)"
             @addIssue="openCreateTask"
             @createSprint="createSprint"
             @taskMoved="onTaskMoved"
+            @toggleSelectAll="(taskIds, checked) => {
+                const next = new Set(selectedTaskIds);
+                taskIds.forEach(id => checked ? next.add(id) : next.delete(id));
+                selectedTaskIds = Array.from(next);
+            }"
         />
     </div>
 

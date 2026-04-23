@@ -1,50 +1,48 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
-import { computed, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
+import { VueDraggable } from 'vue-draggable-plus';
+import { Task } from '../..';
+import { BacklogKey } from '../types';
 import TaskRow from './Taskrow.vue';
 
-interface TaskListItem {
-    id: string | number;
-    title?: string;
-    [key: string]: any;
+interface Props {
+    tasks: Task[];
+    selectedIds: string[];
 }
 
-interface EpicOption {
-    id: string;
-    title: string;
-}
-interface OptionItem {
-    id: string;
-    name: string;
-    severity?: string;
-}
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
-    edit: [task: TaskListItem];
-    add: [task: TaskListItem];
-    addParent: [epicId: string];
-    addEpic: [task: TaskListItem, epicId: string | null];
-    updatePriority: [task: TaskListItem, priorityId: string];
-    viewEpic: [epicId: string];
-    toggleSelect: [task: TaskListItem, checked: boolean];
-    taskMenu: [event: MouseEvent, task: TaskListItem];
     addIssue: [];
     createSprint: [];
+    taskMoved: [taskId: string, fromSprintId: string | null, toSprintId: string | null];
     toggleSelectAll: [taskIds: string[], checked: boolean];
 }>();
 
+const context = inject(BacklogKey);
+
 const collapsed = ref(false);
-const props = defineProps<{
-    tasks: TaskListItem[];
-    canAct: boolean;
-    epics: EpicOption[];
-    taskStatuses: OptionItem[];
-    taskPriorities: OptionItem[];
-    selectedIds: string[];
-}>();
-const sectionTaskIds = computed(() => props.tasks.map((task) => String(task.id)));
+const localTasks = ref([...props.tasks]);
+
+watch(
+    () => props.tasks,
+    (tasks) => {
+        localTasks.value = [...tasks];
+    },
+    { deep: true },
+);
+
+const sectionTaskIds = computed(() => localTasks.value.map((task) => String(task.id)));
 const allSelected = computed(() => sectionTaskIds.value.length > 0 && sectionTaskIds.value.every((id) => props.selectedIds.includes(id)));
+
+const onAdd = (e: any) => {
+    const taskId = String(e.data?.id || e.item?._value?.id);
+    if (taskId) {
+        emit('taskMoved', taskId, e.from.dataset.sprintId || null, null);
+    }
+};
 </script>
 
 <template>
@@ -56,9 +54,9 @@ const allSelected = computed(() => sectionTaskIds.value.length > 0 && sectionTas
             </div>
             <i :class="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'" class="text-xs text-surface-500" />
             <span class="flex-1 text-sm font-semibold">Backlog</span>
-            <span class="text-xs text-surface-500">{{ tasks.length }} issues</span>
+            <span class="text-xs text-surface-500">{{ localTasks.length }} issues</span>
             <Button
-                v-if="canAct"
+                v-if="context?.canAct"
                 label="Create Sprint"
                 icon="pi pi-plus"
                 size="small"
@@ -70,33 +68,32 @@ const allSelected = computed(() => sectionTaskIds.value.length > 0 && sectionTas
 
         <!-- Body -->
         <div v-if="!collapsed">
-            <div v-if="!tasks.length" class="flex flex-col items-center justify-center gap-2 py-8 text-surface-400">
+            <div v-if="!localTasks.length" class="flex flex-col items-center justify-center gap-2 py-8 text-surface-400">
                 <i class="pi pi-inbox text-2xl" />
                 <span class="text-sm">Backlog is empty</span>
             </div>
 
-            <TaskRow
-                v-for="task in tasks"
-                :key="task.id"
-                :task="task"
-                :epics="epics"
-                :taskStatuses="taskStatuses"
-                :taskPriorities="taskPriorities"
-                :canAct="canAct"
-                :showChecklist="true"
-                :selected="selectedIds.includes(String(task.id))"
-                @edit="emit('edit', $event)"
-                @add="emit('add', $event)"
-                @addParent="(epicId) => emit('addParent', epicId)"
-                @addEpic="(task, epicId) => emit('addEpic', task, epicId)"
-                @updatePriority="(task, priorityId) => emit('updatePriority', task, priorityId)"
-                @viewEpic="(epicId) => emit('viewEpic', epicId)"
-                @toggleSelect="(task, checked) => emit('toggleSelect', task, checked)"
-                @menu="(event, task) => emit('taskMenu', event, task)"
-            />
+            <VueDraggable
+                v-model="localTasks"
+                group="tasks"
+                handle=".drag-handle"
+                :animation="150"
+                class="min-h-[2rem]"
+                data-sprint-id=""
+                @add="onAdd"
+            >
+                <TaskRow
+                    v-for="task in localTasks"
+                    :key="task.id"
+                    :task="task"
+                    :draggable="context?.canAct"
+                    :showChecklist="true"
+                    :selected="selectedIds.includes(String(task.id))"
+                />
+            </VueDraggable>
 
             <div
-                v-if="canAct"
+                v-if="context?.canAct"
                 class="flex cursor-pointer items-center gap-2 border-t border-surface-100 px-4 py-2 text-surface-400 hover:bg-surface-50 hover:text-primary-500 dark:border-surface-700 dark:hover:bg-surface-800/50"
                 @click="emit('addIssue')"
             >

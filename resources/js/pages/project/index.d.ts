@@ -119,6 +119,7 @@ export interface Task {
     creator?: User;
     is_assigned?: boolean;
     is_created_by_me?: boolean;
+    story_points?: number;
 }
 
 export interface ProjectOptions {

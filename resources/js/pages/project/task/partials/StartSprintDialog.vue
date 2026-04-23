@@ -2,7 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import moment from 'moment';
 import { computed, watch } from 'vue';
-import type { Sprint } from '../type';
+import type { Sprint } from '../type.d.ts';
 
 interface Props {
     visible: boolean;
@@ -21,8 +21,8 @@ const DURATION_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', 'Custom'];
 const form = useForm({
     goal: '',
     duration: '2 weeks',
-    start_date: null as Date | null,
-    end_date: null as Date | null,
+    start_date: null as any,
+    end_date: null as any,
 });
 
 const isCustom = computed(() => form.duration === 'Custom');
@@ -45,9 +45,7 @@ const submit = () => {
 const calcEndDate = () => {
     if (isCustom.value || !form.start_date) return;
     const weeks = parseInt(form.duration);
-    const start = form.start_date instanceof Date ? new Date(form.start_date) : new Date(form.start_date);
-    start.setDate(start.getDate() + weeks * 7);
-    form.end_date = start;
+    form.end_date = moment(form.start_date).add(weeks, 'weeks').toDate();
 };
 
 watch(
@@ -55,8 +53,8 @@ watch(
     (value) => {
         form.goal = value?.goal ?? '';
         form.duration = value?.duration ?? '2 weeks';
-        form.start_date = value?.start_date ? new Date(value.start_date) : new Date();
-        form.end_date = value?.end_date ? new Date(value.end_date) : null;
+        form.start_date = value?.start_date ? moment(value.start_date).toDate() : moment().toDate();
+        form.end_date = value?.end_date ? moment(value.end_date).toDate() : null;
         calcEndDate();
     },
     { immediate: true },

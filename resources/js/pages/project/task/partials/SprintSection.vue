@@ -1,56 +1,43 @@
 <script setup lang="ts">
+import moment from 'moment';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
-import { computed, ref } from 'vue';
-import type { Sprint } from '../type';
+import { computed, inject, ref, watch } from 'vue';
+import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
+import type { Sprint, Task } from '../type.d';
+import { BacklogKey } from '../types';
 import TaskRow from './Taskrow.vue';
-
-interface SprintTask {
-    id: string | number;
-    title?: string;
-    status?: { name?: string } | null;
-    [key: string]: any;
-}
-
-interface EpicOption {
-    id: string;
-    title: string;
-}
-interface OptionItem {
-    id: string;
-    name: string;
-    severity?: string;
-}
 
 const props = defineProps<{
     sprint: Sprint;
-    canAct: boolean;
-    epics: EpicOption[];
-    taskStatuses: OptionItem[];
-    taskPriorities: OptionItem[];
     selectedIds: string[];
 }>();
 
 const emit = defineEmits<{
-    edit: [task: SprintTask];
-    add: [task: SprintTask, sprintId: string];
-    addParent: [epicId: string, sprintId: string];
-    addEpic: [task: SprintTask, epicId: string | null, sprintId: string];
-    updatePriority: [task: SprintTask, priorityId: string, sprintId: string];
-    viewEpic: [epicId: string];
-    toggleSelect: [task: SprintTask, checked: boolean];
-    toggleSelectAll: [taskIds: string[], checked: boolean];
-    taskMenu: [event: MouseEvent, task: SprintTask, sprintId: string];
     sprintMenu: [event: MouseEvent, sprint: Sprint];
     start: [sprint: Sprint];
     complete: [sprint: Sprint];
     addIssue: [sprintId: string];
+    taskMoved: [taskId: string, fromSprintId: string | null, toSprintId: string | null];
+    toggleSelectAll: [taskIds: string[], checked: boolean];
 }>();
 
+const context = inject(BacklogKey);
+
 const collapsed = ref(false);
-const visibleSprintTasks = computed(() => (props.sprint.tasks ?? []).filter((task) => task.category?.name?.toLowerCase() !== 'epic'));
+const localTasks = ref([...(props.sprint.tasks ?? [])]);
+
+watch(
+    () => props.sprint.tasks,
+    (tasks) => {
+        localTasks.value = [...(tasks ?? [])];
+    },
+    { deep: true },
+);
+
+const visibleSprintTasks = computed(() => localTasks.value.filter((task) => task.category?.name?.toLowerCase() !== 'epic'));
 const sprintTaskIds = computed(() => visibleSprintTasks.value.map((task) => String(task.id)));
 const allSelected = computed(() => sprintTaskIds.value.length > 0 && sprintTaskIds.value.every((id) => props.selectedIds.includes(id)));
 
@@ -62,7 +49,23 @@ const sprintProgress = (sprint: Sprint) => {
     return Math.round((done / sprint.tasks.length) * 100);
 };
 
-const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '');
+const formatDate = (d?: string) => (d ? moment(d).format('D MMM') : '');
+
+const onSort = (e: any) => {
+    if (e.from === e.to && e.oldIndex === e.newIndex) return;
+    const taskId = String(e.item._value?.id || e.clone?._value?.id || localTasks.value[e.newIndex]?.id);
+    if (!taskId) return;
+
+    // We need to know if it came from another list or just reordered within
+    // But for now, we just emit taskMoved and let Backlog.vue handle the logic
+    // Actually, VueDraggablePlus 'add' and 'remove' events are better for cross-list
+};
+
+const onAdd = (e: DraggableEvent<Task>) => {
+    if (e.data) {
+        emit('taskMoved', e.data.id, e.from.dataset.sprintId ?? null, props.sprint.id);
+    }
+};
 </script>
 
 <template>
@@ -89,7 +92,7 @@ const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', 
             </div>
 
             <!-- Actions -->
-            <div v-if="canAct" class="ml-auto flex shrink-0 gap-1" @click.stop>
+            <div v-if="context?.canAct" class="ml-auto flex shrink-0 gap-1" @click.stop>
                 <Button
                     v-if="sprint.status?.name === 'Planning'"
                     label="Start Sprint"
@@ -122,33 +125,32 @@ const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', 
 
         <!-- Body -->
         <div v-if="!collapsed">
-            <div v-if="!visibleSprintTasks.length" class="flex flex-col items-center justify-center gap-2 py-8 text-surface-400">
+            <div v-if="!localTasks.length" class="flex flex-col items-center justify-center gap-2 py-8 text-surface-400">
                 <i class="pi pi-inbox text-2xl" />
                 <span class="text-sm">No issues in this sprint</span>
             </div>
 
-            <TaskRow
-                v-for="task in visibleSprintTasks"
-                :key="task.id"
-                :task="task"
-                :epics="epics"
-                :taskStatuses="taskStatuses"
-                :taskPriorities="taskPriorities"
-                :canAct="canAct"
-                :showChecklist="true"
-                :selected="props.selectedIds.includes(String(task.id))"
-                @edit="emit('edit', $event)"
-                @add="(task) => emit('add', task, sprint.id)"
-                @addParent="(epicId) => emit('addParent', epicId, sprint.id)"
-                @addEpic="(task, epicId) => emit('addEpic', task, epicId, sprint.id)"
-                @updatePriority="(task, priorityId) => emit('updatePriority', task, priorityId, sprint.id)"
-                @viewEpic="(epicId) => emit('viewEpic', epicId)"
-                @toggleSelect="(task, checked) => emit('toggleSelect', task, checked)"
-                @menu="(event, task) => emit('taskMenu', event, task, sprint.id)"
-            />
+            <VueDraggable
+                v-model="localTasks"
+                group="tasks"
+                handle=".drag-handle"
+                :animation="150"
+                class="min-h-[2rem]"
+                :data-sprint-id="sprint.id"
+                @add="onAdd"
+            >
+                <TaskRow
+                    v-for="task in visibleSprintTasks"
+                    :key="task.id"
+                    :task="task"
+                    :draggable="context?.canAct"
+                    :showChecklist="true"
+                    :selected="props.selectedIds.includes(String(task.id))"
+                />
+            </VueDraggable>
 
             <div
-                v-if="canAct"
+                v-if="context?.canAct"
                 class="flex cursor-pointer items-center gap-2 border-t border-surface-100 px-4 py-2 text-surface-400 hover:bg-surface-50 hover:text-primary-500 dark:border-surface-700 dark:hover:bg-surface-800/50"
                 @click="emit('addIssue', sprint.id)"
             >

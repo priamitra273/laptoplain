@@ -1,86 +1,44 @@
 <script setup lang="ts">
-import Avatar from 'primevue/avatar';
-import AvatarGroup from 'primevue/avatargroup';
-import Card from 'primevue/card';
-import type { User } from '../../index.d.ts';
+import { computed } from 'vue';
 
-interface Props {
-    values: User[];
+interface User {
+    id: string | number;
+    name: string;
+    avatar_url?: string | null;
 }
 
-const props = defineProps<Props>();
+const props = defineProps<{
+    users: User[];
+    max?: number;
+}>();
 
-const DEFAULT_IMAGE = '/images/default-avatar.png';
+const displayUsers = computed(() => (props.users ?? []).slice(0, props.max ?? 3));
 
-const hasAvatar = (value: User): boolean => {
-    return !!value.avatar_url && value.avatar_url !== DEFAULT_IMAGE;
-};
-
-const getInitials = (name: string) => {
-    return name
+const getInitials = (name: string) =>
+    name
         .split(' ')
         .map((w) => w[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);
-};
 
-const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
-
-const getAvatarImage = (value: User) => {
-    return hasAvatar(value) ? (value.avatar_url as string) : undefined;
-};
-
-const getAvatarLabel = (value: User) => {
-    return !hasAvatar(value) ? getInitials(value.name) : undefined;
-};
-
-const getAvatarStyle = (index: number, value: User) => {
-    const styles: Record<string, string> = {};
-
-    if (!hasAvatar(value)) {
-        styles.backgroundColor = getUserColor(index);
-        styles.color = 'white';
-        styles.fontWeight = '600';
-    }
-
-    return styles;
-};
+const avatarColors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+const getAvatarColor = (name: string) => avatarColors[name.charCodeAt(0) % avatarColors.length];
 </script>
 
 <template>
-    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
-        <template #title>
-            <div class="flex items-center gap-2">
-                <i class="pi pi-users text-green-500"></i>
-                <h2 class="text-lg font-bold">Team Members</h2>
+    <div class="flex w-24 min-w-[5.5rem] shrink-0 items-center justify-end">
+        <div class="flex justify-end -space-x-1.5">
+            <div
+                v-for="user in displayUsers"
+                :key="user.id"
+                class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-xs text-white ring-2 ring-white dark:ring-surface-900"
+                :style="{ backgroundColor: getAvatarColor(user.name) }"
+                :title="user.name"
+            >
+                <img v-if="user.avatar_url" :src="user.avatar_url" class="h-full w-full object-cover" />
+                <span v-else>{{ getInitials(user.name) }}</span>
             </div>
-        </template>
-        <template #content>
-            <div v-if="props.values.length" class="space-y-4">
-                <AvatarGroup>
-                    <Avatar
-                        v-for="(user, idx) in props.values.slice(0, 5)"
-                        :key="user.id"
-                        :image="getAvatarImage(user)"
-                        :label="getAvatarLabel(user)"
-                        shape="circle"
-                        size="large"
-                        class="border-2 border-white shadow-md dark:border-gray-800"
-                        :style="getAvatarStyle(idx, user)"
-                        v-tooltip.bottom="user.name"
-                    />
-
-                    <Avatar
-                        v-if="props.values.length > 5"
-                        :label="`+${props.values.length - 5}`"
-                        shape="circle"
-                        size="large"
-                        class="border-2 border-white bg-gray-300 shadow-md dark:border-gray-800"
-                    />
-                </AvatarGroup>
-            </div>
-            <p v-else class="text-sm italic text-gray-400">No members assigned</p>
-        </template>
-    </Card>
+        </div>
+    </div>
 </template>

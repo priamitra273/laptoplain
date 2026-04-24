@@ -142,26 +142,26 @@ const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefin
                             :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
                             class="text-sm text-surface-700 dark:text-surface-300"
                         >
-                            Start: {{ moment(project.start_date).format('MMM DD, YYYY') }}
+                            Start: {{ project.start_date ? moment(project.start_date).format('MMM DD, YYYY') : '-' }}
                         </div>
                         <div
                             @click="enableEdit('dueDate')"
                             :class="canEdit ? 'cursor-pointer rounded px-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800' : ''"
                             class="text-sm text-surface-700 dark:text-surface-300"
                         >
-                            Due: {{ moment(project.due_date).format('MMM DD, YYYY') }}
+                            Due: {{ project.due_date ? moment(project.due_date).format('MMM DD, YYYY') : '-' }}
                         </div>
                     </div>
                     <div v-else class="flex flex-col gap-2">
                         <div v-if="editMode.startDate" @click.stop>
                             <DatePicker
-                                :modelValue="new Date(localProject.start_date || '')"
-                                @update:modelValue="onStartDateChange"
-                                @hide="editMode.startDate = false"
+                                :modelValue="localProject.start_date ? new Date(localProject.start_date) : null"
                                 dateFormat="dd M yy"
                                 placeholder="Start Date"
                                 class="w-full text-sm"
                                 autofocus
+                                @update:modelValue="onStartDateChange"
+                                @hide="editMode.startDate = false"
                             />
                         </div>
                         <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">
@@ -169,13 +169,13 @@ const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefin
                         </div>
                         <div v-if="editMode.dueDate" @click.stop>
                             <DatePicker
-                                :modelValue="new Date(localProject.due_date || '')"
-                                @update:modelValue="onDueDateChange"
-                                @hide="editMode.dueDate = false"
+                                :modelValue="localProject.due_date ? new Date(localProject.due_date) : null"
                                 dateFormat="dd M yy"
                                 placeholder="Due Date"
                                 class="w-full text-sm"
                                 autofocus
+                                @update:modelValue="onDueDateChange"
+                                @hide="editMode.dueDate = false"
                             />
                         </div>
                         <div v-else class="px-2 py-1 text-sm text-surface-700 dark:text-surface-300">

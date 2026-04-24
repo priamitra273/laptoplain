@@ -21,6 +21,8 @@
         "spatie/laravel-permission": "^6.16",
         "spatie/laravel-typescript-transformer": "^3.0",
         "sqids/sqids": "^0.5.0",
+        "staudenmeir/laravel-adjacency-list": "^1.0",
+        "staudenmeir/laravel-cte": "^1.0",
         "symfony/http-client": "^7.4",
         "symfony/mailgun-mailer": "^7.4",
         "tightenco/ziggy": "^2.4"

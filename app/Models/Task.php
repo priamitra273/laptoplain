@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Staudenmeir\LaravelAdjacencyList\Eloquent\HasRecursiveRelationships;
 
 class Task extends Model
 {
     use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
+    use HasRecursiveRelationships;
 
     protected $fillable = [
         'owned_id',

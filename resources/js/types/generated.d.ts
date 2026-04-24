@@ -113,11 +113,13 @@ declare namespace App {
             };
             export type TaskData = {
                 id: string;
+                key: string;
                 title: string;
                 description: string | null;
                 status: App.Data.Task.TaskStatusData | null;
                 priority: App.Data.Task.TaskPriorityData | null;
                 category: App.Data.Task.TaskCategoryData | null;
+                rootAncestor: App.Data.Task.TaskData | null;
                 users: App.Data.UserData[] | null;
                 progress: number | null;
                 story_points: number | null;

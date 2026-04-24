@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\ProjectSprint;
 use App\Models\Task;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SprintReportRepository
@@ -48,16 +49,43 @@ class SprintReportRepository
 
     public function getSprintStatusData(int $sprintId): array
     {
+        return [
+            'completed_tasks' => $this->getCompletedTasksBySprint($sprintId),
+            'incomplete_tasks' => $this->getIncompleteTasksBySprint($sprintId),
+        ];
+    }
+
+    /**
+     * Get completed tasks for a sprint
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Task>
+     */
+    protected function getCompletedTasksBySprint(int $sprintId): Collection
+    {
         $sprint = ProjectSprint::with([
             'tasks' => function ($query) {
-                $query->with(['status', 'priority', 'category', 'users'])
+                $query->with([
+                    'project',
+                    'status',
+                    'priority',
+                    'category',
+                    'users',
+                    'rootAncestor' => fn ($q) => $q->whereRelation('category', 'name', 'Epic'),
+                ])
                     ->whereHas('status', fn ($q) => $q->whereIn('name', ['Completed', 'Finished', 'Done']));
             },
         ])->findOrFail($sprintId);
 
-        $completedTasks = $sprint->tasks;
+        return $sprint->tasks;
+    }
 
-        // Incomplete tasks from activity_log
+    /**
+     * Get incomplete tasks for a sprint
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Task>
+     */
+    protected function getIncompleteTasksBySprint(int $sprintId): Collection
+    {
         $activityLogs = DB::table('activity_log')
             ->where('subject_type', ProjectSprint::class)
             ->where('subject_id', $sprintId)
@@ -73,15 +101,20 @@ class SprintReportRepository
         }
 
         $incompleteTasks = collect();
+
         if (! empty($taskIds)) {
-            $incompleteTasks = Task::with(['status', 'priority', 'category', 'users'])
+            $incompleteTasks = Task::with([
+                'project',
+                'status',
+                'priority',
+                'category',
+                'users',
+                'rootAncestor' => fn ($q) => $q->whereRelation('category', 'name', 'Epic'),
+            ])
                 ->whereIn('id', array_unique($taskIds))
                 ->get();
         }
 
-        return [
-            'completed_tasks' => $completedTasks,
-            'incomplete_tasks' => $incompleteTasks,
-        ];
+        return $incompleteTasks;
     }
 }

@@ -17,11 +17,14 @@ class TaskData extends Data
     public function __construct(
         #[TypeScriptType('string')]
         public int $id,
+        public string $key,
         public string $title,
         public ?string $description,
         public ?TaskStatusData $status,
         public ?TaskPriorityData $priority,
         public ?TaskCategoryData $category,
+
+        public ?TaskData $rootAncestor,
 
         #[TypeScriptType('Array<UserData>|null')]
         /** @var DataCollection<int, UserData> */
@@ -35,11 +38,13 @@ class TaskData extends Data
     {
         return new self(
             id: $task->id,
+            key: $task->project->code.'-'.$task->sequence_number,
             title: $task->title,
             description: $task->description,
             status: $task->relationLoaded('status') && $task->status ? TaskStatusData::from($task->status) : null,
             priority: $task->relationLoaded('priority') && $task->priority ? TaskPriorityData::from($task->priority) : null,
             category: $task->relationLoaded('category') && $task->category ? TaskCategoryData::from($task->category) : null,
+            rootAncestor: $task->relationLoaded('rootAncestor') && $task->rootAncestor ? TaskData::from($task->rootAncestor) : null,
             users: $task->relationLoaded('users') ? UserData::collect($task->users) : null,
             progress: (float) $task->progress,
             story_points: $task->story_points,

@@ -35,7 +35,7 @@ class SprintReportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $report,
+            'data' => Sqids::rec_encode_ids_in_list($report->toArray()),
         ]);
     }
 

@@ -82,9 +82,9 @@ class SprintReportRepository
     /**
      * Get incomplete tasks for a sprint
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Task>
+     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Task> | Illuminate\Support\Collection
      */
-    protected function getIncompleteTasksBySprint(int $sprintId): Collection
+    protected function getIncompleteTasksBySprint(int $sprintId)
     {
         $activityLogs = DB::table('activity_log')
             ->where('subject_type', ProjectSprint::class)

@@ -11,7 +11,6 @@ use Inertia\Response;
 
 class MsTaskTypeController extends Controller
 {
-
     public function index(): Response
     {
         $msTaskTypes = MsTaskType::select([
@@ -19,9 +18,10 @@ class MsTaskTypeController extends Controller
             'name',
             'severity',
             'owned_id',
+            'created_at',
             'created_by',
             'updated_by',
-            'deleted_by'
+            'deleted_by',
         ])->orderBy('id')->get();
 
         $msTaskTypes = Sqids::rec_encode_ids_in_list($msTaskTypes);
@@ -34,16 +34,18 @@ class MsTaskTypeController extends Controller
     public function store(MsTaskTypeStoreRequest $request): RedirectResponse
     {
         MsTaskType::create($request->validated());
+
         return redirect()
             ->route('task-type.index')
             ->with('success', 'Task Type has been successfully added.');
     }
 
-
     public function update(MsTaskTypeStoreRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskTypes = MsTaskType::findOrFail($id);
         $msTaskTypes->update($request->validated());
@@ -53,11 +55,12 @@ class MsTaskTypeController extends Controller
             ->with('success', 'Task Type has been successfully updated.');
     }
 
-
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskTypes = MsTaskType::findOrFail($id);
         $msTaskTypes->delete();

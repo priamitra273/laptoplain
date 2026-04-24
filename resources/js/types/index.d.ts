@@ -247,9 +247,18 @@ export interface ProjectPriority {
     deleted_by?: string;
 }
 
+export interface ProjectRoleConfig {
+    task?: string[];
+    project_member?: string[];
+    sprint?: string[];
+    allow_task_status?: string[];
+    allow_update_task_fields?: string[];
+}
+
 export interface ProjectRole {
     id: number;
     name: string;
+    config?: ProjectRoleConfig;
     owned_id: number;
     created_by?: string;
     updated_by?: string;

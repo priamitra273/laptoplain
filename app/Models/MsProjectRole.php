@@ -10,21 +10,21 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MsProjectRole extends Model
 {
-    use SoftDeletes, LogUsers, LogsActivityProjectRole;
-
-    protected $table = 'ms_project_roles';
+    use LogsActivityProjectRole, LogUsers, SoftDeletes;
 
     protected $fillable = [
         'name',
+        'config',
         'owned_id',
         'created_by',
         'updated_by',
-        'deleted_by'
+        'deleted_by',
     ];
 
     protected $casts = [
         'id' => 'integer',
-        'owned_id' => 'integer'
+        'owned_id' => 'integer',
+        'config' => 'json',
     ];
 
     public function owned(): BelongsTo

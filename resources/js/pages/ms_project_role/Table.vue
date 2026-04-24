@@ -8,8 +8,7 @@ import moment from 'moment';
 import { MenuItem } from 'primevue/menuitem';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { ref, watch } from 'vue';
-import ProjectRoleForm from './Form.vue';
+import { ref } from 'vue';
 
 interface Props {
     project_roles?: ProjectRole[];
@@ -24,9 +23,6 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
-const visibleForm = ref<boolean>(false);
-const selected = ref<ProjectRole | undefined>(undefined);
-
 const confirm = useConfirm();
 const toast = useToast();
 
@@ -34,9 +30,7 @@ const items: MenuItem[] = [
     {
         label: 'Edit',
         command(event) {
-            const id = event.item.menuKey;
-            selected.value = props.project_roles.find((item) => item.id === id);
-            visibleForm.value = true;
+            router.visit(route('project-role.edit', event.item.menuKey));
         },
     },
     {
@@ -70,10 +64,6 @@ const destroy = (project_role: ProjectRole) => {
         },
     });
 };
-
-watch(visibleForm, (newValue) => {
-    if (!newValue) selected.value = undefined;
-});
 </script>
 
 <template>
@@ -86,7 +76,7 @@ watch(visibleForm, (newValue) => {
                 </InputIcon>
             </IconField>
 
-            <Button label="Add Project Role" raised @click="visibleForm = true" v-if="hasPermission">
+            <Button label="Add Project Role" raised @click="router.visit(route('project-role.create'))" v-if="hasPermission">
                 <template #icon>
                     <Icon name="Plus" />
                 </template>
@@ -131,6 +121,4 @@ watch(visibleForm, (newValue) => {
             </DataTable>
         </div>
     </div>
-
-    <ProjectRoleForm v-model:visible="visibleForm" :value="selected" />
 </template>

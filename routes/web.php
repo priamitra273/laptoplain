@@ -51,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::resource('project-status', MsProjectStatusController::class)->except($except);
         Route::resource('project-priority', MsProjectPriorityController::class)->except($except);
-        Route::resource('project-role', MsProjectRoleController::class)->except($except);
+        Route::resource('project-role', MsProjectRoleController::class)->except(['show']);
 
         Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
         Route::resource('task-status', MsTaskStatusController::class)->except($except);

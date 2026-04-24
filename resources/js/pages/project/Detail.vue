@@ -12,6 +12,7 @@ import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
 import ProjectDetailsTab from './partials/ProjectDetailsTab.vue';
 import ProjectHeader from './partials/ProjectHeader.vue';
+import ProjectReportTab from './partials/ProjectReportTab.vue';
 import ProjectStats from './partials/ProjectStats.vue';
 import BacklogBoard from './task/Backlog.vue';
 import TaskForm from './task/Form.vue';
@@ -61,6 +62,7 @@ const tabListItems: TabListItem[] = [
     { label: 'Details', icon: 'pi pi-info-circle' },
     { label: 'Team', icon: 'pi pi-users' },
     { label: 'Timeline', icon: 'pi pi-chart-bar' },
+    { label: 'Report', icon: 'pi pi-chart-line' },
 ];
 
 const activeSprintTasks = computed(() => {
@@ -303,6 +305,10 @@ const onKanbanStatusUpdate = () => {
                                 <div class="py-4">
                                     <ProjectGanttChart :tasks="props.tasks" />
                                 </div>
+                            </TabPanel>
+
+                            <TabPanel value="Report">
+                                <ProjectReportTab :project="props.project" />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>

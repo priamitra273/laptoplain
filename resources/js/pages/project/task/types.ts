@@ -7,6 +7,9 @@ export interface BacklogContext {
     taskPriorities: TaskPriority[];
     taskStatuses: TaskStatus[];
     canAct: boolean;
+    canSprintCreate?: boolean;
+    canSprintUpdate?: boolean;
+    canSprintDelete?: boolean;
     
     // Actions
     editTask: (task: any) => void;

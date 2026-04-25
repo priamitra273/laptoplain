@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { severityClasses } from '@/lib/severity';
+import { ProjectPolicyKey } from '@/types/type';
 import { router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { Epic, Task, TaskPriority, TaskStatus, TaskType, User } from '../..';
 import TaskKanbanCard from './kanban/TaskKanbanCard.vue';
@@ -22,8 +24,6 @@ interface Props {
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
-    isMember: boolean;
-    hasPermission: boolean;
     assignableUsers?: User[];
 }
 
@@ -44,9 +44,13 @@ interface ProgressDialog {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
+const policy = inject(ProjectPolicyKey, null);
+
 const toast = useToast();
 const confirm = useConfirm();
 const page = usePage();
+
+const { canAction, canUpdateTaskStatus } = useProjectPermissions(policy);
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const grouped = ref<Record<string, Task[]>>({});
@@ -82,11 +86,11 @@ const cardMenuItems = computed(() => [
         label: 'Edit Task',
         icon: 'pi pi-pencil',
         command: () => emit('edit', cardMenuTask.value!, cardMenuTask.value!.parent_id),
-        disabled: !canAct.value,
+        disabled: !canTaskUpdate.value,
     },
-    { label: 'Add Subtask', icon: 'pi pi-sitemap', command: () => emit('add', cardMenuTask.value!.id), disabled: !canAct.value },
+    { label: 'Add Subtask', icon: 'pi pi-sitemap', command: () => emit('add', cardMenuTask.value!.id), disabled: !canTaskCreate.value },
     { separator: true },
-    { label: 'Delete Task', icon: 'pi pi-trash', command: () => deleteTask(cardMenuTask.value!), disabled: !canAct.value },
+    { label: 'Delete Task', icon: 'pi pi-trash', command: () => deleteTask(cardMenuTask.value!), disabled: !canTaskDelete.value },
 ]);
 
 // ─── In Progress Dialog ───────────────────────────────────────────────────────
@@ -101,7 +105,10 @@ const inProgressDialog = ref<ProgressDialog>({
 const inProgressLoading = ref(false);
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
-const canAct = computed(() => props.isMember || props.hasPermission);
+const canTaskCreate = computed(() => canAction('task', 'create'));
+const canTaskUpdate = computed(() => canAction('task', 'update'));
+const canTaskDelete = computed(() => canAction('task', 'delete'));
+const canAct = computed(() => canTaskCreate.value || canTaskUpdate.value || canTaskDelete.value);
 
 const currentUser = computed(() => page.props.auth?.user as User | undefined);
 
@@ -185,6 +192,12 @@ watch(
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
 const onGroupChange = async (task: Task, newStatusId: string) => {
+    if (!canUpdateTaskStatus(newStatusId)) {
+        toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You are not allowed to set this status', life: 3000 });
+        grouped.value = buildGrouped();
+        return;
+    }
+
     const targetStatus = props.statuses.find((s) => s.id === newStatusId);
     const requireDueDate = targetStatus?.name !== 'To Do';
     const dueDateMissing = !task.due_date;
@@ -276,7 +289,7 @@ const deleteTask = (task: Task) => {
 
 // ─── Quick-add ────────────────────────────────────────────────────────────────
 const startQuickAdd = async (statusId: string) => {
-    if (!canAct.value) return;
+    if (!canTaskCreate.value) return;
     quickErrors.value = {};
     quickAddStatus.value = statusId;
 };

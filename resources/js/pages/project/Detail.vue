@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import ProjectGanttChart from '@/components/ProjectGanttChart.vue';
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
+import { ProjectPolicyKey } from '@/types/type';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { useSessionStorage } from '@vueuse/core';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, provide, ref } from 'vue';
 import type { MemberWithAvatar, ProjectDetailProps, ProjectMember, TabListItem, Task } from './index';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
@@ -23,23 +25,15 @@ const props = defineProps<ProjectDetailProps>();
 
 const toast = useToast();
 const page = usePage();
-const isDeveloper = computed(() => page.props.auth?.role?.startsWith('developer-'));
+
 const authUser = computed(() => page.props.auth?.user);
-const isMember = computed(() => {
-    if (!authUser.value) return false;
-    return props.project.project_members.some((member) => member.user.id === authUser.value.id);
-});
-const isOwner = computed(() => {
-    if (!authUser.value) return false;
-    return props.project.project_members.some((member) => member.user.id === authUser.value.id && member.role.name === 'Owner');
-});
 
-const hasPermission = (): boolean => {
-    const role = page.props.auth.role;
-    return role ? role.startsWith('super-admin-') || role.startsWith('admin-') : false;
-};
+const { canAction, canUpdateTaskStatus, canUpdateTaskField } = useProjectPermissions(props.policy);
 
-const canEdit = computed(() => (isOwner.value || hasPermission()) && !isDeveloper.value);
+// Provide ProjectPolicyKey to children components
+provide(ProjectPolicyKey, props.policy);
+
+const canEdit = computed(() => canAction('project_member', 'update'));
 
 // Dialog State
 const visibleAdd = ref(false);
@@ -137,7 +131,7 @@ const openEdit = (member: ProjectMember) => {
 };
 
 const openTaskAdd = (parentId: string | null, _statusId?: string, source?: string, sprintId?: string | null) => {
-    if (!isMember.value && !hasPermission()) {
+    if (!canAction('task', 'create')) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to create tasks', life: 3000 });
         return;
     }
@@ -151,7 +145,7 @@ const openTaskAdd = (parentId: string | null, _statusId?: string, source?: strin
 };
 
 const openTaskEdit = (task: Task, parentId: string | null, source?: string) => {
-    if (!isMember.value && !hasPermission()) {
+    if (!canAction('task', 'update')) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to edit tasks', life: 3000 });
         return;
     }
@@ -207,7 +201,7 @@ const onKanbanStatusUpdate = () => {
 
     <AppLayout>
         <div class="flex flex-col gap-4">
-            <ProjectHeader :project="project" :members="members" :canEdit="canEdit" :isMember="isMember" @update="updateProject" />
+            <ProjectHeader :project="project" :members="members" :canEdit="canEdit" :isMember="props.isMember" @update="updateProject" />
 
             <ProjectStats :project="project" :statuses="statuses || []" :priorities="priorities || []" :canEdit="canEdit" @update="updateProject" />
 
@@ -232,8 +226,6 @@ const onKanbanStatusUpdate = () => {
                                         :taskStatuses="taskStatuses"
                                         :taskPriorities="taskPriorities"
                                         :taskTypes="taskTypes"
-                                        :isMember="isMember"
-                                        :hasPermission="isOwner || hasPermission()"
                                         :assignableUsers="assignableUsers"
                                         :epic-tasks="epics"
                                         @statusUpdate="onKanbanStatusUpdate"
@@ -248,13 +240,10 @@ const onKanbanStatusUpdate = () => {
                                     <TaskTable
                                         :projectId="project.id"
                                         :tasks="tasks"
-                                        :isMember="isMember"
-                                        :has-permission="isOwner || hasPermission()"
                                         :taskStatuses="taskStatuses"
                                         :taskPriorities="taskPriorities"
                                         :taskTypes="taskTypes"
                                         :taskCategories="taskCategories"
-                                        :isDeveloper="isDeveloper"
                                         @add="openTaskAdd"
                                         @edit="openTaskEdit"
                                     />
@@ -272,8 +261,6 @@ const onKanbanStatusUpdate = () => {
                                         :task-priorities="taskPriorities"
                                         :task-types="taskTypes"
                                         :task-categories="taskCategories"
-                                        :is-member="isMember"
-                                        :has-permission="isOwner || hasPermission()"
                                         :assignable-users="assignableUsers"
                                         @add="openTaskAdd"
                                         @addBacklog="() => openTaskAdd(null, undefined, 'backlog')"
@@ -294,7 +281,11 @@ const onKanbanStatusUpdate = () => {
                                         :members="props.members"
                                         :roles="props.roles"
                                         :users="props.users"
-                                        :hasPermission="(isOwner || hasPermission()) && !isDeveloper"
+                                        :hasPermission="
+                                            canAction('project_member', 'create') ||
+                                            canAction('project_member', 'update') ||
+                                            canAction('project_member', 'delete')
+                                        "
                                         @add="openAdd"
                                         @edit="openEdit"
                                     />
@@ -355,8 +346,6 @@ const onKanbanStatusUpdate = () => {
                 :tags="props.tags"
                 :editTask="selectedTask"
                 :members="formattedMembers"
-                :isMember="isMember"
-                :isDeveloper="isDeveloper"
                 :taskCategories="taskCategories"
                 :excludeEpicCategory="isBacklogCreate || (!selectedTask && (!!selectedSprintId || !!parentTaskId))"
                 :onlyEpicCategory="!selectedTask && isAddParentCreate"

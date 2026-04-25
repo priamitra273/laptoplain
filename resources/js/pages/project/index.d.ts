@@ -204,13 +204,10 @@ export interface TaskFormattedData {
 export interface ProjectTaskTableProps {
     projectId: string;
     tasks: Task[];
-    isMember: boolean;
-    hasPermission: boolean;
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
     taskCategories?: TaskCategory[];
-    isDeveloper: boolean;
 }
 
 export interface ProjectTaskTableEmits {
@@ -303,6 +300,8 @@ export interface ProjectDetailProps {
     backlog: Task[];
     taskCategories: TaskCategory[];
     epics: Epic[];
+    isMember: boolean;
+    policy: App.Data.ProjectRole.ConfigData | null;
 }
 
 export interface ProjectDetailHeaderProps {

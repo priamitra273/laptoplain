@@ -49,6 +49,15 @@ declare namespace App {
                 severity: string | null;
             };
         }
+        namespace ProjectRole {
+            export type ConfigData = {
+                task: App.Enums.ProjectRolePermission[];
+                sprint: App.Enums.ProjectRolePermission[];
+                project_member: App.Enums.ProjectRolePermission[];
+                allow_task_status: string[];
+                allow_update_task_fields: App.Enums.TaskField[];
+            };
+        }
         namespace Sprint {
             export type BurndownChartData = {
                 date: string;
@@ -171,8 +180,22 @@ declare namespace App {
         }
     }
     namespace Enums {
+        export type ProjectRolePermission = 'create' | 'update' | 'delete';
         export type Severity = 'success' | 'info' | 'warn' | 'danger';
         export type SiteStatus = 1 | 2 | 3 | 4 | 5;
+        export type TaskField =
+            | 'title'
+            | 'description'
+            | 'status'
+            | 'priority'
+            | 'type'
+            | 'category'
+            | 'start_date'
+            | 'end_date'
+            | 'due_date'
+            | 'tags'
+            | 'assignee'
+            | 'parent';
         export type TaskNotificationType = 'created' | 'updated' | 'deleted' | 'mentioned';
         export type WorkloadStatus = 'Free' | 'Almost Done' | 'Ongoing' | 'Overloaded';
     }

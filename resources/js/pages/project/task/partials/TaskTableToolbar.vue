@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
+import { usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
+import type { ProjectDetailProps } from '../..';
 
 interface Props {
     hasSelectedTasks: boolean;
-    isMember: boolean;
-    hasPermission: boolean;
-    isDeveloper: boolean;
 }
 
 defineProps<Props>();
@@ -14,6 +14,8 @@ const emit = defineEmits<{
     (e: 'add', parentId: string | null): void;
     (e: 'removeSelected'): void;
 }>();
+
+const { canAction } = useProjectPermissions(usePage<ProjectDetailProps>().props.policy);
 </script>
 
 <template>
@@ -25,7 +27,7 @@ const emit = defineEmits<{
                 icon="pi pi-plus"
                 @click="emit('add', null)"
                 class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
-                :disabled="(!isMember && !hasPermission) || isDeveloper"
+                :disabled="!canAction('task', 'create')"
             />
             <Button
                 v-if="hasSelectedTasks"
@@ -35,7 +37,7 @@ const emit = defineEmits<{
                 @click="emit('removeSelected')"
                 class="w-full min-w-[120px] sm:w-auto sm:min-w-0"
                 variant="outlined"
-                :disabled="!isMember && !hasPermission"
+                :disabled="!canAction('task', 'delete')"
             />
         </div>
     </div>

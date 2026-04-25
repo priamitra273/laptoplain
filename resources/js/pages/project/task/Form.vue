@@ -11,7 +11,9 @@ import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import moment from 'moment';
+import type { ProjectDetailProps } from '..';
 import type { ProjectMember, Tag as TagData, Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
@@ -29,7 +31,6 @@ interface Props {
     hideParentTaskField?: boolean;
     tags: TagData[];
     members: ProjectMember[];
-    isDeveloper: boolean;
 }
 
 interface Form {
@@ -93,11 +94,13 @@ const selectedMembers = ref<ProjectMemberSimple[]>([]);
 const authUser = computed(() => usePage().props.auth.user);
 const isProductOwner = computed(() => usePage().props.auth?.role?.startsWith('product-owner-'));
 
+const { canUpdateTaskField, canUpdateTaskStatus } = useProjectPermissions(usePage<ProjectDetailProps>().props.policy);
+
+const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
+
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id as string, name: m.user.name })));
 
-const statusOption = computed(() => {
-    return props.isDeveloper ? props.taskStatuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.taskStatuses;
-});
+const statusOption = computed(() => props.taskStatuses.filter((s) => canUpdateTaskStatus(s.id)));
 
 const collectDescendants = (task: Task): string[] => {
     const ids: string[] = [];
@@ -507,7 +510,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
 
         <div>
             <label class="font-semibold">Description</label>
-            <div v-if="isDeveloper" class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900" v-html="form.description"></div>
+            <div v-if="fieldDisabled('description')" class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900" v-html="form.description"></div>
             <Editor v-else v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
                 <template #toolbar>
                     <span class="ql-formats">
@@ -544,7 +547,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
         <div v-if="categoryOptions.length > 0" class="flex flex-col">
             <label class="font-semibold">Category</label>
             <Select
-                :disabled="isDeveloper"
+                :disabled="fieldDisabled('task_category_id')"
                 class="w-full"
                 v-model="form.task_category_id"
                 :options="categoryOptions"
@@ -582,7 +585,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
         <div v-if="!props.hideParentTaskField" class="flex flex-col">
             <label class="font-semibold">Parent Task</label>
             <Select
-                :disabled="isDeveloper"
+                :disabled="fieldDisabled('parent_id')"
                 class="w-full"
                 v-model="form.parent_id"
                 :options="parentOptions"
@@ -599,7 +602,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
         <div class="flex flex-col">
             <label class="font-semibold">Assigned Member</label>
             <MultiSelect
-                :disabled="isDeveloper"
+                :disabled="fieldDisabled('assign_users')"
                 v-model="selectedMembers"
                 display="chip"
                 :options="formattedMemberOption"
@@ -616,7 +619,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
             <div>
                 <label class="font-semibold">Start Date</label>
                 <DatePicker
-                    :disabled="isDeveloper"
+                    :disabled="fieldDisabled('start_date')"
                     class="w-full"
                     v-model="form.start_date"
                     dateFormat="yy-mm-dd"
@@ -632,6 +635,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
                     <span v-if="isInProgressStatus" class="text-red-500">*</span>
                 </label>
                 <DatePicker
+                    :disabled="fieldDisabled('due_date')"
                     class="w-full"
                     v-model="form.due_date"
                     dateFormat="yy-mm-dd"
@@ -649,7 +653,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
             <div>
                 <label class="font-semibold">Type <span class="text-red-500">*</span></label>
                 <Select
-                    :disabled="isDeveloper"
+                    :disabled="fieldDisabled('type_id')"
                     class="w-full"
                     v-model="form.type_id"
                     :options="props.taskTypes"
@@ -712,7 +716,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
             <div>
                 <label class="font-semibold">Priority <span class="text-red-500">*</span></label>
                 <Select
-                    :disabled="isDeveloper"
+                    :disabled="fieldDisabled('priority_id')"
                     class="w-full"
                     v-model="form.priority_id"
                     :options="props.taskPriorities"
@@ -745,7 +749,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
         <div class="flex flex-col">
             <label class="font-semibold">Tags</label>
             <AutoComplete
-                :disabled="isDeveloper"
+                :disabled="fieldDisabled('tags')"
                 v-model="selectedTags"
                 multiple
                 optionLabel="name"
@@ -768,7 +772,7 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
             <div>
                 <label class="font-semibold">Archived</label>
                 <Select
-                    :disabled="isDeveloper"
+                    :disabled="fieldDisabled('is_archived')"
                     class="w-full"
                     v-model="form.is_archived"
                     :options="[

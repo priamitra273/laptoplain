@@ -487,7 +487,16 @@ export interface BaseOption {
 export interface StatusOption extends BaseOption {}
 export interface PriorityOption extends BaseOption {}
 
+export interface ProjectRoleConfig {
+    task?: string[];
+    sprint?: string[];
+    project_member?: string[];
+    allow_task_status?: number[];
+    allow_update_task_fields?: string[];
+}
+
 export interface ProjectRoleOption {
     id: string;
     name: string;
+    config?: ProjectRoleConfig | null;
 }

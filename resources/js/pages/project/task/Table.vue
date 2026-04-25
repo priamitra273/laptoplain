@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { useSeverityColor } from '@/composables/useSeverityColor';
+import { ProjectPolicyKey } from '@/types/type';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { useSessionStorage } from '@vueuse/core';
 import axios from 'axios';
@@ -8,22 +10,15 @@ import moment from 'moment';
 import { TreeTableFilterMeta } from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type {
-    ProjectTaskTableEmits,
-    ProjectTaskTableFilter,
-    ProjectTaskTableProps,
-    Task,
-    TaskCategory,
-    TaskFormatted,
-    TaskFormattedData,
-    TaskUser,
-} from '..';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type { ProjectTaskTableEmits, ProjectTaskTableFilter, ProjectTaskTableProps, Task, TaskCategory, TaskFormatted } from '..';
 import TaskTableFilters from './partials/TaskTableFilters.vue';
 import TaskTableToolbar from './partials/TaskTableToolbar.vue';
 
 const props = defineProps<ProjectTaskTableProps>();
 const emit = defineEmits<ProjectTaskTableEmits>();
+
+const policy = inject(ProjectPolicyKey, null);
 
 const { getSeverityColorLight } = useSeverityColor();
 
@@ -37,6 +32,8 @@ const filters = useSessionStorage<ProjectTaskTableFilter>('task-table-filters-' 
     'status.name': null,
     'type.name': null,
 });
+
+const { canAction } = useProjectPermissions(policy);
 
 const activityModal = ref({
     visible: false,
@@ -217,11 +214,12 @@ const removeSelected = () => {
     });
 };
 
-const hasAccessToEditAndDelete = (task: TaskFormattedData): boolean => {
-    if (props.hasPermission) return true;
-    const taskUsers: TaskUser[] = task.users || [];
-    return taskUsers.some((tu) => tu.id === currentUser.id);
-};
+const canTaskCreate = computed(() => canAction('task', 'create'));
+const canTaskUpdate = computed(() => canAction('task', 'update'));
+const canTaskDelete = computed(() => canAction('task', 'delete'));
+const canMoveTask = computed(() => canAction('task', 'update'));
+
+const hasAccessToEditAndDelete = (): boolean => canTaskUpdate.value || canTaskDelete.value;
 
 const clearAutoExpandSchedule = () => {
     if (autoExpandTimerId.value) {
@@ -283,7 +281,7 @@ const isDescendant = (sourceId: string, targetId: string): boolean => {
 };
 
 const onHandleDragStart = (event: DragEvent, node: TaskFormatted) => {
-    const canMove = hasAccessToEditAndDelete(node.data) && !props.isDeveloper;
+    const canMove = canMoveTask.value;
 
     if (!canMove || dragArmedTaskId.value !== node.key) {
         event.preventDefault();
@@ -329,7 +327,7 @@ const hasTaskDragPayload = (event: DragEvent): boolean => {
 };
 
 const onRowDragOver = (event: DragEvent, targetNode: TaskFormatted) => {
-    if (props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     if (!hasTaskDragPayload(event)) return;
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     if (sourceTaskId && targetNode.key === sourceTaskId) return;
@@ -381,14 +379,14 @@ const moveTaskWithValidation = async (sourceTaskId: string | null, targetTaskId:
 };
 
 const onRowDrop = async (event: DragEvent, targetNode: TaskFormatted) => {
-    if (props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     await moveTaskWithValidation(sourceTaskId, targetNode.key);
 };
 
 const onRootDragOver = (event: DragEvent) => {
-    if (props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     if (!hasTaskDragPayload(event)) return;
     const target = event.target as Element | null;
     const insideTaskRow = !!target?.closest('[data-task-drop-row="true"]');
@@ -402,14 +400,14 @@ const onRootDragOver = (event: DragEvent) => {
 };
 
 const onRootDrop = async (event: DragEvent) => {
-    if (props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     event.preventDefault();
     const sourceTaskId = getDraggedTaskIdFromEvent(event);
     await moveTaskWithValidation(sourceTaskId, null);
 };
 
 const onPointerDragStart = (node: TaskFormatted) => {
-    if (!hasAccessToEditAndDelete(node.data) || props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     pointerDraggedTaskId.value = node.key;
     pointerOnRootDropzone.value = false;
     draggedTaskId.value = node.key;
@@ -426,7 +424,7 @@ const cancelPointerHold = () => {
 };
 
 const onPointerHoldStart = (node: TaskFormatted) => {
-    if (!hasAccessToEditAndDelete(node.data) || props.isDeveloper) return;
+    if (!canMoveTask.value) return;
     cancelPointerHold();
     holdCandidateTaskId.value = node.key;
     holdTimerId.value = setTimeout(() => {
@@ -517,14 +515,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <TaskTableToolbar
-            :hasSelectedTasks="hasSelectedTasks"
-            :isMember="isMember"
-            :hasPermission="hasPermission"
-            :isDeveloper="isDeveloper"
-            @add="(parentId) => emit('add', parentId)"
-            @removeSelected="removeSelected"
-        />
+        <TaskTableToolbar :hasSelectedTasks="hasSelectedTasks" @add="(parentId) => emit('add', parentId)" @removeSelected="removeSelected" />
 
         <TaskTableFilters v-model:filters="filters" :statusOptions="props.taskStatuses" :typeOptions="props.taskTypes" />
 
@@ -553,7 +544,7 @@ onBeforeUnmount(() => {
                 scrollHeight="600px"
                 removableSort
             >
-                <Column :expander="false" style="width: 3rem" v-if="isMember || hasPermission" frozen align-frozen="left">
+                <Column :expander="false" style="width: 3rem" v-if="canTaskCreate || canTaskUpdate || canTaskDelete" frozen align-frozen="left">
                     <template #header>
                         <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
                     </template>
@@ -599,12 +590,12 @@ onBeforeUnmount(() => {
                                 :title="node.data.title"
                                 class="max-w-[150px] select-none truncate text-ellipsis rounded px-1 py-0.5"
                                 :class="[
-                                    hasAccessToEditAndDelete(node.data) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
+                                    hasAccessToEditAndDelete() ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
                                         ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
                                         : '',
                                 ]"
-                                :draggable="hasAccessToEditAndDelete(node.data) && !isDeveloper && dragArmedTaskId === node.key"
+                                :draggable="canMoveTask && dragArmedTaskId === node.key"
                                 style="-webkit-user-drag: element"
                                 @mousedown.left.stop.prevent="onPointerHoldStart(node)"
                                 @mouseup.left="cancelPointerHold"
@@ -665,7 +656,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="info"
                                 v-tooltip.top="'Add Subtask'"
-                                :disabled="deleteLoading || (!isMember && !hasPermission) || isDeveloper"
+                                :disabled="deleteLoading || !canTaskCreate"
                                 @click="emit('add', node.data.id)"
                             />
                             <Button
@@ -673,7 +664,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="warning"
                                 v-tooltip.top="'Edit Task'"
-                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
+                                :disabled="deleteLoading || !canTaskUpdate || !hasAccessToEditAndDelete()"
                                 @click="emit('edit', node.original, node.data.parent_id)"
                             />
                             <Button
@@ -681,7 +672,7 @@ onBeforeUnmount(() => {
                                 size="small"
                                 severity="danger"
                                 v-tooltip.top="'Delete'"
-                                :disabled="deleteLoading || !hasAccessToEditAndDelete(node.data)"
+                                :disabled="deleteLoading || !canTaskDelete || !hasAccessToEditAndDelete()"
                                 @click="remove(node.original)"
                             />
                             <Button

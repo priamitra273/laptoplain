@@ -7,6 +7,7 @@ use App\Data\Project\ProjectMemberData;
 use App\Data\Project\ProjectPriorityData;
 use App\Data\Project\ProjectRoleData;
 use App\Data\Project\ProjectStatusData;
+use App\Data\ProjectRole\ConfigData;
 use App\Data\Task\TagData;
 use App\Data\Task\TaskCategoryData;
 use App\Data\Task\TaskPriorityData;
@@ -146,6 +147,9 @@ class ProjectService
             'epics' => Sqids::rec_encode_ids_in_list(
                 $this->projectRepository->getEpics($projectId)->toArray()
             ),
+
+            'isMember' => $this->isAuthUserMemberOfProject($project),
+            'policy' => $this->getAuthUserPolicy($project)->toResponse(),
         ];
     }
 
@@ -170,5 +174,51 @@ class ProjectService
                     : Carbon::parse($task->due_date)->endOfDay()->isPast(),
             ]);
         })->toArray();
+    }
+
+    protected function isAuthUserMemberOfProject(Project $project): bool
+    {
+        return (bool) $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->first();
+    }
+
+    /**
+     * Returns a full access policy project.
+     */
+    protected function fullAccessPolicy(): ConfigData
+    {
+        return ConfigData::from([
+            'task' => ['create', 'update', 'delete'],
+            'sprint' => ['create', 'update', 'delete'],
+            'project_member' => ['create', 'update', 'delete'],
+            'allow_task_status' => [],
+            'allow_update_task_fields' => [],
+        ]);
+    }
+
+    /**
+     * Returns a full access policy project.
+     * If the user is authenticated and is a super admin, returns a full access policy.
+     * Otherwise, returns a policy for the user's project membership.
+     */
+    protected function getAuthUserPolicy(Project $project): ?ConfigData
+    {
+        if (! Auth::check()) {
+            return null;
+        }
+
+        if (Auth::user()->is_super_admin) {
+            return $this->fullAccessPolicy();
+        }
+
+        $config = $project->projectMembers
+            ->where('user.id', Auth::id())
+            ->first()
+            ?->role()
+            ->first()
+            ->config;
+
+        return $config ? ConfigData::from($config) : null;
     }
 }

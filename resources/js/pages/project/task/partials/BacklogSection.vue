@@ -10,6 +10,7 @@ import TaskRow from './Taskrow.vue';
 interface Props {
     tasks: Task[];
     selectedIds: string[];
+    loading: boolean;
 }
 
 const props = defineProps<Props>();
@@ -62,6 +63,8 @@ const onAdd = (e: any) => {
                 size="small"
                 outlined
                 class="!py-1 text-xs"
+                :loading="loading"
+                :disabled="!context?.canAct || loading"
                 @click.stop="emit('createSprint')"
             />
         </div>

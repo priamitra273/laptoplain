@@ -330,10 +330,11 @@ const onKanbanStatusUpdate = () => {
             modal
             scrollable
             maximizable
-            @hide="onDialogClosed"
+            dismissable-mask
             :style="{ width: '70rem' }"
             :contentStyle="{ maxHeight: '75vh' }"
             :breakpoints="{ '1200px': '80vw', '960px': '90vw', '640px': '100vw' }"
+            @hide="onDialogClosed"
         >
             <TaskForm
                 :projectId="props.project.id"

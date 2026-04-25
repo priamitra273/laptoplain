@@ -1,19 +1,11 @@
 <script setup lang="ts">
-import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
-import AutoComplete from 'primevue/autocomplete';
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import Editor from 'primevue/editor';
-import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
-import Select from 'primevue/select';
-import Tag from 'primevue/tag';
-import { useToast } from 'primevue/usetoast';
-import { computed, ref, watch } from 'vue';
-
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
+import { ProjectPolicyKey } from '@/types/type';
+import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
-import type { ProjectDetailProps } from '..';
+import { TreeNode } from 'primevue/treenode';
+import { useToast } from 'primevue/usetoast';
+import { computed, inject, ref, watch } from 'vue';
 import type { ProjectMember, Tag as TagData, Task, TaskCategory, TaskPriority, TaskStatus, TaskType } from '..';
 
 interface Props {
@@ -66,12 +58,6 @@ interface ProjectMemberSimple {
     name: string;
 }
 
-interface TreeNodeOption {
-    key: string;
-    label: string;
-    children?: TreeNodeOption[];
-}
-
 const toDate = (value?: string | null): Date | null => (value ? new Date(value) : null);
 
 const minDueDate = computed(() => (form.start_date ? form.start_date : undefined));
@@ -85,22 +71,40 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits(['close', 'saved']);
+
+const policy = inject(ProjectPolicyKey, null);
+
 const toast = useToast();
+
+const { canUpdateTaskField, canUpdateTaskStatus } = useProjectPermissions(policy);
 
 const existedMembers = computed<ProjectMemberSimple[]>(() => props.task?.users?.map((u) => ({ id: u.id as string, name: u.name })) ?? []);
 
 const selectedMembers = ref<ProjectMemberSimple[]>([]);
 
 const authUser = computed(() => usePage().props.auth.user);
-const isProductOwner = computed(() => usePage().props.auth?.role?.startsWith('product-owner-'));
-
-const { canUpdateTaskField, canUpdateTaskStatus } = useProjectPermissions(usePage<ProjectDetailProps>().props.policy);
 
 const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
 
 const formattedMemberOption = computed<ProjectMemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id as string, name: m.user.name })));
 
 const statusOption = computed(() => props.taskStatuses.filter((s) => canUpdateTaskStatus(s.id)));
+
+const selectedParentId = computed({
+    get: () => {
+        if (!form.parent_id) {
+            return null;
+        }
+
+        const value: Record<string, boolean> = {};
+        value[form.parent_id] = true;
+
+        return value;
+    },
+    set: (val) => {
+        form.parent_id = val ? Object.keys(val)[0] : null;
+    },
+});
 
 const collectDescendants = (task: Task): string[] => {
     const ids: string[] = [];
@@ -135,7 +139,7 @@ const isEpicParentContext = computed(() => {
     return (parent?.category?.name ?? '').toLowerCase() === 'epic';
 });
 
-const parentTreeOptions = computed<TreeNodeOption[]>(() => {
+const parentTreeOptions = computed<TreeNode[]>(() => {
     const excludeIds = new Set<string>();
 
     if (props.task) {
@@ -143,7 +147,7 @@ const parentTreeOptions = computed<TreeNodeOption[]>(() => {
         collectDescendants(props.task).forEach((id) => excludeIds.add(id));
     }
 
-    const build = (tasks: Task[]): TreeNodeOption[] => {
+    const build = (tasks: Task[]): TreeNode[] => {
         return tasks
             .filter((t) => !excludeIds.has(t.id))
             .map((t) => ({
@@ -154,18 +158,6 @@ const parentTreeOptions = computed<TreeNodeOption[]>(() => {
     };
 
     return build(props.tasks);
-});
-
-const parentOptions = computed<{ id: string; title: string }[]>(() => {
-    const flatten = (nodes: TreeNodeOption[], depth = 0): { id: string; title: string }[] =>
-        nodes.flatMap((node) => {
-            const prefix = depth > 0 ? `${'— '.repeat(depth)} ` : '';
-            const current = { id: node.key, title: `${prefix}${node.label}` };
-            const children = node.children ? flatten(node.children, depth + 1) : [];
-            return [current, ...children];
-        });
-
-    return flatten(parentTreeOptions.value);
 });
 
 const categoryOptions = computed<TaskCategory[]>(() => {
@@ -510,7 +502,11 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
 
         <div>
             <label class="font-semibold">Description</label>
-            <div v-if="fieldDisabled('description')" class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900" v-html="form.description"></div>
+            <div
+                v-if="fieldDisabled('description')"
+                class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900"
+                v-html="form.description"
+            ></div>
             <Editor v-else v-model="form.description" editorStyle="height: 200px" :class="{ 'p-invalid': form.errors.description }">
                 <template #toolbar>
                     <span class="ql-formats">
@@ -584,15 +580,15 @@ const getSelectValue = <T extends { id: string }>(id: string, options: T[]): T |
 
         <div v-if="!props.hideParentTaskField" class="flex flex-col">
             <label class="font-semibold">Parent Task</label>
-            <Select
-                :disabled="fieldDisabled('parent_id')"
+            <TreeSelect
                 class="w-full"
-                v-model="form.parent_id"
-                :options="parentOptions"
-                optionLabel="title"
-                optionValue="id"
+                v-model="selectedParentId"
+                :options="parentTreeOptions"
                 placeholder="Select Parent Task"
                 showClear
+                filter
+                filterMode="lenient"
+                :disabled="fieldDisabled('parent_id')"
             />
             <small v-if="form.errors.parent_id" class="p-error text-red-500">
                 {{ form.errors.parent_id }}

@@ -46,6 +46,10 @@ const localSprints = ref<Sprint[]>([...props.sprints]);
 const localBacklog = ref<Task[]>([...props.backlog]);
 const selectedTaskIds = ref<string[]>([]);
 
+const loading = ref({
+    backlog: false,
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────
 const r = (name: string, sprintId?: string) =>
     route(`project.sprints.${name}`, {
@@ -125,14 +129,23 @@ const isAllSelected = computed(() => visibleTaskIds.value.length > 0 && visibleT
 // ─── Actions ──────────────────────────────────────────────────────
 const createSprint = async () => {
     if (!canSprintCreate.value) return;
+
     try {
-        const { data } = await axios.post(r('store'), { name: `Sprint ${localSprints.value.length + 1}` });
+        loading.value.backlog = true;
+
+        const { data } = await axios.post(r('store'));
+
         if (data?.success === false) throw new Error(data?.message || 'Failed to create sprint');
         if (data?.sprint) localSprints.value = [...localSprints.value, data.sprint].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        refreshBoardData().catch(() => null);
+
+        loading.value.backlog = false;
         notify('success', data?.message || 'Sprint created successfully');
+
+        await refreshBoardData();
     } catch (error) {
         notify('error', getErrorMessage(error, 'Failed to create sprint'));
+    } finally {
+        loading.value.backlog = false;
     }
 };
 
@@ -389,6 +402,7 @@ provide(BacklogKey, {
         <BacklogSection
             :tasks="filteredBacklog"
             :selectedIds="selectedTaskIds"
+            :loading="loading.backlog"
             @addIssue="openCreateTask"
             @createSprint="createSprint"
             @taskMoved="onTaskMoved"

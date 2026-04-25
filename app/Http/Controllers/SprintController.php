@@ -80,7 +80,7 @@ class SprintController extends Controller
         $projectId = Sqids::decode($projectEncoded);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'goal' => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -88,6 +88,9 @@ class SprintController extends Controller
         ]);
 
         $lastOrder = ProjectSprint::where('project_id', $projectId)->max('order') ?? 0;
+
+        // Set default name if not provided
+        $validated['name'] = $validated['name'] ?? 'Sprint '.($lastOrder + 1);
 
         $sprint = ProjectSprint::create([
             ...$validated,

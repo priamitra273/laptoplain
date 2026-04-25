@@ -5,7 +5,7 @@ import Highcharts from 'highcharts';
 import { Chart } from 'highcharts-vue';
 import A11yInit from 'highcharts/modules/accessibility';
 import exportingInit from 'highcharts/modules/exporting';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Project } from '..';
 
 import Sprint = App.Data.Sprint;
@@ -102,6 +102,10 @@ watchDebounced(
     },
     { debounce: 500 },
 );
+
+onMounted(() => {
+    fetchBurndown(props.sprintId);
+});
 </script>
 
 <template>

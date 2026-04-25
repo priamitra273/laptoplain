@@ -5,7 +5,7 @@ import { severityClasses } from '@/lib/severity';
 import { watchDebounced } from '@vueuse/core';
 import axios from 'axios';
 import _ from 'lodash';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { Project } from '..';
 
 import Sprint = App.Data.Sprint;
@@ -41,6 +41,10 @@ watchDebounced(
     },
     { debounce: 500 },
 );
+
+onMounted(() => {
+    fetchSprintTasks(props.sprintId);
+});
 </script>
 
 <template>

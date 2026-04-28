@@ -159,6 +159,11 @@ export interface Tag {
     severity: string;
 }
 
+export interface TagForm {
+    name: string;
+    severity: string;
+}
+
 export interface TaskUser extends User {
     pivot: TaskPivot;
 }
@@ -417,4 +422,46 @@ export interface TaskReportProps {
     project_statuses: TaskReportStatus[];
     filters: TaskReportFilters;
     filterOptions: TaskReportFilterOptions;
+}
+
+export interface TaskFormProps {
+    parentId: string | null;
+    projectId: string;
+    task: Task | null;
+    sprintId?: string | null;
+    tasks: Task[];
+    taskTypes: TaskType[];
+    taskStatuses: TaskStatus[];
+    taskPriorities: TaskPriority[];
+    taskCategories?: TaskCategory[];
+    excludeEpicCategory?: boolean;
+    onlyEpicCategory?: boolean;
+    hideParentTaskField?: boolean;
+    tags: Tag[];
+    members: ProjectMember[];
+}
+
+export interface TaskFormData {
+    _method: 'POST' | 'PUT';
+    title: string;
+    description: string;
+    project_id: string;
+    type_id: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    task_category_id: string | null;
+    sprint_id: string | null;
+    parent_id: string | null;
+    start_date: Date | null;
+    due_date: Date | null;
+    is_archived: boolean;
+    progress_value: number;
+    assign_users: string[];
+    unassign_users: string[];
+    add_tag: {
+        new: TagForm[];
+        exists: string[];
+    };
+    remove_tag: string[];
+    [key: string]: any;
 }

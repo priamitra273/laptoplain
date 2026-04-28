@@ -324,14 +324,15 @@ const onKanbanStatusUpdate = () => {
             />
         </Dialog>
 
-        <Dialog
+        <Drawer
             v-model:visible="visibleTaskAdd"
             :header="taskDialogHeader"
             modal
             scrollable
             maximizable
             dismissable-mask
-            :style="{ width: '70rem' }"
+            position="right"
+            :style="{ width: '50rem' }"
             :contentStyle="{ maxHeight: '75vh' }"
             :breakpoints="{ '1200px': '80vw', '960px': '90vw', '640px': '100vw' }"
             @hide="onDialogClosed"
@@ -355,6 +356,6 @@ const onKanbanStatusUpdate = () => {
                 @saved="onTaskSaved"
                 @close="onDialogClosed"
             />
-        </Dialog>
+        </Drawer>
     </AppLayout>
 </template>

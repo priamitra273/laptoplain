@@ -26,6 +26,10 @@ class CreateTaskAction
 
             $this->syncRelationships($task, $project, $assignUserIds, $tagIds, $data['sprint_id'] ?? null);
 
+            if (request()->hasFile('attachments')) {
+                $task->addMediaFromRequest('attachments')->toMediaCollection('attachments');
+            }
+
             event(new TaskCreated($task, $assignUserIds));
 
             return $task;

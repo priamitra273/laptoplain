@@ -10,7 +10,6 @@ const description = defineModel<string | undefined>('modelValue');
 
 <template>
     <div>
-        <label class="text-sm font-semibold">Description</label>
         <div v-if="props.disabled" class="min-h-[200px] rounded-md border bg-surface-50 p-3 dark:bg-surface-900" v-html="description"></div>
         <Editor v-else v-model="description" editorStyle="height: 150px" :class="{ 'p-invalid': props.error }">
             <template #toolbar>

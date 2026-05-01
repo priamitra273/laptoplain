@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\MediaData;
 use App\Data\Project\ProjectData;
 use App\Data\Project\ProjectMemberData;
 use App\Data\Project\ProjectPriorityData;
@@ -168,6 +169,7 @@ class ProjectService
             );
 
             return array_merge($task->toArray(), [
+                'media' => MediaData::collect($task->media),
                 'completed_at' => $isCompleted ? $task->updated_at?->toJSON() : null,
                 'is_overdue' => $isCompleted
                     ? Carbon::parse($task->updated_at)->isAfter(Carbon::parse($task->due_date)->endOfDay())

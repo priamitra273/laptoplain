@@ -21,12 +21,10 @@ class Tag extends Model
         'deleted_by',
     ];
 
-
     public function owner()
     {
         return $this->belongsTo(User::class, 'owned_id');
     }
-
 
     public function creator()
     {
@@ -38,22 +36,9 @@ class Tag extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
-    }
-
-    public function taggables()
-    {
-        return $this->morphedByMany(
-            Model::class,
-            'model',
-            'taggables',
-            'tag_id',
-            'model_id'
-        )->withTimestamps()
-            ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
     }
 
     public function tasks()

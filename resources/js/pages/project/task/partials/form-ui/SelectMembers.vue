@@ -1,33 +1,44 @@
 <script setup lang="ts">
-interface MemberOption {
-    id: string;
-    name: string;
-}
+import Label from '@/components/Label.vue';
+import { User } from '@/pages/project';
 
 interface Props {
-    options: MemberOption[];
+    options: User[];
     disabled?: boolean;
 }
 
 const props = defineProps<Props>();
 
-const modelValue = defineModel<MemberOption[]>('modelValue', { default: () => [] });
+const modelValue = defineModel<User[]>('modelValue', { default: () => [] });
 </script>
 
 <template>
-    <div class="flex flex-col">
-        <label class="font-semibold">Assigned Member</label>
-        <MultiSelect
-            :disabled="props.disabled"
-            v-model="modelValue"
-            display="chip"
-            :options="props.options"
-            optionLabel="name"
-            filter
-            :showClear="false"
-            placeholder="Select Member"
-            :maxSelectedLabels="3"
-            class="w-full"
-        />
+    <div class="grid grid-cols-4 gap-4">
+        <Label value="Assignees" icon="Users" />
+        <div class="col-span-3">
+            <MultiSelect
+                v-model="modelValue"
+                display="chip"
+                :options="props.options"
+                optionLabel="name"
+                filter
+                :showClear="false"
+                placeholder="Select Member"
+                class="w-full !border-0 !shadow-none hover:bg-surface-100 dark:hover:bg-surface-900"
+                :disabled="props.disabled"
+                :pt="{
+                    label: {
+                        class: 'flex-wrap',
+                    },
+                    dropdown: {
+                        class: '!w-0',
+                    },
+                }"
+            >
+                <template #chip="{ value, removeCallback }">
+                    <Chip :label="value.name" :image="value.avatar_url" removable @remove="(event) => removeCallback(event, value)" />
+                </template>
+            </MultiSelect>
+        </div>
     </div>
 </template>

@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Staudenmeir\LaravelAdjacencyList\Eloquent\HasRecursiveRelationships;
 
-class Task extends Model
+class Task extends Model implements HasMedia
 {
     use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
-    use HasRecursiveRelationships;
+    use HasRecursiveRelationships, InteractsWithMedia;
 
     protected $fillable = [
         'owned_id',
@@ -208,6 +210,7 @@ class Task extends Model
                 'subTaskRecursive' => function ($q) {
                     $q->orderBy('id')->withRecursive();
                 },
+                'media' => fn ($q) => $q->where('collection_name', 'attachments'),
             ]);
     }
 
@@ -267,5 +270,14 @@ class Task extends Model
     {
         return $query->whereHas('category', fn ($q) => $q->where('name', 'Epic'))
             ->whereNull('parent_id');
+    }
+
+    /**
+     * Register media collections.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('attachments')
+            ->useDisk('public');
     }
 }

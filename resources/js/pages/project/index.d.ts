@@ -1,4 +1,4 @@
-import { LengthAwarePaginator, PrimeSeverity, ProjectRoleOption } from '@/types';
+import { LengthAwarePaginator, PrimeSeverity, ProjectRoleOption, UploadedFile } from '@/types';
 
 export interface User {
     id: string | number;
@@ -120,6 +120,8 @@ export interface Task {
     is_assigned?: boolean;
     is_created_by_me?: boolean;
     story_points?: number;
+
+    media: UploadedFile[];
 }
 
 export interface ProjectOptions {
@@ -463,5 +465,6 @@ export interface TaskFormData {
         exists: string[];
     };
     remove_tag: string[];
+    attachments: File[] | UploadedFile[] | null;
     [key: string]: any;
 }

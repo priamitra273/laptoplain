@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Label from '@/components/Label.vue';
 import { ref } from 'vue';
 
 interface TagOption {
@@ -63,25 +64,27 @@ const addNewTag = (event: any) => {
 </script>
 
 <template>
-    <div class="flex flex-col">
-        <label class="font-semibold">Tags</label>
-        <AutoComplete
-            :disabled="props.disabled"
-            v-model="modelValue"
-            multiple
-            optionLabel="name"
-            :suggestions="filteredTags"
-            @complete="search"
-            @keydown.enter.prevent="addNewTag"
-            fluid
-        >
-            <template #option="slotProps">
-                <div class="flex items-center gap-2">
-                    <span v-if="!slotProps.option.id" class="font-bold">{{ slotProps.option.name }}</span>
-                    <span v-else>{{ slotProps.option.name }}</span>
-                </div>
-            </template>
-        </AutoComplete>
-        <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+    <div class="grid grid-cols-4 gap-4">
+        <Label value="Tags" icon="Tags" />
+        <div class="col-span-3">
+            <AutoComplete
+                v-model="modelValue"
+                multiple
+                optionLabel="name"
+                :suggestions="filteredTags"
+                fluid
+                :disabled="props.disabled"
+                @complete="search"
+                @keydown.enter.prevent="addNewTag"
+            >
+                <template #option="slotProps">
+                    <div class="flex items-center gap-2">
+                        <span v-if="!slotProps.option.id" class="font-bold">{{ slotProps.option.name }}</span>
+                        <span v-else>{{ slotProps.option.name }}</span>
+                    </div>
+                </template>
+            </AutoComplete>
+            <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+        </div>
     </div>
 </template>

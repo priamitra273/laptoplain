@@ -331,6 +331,7 @@ const onKanbanStatusUpdate = () => {
             scrollable
             maximizable
             dismissable-mask
+            block-scroll
             position="right"
             :style="{ width: '50rem' }"
             :contentStyle="{ maxHeight: '75vh' }"

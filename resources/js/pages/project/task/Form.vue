@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { ProjectPolicyKey } from '@/types/type';
-import { InertiaForm, useForm, usePage } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, inject, ref, watch } from 'vue';
-import type { Task, TaskCategory, TaskFormData, TaskFormProps } from '..';
+import type { Task, TaskCategory, TaskFormData, TaskFormProps, User } from '..';
+import InputAttachment from './partials/form-ui/InputAttachment.vue';
 import InputDateRange from './partials/form-ui/InputDateRange.vue';
 import InputDescription from './partials/form-ui/InputDescription.vue';
 import InputTags from './partials/form-ui/InputTags.vue';
@@ -42,7 +43,7 @@ const props = withDefaults(defineProps<TaskFormProps>(), {
 
 const emit = defineEmits(['close', 'saved']);
 
-const form: InertiaForm<TaskFormData> = useForm({
+const form = useForm<TaskFormData>({
     _method: props?.task ? 'PUT' : 'POST',
     project_id: props.projectId,
     title: props?.task?.title ?? '',
@@ -63,10 +64,11 @@ const form: InertiaForm<TaskFormData> = useForm({
         new: [],
         exists: [],
     },
+    attachments: props.task?.media ?? [],
     remove_tag: [],
 });
 
-const selectedMembers = ref<MemberSimple[]>([]);
+const selectedMembers = ref<User[]>([]);
 const selectedTags = ref<TagOption[]>([]);
 const validationErrors = ref<Record<string, string>>({});
 
@@ -74,11 +76,11 @@ const authUser = computed(() => usePage().props.auth.user);
 
 const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
 
-const formattedMemberOption = computed<MemberSimple[]>(() => props.members.map((m) => ({ id: m.user.id as string, name: m.user.name })));
+const formattedMemberOption = computed<User[]>(() => props.members.map((m) => m.user));
 
 const statusOption = computed(() => props.taskStatuses.filter((s) => canUpdateTaskStatus(s.id)));
 
-const existedMembers = computed<MemberSimple[]>(() => props.task?.users?.map((u) => ({ id: u.id as string, name: u.name })) ?? []);
+const existedMembers = computed<User[]>(() => props.task?.users?.map((u) => u) ?? []);
 
 const selectedParentId = computed({
     get: () => {
@@ -179,8 +181,8 @@ const submit = () => {
 
     const routeName = isEdit.value ? 'project.tasks.update' : 'project.tasks.store';
 
-    const existed = existedMembers.value.map((u) => u.id);
-    const selected = selectedMembers.value.map((u) => u.id);
+    const existed = existedMembers.value.map((u) => u.id as string);
+    const selected = selectedMembers.value.map((u) => u.id as string);
 
     form.assign_users = selected.filter((id) => !existed.includes(id));
     form.unassign_users = existed.filter((id) => !selected.includes(id));
@@ -206,7 +208,7 @@ const submit = () => {
                 start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
                 due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
             };
-        }).put(route(routeName, param), {
+        }).post(route(routeName, param), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('saved');
@@ -254,7 +256,7 @@ watch(
         const authExistsInMembers = members.some((m) => m.id === authUser.value.id);
 
         if (authExistsInOptions && !authExistsInMembers) {
-            members.push({ id: authUser.value.id, name: authUser.value.name });
+            members.push({ id: authUser.value.id, name: authUser.value.name, avatar_url: authUser.value.avatar_url, email: authUser.value.email });
         }
 
         selectedMembers.value = members;
@@ -305,13 +307,7 @@ watch(
 
         <InputDescription v-model="form.description" :error="form.errors.description" :disabled="fieldDisabled('description')" />
 
-        <SelectCategory
-            v-if="categoryOptions.length > 0"
-            v-model="form.task_category_id"
-            :options="categoryOptions"
-            :error="form.errors.task_category_id"
-            :disabled="fieldDisabled('task_category_id')"
-        />
+        <Divider />
 
         <SelectParentTask
             v-if="!props.hideParentTaskField"
@@ -322,17 +318,12 @@ watch(
             :disabled="fieldDisabled('parent_id')"
         />
 
-        <SelectMembers v-model="selectedMembers" :options="formattedMemberOption" :disabled="fieldDisabled('assign_users')" />
-
-        <InputDateRange
-            v-model:startDate="form.start_date"
-            v-model:dueDate="form.due_date"
-            :minDueDate="minDueDate"
-            :isInProgressStatus="isInProgressStatus"
-            :startDateError="form.errors.start_date"
-            :dueDateError="form.errors.due_date || validationErrors.due_date"
-            :disabled="fieldDisabled('start_date')"
-            @update:dueDate="() => delete validationErrors.due_date"
+        <SelectCategory
+            v-if="categoryOptions.length > 0"
+            v-model="form.task_category_id"
+            :options="categoryOptions"
+            :error="form.errors.task_category_id"
+            :disabled="fieldDisabled('task_category_id')"
         />
 
         <SelectTypeStatusPriority
@@ -350,6 +341,14 @@ watch(
             @update:statusId="onStatusChange"
         />
 
+        <SelectMembers v-model="selectedMembers" :options="formattedMemberOption" :disabled="fieldDisabled('assign_users')" />
+
+        <InputDateRange
+            v-model:startDate="form.start_date"
+            v-model:dueDate="form.due_date"
+            :disabled="fieldDisabled('start_date') || fieldDisabled('due_date')"
+        />
+
         <InputTags
             v-model="selectedTags"
             :options="tagOptions"
@@ -357,14 +356,15 @@ watch(
             :disabled="fieldDisabled('tags')"
         />
 
-        <SelectArchivedProgress
-            v-model:isArchived="form.is_archived"
-            v-model:progressValue="form.progress_value"
-            :progressError="form.errors.progress_value"
-            :archivedDisabled="fieldDisabled('is_archived')"
-        />
+        <Divider />
 
-        <div class="mt-4 flex justify-end gap-2">
+        <InputAttachment v-model="form.attachments" />
+
+        <Divider />
+
+        <SelectArchivedProgress v-model:isArchived="form.is_archived" :archivedDisabled="fieldDisabled('is_archived')" />
+
+        <div class="sticky mt-4 flex justify-end gap-2">
             <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
             <Button v-if="!isEdit" label="Create Task" @click="submit" icon="pi pi-save" :loading="form.processing" :disabled="form.processing" />
             <Button

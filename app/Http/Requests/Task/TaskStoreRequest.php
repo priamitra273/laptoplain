@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Task;
 
 use App\Facades\Sqids;
+use App\Rules\FileOrMedia;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -55,6 +56,15 @@ class TaskStoreRequest extends FormRequest
 
             'remove_tag'   => 'sometimes|array',
             'remove_tag.*' => 'exists:tags,id',
+
+            'attachments'  => 'sometimes|nullable|array',
+            'attachments.*' => [
+                'required',
+                new FileOrMedia(
+                    extensions: 'jpg,jpeg,png,gif,svg,pdf,mp4,webm,ogg,m4a,wav,flac,aac,mp3,m4v,mov,avi,wmv,flv,3gp,doc,docx,xls,xlsx,ppt,pptx,csv,txt,zip,rar,7z,tar,gz,bz2',
+                    maxSize: 20 * 1024,
+                ),
+            ],
         ];
     }
 

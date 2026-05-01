@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Label from '@/components/Label.vue';
 import { Task } from '@/pages/project';
 import type { TreeNode } from 'primevue/treenode';
 import { computed } from 'vue';
@@ -52,18 +53,28 @@ function collectDescendants(task: Task): string[] {
 </script>
 
 <template>
-    <div class="flex flex-col">
-        <label class="font-semibold">Parent Task</label>
-        <TreeSelect
-            class="w-full"
-            v-model="modelValue"
-            :options="parentTreeOptions"
-            placeholder="Select Parent Task"
-            showClear
-            filter
-            filterMode="lenient"
-            :disabled="props.disabled"
-        />
-        <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+    <div class="grid grid-cols-4 gap-4">
+        <Label value="Parent Task" icon="Link" />
+
+        <div class="col-span-3">
+            <TreeSelect
+                v-model="modelValue"
+                :options="parentTreeOptions"
+                placeholder="Empty"
+                filter
+                filterMode="lenient"
+                class="min-w-52 !border-0 !shadow-none hover:bg-surface-100 dark:hover:bg-surface-900"
+                panelClass="!min-w-96"
+                :disabled="props.disabled"
+                pt:dropdown:class="!w-0"
+            />
+            <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+        </div>
     </div>
 </template>
+
+<style lang="css" scoped>
+.p-treeselect-open {
+    @apply bg-surface-100 dark:bg-surface-900;
+}
+</style>

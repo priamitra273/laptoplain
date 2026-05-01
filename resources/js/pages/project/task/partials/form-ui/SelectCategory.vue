@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Label from '@/components/Label.vue';
 import type { TaskCategory } from '@/pages/project';
 
 interface Props {
@@ -17,35 +18,39 @@ const getSelectValue = (id: string, options: TaskCategory[]): TaskCategory | nul
 </script>
 
 <template>
-    <div class="flex flex-col">
-        <label class="font-semibold">Category</label>
-        <Select
-            class="w-full"
-            v-model="modelValue"
-            :options="props.options"
-            optionValue="id"
-            placeholder="Select Category"
-            showClear
-            :disabled="props.disabled"
-            :class="{ 'p-invalid': props.error }"
-        >
-            <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <Tag
-                        :icon="getSelectValue(slotProps.value, props.options)?.icon"
-                        :value="getSelectValue(slotProps.value, props.options)?.name"
-                        :severity="getSelectValue(slotProps.value, props.options)?.severity"
-                    />
-                </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
-            <template #option="{ option }">
-                <div class="flex items-center gap-2">
-                    <Tag :icon="option.icon" :value="option.name" :severity="option.severity" class="flex-1" />
-                </div>
-            </template>
-        </Select>
+    <div class="grid grid-cols-4 gap-4">
+        <Label value="Category" icon="Circle" />
 
-        <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+        <div class="col-span-3">
+            <Select
+                v-model="modelValue"
+                :options="props.options"
+                optionValue="id"
+                placeholder="Empty"
+                class="min-w-48 !border-0 !shadow-none hover:bg-surface-100 dark:hover:bg-surface-900"
+                overlayClass="!min-w-48"
+                :disabled="props.disabled"
+                :class="{ 'p-invalid': props.error }"
+                pt:dropdown:class="!w-0"
+            >
+                <template #value="slotProps">
+                    <div v-if="slotProps.value" class="flex items-center gap-2">
+                        <Tag
+                            :icon="getSelectValue(slotProps.value, props.options)?.icon"
+                            :value="getSelectValue(slotProps.value, props.options)?.name"
+                            :severity="getSelectValue(slotProps.value, props.options)?.severity"
+                        />
+                    </div>
+                    <span v-else>{{ slotProps.placeholder }}</span>
+                </template>
+                <template #option="{ option }">
+                    <div class="flex items-center gap-2">
+                        <Tag :icon="option.icon" :value="option.name" :severity="option.severity" class="flex-1" />
+                    </div>
+                </template>
+            </Select>
+
+            <small v-if="props.error" class="p-error text-red-500">{{ props.error }}</small>
+        </div>
     </div>
 </template>

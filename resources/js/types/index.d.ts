@@ -500,3 +500,13 @@ export interface ProjectRoleOption {
     name: string;
     config?: ProjectRoleConfig | null;
 }
+
+export interface UploadedFile {
+    uuid: string;
+    file_name: string;
+    size: number;
+    mime_type: string;
+    url: string;
+    created_at: string;
+    updated_at: string;
+}

@@ -36,6 +36,8 @@ class UpdateTaskAction
 
             $task->update($data);
 
+            $this->syncMedia($task, $data);
+
             $allUserIds = $this->syncUsers($task, $assignUserIds, $unassignUserIds);
             $this->recalculateParentProgress($task, $data);
             $this->sendNotification($task, $allUserIds);
@@ -202,5 +204,28 @@ class UpdateTaskAction
         );
 
         return $data;
+    }
+
+    /**
+     * Sync media — attach existing, create new, detach removed.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function syncMedia(Task $task, array $data): void
+    {
+        if (! empty($data['attachments'])) {
+            $existingMediaUuids = array_map(
+                fn ($media) => $media['uuid'],
+                array_filter($data['attachments'], fn ($attachment) => is_array($attachment))
+            );
+
+            $task->media()->whereNotIn('uuid', $existingMediaUuids)->get()->each->delete();
+        } else {
+            $task->clearMediaCollection('attachments');
+        }
+
+        if (request()->hasFile('attachments')) {
+            $task->addMediaFromRequest('attachments')->toMediaCollection('attachments');
+        }
     }
 }

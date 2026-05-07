@@ -82,16 +82,16 @@ class TaskUpdateRequest extends FormRequest
                 return;
             }
 
-            $statusName = (string) optional(MsTaskStatus::find($this->status_id))->name;
-            $normalized = mb_strtolower(trim($statusName));
-            $allowed = ['to do', 'complete', 'completed', 'block', 'blocked'];
+            // $statusName = (string) optional(MsTaskStatus::find($this->status_id))->name;
+            // $normalized = mb_strtolower(trim($statusName));
+            // $allowed = ['to do', 'complete', 'completed', 'block', 'blocked'];
 
-            if (! in_array($normalized, $allowed, true)) {
-                $validator->errors()->add(
-                    'status_id',
-                    'Product Owner can only set status to To Do, Complete(d), or Block.'
-                );
-            }
+            // if (! in_array($normalized, $allowed, true)) {
+            //     $validator->errors()->add(
+            //         'status_id',
+            //         'Product Owner can only set status to To Do, Complete(d), or Block.'
+            //     );
+            // }
         });
     }
 

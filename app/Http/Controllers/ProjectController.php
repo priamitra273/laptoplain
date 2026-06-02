@@ -67,7 +67,10 @@ class ProjectController extends Controller
                 'projectMembers.user.media',
                 'projectMembers.role:id,name',
                 'tasks' => function ($query) {
-                    $query->withRecursive();
+                    $query->withRecursive()
+                        ->whereNull('parent_id')
+                        ->orderBy('sequence_number')
+                        ->orderBy('id');
                 },
             ])->findOrFail($projectId);
         } catch (\Exception $e) {
@@ -173,7 +176,7 @@ class ProjectController extends Controller
         $projectPriorities = MsProjectPriority::select('id', 'name', 'severity')->get();
 
         // Format tasks with creator information
-        $formattedTasks = collect($projectArr['tasks'] ?? [])
+        $formattedTasks = $project->tasks
             ->map(function ($task) {
                 // Add creator information to each task
                 if (isset($task['creator'])) {

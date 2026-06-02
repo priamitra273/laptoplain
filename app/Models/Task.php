@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes, LogUsers, LogsActivityTask;
+    use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
 
     protected $table = 'tasks';
 
@@ -74,7 +74,6 @@ class Task extends Model
         return $this->belongsTo(Task::class, 'parent_id');
     }
 
-
     public function children()
     {
         return $this->hasMany(Task::class, 'parent_id');
@@ -90,18 +89,15 @@ class Task extends Model
         return $this->belongsTo(MsTaskPriority::class, 'priority_id');
     }
 
-
     public function type()
     {
         return $this->belongsTo(MsTaskType::class, 'type_id');
     }
 
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
 
     public function updater()
     {
@@ -137,7 +133,6 @@ class Task extends Model
             ->withTrashed();
     }
 
-
     public function comments()
     {
         return $this->morphMany(Comment::class, 'commentable');
@@ -167,19 +162,18 @@ class Task extends Model
 
     public function scopeWithRecursive($query)
     {
-        $query->orderBy('id')
-            ->with([
-                'status:id,name,severity',
-                'priority:id,name,severity',
-                'type:id,name,severity',
-                'users:id,name',
-                'tags:id,name,severity',
-                'creator:id,name', // Added creator relationship
-                'creator.media',   // Added creator media relationship
-                'subTaskRecursive' => function ($q) {
-                    $q->orderBy('id')->withRecursive();
-                },
-            ]);
+        $query->with([
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'users:id,name',
+            'tags:id,name,severity',
+            'creator:id,name',
+            'creator.media',
+            'subTaskRecursive' => function ($q) {
+                $q->orderBy('sequence_number')->orderBy('id')->withRecursive();
+            },
+        ]);
     }
 
     public function calculateProgress(): float
@@ -200,6 +194,7 @@ class Task extends Model
             if ($pivot->trashed()) {
                 $pivot->restore();
             }
+
             return $pivot;
         }
 

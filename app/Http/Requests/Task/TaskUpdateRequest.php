@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Task;
 
+use App\Enums\TaskStatusEnum;
 use App\Facades\Sqids;
+use App\Models\MsTaskStatus;
 use App\Rules\FileOrMedia;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TaskUpdateRequest extends FormRequest
 {
@@ -16,11 +19,13 @@ class TaskUpdateRequest extends FormRequest
 
     public function rules(): array
     {
+        $status = MsTaskStatus::find($this->status_id);
+
         return [
             'project_id' => 'sometimes|exists:projects,id',
             'parent_id' => 'sometimes|nullable|exists:tasks,id',
 
-            'status_id' => 'sometimes|nullable|exists:ms_task_statuses,id',
+            'status_id' => 'required|exists:ms_task_statuses,id',
             'priority_id' => 'sometimes|nullable|exists:ms_task_priorities,id',
             'type_id' => 'sometimes|nullable|exists:ms_task_types,id',
             'task_category_id' => 'sometimes|nullable|exists:task_categories,id',
@@ -30,8 +35,16 @@ class TaskUpdateRequest extends FormRequest
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|nullable|string',
 
-            'start_date' => 'sometimes|nullable|date',
-            'due_date' => 'sometimes|nullable|date|after_or_equal:start_date',
+            'start_date' => [
+                Rule::requiredIf(! in_array($status->name, [TaskStatusEnum::IN_PROGRESS, TaskStatusEnum::BLOCKED])),
+                'date',
+            ],
+
+            'due_date' => [
+                Rule::requiredIf(! in_array($status->name, [TaskStatusEnum::IN_PROGRESS, TaskStatusEnum::BLOCKED])),
+                'date',
+                'after_or_equal:start_date',
+            ],
 
             'sequence_number' => 'sometimes|nullable|integer',
             'is_archived' => 'sometimes|boolean',

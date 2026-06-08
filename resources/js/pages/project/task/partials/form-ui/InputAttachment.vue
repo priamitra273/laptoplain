@@ -37,7 +37,7 @@ const getFileUrl = (file: File | UploadedFile) => {
         return URL.createObjectURL(file);
     }
 
-    return file.url;
+    return file.url ?? file.original_url;
 };
 
 const addFiles = (fileList: FileList) => {

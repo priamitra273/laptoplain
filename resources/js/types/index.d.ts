@@ -507,6 +507,7 @@ export interface UploadedFile {
     size: number;
     mime_type: string;
     url: string;
+    original_url: string;
     created_at: string;
     updated_at: string;
 }

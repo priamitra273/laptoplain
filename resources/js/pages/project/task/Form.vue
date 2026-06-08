@@ -330,6 +330,8 @@ watch(
             v-model:startDate="form.start_date"
             v-model:dueDate="form.due_date"
             :disabled="fieldDisabled('start_date') || fieldDisabled('due_date')"
+            :startDateError="form.errors.start_date"
+            :dueDateError="form.errors.due_date"
         />
 
         <InputTags

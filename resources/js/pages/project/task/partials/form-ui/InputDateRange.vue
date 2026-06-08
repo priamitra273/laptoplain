@@ -18,34 +18,40 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
 
 <template>
     <div class="grid grid-cols-4 gap-4">
-        <Label value="Dates" icon="Calendar" />
+        <Label value="Dates" icon="Calendar" required />
 
         <div class="col-span-3 flex items-center gap-4">
             <div>
-                <DatePicker
-                    :disabled="props.disabled"
-                    v-model="startDate"
-                    dateFormat="dd M yy"
-                    showIcon
-                    iconDisplay="input"
-                    placeholder="Start Date"
-                    :class="{ 'p-invalid': props.startDateError }"
-                />
+                <div>
+                    <DatePicker
+                        :disabled="props.disabled"
+                        v-model="startDate"
+                        dateFormat="dd M yy"
+                        showIcon
+                        iconDisplay="input"
+                        placeholder="Start Date"
+                        :class="{ 'p-invalid': props.startDateError }"
+                    />
+                </div>
+
                 <small v-if="props.startDateError" class="p-error text-red-500">{{ props.startDateError }}</small>
             </div>
 
             <Icon name="ArrowRight" />
 
             <div>
-                <DatePicker
-                    v-model="dueDate"
-                    dateFormat="dd M yy"
-                    showIcon
-                    iconDisplay="input"
-                    :minDate="props.minDueDate"
-                    placeholder="Due Date"
-                    :class="{ 'p-invalid': props.dueDateError }"
-                />
+                <div>
+                    <DatePicker
+                        v-model="dueDate"
+                        dateFormat="dd M yy"
+                        showIcon
+                        iconDisplay="input"
+                        :minDate="props.minDueDate"
+                        placeholder="Due Date"
+                        :class="{ 'p-invalid': props.dueDateError }"
+                    />
+                </div>
+
                 <small v-if="props.dueDateError" class="p-error text-red-500">{{ props.dueDateError }}</small>
             </div>
         </div>

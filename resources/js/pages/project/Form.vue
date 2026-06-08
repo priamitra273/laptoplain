@@ -83,15 +83,16 @@ const hide = (): void => {
     showEmojiPicker.value = false;
 };
 
-vueWatch(
-    () => form.data(),
-    () => {
-        Object.keys(form.errors).forEach((key) => {
-            if (form[key] !== undefined) delete form.errors[key];
-        });
-    },
-    { deep: true },
-);
+for (const key in form.data()) {
+    vueWatch(
+        () => form[key],
+        () => {
+            if (form[key]) {
+                delete form.errors[key];
+            }
+        },
+    );
+}
 
 const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]) => {
     return options.find((option) => option.id === id) || null;
@@ -109,7 +110,7 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
         :blockScroll="true"
         :dismissable="true"
     >
-        <div class="grid gap-8 md:grid-cols-2" >
+        <div class="grid gap-8 md:grid-cols-2">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputGroup>

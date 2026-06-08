@@ -189,7 +189,7 @@ const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefin
         <!-- Progress Card -->
         <Card class="shadow-sm">
             <template #content>
-                <div class="flex flex-col gap-2">
+                <div class="space-y-2">
                     <span class="text-xs font-semibold uppercase text-surface-500 dark:text-surface-400">Progress</span>
                     <ProgressBar :value="project.progress" class="flex-1" :showValue="true" />
                 </div>

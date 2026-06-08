@@ -19,6 +19,8 @@ const props = withDefaults(defineProps<Props>(), {
     project_roles: () => [],
 });
 
+const first = ref(0);
+
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
@@ -86,6 +88,7 @@ const destroy = (project_role: ProjectRole) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="project_roles"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -97,7 +100,7 @@ const destroy = (project_role: ProjectRole) => {
             >
                 <Column header="No" style="width: 5%">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

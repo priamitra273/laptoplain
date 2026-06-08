@@ -14,15 +14,7 @@ class MsProjectRoleController extends Controller
 {
     public function index(): Response
     {
-        $roles = MsProjectRole::select([
-            'id',
-            'name',
-            'config',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'deleted_by',
-        ])->orderBy('id')->get();
+        $roles = MsProjectRole::orderBy('id')->get();
 
         $roles = Sqids::rec_encode_ids_in_list($roles);
 

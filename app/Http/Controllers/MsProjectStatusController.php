@@ -11,18 +11,9 @@ use Inertia\Response;
 
 class MsProjectStatusController extends Controller
 {
-
     public function index(): Response
     {
-        $statuses = MsProjectStatus::select([
-            'id',
-            'name',
-            'severity',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'deleted_by'
-        ])->orderBy('id')->get();
+        $statuses = MsProjectStatus::orderBy('id')->get();
 
         $statuses = Sqids::rec_encode_ids_in_list($statuses);
 
@@ -30,7 +21,6 @@ class MsProjectStatusController extends Controller
             'statuses' => $statuses,
         ]);
     }
-
 
     public function store(MsProjectStatusStoreRequest $request): RedirectResponse
     {
@@ -41,11 +31,12 @@ class MsProjectStatusController extends Controller
             ->with('success', 'Project Status has been successfully added.');
     }
 
-
     public function update(MsProjectStatusStoreRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $statuses = MsProjectStatus::findOrFail($id);
         $statuses->update($request->validated());
@@ -55,11 +46,12 @@ class MsProjectStatusController extends Controller
             ->with('success', 'Project Status has been successfully updated.');
     }
 
-
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $statuses = MsProjectStatus::findOrFail($id);
         $statuses->delete();

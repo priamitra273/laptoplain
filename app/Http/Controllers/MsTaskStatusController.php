@@ -11,20 +11,9 @@ use Inertia\Response;
 
 class MsTaskStatusController extends Controller
 {
-
-
     public function index(): Response
     {
-        $msTaskStatuses = MsTaskStatus::select([
-            'id',
-            'name',
-            'severity',
-            'score',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'deleted_by'
-        ])->orderBy('id')->get();
+        $msTaskStatuses = MsTaskStatus::orderBy('id')->get();
 
         $msTaskStatuses = Sqids::rec_encode_ids_in_list($msTaskStatuses);
 
@@ -45,7 +34,9 @@ class MsTaskStatusController extends Controller
     public function update(MsTaskStatusStoreRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskStatuses = MsTaskStatus::findOrFail($id);
         $msTaskStatuses->update($request->validated());
@@ -58,7 +49,9 @@ class MsTaskStatusController extends Controller
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskStatuses = MsTaskStatus::findOrFail($id);
         $msTaskStatuses->delete();

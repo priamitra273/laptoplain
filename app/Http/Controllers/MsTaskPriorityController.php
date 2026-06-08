@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
-use App\Models\MsTaskPriority;
 use App\Http\Requests\MsTaskPriority\MsTaskPriorityRequest;
+use App\Models\MsTaskPriority;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,15 +13,7 @@ class MsTaskPriorityController extends Controller
 {
     public function index(): Response
     {
-        $msTaskPriorities = MsTaskPriority::select([
-            'id',
-            'name',
-            'severity',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'deleted_by'
-        ])->orderBy('id')->get();
+        $msTaskPriorities = MsTaskPriority::orderBy('id')->get();
 
         $msTaskPriorities = Sqids::rec_encode_ids_in_list($msTaskPriorities);
 
@@ -29,7 +21,6 @@ class MsTaskPriorityController extends Controller
             'task_priorities' => $msTaskPriorities,
         ]);
     }
-
 
     public function store(MsTaskPriorityRequest $request): RedirectResponse
     {
@@ -43,7 +34,9 @@ class MsTaskPriorityController extends Controller
     public function update(MsTaskPriorityRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskPriorities = MsTaskPriority::findOrFail($id);
         $msTaskPriorities->update($request->validated());
@@ -56,7 +49,9 @@ class MsTaskPriorityController extends Controller
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $msTaskPriorities = MsTaskPriority::findOrFail($id);
         $msTaskPriorities->delete();

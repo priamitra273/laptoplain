@@ -13,15 +13,7 @@ class MsProjectPriorityController extends Controller
 {
     public function index(): Response
     {
-        $priorities = MsProjectPriority::select([
-            'id',
-            'name',
-            'severity',
-            'owned_id',
-            'created_by',
-            'updated_by',
-            'deleted_by'
-        ])->orderBy('id')->get();
+        $priorities = MsProjectPriority::orderBy('id')->get();
 
         $priorities = Sqids::rec_encode_ids_in_list($priorities);
 
@@ -42,7 +34,9 @@ class MsProjectPriorityController extends Controller
     public function update(MsProjectPriorityRequest $request, string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $priority = MsProjectPriority::findOrFail($id);
         $priority->update($request->validated());
@@ -55,7 +49,9 @@ class MsProjectPriorityController extends Controller
     public function destroy(string $encodedId): RedirectResponse
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $priority = MsProjectPriority::findOrFail($id);
         $priority->delete();

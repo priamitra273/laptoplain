@@ -141,21 +141,6 @@ const findTaskById = (tasks: Task[], id: string): Task | null => {
     return null;
 };
 
-const validate = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!form.title?.trim()) {
-        errors.title = 'Title is required.';
-    }
-
-    if (isInProgressStatus.value && !form.due_date) {
-        errors.due_date = 'Due date is required when status is In Progress.';
-    }
-
-    validationErrors.value = errors;
-    return Object.keys(errors).length === 0;
-};
-
 const onStatusChange = (newStatusId: string | null) => {
     delete validationErrors.value.due_date;
 
@@ -173,8 +158,6 @@ const onStatusChange = (newStatusId: string | null) => {
 };
 
 const submit = () => {
-    if (!validate()) return;
-
     if (props.onlyEpicCategory) {
         form.parent_id = null;
     }

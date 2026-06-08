@@ -24,17 +24,23 @@ class MenuService
     public function getAvailableRoutes(array|Collection $existing_menu): Collection
     {
         $routes = collect(Route::getRoutes()->getRoutesByName())->filter(function (RoutingRoute $route) {
-            return in_array('GET', $route->methods) 
+            return in_array('GET', $route->methods)
                 && in_array('auth', $route->middleware())
                 && (Str::contains($route->getName(), '.index') || Str::doesntContain($route->getName(), '.'));
         });
-        
-        $routes = $routes->map(function ($route) {
+
+        $routes = $routes->map(function (RoutingRoute $route) {
+            $parameters = $route->parameterNames();
+
+            if (!empty($parameters)) {
+                return null;
+            }
+
             return [
                 'uri' => route($route->getName()),
                 'name' => $route->getName()
             ];
-        })->whereNotIn('name', $existing_menu)->values();
+        })->filter()->whereNotIn('name', $existing_menu)->values();
 
         return $routes;
     }
@@ -65,26 +71,25 @@ class MenuService
             Menu::where('sequence_number', '>=', $input->sequence_number)
                 ->where('parent_id', $input->parent_id)
                 ->increment('sequence_number');
-    
+
             $menu = Menu::create($input->toArray());
 
             if ($input->route_name) {
                 $uri = Route::getRoutes()->getByName($input->route_name)->uri;
                 $uri = Str::replace('/', '.', $uri);
-            }
-            else {
+            } else {
                 $uri = (string) str($input->label)->singular()->slug();
-                
+
                 $count_uri = Menu::whereRaw("LOWER(REPLACE(label, ' ', '-')) = ?", Str::slug($input->label))->count();
 
-                $uri = $count_uri > 1 ? $uri . "-" . $count_uri+1 : $uri;
+                $uri = $count_uri > 1 ? $uri . "-" . $count_uri + 1 : $uri;
             }
 
             $actions = ['create', 'read', 'update', 'delete'];
 
             foreach ($actions as $action) {
                 $permission = Permission::findOrCreate("$uri.$action");
-                $menu->givePermissionTo($permission); 
+                $menu->givePermissionTo($permission);
             }
 
             DB::commit();
@@ -101,7 +106,7 @@ class MenuService
     public function update(ValidatedInput $input, Menu $menu): void
     {
         $input->parent_id = $input->parent_uuid ? Menu::findByUuid($input->parent_uuid)->id : null;
-        
+
         Menu::where('sequence_number', '>', $menu->sequence_number)
             ->where('parent_id', $input->parent_id)
             ->decrement('sequence_number');
@@ -120,8 +125,8 @@ class MenuService
     public function getMenuPermissions(...$select): Collection
     {
         $menu = Menu::leftJoin('model_has_permissions as mhp', function (JoinClause $join) {
-                $join->on('menus.id', '=', 'mhp.model_id')->where('mhp.model_type', '=', Menu::class);
-            })
+            $join->on('menus.id', '=', 'mhp.model_id')->where('mhp.model_type', '=', Menu::class);
+        })
             ->join('permissions as p', 'p.id', '=', 'mhp.permission_id')
             ->select($select)
             ->get();

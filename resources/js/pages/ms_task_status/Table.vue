@@ -2,8 +2,8 @@
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { getSeverityLabel } from '@/constants';
-import { TaskStatus } from '@/types';
 import { can } from '@/lib/utils';
+import { TaskStatus } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import moment from 'moment';
@@ -15,7 +15,7 @@ import { ref, watch } from 'vue';
 import TaskStatusForm from './Form.vue';
 
 interface Props {
-    task_statuses?: TaskStatus[]
+    task_statuses?: TaskStatus[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -26,6 +26,7 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
 const visibleForm = ref(false);
 const selected = ref<TaskStatus | undefined>(undefined);
 
@@ -41,7 +42,7 @@ if (can('task-status.update')) {
             selected.value = event.item.data;
             visibleForm.value = true;
         },
-    })
+    });
 }
 
 if (can('task-status.delete')) {
@@ -50,7 +51,7 @@ if (can('task-status.delete')) {
         command(event) {
             destroy(event.item.data);
         },
-    })
+    });
 }
 
 const destroy = (task_status: TaskStatus) => {
@@ -105,6 +106,7 @@ watch(visibleForm, (newVal) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="props.task_statuses"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -116,7 +118,7 @@ watch(visibleForm, (newVal) => {
             >
                 <Column header="No" :style="{ width: '50px' }">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

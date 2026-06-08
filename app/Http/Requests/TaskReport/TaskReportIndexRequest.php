@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\TaskReport;
 
+use App\Facades\Sqids;
 use App\Models\MsProjectStatus;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
@@ -45,5 +46,38 @@ class TaskReportIndexRequest extends FormRequest
             'search' => 'sometimes|string',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ];
+    }
+
+    public function passedValidation()
+    {
+        if ($this->input('names')) {
+            $this->merge([
+                'names' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('names')),
+            ]);
+        }
+
+        if ($this->input('statuses')) {
+            $this->merge([
+                'statuses' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('statuses')),
+            ]);
+        }
+
+        if ($this->input('priorities')) {
+            $this->merge([
+                'priorities' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('priorities')),
+            ]);
+        }
+
+        if ($this->input('types')) {
+            $this->merge([
+                'types' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('types')),
+            ]);
+        }
+
+        if ($this->input('project_statuses')) {
+            $this->merge([
+                'project_statuses' => array_map(fn ($encoded) => Sqids::decode($encoded), $this->input('project_statuses')),
+            ]);
+        }
     }
 }

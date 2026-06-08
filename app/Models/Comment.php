@@ -2,9 +2,15 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class Comment extends Model
 {
@@ -24,6 +30,22 @@ class Comment extends Model
         'deleted_by',
         'parent_id',
     ];
+
+    /**
+     * Resolve route binding for comment
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                throw (new ModelNotFoundException)->setModel(static::class);
+            }
+        }
+
+        return $this->where('id', $value)->firstOrFail();
+    }
 
     /**
      * Relasi morph (polymorphic) ke model lain
@@ -78,6 +100,29 @@ class Comment extends Model
     public function replies()
     {
         return $this->hasMany(Comment::class, 'parent_id')->with('user', 'replies');
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(CommentReaction::class);
+    }
+
+    public function reaction_group_count(): HasMany
+    {
+        return $this->reactions()->select('comment_id', 'reaction', DB::raw('COUNT(*) as count'))
+            ->groupBy('comment_id', 'reaction')
+            ->orderBy('count', 'desc');
+    }
+
+    protected function currentUserReaction(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if (! Auth::check()) {
+                return null;
+            }
+
+            return $this->reactions()->where('user_id', Auth::id())->first()?->reaction;
+        });
     }
 
     protected $casts = [

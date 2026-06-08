@@ -22,6 +22,8 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
+
 const items: MenuItem[] = [];
 
 if (can('user.update')) {
@@ -95,6 +97,7 @@ const destroy = (user: UserList) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="users"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -106,7 +109,7 @@ const destroy = (user: UserList) => {
             >
                 <Column header="No">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

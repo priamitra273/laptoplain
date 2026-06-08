@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
-import { can } from '@/lib/utils';
 import { getSeverityLabel } from '@/constants';
+import { can } from '@/lib/utils';
 import { MsProjectStatus } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -25,6 +25,7 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
 const visibleForm = ref<boolean>(false);
 const selected = ref<MsProjectStatus | undefined>(undefined);
 
@@ -41,7 +42,7 @@ if (can('project-status.update')) {
             selected.value = props.statuses.find((i) => i.id === id);
             visibleForm.value = true;
         },
-    })
+    });
 }
 
 if (can('project-status.delete')) {
@@ -50,7 +51,7 @@ if (can('project-status.delete')) {
         command(event: any) {
             destroy(event.item.data);
         },
-    })
+    });
 }
 
 const destroy = (status: MsProjectStatus) => {
@@ -102,6 +103,7 @@ watch(visibleForm, (newValue) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="props.statuses"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -113,7 +115,7 @@ watch(visibleForm, (newValue) => {
             >
                 <Column header="No" style="width: 5%">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

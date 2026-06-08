@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Models\Task;
+use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TaskActivityController extends Controller
 {
+    public function __construct(
+        protected TaskService $taskService
+    ) {}
 
     public function index(string $encoded): JsonResponse
     {
@@ -24,9 +28,7 @@ class TaskActivityController extends Controller
             abort(403);
         }
 
-        $activities = Task::getFormattedActivities($task->id, 'updated')
-            ->filter(fn($activity) => count($activity['changed_fields']) > 0)
-            ->values();
+        $activities = $this->taskService->getActivities($task, 'updated');
 
         return response()->json([
             'success'    => true,

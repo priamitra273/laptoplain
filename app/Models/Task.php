@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use App\Facades\Sqids;
 use App\Traits\LogsActivityTask;
 use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Staudenmeir\LaravelAdjacencyList\Eloquent\HasRecursiveRelationships;
 
-class Task extends Model
+class Task extends Model implements HasMedia
 {
     use HasFactory, LogsActivityTask, LogUsers, SoftDeletes;
-
-    protected $table = 'tasks';
+    use HasRecursiveRelationships, InteractsWithMedia;
 
     protected $fillable = [
         'owned_id',
@@ -29,13 +33,14 @@ class Task extends Model
         'start_date',
         'due_date',
         'progress',
+        'story_points',
         'sequence_number',
         'is_archived',
         'project_id',
         'completed_at',
+        'task_category_id',
     ];
 
-    // protected $appends = ['sub_task'];
     protected $hidden = ['children'];
 
     public static function boot()
@@ -43,7 +48,6 @@ class Task extends Model
         parent::boot();
 
         static::deleting(function (Task $task) {
-
             if (! $task->isForceDeleting()) {
                 foreach ($task->children as $child) {
                     $child->delete();
@@ -62,6 +66,26 @@ class Task extends Model
                 $child->restore();
             }
         });
+    }
+
+    /**
+     * Retrieve the model for a bound value.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($value) && ! ctype_digit($value)) {
+            try {
+                $value = Sqids::decode($value);
+            } catch (\Throwable $e) {
+                throw (new ModelNotFoundException)->setModel(static::class);
+            }
+        }
+
+        return $this->where('id', $value)->firstOrFail();
     }
 
     public function owner()
@@ -150,9 +174,20 @@ class Task extends Model
             ->withPivot(['owned_id', 'created_by', 'updated_by', 'deleted_by']);
     }
 
+    // ← FIX: tambah eager load category dan relasi lainnya
     public function subTaskRecursive()
     {
-        return $this->children()->with('subTaskRecursive');
+        return $this->children()->with([
+            'subTaskRecursive',
+            'status:id,name,severity',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'category:id,name,icon,severity',
+            'users:id,name',
+            'tags:id,name,severity',
+            'creator:id,name',
+            'creator.media',
+        ]);
     }
 
     public function getSubTaskAttribute()
@@ -166,13 +201,15 @@ class Task extends Model
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
+            'category:id,name,icon,severity',
             'users:id,name',
             'tags:id,name,severity',
             'creator:id,name',
             'creator.media',
             'subTaskRecursive' => function ($q) {
-                $q->orderBy('sequence_number')->orderBy('id')->withRecursive();
+                $q->orderBy('id')->withRecursive();
             },
+            'media' => fn ($q) => $q->where('collection_name', 'attachments'),
         ]);
     }
 
@@ -199,5 +236,47 @@ class Task extends Model
         }
 
         return $this->users()->attach($userId);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(TaskCategory::class, 'task_category_id');
+    }
+
+    public function sprints()
+    {
+        return $this->belongsToMany(
+            ProjectSprint::class,
+            'sprint_task',
+            'task_id',
+            'sprint_id'
+        )->using(SprintTask::class)
+            ->withTimestamps();
+    }
+
+    public function scopeBacklog($query)
+    {
+        return $query->whereDoesntHave('sprints');
+    }
+
+    public function scopeIssues($query)
+    {
+        return $query->whereHas('category', fn ($q) => $q->where('name', 'Issue'))
+            ->whereDoesntHave('sprints');
+    }
+
+    public function scopeEpics($query)
+    {
+        return $query->whereHas('category', fn ($q) => $q->where('name', 'Epic'))
+            ->whereNull('parent_id');
+    }
+
+    /**
+     * Register media collections.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('attachments')
+            ->useDisk('public');
     }
 }

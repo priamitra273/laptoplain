@@ -5,13 +5,13 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import type { ProjectMember } from '..';
+import type { ProjectMember, User } from '..';
 
 interface Props {
     projectId: string;
     members: ProjectMember[];
     roles: { id: string; name: string }[];
-    users: { id: string; name: string }[];
+    users: User[];
     hasPermission: boolean;
 }
 

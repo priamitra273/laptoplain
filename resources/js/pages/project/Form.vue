@@ -1,54 +1,19 @@
 <script setup lang="ts">
+// @ts-ignore
+import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
+
 import Label from '@/components/ui/label/Label.vue';
 import { useForm } from '@inertiajs/vue3';
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
-import { EmojiIndex, Picker } from 'emoji-mart-vue-fast/src';
 import moment from 'moment';
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import Select from 'primevue/select';
-import Editor from 'primevue/editor';
-import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch as vueWatch } from 'vue';
-import { PrimeSeverity } from '@/types';
+import { ProjectForm, ProjectFormProps, ProjectPriority, ProjectStatus } from '.';
 
 const emojiIndex = new EmojiIndex(emojiData);
 
-interface ProjectStatus { 
-    id: string; 
-    name: string;
-    severity: PrimeSeverity 
-}
-
-interface ProjectPriority { 
-    id: string; 
-    name: string;
-    severity: PrimeSeverity 
-}
-
-interface Props {
-    value?: any;
-    visible: boolean;
-    statuses: ProjectStatus[];
-    priorities: ProjectPriority[];
-}
-
-interface ProjectForm {
-    title: string;
-    start_date: Date | null;
-    due_date: Date | null;
-    description: string;
-    emoji: string | null;
-    status_id: string | null;
-    priority_id: string | null;
-    owner_id?: number | null;
-    owned_id?: number | null;
-    [key: string]: any;
-}
-
-const props = defineProps<Props>();
+const props = defineProps<ProjectFormProps>();
 const emits = defineEmits<{ (e: 'update:visible', value: boolean): void }>();
 const toast = useToast();
 
@@ -118,15 +83,16 @@ const hide = (): void => {
     showEmojiPicker.value = false;
 };
 
-vueWatch(
-    () => form.data(),
-    () => {
-        Object.keys(form.errors).forEach((key) => {
-            if (form[key] !== undefined) delete form.errors[key];
-        });
-    },
-    { deep: true },
-);
+for (const key in form.data()) {
+    vueWatch(
+        () => form[key],
+        () => {
+            if (form[key]) {
+                delete form.errors[key];
+            }
+        },
+    );
+}
 
 const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]) => {
     return options.find((option) => option.id === id) || null;
@@ -142,9 +108,9 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
         @show="show"
         @after-hide="hide"
         :blockScroll="true"
-        :dismissable="false"
+        :dismissable="true"
     >
-        <form class="grid gap-8 md:grid-cols-2" @submit.prevent="save">
+        <div class="grid gap-8 md:grid-cols-2">
             <div class="col-span-2 flex flex-col gap-2">
                 <Label for="title">Project Title</Label>
                 <InputGroup>
@@ -256,11 +222,13 @@ const getSelectValue = (id: string, options: ProjectStatus[] | ProjectPriority[]
 
                 <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
             </div>
+        </div>
 
-            <div class="col-span-2 flex justify-end gap-2">
+        <template #footer>
+            <div class="flex justify-end gap-2">
                 <Button label="Cancel" severity="secondary" @click="visible = false" />
-                <Button label="Save" type="submit" :loading="form.processing" :disabled="form.processing" />
+                <Button label="Save" @click="save" class="w-20" :loading="form.processing" :disabled="form.processing" />
             </div>
-        </form>
+        </template>
     </Drawer>
 </template>

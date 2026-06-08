@@ -2,6 +2,7 @@
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { getSeverityLabel } from '@/constants';
+import { can } from '@/lib/utils';
 import { TaskType } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -12,10 +13,9 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskTypeForm from './Form.vue';
-import { can } from '@/lib/utils';
 
 interface Props {
-    task_types?: TaskType[]
+    task_types?: TaskType[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -26,27 +26,14 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
 const visibleForm = ref(false);
 const selected = ref<TaskType | undefined>(undefined);
 
 const confirm = useConfirm();
 const toast = useToast();
 
-const items: MenuItem[] = [
-    {
-        label: 'Edit',
-        command(event) {
-            selected.value = event.item.data;
-            visibleForm.value = true;
-        },
-    },
-    {
-        label: 'Delete',
-        command(event) {
-            destroy(event.item.data);
-        },
-    },
-];
+const items: MenuItem[] = [];
 
 if (can('task-type.update')) {
     items.push({
@@ -55,7 +42,7 @@ if (can('task-type.update')) {
             selected.value = event.item.data;
             visibleForm.value = true;
         },
-    })
+    });
 }
 
 if (can('task-type.delete')) {
@@ -64,7 +51,7 @@ if (can('task-type.delete')) {
         command(event) {
             destroy(event.item.data);
         },
-    })
+    });
 }
 
 const destroy = (task_type: TaskType) => {
@@ -120,6 +107,7 @@ watch(visibleForm, (newVal) => {
             <DataTable
                 :value="props.task_types"
                 v-model:filters="filters"
+                v-model:first="first"
                 data-key="id"
                 paginator
                 :rows="10"
@@ -130,7 +118,7 @@ watch(visibleForm, (newVal) => {
             >
                 <Column header="No" :style="{ width: '60px' }">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

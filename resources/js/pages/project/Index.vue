@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { PrimeSeverity, Project } from '@/types';
+import { PrimeSeverity } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import { Project } from '.';
 import ProjectTable from './Table.vue';
-
 
 interface ProjectStatus {
     id: string;
@@ -22,7 +22,6 @@ interface Props {
     projects: Project[];
     statuses: ProjectStatus[];
     priorities: ProjectPriority[];
-    // roles: { id: number; name: string }[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,7 +30,6 @@ const props = withDefaults(defineProps<Props>(), {
     priorities: () => [],
     // roles: () => [],
 });
-
 </script>
 
 <template>

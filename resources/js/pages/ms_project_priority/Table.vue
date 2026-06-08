@@ -29,6 +29,7 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
 const visibleForm = ref<boolean>(false);
 const selected = ref<ProjectPriority | undefined>(undefined);
 
@@ -42,7 +43,7 @@ if (can('project-priority.update')) {
             selected.value = props.project_priorities.find((item) => item.id === id);
             visibleForm.value = true;
         },
-    })
+    });
 }
 
 if (can('project-priority.delete')) {
@@ -51,7 +52,7 @@ if (can('project-priority.delete')) {
         command(event) {
             destroy(event.item.data);
         },
-    })
+    });
 }
 
 const destroy = (project_priority: ProjectPriority) => {
@@ -103,6 +104,7 @@ watch(visibleForm, (newValue) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="project_priorities"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator

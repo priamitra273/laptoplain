@@ -38,7 +38,17 @@ const hasActiveFilters = computed(() => {
     );
 });
 
-const activeFilterCount = computed(() => Object.keys(props.filters).length);
+/**
+ * Navigate to task detail page
+ * @param encodedTaskId - Already encoded task ID from backend
+ */
+const navigateToTask = (encodedTaskId: string) => {
+    router.visit(route('task.show', encodedTaskId));
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 const truncateText = (text: string | null, length: number = 15): string => {
     if (!text) return '-';
@@ -192,7 +202,6 @@ initializeFilters();
                                 :label="showFilters ? 'Hide Filters' : 'Show Filters'"
                                 :icon="showFilters ? 'pi pi-times' : 'pi pi-filter'"
                                 :severity="hasActiveFilters ? 'primary' : 'secondary'"
-                                :badge="hasActiveFilters ? String(activeFilterCount) : undefined"
                                 @click="toggleFilters"
                             />
                             <!-- <Button label="Export CSV" icon="pi pi-download" severity="success" @click="exportReport" /> -->
@@ -360,7 +369,7 @@ initializeFilters();
             <!-- Data Table -->
             <Card class="rounded-2xl border-0 shadow-md">
                 <template #content>
-                    <DataTable :value="tasks.data" stripedRows class="rounded-lg" :rows="tasks.per_page" responsiveLayout="scroll">
+                    <DataTable :value="tasks.data" stripedRows class="rounded-lg" :rows="tasks.meta.per_page" responsiveLayout="scroll">
                         <!-- Creator Column -->
                         <Column field="creator.name" header="Name" style="min-width: 200px">
                             <template #body="{ data }">
@@ -405,7 +414,7 @@ initializeFilters();
                         <Column field="summary" header="Summary" style="width: 300px; min-width: 300px; max-width: 300px">
                             <template #body="{ data }">
                                 <Link
-                                    :href="route('task.show', { encoded: data.id })"
+                                    :href="route('task.show', data.id)"
                                     class="-m-2 block cursor-pointer rounded p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <p
@@ -471,21 +480,12 @@ initializeFilters();
                     <!-- Pagination -->
                     <div class="mt-4">
                         <Paginator
-                            :rows="tasks.per_page"
-                            :totalRecords="tasks.total"
+                            :rows="tasks.meta.per_page"
+                            :totalRecords="tasks.meta.total"
                             :rowsPerPageOptions="[10, 25, 50, 100]"
-                            :first="(tasks.current_page - 1) * tasks.per_page"
+                            :first="(tasks.meta.current_page - 1) * tasks.meta.per_page"
                             @page="onPageChange"
                         />
-                    </div>
-
-                    <!-- Stats -->
-                    <div class="mt-4 flex items-center justify-between border-t pt-4">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Showing {{ tasks.from }} to {{ tasks.to }} of {{ tasks.total }} tasks</p>
-                        <div v-if="hasActiveFilters" class="flex items-center gap-2">
-                            <i class="pi pi-filter text-blue-500"></i>
-                            <span class="text-sm font-medium text-blue-600">{{ activeFilterCount }} filter(s) active</span>
-                        </div>
                     </div>
                 </template>
             </Card>

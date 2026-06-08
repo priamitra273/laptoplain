@@ -2,7 +2,7 @@
 import Heading from '@/components/Heading.vue';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { ProjectPriority } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import ProjectPriorityTable from './Table.vue';
 
 interface Props {

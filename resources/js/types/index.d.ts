@@ -51,6 +51,33 @@ export interface PaginationMetaLink {
     label: string | null;
 }
 
+export interface PaginationLink {
+    active: boolean | null;
+    url: string | null;
+    label: string | null;
+    page: number | null;
+}
+
+export interface PaginationMeta {
+    current_page: number;
+    first_page_url: string | null;
+    from: number;
+    last_page: number;
+    last_page_url: string | null;
+    next_page_url: string | null;
+    path: string;
+    per_page: number;
+    prev_page_url: string | null;
+    to: number;
+    total: number;
+}
+
+export interface LengthAwarePaginator<T> {
+    data: T[];
+    meta: PaginationMeta;
+    links: PaginationLink[];
+}
+
 export interface Pagination {
     links: {
         first: string | null;
@@ -69,6 +96,8 @@ export interface Pagination {
         total: number;
     };
 }
+
+export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
 
 export interface User {
     id: string;
@@ -218,9 +247,18 @@ export interface ProjectPriority {
     deleted_by?: string;
 }
 
+export interface ProjectRoleConfig {
+    task?: string[];
+    project_member?: string[];
+    sprint?: string[];
+    allow_task_status?: string[];
+    allow_update_task_fields?: string[];
+}
+
 export interface ProjectRole {
     id: number;
     name: string;
+    config?: ProjectRoleConfig;
     owned_id: number;
     created_by?: string;
     updated_by?: string;
@@ -232,6 +270,16 @@ export interface TaskPriority {
     name: string;
     severity: PrimeSeverity;
     owned_id: number;
+    created_by?: string;
+    updated_by?: string;
+    deleted_by?: string;
+}
+
+export interface TaskCategory {
+    id: number;
+    name: string;
+    icon: string;
+    severity: PrimeSeverity;
     created_by?: string;
     updated_by?: string;
     deleted_by?: string;
@@ -418,8 +466,6 @@ export interface MsTaskType {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
-export type PrimeSeverity = 'primary' | 'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast';
-
 export interface SeverityOption {
     label: string;
     value: PrimeSeverityEnum;
@@ -430,4 +476,37 @@ export interface Notification {
     message: string;
     task_id: string;
     is_read: boolean;
+}
+
+export interface BaseOption {
+    id: string;
+    name: string;
+    severity?: PrimeSeverity;
+}
+
+export interface StatusOption extends BaseOption {}
+export interface PriorityOption extends BaseOption {}
+
+export interface ProjectRoleConfig {
+    task?: string[];
+    sprint?: string[];
+    project_member?: string[];
+    allow_task_status?: number[];
+    allow_update_task_fields?: string[];
+}
+
+export interface ProjectRoleOption {
+    id: string;
+    name: string;
+    config?: ProjectRoleConfig | null;
+}
+
+export interface UploadedFile {
+    uuid: string;
+    file_name: string;
+    size: number;
+    mime_type: string;
+    url: string;
+    created_at: string;
+    updated_at: string;
 }

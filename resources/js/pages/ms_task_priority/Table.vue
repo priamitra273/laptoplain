@@ -2,6 +2,7 @@
 import DropdownButton from '@/components/DropdownButton.vue';
 import Icon from '@/components/Icon.vue';
 import { getSeverityLabel } from '@/constants';
+import { can } from '@/lib/utils';
 import { TaskPriority } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -11,7 +12,6 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 import TaskPriorityForm from './Form.vue';
-import { can } from '@/lib/utils';
 
 interface Props {
     task_priorities?: TaskPriority[];
@@ -25,6 +25,7 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const first = ref(0);
 const visibleForm = ref<boolean>(false);
 const selected = ref<TaskPriority | undefined>(undefined);
 
@@ -41,7 +42,7 @@ if (can('task-priority.update')) {
             selected.value = props.task_priorities.find((i) => i.id === id);
             visibleForm.value = true;
         },
-    })
+    });
 }
 
 if (can('task-priority.delete')) {
@@ -50,7 +51,7 @@ if (can('task-priority.delete')) {
         command(event: any) {
             destroy(event.item.data);
         },
-    })
+    });
 }
 
 const destroy = (taskPriority: TaskPriority) => {
@@ -102,6 +103,7 @@ watch(visibleForm, (newValue) => {
         <div class="card overflow-hidden">
             <DataTable
                 :value="task_priorities"
+                v-model:first="first"
                 v-model:filters="filters"
                 data-key="id"
                 paginator
@@ -113,7 +115,7 @@ watch(visibleForm, (newValue) => {
             >
                 <Column header="No" style="width: 5%">
                     <template #body="{ index }">
-                        {{ index + 1 }}
+                        {{ first + index + 1 }}
                     </template>
                 </Column>
 

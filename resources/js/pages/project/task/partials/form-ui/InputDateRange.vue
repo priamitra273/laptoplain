@@ -20,42 +20,37 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
     <div class="grid grid-cols-4 gap-4">
         <Label value="Dates" icon="Calendar" required />
 
-        <div class="col-span-3 flex items-start gap-4">
+        <div class="col-span-3 flex items-center gap-4">
             <div>
-                <div>
-                    <DatePicker
-                        :disabled="props.disabled"
-                        v-model="startDate"
-                        dateFormat="dd M yy"
-                        showIcon
-                        iconDisplay="input"
-                        placeholder="Start Date"
-                        :class="{ 'p-invalid': props.startDateError }"
-                    />
-                </div>
-
-                <small v-if="props.startDateError" class="p-error text-red-500">{{ props.startDateError }}</small>
+                <DatePicker
+                    :disabled="props.disabled"
+                    v-model="startDate"
+                    dateFormat="dd M yy"
+                    showIcon
+                    iconDisplay="input"
+                    placeholder="Start Date"
+                    :class="{ 'p-invalid': props.startDateError }"
+                />
             </div>
 
-            <div class="flex h-full items-center justify-center">
-                <Icon name="ArrowRight" />
-            </div>
+            <Icon name="ArrowRight" />
 
             <div>
-                <div>
-                    <DatePicker
-                        v-model="dueDate"
-                        dateFormat="dd M yy"
-                        showIcon
-                        iconDisplay="input"
-                        :minDate="props.minDueDate"
-                        placeholder="Due Date"
-                        :class="{ 'p-invalid': props.dueDateError }"
-                    />
-                </div>
-
-                <small v-if="props.dueDateError" class="p-error text-red-500">{{ props.dueDateError }}</small>
+                <DatePicker
+                    v-model="dueDate"
+                    dateFormat="dd M yy"
+                    showIcon
+                    iconDisplay="input"
+                    :minDate="props.minDueDate"
+                    placeholder="Due Date"
+                    :class="{ 'p-invalid': props.dueDateError }"
+                />
             </div>
+        </div>
+
+        <div class="col-span-3 col-start-2">
+            <small v-if="props.startDateError" class="p-error text-red-500">{{ props.startDateError }}</small>
+            <small v-if="props.dueDateError" class="p-error text-red-500">{{ props.dueDateError }}</small>
         </div>
     </div>
 </template>

@@ -36,12 +36,12 @@ class TaskUpdateRequest extends FormRequest
             'description' => 'sometimes|nullable|string',
 
             'start_date' => [
-                Rule::requiredIf(! in_array($status->name, [TaskStatusEnum::IN_PROGRESS, TaskStatusEnum::BLOCKED])),
+                Rule::requiredIf(! in_array($status->name, $this->doesNotRequireDateStatus())),
                 'date',
             ],
 
             'due_date' => [
-                Rule::requiredIf(! in_array($status->name, [TaskStatusEnum::IN_PROGRESS, TaskStatusEnum::BLOCKED])),
+                Rule::requiredIf(! in_array($status->name, $this->doesNotRequireDateStatus())),
                 'date',
                 'after_or_equal:start_date',
             ],
@@ -207,5 +207,10 @@ class TaskUpdateRequest extends FormRequest
         }
 
         $this->merge($merged);
+    }
+
+    protected function doesNotRequireDateStatus(): array
+    {
+        return [TaskStatusEnum::TO_DO->value, TaskStatusEnum::BLOCKED->value];
     }
 }

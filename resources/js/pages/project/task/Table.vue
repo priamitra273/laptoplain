@@ -140,7 +140,7 @@ const toast = useToast();
 
 const remove = (t: Task) => {
     confirm.require({
-        message: `Remove ${t.title}? This action cannot be undone.`,
+        message: `Remove task ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
         icon: 'pi pi-exclamation-triangle',
         acceptLabel: 'Yes, remove',

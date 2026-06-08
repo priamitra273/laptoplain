@@ -272,7 +272,7 @@ const cancelInProgressDialog = () => {
 // ─── Delete ───────────────────────────────────────────────────────────────────
 const deleteTask = (task: Task) => {
     confirm.require({
-        message: `Delete "${task.title}"? This cannot be undone.`,
+        message: `Delete task "${task.title}"? This cannot be undone.`,
         header: 'Confirm Delete',
         icon: 'pi pi-exclamation-triangle',
         acceptLabel: 'Delete',

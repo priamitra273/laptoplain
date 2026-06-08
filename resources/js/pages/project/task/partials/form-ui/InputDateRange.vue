@@ -20,7 +20,7 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
     <div class="grid grid-cols-4 gap-4">
         <Label value="Dates" icon="Calendar" required />
 
-        <div class="col-span-3 flex items-center gap-4">
+        <div class="col-span-3 flex items-start gap-4">
             <div>
                 <div>
                     <DatePicker
@@ -37,7 +37,9 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
                 <small v-if="props.startDateError" class="p-error text-red-500">{{ props.startDateError }}</small>
             </div>
 
-            <Icon name="ArrowRight" />
+            <div class="flex h-full items-center justify-center">
+                <Icon name="ArrowRight" />
+            </div>
 
             <div>
                 <div>

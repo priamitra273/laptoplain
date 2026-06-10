@@ -35,18 +35,19 @@ sequenceDiagram
     Note over Backend: Validasi sprint belongs to project
 
     Backend->>SprintReportService: getBurndownChartData(sprint)
-    SprintReportService->>DB: Query sprint tasks + daily snapshots
-    SprintReportService->>SprintReportService: Calculate ideal line vs actual remaining
-    Note over SprintReportService: Ideal = linear dari total task di awal sprint<br/>Actual = count task yang belum completed per hari
+    SprintReportService->>DB: Raw SQL CTE (generate_series start_date..end_date)
+    SprintReportService->>SprintReportService: Hanya hari kerja (kecuali Sabtu/Minggu, ISODOW 6,7)
+    Note over SprintReportService: total_plan = count task dgn plan_end_date > tanggal<br/>(plan_end_date = COALESCE(due_date, sprint.end_date))<br/>total_actual = count task dgn completed_at IS NULL<br/>atau completed_at > tanggal
 
-    Backend->>Browser: JSON {success: true, data: BurndownChartData[]}
-    Browser->>Browser: Render Highcharts line chart (planned vs actual)
+    Backend->>Browser: JSON {success: true, data: BurndownChartData[]} (tanpa Sqids encode)
+    Browser->>Browser: Render Highcharts line chart (plan vs actual)
 ```
 
 **BurndownChartData per data point:**
 - `date` — tanggal
-- `ideal` — remaining ideal (linear)
-- `actual` — remaining aktual
+- `label` — `DAY-N` (urut hari kerja)
+- `total_plan` — sisa task rencana
+- `total_actual` — sisa task aktual (belum selesai)
 
 ---
 
@@ -61,11 +62,11 @@ sequenceDiagram
     Backend->>Backend: abort_if(project->id !== sprint->project_id, 404)
 
     Backend->>SprintReportService: getSprintStatusReport(sprint)
-    SprintReportService->>DB: Query task status dalam sprint
-    Note over DB: Pisahkan completed vs incomplete tasks
+    SprintReportService->>DB: completed_tasks = task sprint dgn status Completed/Finished/Done
+    SprintReportService->>DB: incomplete_tasks = task yang pernah dipindahkan keluar<br/>(dari activity_log log_name 'move_incomplete_%', properti 'detached')
 
-    Backend->>Browser: JSON {success: true, data: SprintStatusReportData}
-    Note over Browser: SprintStatusReportData: daftar task completed + incomplete<br/>dengan status, assignee, due date
+    Backend->>Browser: JSON {success: true, data: SprintStatusReportData} (Sqids encode)
+    Note over Browser: SprintStatusReportData: completed_tasks[] + incomplete_tasks[]<br/>(TaskData: status, assignee/users, due date, dll)
     Browser->>Browser: Render DataTable SprintTaskTableReport
 ```
 
@@ -75,9 +76,9 @@ sequenceDiagram
 
 | Method | URI | Controller | Validasi |
 |--------|-----|------------|----------|
-| GET | `/project/{project}/sprints/all` | `SprintReportController@index` | Project model binding |
-| GET | `/project/{project}/sprints/{sprint}/burndown` | `SprintReportController@burndown` | abort_if project !== sprint.project_id |
-| GET | `/project/{project}/sprints/{sprint}/status-report` | `SprintReportController@statusReport` | abort_if project !== sprint.project_id |
+| GET | `/project/{project}/sprints/all` | `Api\SprintReportController@index` | Project model binding |
+| GET | `/project/{project}/sprints/{projectSprint}/burndown` | `Api\SprintReportController@burndown` | abort_if project->id !== projectSprint->project_id |
+| GET | `/project/{project}/sprints/{projectSprint}/status-report` | `Api\SprintReportController@statusReport` | abort_if project->id !== projectSprint->project_id |
 
 ## Frontend Components
 

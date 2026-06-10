@@ -14,18 +14,18 @@ sequenceDiagram
     Browser->>Backend: GET /dashboard (route.permission)
 
     Backend->>DB: getRecentProjects(userId)
-    Note over DB: Project::with(status, priority, members.user, members.role)<br/>whereHas(members where user_id=userId)<br/>latest('id')->limit(5)
+    Note over DB: Project::with(status, priority, projectMembers.user, projectMembers.role)<br/>whereHas(projectMembers where user_id=userId)<br/>latest('id')->limit(5)
 
     Backend->>DB: getRecentTasks(userId)
     Note over DB: Task::with(project, status, priority, type, users)<br/>where created_by=userId OR whereHas(users id=userId)<br/>latest('id')->limit(5)
     Note over DB: Map: set is_assigned, is_created_by_me flags
 
     Backend->>DB: getStatistics(userId)
-    Note over DB: Project: SELECT COUNT(*) as total, AVG(progress) as avg_progress<br/>whereHas(members user_id). first()
+    Note over DB: Project: SELECT COUNT(*) as total, AVG(progress) as avg_progress<br/>whereHas(projectMembers user_id). first()
     Note over DB: Task: SELECT COUNT(*) as total, AVG(progress) as avg_progress<br/>where created_by OR whereHas(users). first()
 
     Backend->>DB: getTeamMembers(userId)
-    Note over DB: Dari semua project user → flatMap members.user → unique('id') → values
+    Note over DB: Dari semua project user → flatMap projectMembers.user → unique('id') → values
 
     Backend->>Backend: Sqids::rec_encode_ids_in_list(data)
     Backend->>Browser: Inertia render('Dashboard', {projects, tasks, stats})
@@ -92,7 +92,7 @@ sequenceDiagram
 
     Backend->>WorkloadService: getFilterOptions()
     WorkloadService->>DB: Available users (encoded IDs + name + avatar_url)
-    WorkloadService->>WorkloadService: WorkloadStatus enum values (id, label, severity)
+    WorkloadService->>WorkloadService: WorkloadStatus enum values (id, name=label(), severity)
 
     Backend->>Browser: Inertia render('workload/index', {users, summary, filters, filterOptions})
     Browser-->>User: Summary cards + DataTable + filters

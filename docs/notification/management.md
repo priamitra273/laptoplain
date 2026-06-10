@@ -31,13 +31,14 @@ sequenceDiagram
     Browser->>Browser: Set unreadCount = filter(not is_read).length
 
     loop While connection not aborted (every 200ms)
-        Backend->>Redis: GET notifications:user:{userId} from cache
+        Backend->>Redis: Cache::store('redis')->get("notifications:user:{userId}", [])
         alt Cache has new notifications
-            Backend->>Browser: event: notification (json notif data)
-            Browser->>Browser: push notif + increment unreadCount
-            Backend->>Redis: DEL cache key
-        else Cache empty + 30s since last ping
-            Backend->>Browser: ping (SSE keepalive comment)
+            Backend->>Browser: event: notification (json notif data per item)
+            Browser->>Browser: unshift notif + increment unreadCount
+            Backend->>Redis: Cache::store('redis')->forget(key)
+        end
+        opt 30s sejak last ping
+            Backend->>Browser: : ping (SSE keepalive comment)
         end
         Backend->>Backend: usleep(200_000)
     end
@@ -67,14 +68,15 @@ sequenceDiagram
 
 ```typescript
 // markAsRead with optimistic update + rollback
-const currentCount = unreadCount.value  // save previous
-unreadCount.value--                      // optimistic update
-notif.is_read = true                     // optimistic update
+const currentCount = unreadCount.value           // save previous
+const notif = notifications.value.find((n) => n.id === notificationId)
 try {
-    await axios.post(route('notifications.read', {encoded: notificationId}))
+    unreadCount.value--                           // optimistic update
+    if (notif) notif.is_read = true               // optimistic update
+    await axios.post(route('notifications.read', { encoded: notificationId }))
 } catch (error) {
-    unreadCount.value = currentCount     // rollback
-    notif.is_read = false                 // rollback
+    unreadCount.value = currentCount              // rollback
+    if (notif) notif.is_read = false              // rollback
 }
 ```
 
@@ -104,17 +106,33 @@ try {
 
 ## Redis Notification Queue
 
-Saat notifikasi dibuat oleh service (TaskService/CommentService):
+Notifikasi dibuat lewat facade `TaskNotification` (mengarah ke `TaskNotificationService`).
+Pemicunya antara lain: listener `NotifyAssignedUsers` (event `TaskCreated`),
+`TaskObserver`, `CreateTaskAction`/`UpdateTaskAction`, `TaskService`,
+`CommentService`, dan `ProjectController`.
 
 ```php
-// TaskNotificationService::createTaskNotification()
-Notification::create([...])        // Simpan ke DB
-$user->notifications()->attach()   // Pivot: is_read = false
-Redis::rpush("notifications:user:$userId", json_encode(notif))
-Redis::expire("notifications:user:$userId", 60)  // TTL 1 menit
+// TaskNotificationService::createTaskNotification($task, $userIds, TaskNotificationType $type)
+$notification = Notification::create([
+    'task_id' => $task->id,
+    'task_status_id' => $task->status_id,
+    'task_type_id' => $task->type_id,
+    'message' => ...,
+]);
+
+foreach ($userIds as $userId) {
+    $notification->users()->attach($userId, ['is_read' => false]); // Pivot
+
+    $payload = ['id' => Sqids::encode(...), 'message' => ..., 'task_id' => Sqids::encode(...), 'is_read' => false];
+
+    $key = "notifications:user:$userId";
+    $existing = Cache::store('redis')->get($key, []);
+    $existing[] = $payload;
+    Cache::store('redis')->put($key, $existing, now()->addMinutes(1)); // TTL 1 menit
+}
 ```
 
-**Note:** Notifikasi juga dikirim ke user dengan role `watcher-admin`.
+**Note:** ID notifikasi & task pada payload Redis sudah di-encode Sqids. Notifikasi juga dikirim ke user dengan role `watcher-admin` (digabung ke `$userIds`).
 
 ## Routes
 

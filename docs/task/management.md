@@ -60,22 +60,23 @@ sequenceDiagram
 | `emoji` | nullable, string, max:100 |
 | `title` | required, string, max:255 |
 | `description` | nullable, string |
-| `start_date` | Rule::requiredIf (status not "To Do"/"Blocked"), date |
-| `due_date` | Rule::requiredIf (status not "To Do"/"Blocked"), date, after_or_equal:start_date |
+| `start_date` | Rule::requiredIf (status not "To Do"/"Blocked"), nullable, date |
+| `due_date` | Rule::requiredIf (status not "To Do"/"Blocked"), nullable, date, after_or_equal:start_date |
 | `sequence_number` | nullable, integer |
 | `is_archived` | boolean |
 | `assign_users` | nullable, array; each: exists:users,id |
 | `unassign_users` | sometimes, array; each: exists:users,id |
 | `add_tag.exists` | sometimes, array; each: exists:tags,id |
-| `add_tag.new.*.name` | required_with:add_tag.new, string, max:255 |
+| `add_tag.new.*.name` | required, string, max:255 |
 | `add_tag.new.*.severity` | nullable, string, max:50 |
 | `remove_tag` | sometimes, array; each: exists:tags,id |
-| `attachments.*` | required, FileOrMedia (extensions gambar/video/doc, maxSize: 20MB) |
+| `attachments` | sometimes, nullable, array |
+| `attachments.*` | required, FileOrMedia (extensions gambar/video/doc, maxSize: 20MB / 20*1024 KB) |
 
-**prepareForValidation:** Sqids-decode `status_id`, `priority_id`, `type_id`, `task_category_id`, `sprint_id`, `project_id`, `owned_id`, `parent_id`, `assign_users`, `unassign_users`, `add_tag.exists`, `remove_tag`. Merge `progress` dari `progress_value`.
+**prepareForValidation:** Default `owned_id` ke `Auth::id()` jika tidak dikirim. Sqids-decode `status_id`, `priority_id`, `type_id`, `task_category_id`, `sprint_id`, `project_id`, `owned_id`, `parent_id`, `assign_users`, `unassign_users`, `add_tag.exists`, `remove_tag`. Merge `progress` dari `progress_value`.
 
 **withValidator:**
-- In Progress status tanpa due_date → error
+- Status "in progress" (case-insensitive) tanpa due_date → error
 - Epic category tidak bisa punya parent → error
 
 ---
@@ -92,15 +93,15 @@ sequenceDiagram
     participant UpdateTaskAction
     participant DB
 
-    Browser->>Backend: PUT /project/{project}/tasks/{task}
+    Browser->>Backend: PUT /project/{project}/tasks/{taskEncoded}
 
-    Backend->>Backend: Sqids::decode(taskEncoded)
+    Backend->>Backend: Sqids::decode(taskEncoded) (catch: back()->error 'Task not found')
     Backend->>DB: Eager-load users + project members + roles
-    Note over DB: Load isTaskMember dan isOwner via query exists
+    Note over DB: Load isTaskMember dan isOwner via withExists
 
     Backend->>Backend: Policy: user->cannot('update', task)
     alt Unauthorized
-        Backend->>Browser: abort(403)
+        Backend->>Browser: back()->with('error', permission denied)
     end
 
     Backend->>Backend: Validasi TaskUpdateRequest (partial)
@@ -132,21 +133,26 @@ sequenceDiagram
 | `priority_id` | sometimes, nullable, exists:ms_task_priorities,id |
 | `type_id` | sometimes, nullable, exists:ms_task_types,id |
 | `task_category_id` | sometimes, nullable, exists:task_categories,id |
-| `title` | sometimes, string, max:255 |
+| `owned_id` | sometimes, exists:users,id |
+| `emoji` | sometimes, nullable, string, max:100 |
+| `title` | sometimes, required, string, max:255 |
 | `description` | sometimes, nullable, string |
-| `start_date` | Rule::requiredIf (status not "To Do"/"Blocked"), date |
-| `due_date` | Rule::requiredIf (status not "To Do"/"Blocked"), date, after_or_equal:start_date |
+| `start_date` | Rule::requiredIf (status not "To Do"/"Blocked"), nullable, date |
+| `due_date` | Rule::requiredIf (status not "To Do"/"Blocked"), nullable, date, after_or_equal:start_date |
+| `sequence_number` | sometimes, nullable, integer |
 | `is_archived` | sometimes, boolean |
 | `assign_users` | sometimes, array; each: exists:users,id |
 | `unassign_users` | sometimes, array; each: exists:users,id |
 | `add_tag.exists` | sometimes, array; each: exists:tags,id |
-| `add_tag.new.*.name` | required_with, string, max:255 |
+| `add_tag.new.*.name` | required_with:add_tag.new, string, max:255 |
+| `add_tag.new.*.severity` | nullable, string, max:50 |
 | `remove_tag` | sometimes, array; each: exists:tags,id |
+| `attachments` | sometimes, nullable, array |
 | `attachments.*` | nullable, FileOrMedia |
 
-**prepareForValidation:** Sqids-decode. Jika `status_id === 1` (To Do), set `due_date = null`. Merge progress dari `progress_value`.
+**prepareForValidation:** Sqids-decode (`status_id`, `priority_id`, `type_id`, `task_category_id`, `project_id`, `owned_id`, `parent_id`, `assign_users`, `unassign_users`, `add_tag.exists`, `remove_tag`). Jika decoded `status_id === 1` (To Do), set `due_date = null`. Merge `progress` dari `progress_value`.
 
-**withValidator:** In Progress status wajib ada due_date (check existing di DB jika tidak di request).
+**withValidator:** Status "In Progress" (case-sensitive) wajib ada due_date — pakai status_id dari request atau dari DB, dan cek existing due_date di DB jika tidak dikirim.
 
 ---
 
@@ -331,9 +337,10 @@ sequenceDiagram
     TaskReportService->>TaskReportService: Format filter options with encoded IDs
     Backend->>Browser: Inertia render('project/task/TaskReport')
 
-    Note over User,DB: EXPORT
-    User->>Browser: Klik Export
+    Note over User,DB: EXPORT (tombol UI saat ini di-comment; route & logic tetap ada)
+    User->>Browser: Klik Export (exportReport → window.open)
     Browser->>Backend: GET /reports/tasks/export?filters...
+    Note over Backend: export() pakai $request->only([names, statuses, priorities, types,<br/>start_date_from/to, due_date_from/to, search]) — TANPA project_statuses
     Backend->>TaskReportService: generateExportCallback(filters)
     Note over TaskReportService: Stream CSV dengan kolom:<br/>Task ID, Title, Summary (strip HTML, truncate 100),<br/>Creator, Status, Priority, Type, Project,<br/>Start Date, Due Date, Progress (%), Created At
     Backend->>Browser: StreamedResponse CSV download
@@ -378,7 +385,7 @@ sequenceDiagram
 | File | Purpose |
 |------|---------|
 | `pages/project/task/Detail.vue` | Detail 2 kolom: content (kiri) + description/comments (kanan) |
-| `pages/project/task/Form.vue` | Drawer form (right, 50rem) dengan sub-components di `form-ui/` |
+| `pages/project/task/Form.vue` | Body form (dirender dalam Drawer right 50rem di `pages/project/Detail.vue`) dengan sub-components di `partials/form-ui/` |
 | `pages/project/task/Table.vue` | TreeTable List tab — hold 900ms drag reparent, filter sessionStorage |
 | `pages/project/task/partials/TaskKanbanBoard.vue` | Kanban drag-drop columns (vue-draggable-plus) |
 | `pages/project/task/partials/TaskDetails.vue` | Inline edit: status, priority, type, dates, progress |

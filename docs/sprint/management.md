@@ -11,7 +11,7 @@ Manajemen sprint dalam project: CRUD, lifecycle (planning → active → complet
 ```mermaid
 sequenceDiagram
     Browser->>Backend: POST /project/{project}/sprints
-    Note over Backend: Validasi SprintStoreRequest:<br/>name=nullable|string|max:255<br/>goal=nullable|string<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date<br/>duration=nullable|in:1,2,3,4 week,Custom
+    Note over Backend: Validasi SprintStoreRequest:<br/>name=nullable|string|max:255<br/>goal=nullable|string<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date<br/>duration=nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom
 
     Backend->>SprintService: store(decodedProjectId, validated)
     SprintService->>SprintService: Auto-generate name if empty (Sprint N+1)
@@ -27,7 +27,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     Browser->>Backend: PUT /project/{project}/sprints/{sprint}
-    Note over Backend: Validasi SprintUpdateRequest:<br/>name=required|string|max:255<br/>goal=nullable|string<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date<br/>duration=nullable|in:1,2,3,4 week,Custom
+    Note over Backend: Validasi SprintUpdateRequest:<br/>name=required|string|max:255<br/>goal=nullable|string<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date<br/>duration=nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom
 
     Backend->>SprintService: findByProject(decodedSprintId, decodedProjectId)
     Backend->>SprintService: update(sprint, validated)
@@ -44,7 +44,7 @@ sequenceDiagram
 
     SprintService->>SprintService: Cek status sprint
     alt Status = "Active"
-        SprintService-->>Backend: throw HttpException 422 "Cannot delete active sprint"
+        SprintService-->>Backend: throw HttpException 422 "Sprint yang sedang berjalan tidak bisa dihapus. Selesaikan sprint terlebih dahulu."
         Backend->>Browser: JSON error / back()->with('error')
     else
         SprintService->>DB: Detach all tasks from sprint
@@ -62,7 +62,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     Browser->>Backend: PATCH /project/{project}/sprints/{sprint}/start
-    Note over Backend: Validasi SprintStartRequest:<br/>goal=nullable|string<br/>duration=nullable|in:1,2,3,4 week,Custom<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date
+    Note over Backend: Validasi SprintStartRequest:<br/>goal=nullable|string<br/>duration=nullable|in:1 week,2 weeks,3 weeks,4 weeks,Custom<br/>start_date=nullable|date<br/>end_date=nullable|date|after_or_equal:start_date
 
     Backend->>SprintService: start(sprint, validated)
     SprintService->>SprintService: Set sprint_status_id = "active"
@@ -76,7 +76,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     Browser->>Backend: PATCH /project/{project}/sprints/{sprint}/complete
-    Note over Backend: Validasi SprintCompleteRequest:<br/>retrospective=nullable|string<br/>move_incomplete_to.existing_sprint=nullable|integer|exists:project_sprints,id<br/>move_incomplete_to.other=nullable|in:backlog,new_sprint<br/>prepareForValidation: Sqids-decode existing_sprint
+    Note over Backend: Validasi SprintCompleteRequest:<br/>retrospective=nullable|string<br/>move_incomplete_to.existing_sprint=nullable|integer|exists:project_sprints,id<br/>move_incomplete_to.other=nullable|string|in:backlog,new_sprint<br/>prepareForValidation: Sqids-decode existing_sprint
 
     Backend->>SprintService: complete(sprint, validated)
     Note over SprintService: Route incomplete tasks berdasarkan move_incomplete_to
@@ -147,9 +147,9 @@ sequenceDiagram
 | PATCH | `/project/{project}/sprints/{sprint}/complete` | `SprintController@complete` | Redirect |
 | POST | `/project/{project}/sprints/{sprint}/tasks` | `SprintController@assignTask` | Redirect / JSON |
 | DELETE | `/project/{project}/sprints/{sprint}/tasks/{task}` | `SprintController@removeTask` | Redirect / JSON |
-| GET | `/project/{project}/sprints/all` | `SprintReportController@index` | JSON |
-| GET | `/project/{project}/sprints/{sprint}/burndown` | `SprintReportController@burndown` | JSON |
-| GET | `/project/{project}/sprints/{sprint}/status-report` | `SprintReportController@statusReport` | JSON |
+| GET | `/project/{project}/sprints/all` | `Api\SprintReportController@index` | JSON |
+| GET | `/project/{project}/sprints/{projectSprint}/burndown` | `Api\SprintReportController@burndown` | JSON |
+| GET | `/project/{project}/sprints/{projectSprint}/status-report` | `Api\SprintReportController@statusReport` | JSON |
 
 ## Frontend Backlog Board (Backlog.vue)
 

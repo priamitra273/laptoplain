@@ -57,14 +57,14 @@ sequenceDiagram
     Note over Backend: Validasi reaction=required|string
 
     Backend->>CommentService: toggleReaction(comment, reactionType)
-    CommentService->>DB: Check existing reaction (same user + same type)
-    alt Already exists
+    CommentService->>DB: Cek reaction milik user dengan tipe yang sama
+    alt Sudah ada (user + reaction sama)
         CommentService->>DB: Delete reaction (remove)
-    else Doesn't exist
-        CommentService->>DB: Create reaction (add)
+    else Belum ada
+        CommentService->>DB: updateOrCreate({user_id}, {reaction})<br/>(1 reaction per user: ganti jika sudah pilih tipe lain)
     end
     Backend->>Browser: JSON {success, data: CommentReactionData[]}
-    Note over Browser: CommentReactionData = reaction group counts
+    Note over Browser: CommentReactionData = {reaction, count}<br/>dari $comment->reaction_group_count
 ```
 
 ## Routes

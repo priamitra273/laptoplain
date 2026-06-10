@@ -60,7 +60,7 @@ sequenceDiagram
     Browser->>Backend: POST /project
 
     Backend->>Backend: Validasi ProjectStoreRequest
-    Note over Backend: title=required|string|max:255<br/>description=nullable|string<br/>emoji=nullable|string|max:100<br/>start_date=required|date<br/>due_date=nullable|date|after_or_equal:start_date<br/>status_id=required|exists:ms_project_statuses,id<br/>priority_id=required|exists:ms_project_priority,id<br/>prepareForValidation: owned_id=Auth::id() if missing<br/>prepareForValidation: Sqids-decode status_id & priority_id
+    Note over Backend: title=required|string|max:255<br/>description=nullable|required|string<br/>emoji=nullable|required|string|max:100<br/>start_date=required|date<br/>due_date=nullable|date|after_or_equal:start_date<br/>status_id=required|exists:ms_project_statuses,id<br/>priority_id=required|exists:ms_project_priority,id<br/>prepareForValidation: owned_id=Auth::id() if missing<br/>prepareForValidation: Sqids-decode status_id & priority_id
 
     Backend->>DB: Project::create(validated)
     Backend->>DB: Update progress via $project->calculateProgress()
@@ -74,8 +74,8 @@ sequenceDiagram
 | Field | Rule |
 |-------|------|
 | `title` | required, string, max:255 |
-| `description` | nullable, string |
-| `emoji` | nullable, string, max:100 |
+| `description` | nullable, required, string |
+| `emoji` | nullable, required, string, max:100 |
 | `start_date` | required, date |
 | `due_date` | nullable, date, after_or_equal:start_date |
 | `status_id` | required, exists:ms_project_statuses,id |
@@ -103,7 +103,7 @@ sequenceDiagram
     Note over Backend: Gagal -> back()->with('error','Project not found')
 
     Backend->>Backend: Validasi ProjectUpdateRequest
-    Note over Backend: Semua field pakai "sometimes" (partial update)<br/>title=string|max:255<br/>description=nullable|string<br/>emoji=nullable|string|max:10<br/>start_date=date<br/>due_date=date|after_or_equal:start_date<br/>status_id=exists:ms_project_statuses,id<br/>priority_id=exists:ms_project_priority,id<br/>withValidator: jika status_id 1 atau 2 && !due_date -> error
+    Note over Backend: Semua field pakai "sometimes|required" (partial update)<br/>title=sometimes|required|string|max:255<br/>description=sometimes|nullable|string<br/>emoji=sometimes|nullable|string|max:10<br/>start_date=sometimes|required|date<br/>due_date=sometimes|required|date|after_or_equal:start_date<br/>status_id=sometimes|required|exists:ms_project_statuses,id<br/>priority_id=sometimes|required|exists:ms_project_priority,id<br/>withValidator: jika due_date tidak dikirim & status_id (request/DB) 1 atau 2 -> error
 
     Backend->>DB: $project->update(validated)
     Backend->>DB: Update progress via $project->calculateProgress()
@@ -119,15 +119,15 @@ sequenceDiagram
 
 | Field | Rule |
 |-------|------|
-| `title` | sometimes, string, max:255 |
+| `title` | sometimes, required, string, max:255 |
 | `description` | sometimes, nullable, string |
 | `emoji` | sometimes, nullable, string, max:10 |
-| `start_date` | sometimes, date |
-| `due_date` | sometimes, date, after_or_equal:start_date |
-| `status_id` | sometimes, exists:ms_project_statuses,id |
-| `priority_id` | sometimes, exists:ms_project_priority,id |
+| `start_date` | sometimes, required, date |
+| `due_date` | sometimes, required, date, after_or_equal:start_date |
+| `status_id` | sometimes, required, exists:ms_project_statuses,id |
+| `priority_id` | sometimes, required, exists:ms_project_priority,id |
 
-**withValidator:** Menambah error jika `status_id` = 1 atau 2 (indikasi status yang butuh due_date) dan `due_date` tidak ada. `status_id` dan `priority_id` di-decode dari Sqids.
+**withValidator:** Jika `due_date` dikirim, rule biasa jalan. Jika tidak: ambil `status_id` dari request atau dari DB (`projects.status_id`), lalu jika status = 1 atau 2 tambahkan error `due_date` ("Due date is required when status is set to..."). **prepareForValidation:** `owned_id` di-set ke `Auth::id()` jika tidak ada; `status_id` dan `priority_id` di-decode dari Sqids.
 
 ---
 

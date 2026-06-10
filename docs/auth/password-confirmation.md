@@ -19,25 +19,29 @@ sequenceDiagram
     User->>Browser: Input password
     Browser->>Backend: POST /confirm-password (auth middleware)
 
-    Note over Backend: Validasi: password=required|current_password
-    Note over Backend: current_password rule: Auth::guard()->validate({email, password})
+    Note over Backend: Auth::guard('web')->validate(<br/>{email: user->email, password})
 
     alt Password benar
-        Backend->>Backend: session(['auth.password_confirmed_at' => time()])
-        Backend->>Browser: Redirect intended (ke halaman yang diminta)
+        Backend->>Backend: session()->put('auth.password_confirmed_at', time())
+        Backend->>Browser: redirect()->intended(route('dashboard'))
     else Password salah
-        Backend->>Browser: Validation error "The password is incorrect"
+        Backend->>Browser: ValidationException(['password' => __('auth.password')])
         Browser-->>User: Tampilkan error
     end
 ```
 
 ## Validasi
 
-| Field | Rule |
-|-------|------|
-| `password` | required, current_password |
+Tidak ada FormRequest atau rule `current_password`. Controller memvalidasi password secara manual:
 
-**`current_password` rule:** memvalidasi password terhadap user yang sedang login via `Auth::guard()->validate()`.
+```php
+Auth::guard('web')->validate([
+    'email' => $request->user()->email,
+    'password' => $request->password,
+]);
+```
+
+Jika gagal, dilempar `ValidationException` dengan pesan `__('auth.password')` pada field `password`.
 
 ## Session
 

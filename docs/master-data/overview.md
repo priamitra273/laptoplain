@@ -30,8 +30,8 @@ sequenceDiagram
     Admin->>Browser: GET /{resource}
     Browser->>Backend: GET /{resource}
     Backend->>DB: Model::orderBy('id')->get()
-    Backend->>Backend: Encode IDs dengan Sqids
-    Backend->>Browser: Inertia render('{resource}/Index', {data})
+    Backend->>Backend: Sqids::rec_encode_ids_in_list(data)
+    Backend->>Browser: Inertia render('ms_{resource}/Index', {data})
     Browser-->>Admin: DataTable dengan pagination 25/50/100
 
     Note over Admin,DB: CREATE
@@ -101,7 +101,7 @@ sequenceDiagram
     Backend->>DB: MsProjectRole::create(validated)
     Backend->>Browser: Redirect ke project-role.index
 
-    Admin->>Browser: Edit (decode allow_task_status ke Sqids untuk display)
+    Admin->>Browser: Edit (encode allow_task_status ke Sqids untuk display)
     Browser->>Backend: PUT /project-role/{id}
     Note over Backend: Decode allow_task_status array items kembali ke integer IDs
     Backend->>DB: Update
@@ -148,7 +148,20 @@ Setiap halaman master data menerapkan permission gating untuk tindakan:
 
 ## Frontend Pattern
 
+Direktori halaman mengikuti nama view di controller (bukan route prefix):
+
+| Resource | Halaman |
+|----------|---------|
+| Project Status | `pages/ms_project_status/Index.vue` |
+| Project Priority | `pages/ms_project_priority/Index.vue` |
+| Project Role | `pages/ms_project_role/Index.vue` + `pages/ms_project_role/FormPage.vue` |
+| Task Status | `pages/ms_task_status/Index.vue` |
+| Task Priority | `pages/ms_task_priority/Index.vue` |
+| Task Type | `pages/ms_task_type/Index.vue` |
+| Task Category | `pages/task_category/Index.vue` |
+| Tag | `pages/tag/Index.vue` |
+
 | File | Purpose |
 |------|---------|
-| `pages/{resource}/Index.vue` | Halaman utama: DataTable + Drawer Form |
+| `pages/ms_{resource}/Index.vue` | Halaman utama: DataTable + Drawer Form |
 | `components/DropdownButton.vue` | Action dropdown (Edit/Delete) di setiap row |

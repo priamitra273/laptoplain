@@ -41,13 +41,13 @@ sequenceDiagram
     Note over Backend: Validasi:<br/>token=required<br/>email=required|email<br/>password=required|confirmed|Password::defaults()
 
     Backend->>Backend: Password::reset(credentials, callback)
-    Note over Backend: Callback: User::where('email', email)<br/>->update({password: Hash::make(password)})
+    Note over Backend: Callback: $user->forceFill({password: Hash::make(password),<br/>remember_token: Str::random(60)})->save()
 
-    alt Success
+    alt Success (Password::PasswordReset)
         Backend->>Backend: Event: PasswordReset($user)
-        Backend->>Browser: Redirect to login with status
-    else Gagal (invalid token)
-        Backend->>Browser: ValidationException('email','Invalid reset token')
+        Backend->>Browser: to_route('login')->with('status', __($status))
+    else Gagal (invalid token/email)
+        Backend->>Browser: ValidationException(['email' => [__($status)]])
     end
 ```
 

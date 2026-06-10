@@ -120,7 +120,7 @@ sequenceDiagram
 
 | File | Purpose |
 |------|---------|
-| `pages/settings/Profile.vue` | Edit name, email, avatar upload (FileUpload + Cropper.js), delete account form |
+| `pages/settings/Profile.vue` | Edit name, email, avatar upload (PrimeVue FileUpload + vue-advanced-cropper), delete account form |
 | `pages/settings/Password.vue` | Current + new password + confirm |
 | `pages/settings/Appearance.vue` | Dark/Light/System toggle |
 | `layouts/settings/Layout.vue` | Settings sub-layout dengan side nav |

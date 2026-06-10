@@ -16,7 +16,7 @@ sequenceDiagram
     Note over Admin,DB: LIST
     Admin->>Browser: GET /team
     Browser->>Backend: GET /team (route.permission)
-    Backend->>DB: Team::select(uuid,name)::filterByUserRole()::get()
+    Backend->>DB: Team::select(uuid,name,created_at,updated_at)::filterByUserRole()::get()
     Backend->>Browser: Inertia render('team/Team', {teams})
 
     Note over Admin,DB: CREATE

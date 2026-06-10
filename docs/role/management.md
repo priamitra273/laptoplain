@@ -78,7 +78,7 @@ Contoh: label="Developer", team="Engineering" → name="developer-engineering"
 
 ## Permission Structure
 
-Permission format: `{uri}.{action}` (e.g., `project.index`, `project.create`, `project.destroy`)
+Permission format: `{uri}.{action}` (e.g., `project.create`, `project.read`, `project.update`, `project.delete`)
 
 Setiap menu menghasilkan 4 permissions: `create`, `read`, `update`, `delete`.
 
@@ -97,6 +97,7 @@ Setiap menu menghasilkan 4 permissions: `create`, `read`, `update`, `delete`.
 
 | File | Purpose |
 |------|---------|
-| `pages/role/Role.vue` | Role list DataTable |
+| `pages/role/Role.vue` | Halaman list (wrapper, render RoleListTable) |
+| `pages/role/partials/RoleListTable.vue` | DataTable role dengan actions |
 | `pages/role/RoleForm.vue` | Form create/edit: Team Select, Role Name, Active ToggleSwitch, permission matrix |
 | `pages/role/partials/SetupPermission.vue` | Hierarchical checkbox tree per menu item |

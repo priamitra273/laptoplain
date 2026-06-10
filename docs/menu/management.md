@@ -75,7 +75,7 @@ sequenceDiagram
 
 Sama, tapi `route_name` unique ignore self (menu->id).
 
-**passedValidation:** merge `parent_id` dari `Menu::findByUuid(parent_uuid)`.
+**passedValidation (hanya MenuUpdateRequest):** merge `parent_id` dari `Menu::findByUuid(parent_uuid)`. Pada store, `parent_id` di-resolve di dalam `MenuService::store()` (bukan di FormRequest).
 
 ## Menu Permission Auto-Creation
 

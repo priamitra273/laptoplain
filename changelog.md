@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.1.1] - 2026-06-10
+
+### Fixed
+
+- Included the task's current status in `statusOption` so it is always visible regardless of user permissions. (8b0f72a)
+- Corrected date range field disabling logic to use `end_date` instead of `due_date` in task form. (8b0f72a)
+
 ## [1.1.0] - 2026-06-10
 
 ### Added
@@ -244,10 +251,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 Notes:
 
 - Versions above are organized semantically from historical milestones in `git log`.
-- Version `1.0.0` covers changes after `d91fb0` through `ca033b8`.
-- Version `1.0.1` covers changes after `ca033b8` through `0a6f2ef`.
-- Version `1.1.0` covers changes after `0a6f2ef` through `f2f16cf`.
-- Latest commit incorporated: `f2f16cf` (feat: replace Instrument Sans with Roboto font across the application).
+- Version `1.1.1` covers changes after `f2f16cf` through `8b0f72a`.
+- Latest commit incorporated: `8b0f72a` (feat: enhance task status filtering and fix date range field disabling logic).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

@@ -78,7 +78,11 @@ const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
 
 const formattedMemberOption = computed<User[]>(() => props.members.map((m) => m.user));
 
-const statusOption = computed(() => props.taskStatuses.filter((s) => canUpdateTaskStatus(s.id)));
+const statusOption = computed(() =>
+    props.taskStatuses.filter((s) => {
+        return canUpdateTaskStatus(s.id) || props.task?.status_id === s.id;
+    }),
+);
 
 const existedMembers = computed<User[]>(() => props.task?.users?.map((u) => u) ?? []);
 
@@ -336,7 +340,7 @@ watch(
         <InputDateRange
             v-model:startDate="form.start_date"
             v-model:dueDate="form.due_date"
-            :disabled="fieldDisabled('start_date') || fieldDisabled('due_date')"
+            :disabled="fieldDisabled('start_date') || fieldDisabled('end_date')"
             :required="requiresDates"
             :minDueDate="minDueDate"
             :isInProgressStatus="isInProgressStatus"

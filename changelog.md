@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.0.1] - 2026-06-09
+
+### Added
+
+- Comprehensive feature documentation under `docs/` covering authentication, comments, dashboard, master data, menu, notifications, projects, roles, settings, sprints, tasks, teams, and users. (ace4cef)
+
+### Changed
+
+- Task statuses in `getTaskStatuses` are now ordered by `score` for consistent display in the UI. (0a6f2ef)
+
 ## [1.0.0] - 2026-06-09
 
 ### Added
@@ -224,7 +234,8 @@ Notes:
 
 - Versions above are organized semantically from historical milestones in `git log`.
 - Version `1.0.0` covers changes after `d91fb0` through `ca033b8`.
-- Latest commit incorporated: `ca033b8` (feat: conditionally require start and due dates based on task status).
+- Version `1.0.1` covers changes after `ca033b8` through `0a6f2ef`.
+- Latest commit incorporated: `0a6f2ef` (feat(repository): order task statuses by score in getTaskStatuses query).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

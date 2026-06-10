@@ -147,7 +147,7 @@ class ProjectRepository
 
     public function getTaskStatuses(): Collection
     {
-        return MsTaskStatus::select('id', 'name', 'severity', 'score')->get();
+        return MsTaskStatus::select('id', 'name', 'severity', 'score')->orderBy('score')->get();
     }
 
     public function getTaskPriorities(): Collection

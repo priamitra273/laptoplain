@@ -10,6 +10,7 @@ const props = defineProps<{
     taskPriorities: TaskPriority[];
     userOptions: User[];
     currentUser?: User;
+    isNeedDueDate?: boolean;
     loading?: boolean;
     errors?: Record<string, string>;
 }>();
@@ -161,7 +162,7 @@ const submitForm = () => {
             <div>
                 <DatePicker
                     v-model="form.due_date"
-                    placeholder="Due date (optional)"
+                    :placeholder="isNeedDueDate ? 'Due date *' : 'Due date (optional)'"
                     dateFormat="dd M yy"
                     class="w-full !text-xs"
                     :class="errors?.due_date ? '!border-rose-400' : ''"

@@ -33,6 +33,14 @@ interface Emits {
     edit: [task: Task, parentId: string | null];
 }
 
+interface ProgressDialog {
+    visible: boolean;
+    task: Task | null;
+    newStatusId: string | null;
+    dueDate: Date | null;
+    snapshot: Record<string, Task[]> | null;
+}
+
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
@@ -85,6 +93,17 @@ const cardMenuItems = computed(() => [
     { label: 'Delete Task', icon: 'pi pi-trash', command: () => deleteTask(cardMenuTask.value!), disabled: !canTaskDelete.value },
 ]);
 
+// ─── Due Date Dialog ─────────────────────────────────────────────────────────
+const inProgressDialog = ref<ProgressDialog>({
+    visible: false,
+    task: null,
+    newStatusId: null,
+    dueDate: null,
+    snapshot: null,
+});
+
+const inProgressLoading = ref(false);
+
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const canTaskCreate = computed(() => canAction('task', 'create'));
 const canTaskUpdate = computed(() => canAction('task', 'update'));
@@ -132,6 +151,7 @@ const boardProgress = computed(() => (totalTasks.value ? Math.round((doneTasks.v
 
 const getMeta = (sid: string) => severityClasses[props.statuses.find((s) => s.id === sid)?.severity || 'default'] || severityClasses.default;
 const getStatusName = (id: string) => props.statuses.find((s) => s.id === id)?.name || 'Unknown';
+const requiresDueDateForStatus = (statusName?: string) => !!statusName && !['To Do', 'Blocked'].includes(statusName);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 const isOverdue = (task: Task) =>
@@ -179,6 +199,21 @@ const onGroupChange = async (task: Task, newStatusId: string) => {
         return;
     }
 
+    const targetStatus = props.statuses.find((s) => s.id === newStatusId);
+    const dueDateMissing = !task.due_date;
+
+    if (requiresDueDateForStatus(targetStatus?.name) && dueDateMissing) {
+        inProgressDialog.value = {
+            visible: true,
+            task,
+            newStatusId,
+            dueDate: null,
+            snapshot: preDragSnapshot.value,
+        };
+
+        return;
+    }
+
     await doStatusUpdate(task, newStatusId, null);
 };
 
@@ -222,6 +257,28 @@ const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string |
     }
 };
 
+const submitInProgressDialog = async () => {
+    if (!inProgressDialog.value.dueDate) {
+        toast.add({ severity: 'warn', summary: 'Due Date Required', detail: 'Please select a due date.', life: 3000 });
+        return;
+    }
+
+    inProgressLoading.value = true;
+    const formattedDueDate = moment(inProgressDialog.value.dueDate).format('YYYY-MM-DD');
+
+    await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.newStatusId!, formattedDueDate);
+
+    inProgressLoading.value = false;
+    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+};
+
+const cancelInProgressDialog = () => {
+    if (inProgressDialog.value.snapshot) {
+        grouped.value = inProgressDialog.value.snapshot;
+    }
+    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+};
+
 // ─── Delete ───────────────────────────────────────────────────────────────────
 const deleteTask = (task: Task) => {
     confirm.require({
@@ -253,6 +310,11 @@ const validateQuickForm = (form: any): boolean => {
     if (!form.type_id) errs.type_id = 'Type is required.';
     if (!form.priority_id) errs.priority_id = 'Priority is required.';
     if (!form.assign_users.length) errs.assign_users = 'At least one assignee is required.';
+
+    const currentStatus = props.statuses.find((s) => s.id === quickAddStatus.value);
+    if (requiresDueDateForStatus(currentStatus?.name) && !form.due_date) {
+        errs.due_date = 'Due date is required for this status.';
+    }
 
     if (form.start_date && form.due_date && form.start_date > form.due_date) {
         errs.start_date = 'Start date cannot be after due date.';
@@ -350,6 +412,7 @@ const openCardMenu = (e: MouseEvent, task: Task) => {
                     :taskPriorities="taskPriorities"
                     :userOptions="userOptions"
                     :currentUser="currentUser"
+                    :isNeedDueDate="requiresDueDateForStatus(getStatusName(statusId))"
                     :loading="quickAddLoading"
                     :errors="quickErrors"
                     @cancel="quickAddStatus = null"
@@ -414,6 +477,56 @@ const openCardMenu = (e: MouseEvent, task: Task) => {
     </div>
 
     <Menu ref="cardMenu" :model="cardMenuItems" popup />
+
+    <!-- ── Due Date Dialog ──────────────────────────────────────────────────── -->
+    <Dialog v-model:visible="inProgressDialog.visible" modal :closable="false" :draggable="false" class="w-full max-w-md">
+        <template #header>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                    <i class="pi pi-calendar-clock text-blue-600 dark:text-blue-300"></i>
+                </div>
+                <div>
+                    <p class="text-base font-semibold text-gray-800 dark:text-white">Set Due Date</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Required to move task to this status</p>
+                </div>
+            </div>
+        </template>
+
+        <div class="flex flex-col gap-4 py-2">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="font-medium text-surface-800 dark:text-surface-100"> "{{ inProgressDialog.task?.title }}" </span>
+                doesn't have a due date yet. Please set one before moving it to
+                <span class="font-semibold text-blue-600 dark:text-blue-400">{{ inProgressDialog.newStatusId ? getStatusName(inProgressDialog.newStatusId) : 'this status' }}</span>.
+            </p>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
+                </label>
+                <DatePicker
+                    v-model="inProgressDialog.dueDate"
+                    dateFormat="dd M yy"
+                    class="w-full"
+                    showIcon
+                    placeholder="Select due date"
+                    :minDate="new Date()"
+                />
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex justify-end gap-2 pt-2">
+                <Button label="Cancel" severity="secondary" text @click="cancelInProgressDialog" />
+                <Button
+                    label="Confirm & Move"
+                    icon="pi pi-check"
+                    :disabled="!inProgressDialog.dueDate"
+                    :loading="inProgressLoading"
+                    @click="submitInProgressDialog"
+                />
+            </div>
+        </template>
+    </Dialog>
 
     <TaskKanbanDetailPanel
         v-model:visible="detailPanel.visible"

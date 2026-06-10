@@ -24,6 +24,9 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+    (e: 'showInProgressDialog', pendingStatusId: string): void;
+}>();
 
 const page = usePage();
 const toast = useToast();
@@ -43,6 +46,7 @@ const isOwner = computed(() => {
 const statusOption = computed(() => {
     return isDeveloper.value ? props.statuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.statuses;
 });
+const requiresDueDateForStatus = (statusName?: string) => statusName === 'In Progress';
 
 const formatDate = (date?: string) => (date ? moment(date).format('DD MMM YYYY') : '-');
 const formatDateTime = (date?: string) => (date ? moment(date).format('DD MMM YYYY HH:mm') : '-');
@@ -161,6 +165,16 @@ const autoSave = (field: TaskFormField, value: any, extraFields?: Partial<TaskFo
 };
 
 const handleSelectChange = (field: string, value: any) => {
+    if (field === 'status_id') {
+        const selectedStatus = props.statuses.find((s) => s.id === value);
+        const dueDateMissing = !props.task.due_date;
+
+        if (requiresDueDateForStatus(selectedStatus?.name) && dueDateMissing) {
+            emit('showInProgressDialog', value);
+            return;
+        }
+    }
+
     autoSave(field as TaskFormField, value);
 };
 

@@ -2,6 +2,9 @@
 import { Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
@@ -34,6 +37,21 @@ const onDragStart = () => {
 
     preDragSnapshot.value = snapshot;
 };
+
+const inProgressDialog = ref<{
+    visible: boolean;
+    task: Task | null;
+    newStatusId: string | null;
+    dueDate: Date | null;
+    snapshot: Record<string, Task[]> | null;
+}>({
+    visible: false,
+    task: null,
+    newStatusId: null,
+    dueDate: null,
+    snapshot: null,
+});
+const inProgressLoading = ref(false);
 
 const cardClasses: Record<string, string> = {
     primary: 'bg-primary-100/50',
@@ -85,6 +103,7 @@ const getStatusName = (id: string) => {
 
     return 'Unknown';
 };
+const requiresDueDateForStatus = (statusName?: string) => !!statusName && !['To Do', 'Blocked'].includes(statusName);
 
 const getErrorMessage = (error: any, fallback: string) => {
     const errors = error?.response?.data?.errors as Record<string, string[]> | undefined;
@@ -113,7 +132,54 @@ const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string |
 };
 
 const onGroupChange = async (task: Task, newStatusId: string) => {
+    const targetStatus = props.statuses.find((s) => s.id === newStatusId);
+    const dueDateMissing = !task.due_date;
+
+    if (requiresDueDateForStatus(targetStatus?.name) && dueDateMissing) {
+        inProgressDialog.value = {
+            visible: true,
+            task,
+            newStatusId,
+            dueDate: null,
+            snapshot: preDragSnapshot.value,
+        };
+        return;
+    }
+
     await doStatusUpdate(task, newStatusId, null);
+};
+
+const submitInProgressDialog = async () => {
+    if (!inProgressDialog.value.dueDate) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Due Date Wajib Diisi',
+            detail: 'Pilih due date sebelum memindahkan task ke status ini.',
+            life: 3000,
+        });
+        return;
+    }
+
+    inProgressLoading.value = true;
+
+    const formattedDueDate = moment(inProgressDialog.value.dueDate).format('YYYY-MM-DD');
+    await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.newStatusId!, formattedDueDate);
+
+    inProgressLoading.value = false;
+    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+};
+
+const cancelInProgressDialog = () => {
+    if (inProgressDialog.value.snapshot) {
+        grouped.value = inProgressDialog.value.snapshot;
+    }
+    inProgressDialog.value = {
+        visible: false,
+        task: null,
+        newStatusId: null,
+        dueDate: null,
+        snapshot: null,
+    };
 };
 
 onMounted(() => {
@@ -190,4 +256,54 @@ watch(
             </div>
         </div>
     </div>
+
+    <!-- ── Due Date Dialog ──────────────────────────────────────────────────── -->
+    <Dialog v-model:visible="inProgressDialog.visible" modal :closable="false" :draggable="false" class="w-full max-w-md">
+        <template #header>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                    <i class="pi pi-calendar-clock text-blue-600 dark:text-blue-300"></i>
+                </div>
+                <div>
+                    <p class="text-base font-semibold text-gray-800 dark:text-white">Set Due Date</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Required to move task to this status</p>
+                </div>
+            </div>
+        </template>
+
+        <div class="flex flex-col gap-4 py-2">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="font-medium text-surface-800 dark:text-surface-100"> "{{ inProgressDialog.task?.title }}" </span>
+                doesn't have a due date yet. Please set one before moving it to
+                <span class="font-semibold text-blue-600 dark:text-blue-400">{{ inProgressDialog.newStatusId ? getStatusName(inProgressDialog.newStatusId) : 'this status' }}</span>.
+            </p>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
+                </label>
+                <DatePicker
+                    v-model="inProgressDialog.dueDate"
+                    dateFormat="dd M yy"
+                    class="w-full"
+                    showIcon
+                    placeholder="Pilih due date"
+                    :minDate="new Date()"
+                />
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex justify-end gap-2 pt-2">
+                <Button label="Cancel" severity="secondary" text @click="cancelInProgressDialog" />
+                <Button
+                    label="Confirm & Move"
+                    icon="pi pi-check"
+                    :disabled="!inProgressDialog.dueDate"
+                    :loading="inProgressLoading"
+                    @click="submitInProgressDialog"
+                />
+            </div>
+        </template>
+    </Dialog>
 </template>

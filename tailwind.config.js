@@ -13,7 +13,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Instrument Sans', ...defaultTheme.fontFamily.sans],
+                sans: ['Roboto', ...defaultTheme.fontFamily.sans],
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -78,8 +78,8 @@ export default {
             md: '768px',
             lg: '992px',
             xl: '1200px',
-            '2xl': '1920px'
-        }
+            '2xl': '1920px',
+        },
     },
     plugins: [require('tailwindcss-animate'), require('tailwindcss-primeui')],
 };

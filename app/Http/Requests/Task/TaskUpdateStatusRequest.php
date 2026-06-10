@@ -34,7 +34,6 @@ class TaskUpdateStatusRequest extends FormRequest
             ],
 
             'due_date' => [
-                'sometimes',
                 'nullable',
                 'date',
                 Rule::requiredIf(function () {
@@ -61,6 +60,14 @@ class TaskUpdateStatusRequest extends FormRequest
                     }
                 },
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'due_date.required' => 'Due date is required for this status.',
+            'due_date.date' => 'Due date must be a valid date.',
         ];
     }
 

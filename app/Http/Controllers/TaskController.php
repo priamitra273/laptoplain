@@ -170,7 +170,7 @@ class TaskController extends Controller
         $this->service->updateStatus(
             task: $task,
             status: MsTaskStatus::find(Sqids::decode($request->status_id)),
-            due_date: $request->due_date
+            due_date: $request->has('due_date') ? $request->input('due_date') : $task->due_date
         );
 
         return response()->json([

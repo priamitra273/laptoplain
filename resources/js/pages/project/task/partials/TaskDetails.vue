@@ -24,9 +24,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{
-    (e: 'showInProgressDialog', pendingStatusId: string): void;
-}>();
 
 const page = usePage();
 const toast = useToast();
@@ -164,17 +161,6 @@ const autoSave = (field: TaskFormField, value: any, extraFields?: Partial<TaskFo
 };
 
 const handleSelectChange = (field: string, value: any) => {
-    if (field === 'status_id') {
-        const selectedStatus = props.statuses.find((s) => s.id === value);
-        const isInProgress = selectedStatus?.name === 'In Progress';
-        const dueDateMissing = !props.task.due_date;
-
-        if (isInProgress && dueDateMissing) {
-            emit('showInProgressDialog', value);
-            return;
-        }
-    }
-
     autoSave(field as TaskFormField, value);
 };
 

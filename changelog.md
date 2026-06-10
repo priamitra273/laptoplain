@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.1.0] - 2026-06-10
+
+### Added
+
+- Due date requirement enforcement when updating task status, with dialog prompts in Kanban board, task detail, and task details views. (60f24cc, 4c4c45d)
+
+### Changed
+
+- Replaced Instrument Sans with Roboto as the primary application font, including variable and static font files, stylesheet definitions, and Tailwind configuration. (f2f16cf)
+- Enhanced date validation logic in `TaskStoreRequest` and `TaskUpdateRequest` with updated form components for date range input. (f73be67)
+
 ## [1.0.1] - 2026-06-09
 
 ### Added
@@ -235,7 +246,8 @@ Notes:
 - Versions above are organized semantically from historical milestones in `git log`.
 - Version `1.0.0` covers changes after `d91fb0` through `ca033b8`.
 - Version `1.0.1` covers changes after `ca033b8` through `0a6f2ef`.
-- Latest commit incorporated: `0a6f2ef` (feat(repository): order task statuses by score in getTaskStatuses query).
+- Version `1.1.0` covers changes after `0a6f2ef` through `f2f16cf`.
+- Latest commit incorporated: `f2f16cf` (feat: replace Instrument Sans with Roboto font across the application).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

@@ -127,6 +127,13 @@ const isInProgressStatus = computed(() => {
     return status?.name === 'In Progress';
 });
 
+const normalizeStatusName = (statusName: string) => statusName.replace(/\s+/g, '').toLowerCase();
+
+const requiresDates = computed(() => {
+    const status = props.taskStatuses.find((s) => s.id === form.status_id);
+    return !!status && !['todo', 'blocked'].includes(normalizeStatusName(status.name));
+});
+
 const isEdit = computed(() => !!props.task);
 
 const findTaskById = (tasks: Task[], id: string): Task | null => {
@@ -152,7 +159,7 @@ const onStatusChange = (newStatusId: string | null) => {
     const status = props.taskStatuses.find((s) => s.id === newStatusId);
     form.progress_value = status?.score ?? 0;
 
-    if (status?.name?.toLowerCase() === 'to do') {
+    if (status?.name && normalizeStatusName(status.name) === 'todo') {
         form.due_date = null;
     }
 };
@@ -330,6 +337,9 @@ watch(
             v-model:startDate="form.start_date"
             v-model:dueDate="form.due_date"
             :disabled="fieldDisabled('start_date') || fieldDisabled('due_date')"
+            :required="requiresDates"
+            :minDueDate="minDueDate"
+            :isInProgressStatus="isInProgressStatus"
             :startDateError="form.errors.start_date"
             :dueDateError="form.errors.due_date"
         />

@@ -20,6 +20,7 @@ class TaskUpdateRequest extends FormRequest
     public function rules(): array
     {
         $status = MsTaskStatus::find($this->status_id);
+        $datesRequired = $this->requiresDates($status?->name);
 
         return [
             'project_id' => 'sometimes|exists:projects,id',
@@ -36,12 +37,14 @@ class TaskUpdateRequest extends FormRequest
             'description' => 'sometimes|nullable|string',
 
             'start_date' => [
-                Rule::requiredIf(! in_array($status->name, $this->doesNotRequireDateStatus())),
+                Rule::requiredIf($datesRequired),
+                'nullable',
                 'date',
             ],
 
             'due_date' => [
-                Rule::requiredIf(! in_array($status->name, $this->doesNotRequireDateStatus())),
+                Rule::requiredIf($datesRequired),
+                'nullable',
                 'date',
                 'after_or_equal:start_date',
             ],
@@ -211,6 +214,23 @@ class TaskUpdateRequest extends FormRequest
 
     protected function doesNotRequireDateStatus(): array
     {
-        return [TaskStatusEnum::TO_DO->value, TaskStatusEnum::BLOCKED->value];
+        return [
+            $this->normalizeStatusName(TaskStatusEnum::TO_DO->value),
+            $this->normalizeStatusName(TaskStatusEnum::BLOCKED->value),
+        ];
+    }
+
+    private function requiresDates(?string $statusName): bool
+    {
+        if (! $statusName) {
+            return true;
+        }
+
+        return ! in_array($this->normalizeStatusName($statusName), $this->doesNotRequireDateStatus(), true);
+    }
+
+    private function normalizeStatusName(string $statusName): string
+    {
+        return str_replace(' ', '', strtolower($statusName));
     }
 }

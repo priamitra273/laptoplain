@@ -5,12 +5,15 @@ import Label from '@/components/Label.vue';
 interface Props {
     minDueDate?: Date;
     isInProgressStatus?: boolean;
+    required?: boolean;
     startDateError?: string | null;
     dueDateError?: string | null;
     disabled?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    required: false,
+});
 
 const startDate = defineModel<Date | null>('startDate', { default: null });
 const dueDate = defineModel<Date | null>('dueDate', { default: null });
@@ -18,7 +21,7 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
 
 <template>
     <div class="grid grid-cols-4 gap-4">
-        <Label value="Dates" icon="Calendar" required />
+        <Label value="Dates" icon="Calendar" :required="props.required" />
 
         <div class="col-span-3 flex items-center gap-4">
             <div>
@@ -38,6 +41,7 @@ const dueDate = defineModel<Date | null>('dueDate', { default: null });
             <div>
                 <DatePicker
                     v-model="dueDate"
+                    :disabled="props.disabled"
                     dateFormat="dd M yy"
                     showIcon
                     iconDisplay="input"

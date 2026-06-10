@@ -64,7 +64,9 @@ class ProjectRepository
                 'projectMembers.user.media',
                 'projectMembers.role:id,name',
                 'tasks' => function ($query) {
-                    $query->withRecursive();
+                    $query->withRecursive()
+                        ->orderBy('sequence_number')
+                        ->orderBy('id');
                 },
             ])->findOrFail($projectId);
         } catch (\Exception $e) {

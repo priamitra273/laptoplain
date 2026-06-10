@@ -207,7 +207,7 @@ class Task extends Model implements HasMedia
             'creator:id,name',
             'creator.media',
             'subTaskRecursive' => function ($q) {
-                $q->orderBy('id')->withRecursive();
+                $q->orderBy('sequence_number')->orderBy('id')->withRecursive();
             },
             'media' => fn ($q) => $q->where('collection_name', 'attachments'),
         ]);

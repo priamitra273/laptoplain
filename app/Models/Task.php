@@ -215,7 +215,13 @@ class Task extends Model implements HasMedia
 
     public function calculateProgress(): float
     {
-        $avg = $this->children()->avg('progress');
+        // Pakai relasi children yang sudah di-eager-load (Project::tasks()->with('children')
+        // dan scopeWithRecursive() memuatnya). Hanya query bila benar-benar belum dimuat.
+        $children = $this->relationLoaded('children')
+            ? $this->children
+            : $this->children()->get(['id', 'parent_id', 'progress']);
+
+        $avg = $children->isEmpty() ? null : $children->avg('progress');
 
         return round($avg ?? (float) $this->progress, 2);
     }

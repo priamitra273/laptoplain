@@ -62,7 +62,11 @@ class ProjectService
     public function getShowData(string $encoded): array
     {
         $project = $this->projectRepository->findWithRelationsForShow($encoded);
-        $project->update(['progress' => $project->calculateProgress()]);
+
+        $progress = $project->calculateProgress();
+        if (abs((float) $project->progress - $progress) > 0.001) {
+            $project->update(['progress' => $progress]);
+        }
 
         $projectId = $project->id;
 

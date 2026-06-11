@@ -165,21 +165,17 @@ class Project extends Model
 
     public function calculateProgress(): float
     {
-        $tasks = $this->tasks()->with('children')->get();
+        // Pakai relasi tasks yang sudah di-eager-load (findWithRelationsForShow).
+        // Hanya query bila belum dimuat (mis. dipanggil di luar alur show).
+        $tasks = $this->relationLoaded('tasks')
+            ? $this->tasks
+            : $this->tasks()->with('children')->get();
 
         if ($tasks->isEmpty()) {
             return 0;
         }
 
-        $total = 0;
-        $count = 0;
-
-        foreach ($tasks as $task) {
-            $total += $task->calculateProgress();
-            $count++;
-        }
-
-        return round($total / $count, 2);
+        return round($tasks->avg(fn (Task $task) => $task->calculateProgress()), 2);
     }
 
     public function scopeVisibleFor($query, User $user)

@@ -62,7 +62,7 @@ class ProjectRepository
                 },
                 'projectMembers.user:id,name,email',
                 'projectMembers.user.media',
-                'projectMembers.role:id,name',
+                'projectMembers.role:id,name,config',
                 'tasks' => function ($query) {
                     $query->withRecursive()
                         ->orderBy('sequence_number')

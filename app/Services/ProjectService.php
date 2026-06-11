@@ -219,11 +219,8 @@ class ProjectService
         }
 
         $config = $project->projectMembers
-            ->where('user.id', Auth::id())
-            ->first()
-            ?->role()
-            ->first()
-            ->config;
+            ->firstWhere('user.id', Auth::id())
+            ?->role?->config;
 
         return $config ? ConfigData::from($config) : null;
     }

@@ -31,18 +31,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 Route::get('/', fn () => to_route('login'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-
-    // HAPUS route ini karena akan ditangani oleh fallback
-    // Route::get('dashboard/{any}', fn() => abort(404))
-    //     ->where('any', '.*');
-
     Route::middleware('route.permission')->group(function () {
         $except = ['create', 'show', 'edit'];
-        Route::get('dashboard', [DashboardController::class, 'index'])
-            ->name('dashboard');
 
-        Route::get('workload-users', [WorkLoadUserController::class, 'index'])
-            ->name('workload-users.index');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('workload-users', [WorkLoadUserController::class, 'index'])->name('workload-users.index');
 
         Route::resource('menu', MenuController::class)->except($except)->whereUuid('menu');
         Route::resource('user', UserController::class)->except('show');
@@ -56,85 +49,75 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('task-priority', MsTaskPriorityController::class)->except($except);
         Route::resource('task-status', MsTaskStatusController::class)->except($except);
         Route::resource('task-type', MsTaskTypeController::class)->except($except);
-
         Route::resource('task-category', TaskCategoryController::class)->except($except);
 
         Route::resource('tag', TagController::class)->except($except);
 
-        Route::resource('project', ProjectController::class)
-            ->except(['create', 'edit', 'show']);
-
-        Route::get('project/{encoded}', [ProjectController::class, 'show'])
-            ->name('project.show');
-
-        Route::get('project/{encoded}/summary', ProjectSummaryController::class)
-            ->name('project.summary');
+        Route::resource('project', ProjectController::class)->except(['create', 'edit', 'show']);
+        Route::get('project/{encoded}', [ProjectController::class, 'show'])->name('project.show');
+        Route::get('project/{encoded}/summary', ProjectSummaryController::class)->name('project.summary');
 
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
-        Route::get('/reports/tasks', [TaskReportController::class, 'index'])
-            ->name('reports.tasks.index');
-
-        Route::get('/reports/tasks/export', [TaskReportController::class, 'export'])
-            ->name('reports.tasks.export');
+        Route::get('reports/tasks', [TaskReportController::class, 'index'])->name('reports.tasks.index');
+        Route::get('reports/tasks/export', [TaskReportController::class, 'export'])->name('reports.tasks.export');
     });
 
-    Route::get('/task/{task}', [TaskController::class, 'show'])->name('task.show');
-    Route::get('/task/{task}/comment', [TaskController::class, 'comments'])->name('task.comments');
-    Route::get('/task/{task}/parents', [TaskController::class, 'parents'])->name('task.parents');
-    Route::put('/task/{task}/parents', [TaskController::class, 'update_parents'])->name('task.parents.update');
-    Route::put('/task/{task}/status', [TaskController::class, 'updateStatus'])->name('task.status.update');
-    Route::get('/task/{encoded}/activities', [TaskActivityController::class, 'index'])->name('task.activities');
+    Route::prefix('task')->name('task.')->group(function () {
+        Route::get('{task}', [TaskController::class, 'show'])->name('show');
+        Route::get('{task}/comment', [TaskController::class, 'comments'])->name('comments');
+        Route::get('{task}/parents', [TaskController::class, 'parents'])->name('parents');
+        Route::put('{task}/parents', [TaskController::class, 'update_parents'])->name('parents.update');
+        Route::put('{task}/status', [TaskController::class, 'updateStatus'])->name('status.update');
+        Route::get('{encoded}/activities', [TaskActivityController::class, 'index'])->name('activities');
+    });
 
-    Route::prefix('project/{projectEncoded}')
-        ->name('project.')
-        ->group(function () {
-            Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
-            Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
-            Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
+    Route::prefix('project/{projectEncoded}')->name('project.')->group(function () {
+        Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
+        Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
+        Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
 
-            Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
-            Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
-            Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
-            Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
-            Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+        Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
+        Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
+        Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
-            Route::prefix('sprints')->name('sprints.')->group(function () {
-                Route::post('/', [SprintController::class, 'store'])->name('store');
-                Route::get('/', [SprintController::class, 'index'])->name('index');
-                Route::put('/{sprintEncoded}', [SprintController::class, 'update'])->name('update');
-                Route::delete('/{sprintEncoded}', [SprintController::class, 'destroy'])->name('destroy');
+        Route::prefix('sprints')->name('sprints.')->group(function () {
+            Route::get('/', [SprintController::class, 'index'])->name('index');
+            Route::post('/', [SprintController::class, 'store'])->name('store');
+            Route::put('{sprintEncoded}', [SprintController::class, 'update'])->name('update');
+            Route::delete('{sprintEncoded}', [SprintController::class, 'destroy'])->name('destroy');
 
-                // Lifecycle
-                Route::patch('/{sprintEncoded}/start', [SprintController::class, 'start'])->name('start');
-                Route::patch('/{sprintEncoded}/complete', [SprintController::class, 'complete'])->name('complete');
+            Route::patch('{sprintEncoded}/start', [SprintController::class, 'start'])->name('start');
+            Route::patch('{sprintEncoded}/complete', [SprintController::class, 'complete'])->name('complete');
 
-                // Task management dalam sprint
-                Route::post('/{sprintEncoded}/tasks', [SprintController::class, 'assignTask'])->name('tasks.assign');
-                Route::delete('/{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
-            });
+            Route::post('{sprintEncoded}/tasks', [SprintController::class, 'assignTask'])->name('tasks.assign');
+            Route::delete('{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
         });
+    });
 
     Route::prefix('project/{project}/sprints')->name('sprints.')->group(function () {
         Route::get('all', [SprintReportController::class, 'index'])->name('all');
-
         Route::get('{projectSprint}/burndown', [SprintReportController::class, 'burndown'])->name('burndown');
         Route::get('{projectSprint}/status-report', [SprintReportController::class, 'statusReport'])->name('status-report');
     });
 
-    Route::delete('/settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])
-        ->name('profile.avatar.destroy');
+    Route::prefix('comments')->name('comments.')->group(function () {
+        Route::post('/', [CommentController::class, 'store'])->name('store');
+        Route::put('{comment}', [CommentController::class, 'update'])->name('update');
+        Route::delete('{comment}', [CommentController::class, 'destroy'])->name('destroy');
+        Route::post('{comment}/reaction', [CommentController::class, 'react'])->name('react');
+    });
 
-    Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
-    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
-    Route::post('/comments/{comment}/reaction', [CommentController::class, 'react'])->name('comments.react');
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('stream', [NotificationController::class, 'stream'])->name('stream');
+        Route::post('{encoded}/read', [NotificationController::class, 'markAsRead'])->name('read');
+        Route::post('clear', [NotificationController::class, 'clearAll'])->name('clear');
+    });
 
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('/notifications/stream', [NotificationController::class, 'stream'])->name('notifications.stream');
-    Route::post('/notifications/{encoded}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::post('/notifications/clear', [NotificationController::class, 'clearAll'])
-        ->name('notifications.clear');
+    Route::delete('settings/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
 });
 
 require __DIR__.'/settings.php';

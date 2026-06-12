@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Data\MediaData;
 use App\Data\Project\ProjectData;
 use App\Data\Project\ProjectMemberData;
 use App\Data\Project\ProjectPriorityData;
 use App\Data\Project\ProjectRoleData;
 use App\Data\Project\ProjectStatusData;
 use App\Data\ProjectRole\ConfigData;
+use App\Data\Task\ProjectTaskData;
 use App\Data\Task\TagData;
 use App\Data\Task\TaskCategoryData;
 use App\Data\Task\TaskPriorityData;
@@ -17,17 +17,15 @@ use App\Data\Task\TaskTypeData;
 use App\Data\UserData;
 use App\Facades\Sqids;
 use App\Models\Project;
+use App\Models\ProjectSprint;
 use App\Models\Task;
 use App\Repositories\ProjectRepository;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\LaravelData\DataCollection;
 
 class ProjectService
 {
-    private const TASK_STATUS_COMPLETED = ['COMPLETED', 'FINISHED'];
-
     public function __construct(private ProjectRepository $projectRepository) {}
 
     public function findByEncodedId(string $encodedId): Project
@@ -68,6 +66,8 @@ class ProjectService
             $project->update(['progress' => $progress]);
         }
 
+        $project->unsetRelation('tasks');
+
         $projectId = $project->id;
 
         // Member user IDs used to determine who is "available" (non-member)
@@ -97,9 +97,9 @@ class ProjectService
                 ->map(fn ($user) => UserData::fromModel($user)->toArray())
                 ->toArray(),
 
-            // Only computed fields (is_overdue, completed_at) are added here;
-            // creator.avatar_url comes automatically via User::$appends
-            'tasks' => $this->formatProjectTasks($project->tasks),
+            // Full recursive task tree, serialized as ProjectTaskData
+            // (computed is_overdue/completed_at + avatar_url resolved within the DTO).
+            'tasks' => $this->projectRepository->getTaskTree($projectId)->toArray(),
 
             'taskStatuses' => TaskStatusData::collect(
                 $this->projectRepository->getTaskStatuses(),
@@ -141,7 +141,7 @@ class ProjectService
 
             // Sprint/backlog: avatar_url is resolved automatically via User::$appends
             // since users.media is eager-loaded in the repository — no manual formatting needed
-            'sprints' => $this->projectRepository->getActiveSprints($projectId)->toArray(),
+            'sprints' => $this->formatSprints($this->projectRepository->getActiveSprints($projectId)),
             'backlog' => $this->projectRepository->getBacklogTasks($projectId)->toArray(),
 
             'taskCategories' => TaskCategoryData::collect(
@@ -159,27 +159,25 @@ class ProjectService
     }
 
     /**
-     * Append computed view fields (is_overdue, completed_at) to each top-level task.
+     * Map each active sprint to an array, with its tasks as ProjectTaskData.
      *
-     * creator.avatar_url is already included via User::$appends when
-     * creator.media is eager-loaded by the repository's withRecursive() scope.
+     * @param  Collection<int, ProjectSprint>  $sprints
+     * @return array<int, array<string, mixed>>
      */
-    private function formatProjectTasks(Collection $tasks): array
+    private function formatSprints(Collection $sprints): array
     {
-        return $tasks->map(function (Task $task) {
-            $isCompleted = in_array(
-                strtoupper($task->status?->name ?? ''),
-                self::TASK_STATUS_COMPLETED
-            );
+        return $sprints->map(function (ProjectSprint $sprint) {
+            $data = $sprint->makeHidden('tasks')->toArray();
+            $data['tasks'] = $sprint->tasks
+                ->map(fn (Task $task) => ProjectTaskData::fromModel(
+                    $task,
+                    ProjectTaskData::collect([], DataCollection::class)
+                )->toArray())
+                ->values()
+                ->all();
 
-            return array_merge($task->toArray(), [
-                'media' => MediaData::collect($task->media),
-                'completed_at' => $isCompleted ? $task->updated_at?->toJSON() : null,
-                'is_overdue' => $isCompleted
-                    ? Carbon::parse($task->updated_at)->isAfter(Carbon::parse($task->due_date)->endOfDay())
-                    : Carbon::parse($task->due_date)->endOfDay()->isPast(),
-            ]);
-        })->toArray();
+            return $data;
+        })->all();
     }
 
     protected function isAuthUserMemberOfProject(Project $project): bool

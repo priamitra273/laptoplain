@@ -152,25 +152,23 @@ class ProjectRepository
     }
 
     /**
-     * Get active sprints for a project, with tasks and user media.
+     * Get active sprints for a project with their tasks + relations eager-loaded.
+     *
+     * Returns Eloquent ProjectSprint models (NOT DTOs) because sprints carry
+     * envelope fields; callers must map each sprint's tasks to ProjectTaskData
+     * before serializing (see ProjectService::formatSprints()).
      */
     public function getActiveSprints(int $projectId): Collection
     {
         return ProjectSprint::with([
             'status:id,name,severity',
             'tasks' => function ($q) {
-                $q->with([
-                    'status:id,name,severity',
-                    'priority:id,name,severity',
-                    'type:id,name,severity',
-                    'category:id,name,icon,severity',
-                    'users:id,name',
-                    'users.media',
-                ])
+                $q->with($this->taskTreeRelations())
                     ->where(function ($taskQuery) {
                         $taskQuery->whereNull('parent_id')
                             ->orWhereHas('parent.category', fn ($q) => $q->where('name', 'Epic'));
                     })
+                    ->orderBy('sequence_number')
                     ->orderBy('id');
             },
         ])
@@ -183,17 +181,12 @@ class ProjectRepository
 
     /**
      * Get backlog tasks (not in any sprint) for a project, with user media.
+     *
+     * @return DataCollection<int, ProjectTaskData>
      */
-    public function getBacklogTasks(int $projectId): Collection
+    public function getBacklogTasks(int $projectId): DataCollection
     {
-        return Task::with([
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'type:id,name,severity',
-            'category:id,name,icon,severity',
-            'users:id,name',
-            'users.media',
-        ])
+        $tasks = Task::with($this->taskTreeRelations())
             ->where('project_id', $projectId)
             ->where(function ($q) {
                 $q->whereNull('parent_id')
@@ -202,6 +195,14 @@ class ProjectRepository
             ->doesntHave('sprints')
             ->orderBy('id')
             ->get();
+
+        return ProjectTaskData::collect(
+            $tasks->map(fn (Task $task) => ProjectTaskData::fromModel(
+                $task,
+                ProjectTaskData::collect([], DataCollection::class)
+            )),
+            DataCollection::class
+        );
     }
 
     /**

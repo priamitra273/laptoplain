@@ -74,7 +74,9 @@ const validationErrors = ref<Record<string, string>>({});
 
 const authUser = computed(() => usePage().props.auth.user);
 
-const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
+const fieldDisabled = (field: string): boolean => {
+    return !!props.task && !canUpdateTaskField(field);
+};
 
 const formattedMemberOption = computed<User[]>(() => props.members.map((m) => m.user));
 

@@ -17,7 +17,7 @@
             "@composables/*": ["./resources/js/composables/*"],
             "ziggy-js": ["./vendor/tightenco/ziggy"]
         },
-        "types": ["vite/client", "vue/tsx", "./resources/js/types"],
+        "types": ["vite/client", "./resources/js/types"],
         "resolveJsonModule": true,
         "allowJs": true,
         "sourceMap": true,

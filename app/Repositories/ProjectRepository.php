@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Data\Task\ProjectTaskData;
 use App\Facades\Sqids;
 use App\Models\MsProjectPriority;
 use App\Models\MsProjectRole;
@@ -18,6 +19,8 @@ use App\Models\TaskCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\DataCollection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ProjectRepository
@@ -58,20 +61,84 @@ class ProjectRepository
                 'status:id,name,severity',
                 'priority:id,name,severity',
                 'projectMembers' => function ($query) {
-                    $query->whereHas('user');
+                    $query->whereHas('user', fn ($q) => $q->where('is_active', true));
                 },
                 'projectMembers.user:id,name,email',
                 'projectMembers.user.media',
                 'projectMembers.role:id,name,config',
-                'tasks' => function ($query) {
-                    $query->withRecursive()
-                        ->orderBy('sequence_number')
-                        ->orderBy('id');
-                },
+                'tasks',
             ])->findOrFail($projectId);
         } catch (\Exception $e) {
             throw new NotFoundHttpException;
         }
+    }
+
+    /**
+     * Flat relation list shared by tree, sprint, and backlog task loading.
+     *
+     * @return array<int|string, string|\Closure>
+     */
+    protected function taskTreeRelations(): array
+    {
+        return [
+            'status:id,name,severity,score',
+            'priority:id,name,severity',
+            'type:id,name,severity',
+            'category:id,name,icon,severity',
+            'users:id,name,email',
+            'users.media',
+            'tags:id,name,severity',
+            'creator:id,name,email',
+            'creator.media',
+            'media' => fn ($q) => $q->where('collection_name', 'attachments'),
+        ];
+    }
+
+    /**
+     * Load the project's full task tree using a single recursive CTE for the rows,
+     * then batch-load relations in the app (query count independent of tree depth).
+     *
+     * @return DataCollection<int, ProjectTaskData>
+     */
+    public function getTaskTree(int $projectId): DataCollection
+    {
+        $sql = <<<'SQL'
+            WITH RECURSIVE task_tree AS (
+                SELECT t.id, t.owned_id, t.parent_id, t.status_id, t.priority_id, t.type_id,
+                       t.task_category_id, t.created_by, t.updated_by, t.deleted_by,
+                       t.emoji, t.title, t.description, t.start_date, t.due_date,
+                       t.progress, t.story_points, t.sequence_number, t.is_archived,
+                       t.project_id, t.created_at, t.updated_at, t.deleted_at, 0 AS depth
+                FROM tasks t
+                WHERE t.project_id = :projectId
+                  AND t.parent_id IS NULL
+                  AND t.deleted_at IS NULL
+                UNION ALL
+                SELECT c.id, c.owned_id, c.parent_id, c.status_id, c.priority_id, c.type_id,
+                       c.task_category_id, c.created_by, c.updated_by, c.deleted_by,
+                       c.emoji, c.title, c.description, c.start_date, c.due_date,
+                       c.progress, c.story_points, c.sequence_number, c.is_archived,
+                       c.project_id, c.created_at, c.updated_at, c.deleted_at, tt.depth + 1
+                FROM tasks c
+                JOIN task_tree tt ON c.parent_id = tt.id
+                WHERE c.deleted_at IS NULL
+            )
+            SELECT * FROM task_tree
+            ORDER BY depth, sequence_number, id
+            SQL;
+
+        $rows = DB::select($sql, ['projectId' => $projectId]);
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Task> $tasks */
+        $tasks = Task::hydrate($rows);
+
+        if ($tasks->isEmpty()) {
+            return ProjectTaskData::collect([], DataCollection::class);
+        }
+
+        $tasks->load($this->taskTreeRelations());
+
+        return ProjectTaskData::treeFromTasks($tasks->toBase());
     }
 
     /**

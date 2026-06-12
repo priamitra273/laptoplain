@@ -16,7 +16,7 @@ import SprintSection from './partials/SprintSection.vue';
 import StartSprintDialog from './partials/StartSprintDialog.vue';
 import { BacklogKey } from './types';
 
-const props = defineProps<{
+interface Props {
     projectId: string;
     sprints: Sprint[];
     backlog: ProjectTask[];
@@ -26,7 +26,9 @@ const props = defineProps<{
     taskTypes: TaskType[];
     taskCategories: TaskCategory[];
     assignableUsers: User[];
-}>();
+}
+
+const props = defineProps<Props>();
 
 const emit = defineEmits(['add', 'addBacklog', 'edit', 'activeSprintTaskIds']);
 
@@ -355,13 +357,27 @@ const openCreateTask = (sprintId: string | null = null, parentTaskId: string | n
 // ─── Provide Context ──────────────────────────────────────────────
 provide(BacklogKey, {
     projectId: props.projectId,
-    epics: props.epics,
-    taskPriorities: props.taskPriorities,
-    taskStatuses: props.taskStatuses,
-    canAct: canAct.value,
-    canSprintCreate: canSprintCreate.value,
-    canSprintUpdate: canSprintUpdate.value,
-    canSprintDelete: canSprintDelete.value,
+    get epics() {
+        return props.epics;
+    },
+    get taskPriorities() {
+        return props.taskPriorities;
+    },
+    get taskStatuses() {
+        return props.taskStatuses;
+    },
+    get canAct() {
+        return canAct.value;
+    },
+    get canSprintCreate() {
+        return canSprintCreate.value;
+    },
+    get canSprintUpdate() {
+        return canSprintUpdate.value;
+    },
+    get canSprintDelete() {
+        return canSprintDelete.value;
+    },
     editTask: (task) => emit('edit', task, null),
     addEpic: assignTaskToEpic,
     updatePriority,

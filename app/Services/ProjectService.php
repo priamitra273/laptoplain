@@ -149,9 +149,7 @@ class ProjectService
                 DataCollection::class
             )->toArray(),
 
-            'epics' => Sqids::rec_encode_ids_in_list(
-                $this->projectRepository->getEpics($projectId)->toArray()
-            ),
+            'epics' => fn () => Sqids::rec_encode_ids_in_list($this->getEpicTasks($projectId)),
 
             'isMember' => $this->isAuthUserMemberOfProject($project),
             'policy' => $this->getAuthUserPolicy($project)->toResponse(),
@@ -221,5 +219,10 @@ class ProjectService
             ?->role?->config;
 
         return $config ? ConfigData::from($config) : null;
+    }
+
+    protected function getEpicTasks(int $projectId): array
+    {
+        return $this->projectRepository->getEpics($projectId)->toArray();
     }
 }

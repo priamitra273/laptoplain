@@ -148,6 +148,7 @@ class ProjectRepository
     {
         return User::whereNotIn('id', $memberUserIds)
             ->with('media')
+            ->where('is_active', true)
             ->get(['id', 'name', 'email']);
     }
 

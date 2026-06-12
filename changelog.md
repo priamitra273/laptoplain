@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.1.2] - 2026-06-12
+
+### Changed
+
+- Ordered recursive subtask queries by `sequence_number` (then `id`) in the `Task` model and `ProjectRepository` so child tasks display in their intended order. (dae2bc7)
+- Updated feature documentation under `docs/` (auth, comments, dashboard, master data, menu, notifications, projects, roles, settings, sprints, tasks, teams) to reflect current validation rules, Sqids encoding, notification flow, and error handling. (d9112c4)
+
+### Fixed
+
+- Prevented task form fields from being disabled during task creation by checking for an existing task before applying permission-based field validation. (c2361f1)
+
 ## [1.1.1] - 2026-06-10
 
 ### Fixed
@@ -252,7 +263,8 @@ Notes:
 
 - Versions above are organized semantically from historical milestones in `git log`.
 - Version `1.1.1` covers changes after `f2f16cf` through `8b0f72a`.
-- Latest commit incorporated: `8b0f72a` (feat: enhance task status filtering and fix date range field disabling logic).
+- Version `1.1.2` covers changes after `8b0f72a` through `c2361f1`.
+- Latest commit incorporated: `c2361f1` (feat: update fieldDisabled logic to check for task existence before permission validation).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

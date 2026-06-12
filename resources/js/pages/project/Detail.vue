@@ -163,7 +163,7 @@ const onSaved = () => {
 };
 
 const onTaskSaved = () => {
-    router.reload({ only: ['tasks', 'sprints', 'backlog'] });
+    router.reload({ only: ['tasks', 'sprints', 'backlog', 'epics'] });
 };
 
 const onDialogClosed = () => {

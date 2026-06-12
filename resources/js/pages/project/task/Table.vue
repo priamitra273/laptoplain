@@ -11,7 +11,7 @@ import { TreeTableFilterMeta } from 'primevue/treetable';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { ProjectTaskTableEmits, ProjectTaskTableFilter, ProjectTaskTableProps, Task, TaskCategory, TaskFormatted } from '..';
+import type { ProjectTask, ProjectTaskTableEmits, ProjectTaskTableFilter, ProjectTaskTableProps, TaskCategory, TaskFormatted } from '..';
 import TaskTableFilters from './partials/TaskTableFilters.vue';
 import TaskTableToolbar from './partials/TaskTableToolbar.vue';
 
@@ -60,7 +60,7 @@ const activeDragTaskId = computed(() => pointerDraggedTaskId.value || draggedTas
 const isDraggingTask = computed(() => !!activeDragTaskId.value);
 const isRootDropActive = computed(() => isDraggingTask.value && pointerOnRootDropzone.value && !dropTargetTaskId.value);
 
-const openActivityLog = (task: Task) => {
+const openActivityLog = (task: ProjectTask) => {
     activityModal.value = {
         visible: true,
         taskId: task.id,
@@ -74,7 +74,7 @@ const formatDate = (date: string | null | undefined): string => {
 };
 
 // ─── Pure function, tidak ada side effects ────────────────────────────────────
-const formatTasks = (list?: Task[], level: number = 0): TaskFormatted[] => {
+const formatTasks = (list?: ProjectTask[], level: number = 0): TaskFormatted[] => {
     if (!list || !Array.isArray(list)) return [];
     return list.map((t) => ({
         key: t.id,
@@ -138,7 +138,7 @@ const hasSelectedTasks = computed(() => Object.keys(selectedKey.value).length > 
 const confirm = useConfirm();
 const toast = useToast();
 
-const remove = (t: Task) => {
+const remove = (t: ProjectTask) => {
     confirm.require({
         message: `Remove task ${t.title}? This action cannot be undone.`,
         header: 'Confirmation',
@@ -258,7 +258,7 @@ const resetDragState = () => {
     holdCandidateTaskId.value = null;
 };
 
-const findTaskById = (list: Task[], taskId: string): Task | null => {
+const findTaskById = (list: ProjectTask[], taskId: string): ProjectTask | null => {
     for (const item of list) {
         if (item.id === taskId) return item;
         const found = findTaskById(item.sub_task_recursive || [], taskId);
@@ -270,7 +270,7 @@ const findTaskById = (list: Task[], taskId: string): Task | null => {
 const isDescendant = (sourceId: string, targetId: string): boolean => {
     const source = findTaskById(props.tasks, sourceId);
     if (!source) return false;
-    const walk = (nodes: Task[]): boolean => {
+    const walk = (nodes: ProjectTask[]): boolean => {
         for (const n of nodes) {
             if (n.id === targetId) return true;
             if (walk(n.sub_task_recursive || [])) return true;

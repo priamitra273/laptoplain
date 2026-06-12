@@ -2,7 +2,7 @@
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import { inject } from 'vue';
-import { Task } from '../..';
+import { ProjectTask } from '../..';
 import { BacklogKey } from '../types';
 import TaskCategoryIcon from './TaskCategoryIcon.vue';
 import TaskEpicPicker from './TaskEpicPicker.vue';
@@ -10,7 +10,7 @@ import TaskMembers from './TaskMembers.vue';
 import TaskPriorityPicker from './TaskPriorityPicker.vue';
 
 interface Props {
-    task: Task;
+    task: ProjectTask;
     draggable?: boolean;
     showChecklist?: boolean;
     selected?: boolean;
@@ -20,7 +20,7 @@ const context = inject(BacklogKey);
 
 const props = defineProps<Props>();
 
-const isEpic = (task: Task) => task.category?.name?.toLowerCase() === 'epic';
+const isEpic = (task: ProjectTask) => task.category?.name?.toLowerCase() === 'epic';
 </script>
 
 <template>
@@ -68,7 +68,7 @@ const isEpic = (task: Task) => task.category?.name?.toLowerCase() === 'epic';
             <Tag
                 v-if="task.status"
                 :value="task.status.name"
-                :severity="task.status.severity"
+                :severity="task.status.severity ?? undefined"
                 class="w-24 min-w-[5.5rem] shrink-0 justify-center truncate text-xs"
             />
             <span v-else class="w-24 min-w-[5.5rem] shrink-0"></span>

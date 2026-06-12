@@ -1,5 +1,7 @@
 import { LengthAwarePaginator, PrimeSeverity, ProjectRoleOption, UploadedFile } from '@/types';
 
+export type ProjectTask = App.Data.Task.ProjectTaskData;
+
 export interface User {
     id: string | number;
     name: string;
@@ -65,7 +67,7 @@ export interface Sprint {
     order?: number;
     retrospective?: string;
     status?: SprintStatus;
-    tasks?: Task[];
+    tasks?: ProjectTask[];
 }
 
 export interface CellEditEvent<T> {
@@ -187,22 +189,22 @@ export interface TaskFormatted {
     key: string;
     data: TaskFormattedData;
     children: TaskFormatted[];
-    original: Task;
+    original: ProjectTask;
 }
 
 export interface TaskFormattedData {
     id: string;
     parent_id: string | null;
     title: string;
-    status?: TaskStatus;
-    priority?: TaskPriority;
-    type?: TaskType;
-    category?: TaskCategory;
-    users: TaskUser[];
+    status?: App.Data.Task.TaskStatusData;
+    priority?: App.Data.Task.TaskPriorityData;
+    type?: App.Data.Task.TaskTypeData;
+    category?: App.Data.Task.TaskCategoryData;
+    users: App.Data.UserData[];
     progress: number;
     start_date: string | null;
     due_date: string | null;
-    created_by: string | null;
+    created_by: number | null;
     completed_at: string | null;
     is_overdue: boolean;
     level?: number;
@@ -210,7 +212,7 @@ export interface TaskFormattedData {
 
 export interface ProjectTaskTableProps {
     projectId: string;
-    tasks: Task[];
+    tasks: ProjectTask[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
@@ -219,7 +221,7 @@ export interface ProjectTaskTableProps {
 
 export interface ProjectTaskTableEmits {
     (e: 'add', parentId: string | null): void;
-    (e: 'edit', task: Task, parentId: string | null): void;
+    (e: 'edit', task: ProjectTask, parentId: string | null): void;
 }
 
 export interface ProjectTaskTableFilter {
@@ -295,7 +297,7 @@ export interface ProjectDetailProps {
     members: MemberWithAvatar[];
     roles: ProjectRoleOption[];
     users: User[];
-    tasks: Task[];
+    tasks: ProjectTask[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
@@ -304,7 +306,7 @@ export interface ProjectDetailProps {
     statuses?: ProjectStatus[];
     priorities?: ProjectPriority[];
     sprints: Sprint[];
-    backlog: Task[];
+    backlog: ProjectTask[];
     taskCategories: TaskCategory[];
     epics: Epic[];
     isMember: boolean;
@@ -429,9 +431,9 @@ export interface TaskReportProps {
 export interface TaskFormProps {
     parentId: string | null;
     projectId: string;
-    task: Task | null;
+    task: ProjectTask | null;
     sprintId?: string | null;
-    tasks: Task[];
+    tasks: ProjectTask[];
     taskTypes: TaskType[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];

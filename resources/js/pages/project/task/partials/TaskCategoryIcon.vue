@@ -4,7 +4,7 @@ import { computed } from 'vue';
 
 interface TaskCategory {
     name?: string;
-    icon?: string;
+    icon?: string | null;
     severity?: string | null;
 }
 
@@ -44,9 +44,5 @@ const categoryColor = computed((): string => {
 </script>
 
 <template>
-    <i
-        v-tooltip.top="category?.name || 'Category'"
-        :class="['flex-shrink-0 text-sm', categoryIcon]"
-        :style="{ color: categoryColor }"
-    ></i>
+    <i v-tooltip.top="category?.name || 'Category'" :class="['flex-shrink-0 text-sm', categoryIcon]" :style="{ color: categoryColor }"></i>
 </template>

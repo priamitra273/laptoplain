@@ -8,7 +8,7 @@ import { useSessionStorage } from '@vueuse/core';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, provide, ref } from 'vue';
-import type { MemberWithAvatar, ProjectDetailProps, ProjectMember, TabListItem, Task } from './index';
+import type { MemberWithAvatar, ProjectDetailProps, ProjectMember, ProjectTask, TabListItem } from './index';
 import MemberEditForm from './member/EditFormTemp.vue';
 import MemberAddForm from './member/Form.vue';
 import MembersTable from './member/Table.vue';
@@ -40,7 +40,7 @@ const visibleAdd = ref(false);
 const visibleEdit = ref(false);
 const visibleTaskAdd = ref(false);
 const selectedMember = ref<ProjectMember | null>(null);
-const selectedTask = ref<Task | null>(null);
+const selectedTask = ref<ProjectTask | null>(null);
 const parentTaskId = ref<string | null>(null);
 const isBacklogCreate = ref(false);
 const isAddParentCreate = ref(false);
@@ -77,7 +77,7 @@ const activeSprintTasks = computed(() => {
     return tasks;
 });
 
-const findTaskById = (tasks: Task[], id: string): Task | null => {
+const findTaskById = (tasks: ProjectTask[], id: string): ProjectTask | null => {
     for (const task of tasks) {
         if (task.id === id) return task;
         if (task.sub_task_recursive && task.sub_task_recursive.length > 0) {
@@ -144,7 +144,7 @@ const openTaskAdd = (parentId: string | null, _statusId?: string, source?: strin
     visibleTaskAdd.value = true;
 };
 
-const openTaskEdit = (task: Task, parentId: string | null, source?: string) => {
+const openTaskEdit = (task: ProjectTask, parentId: string | null, source?: string) => {
     if (!canAction('task', 'update')) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You must be a project member to edit tasks', life: 3000 });
         return;

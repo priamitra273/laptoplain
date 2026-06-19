@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Menu;
 use App\Models\User;
+use App\Repositories\MenuRepository;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Collection;
@@ -17,6 +18,64 @@ use Spatie\Permission\Models\Permission;
 
 class MenuService
 {
+    public function __construct(private MenuRepository $menuRepository) {}
+
+    /**
+     * Build the nested sidebar menu tree for the given user.
+     *
+     * Delegates the visibility-filtered fetch to a single recursive CTE in the
+     * repository, then assembles the flat rows into the shape the sidebar
+     * expects: { label, icon, to, items }.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    /**
+     * Root menus are grouped under this key (menu ids are auto-increment >= 1,
+     * so 0 can never collide with a real parent id).
+     */
+    private const ROOT_KEY = 0;
+
+    public function getSidebarMenu(int $userId): array
+    {
+        $rows = $this->menuRepository->getVisibleMenuRowsForUser($userId);
+
+        $childrenByParent = [];
+
+        foreach ($rows as $row) {
+            $parentKey = $row->parent_id !== null ? (int) $row->parent_id : self::ROOT_KEY;
+            $childrenByParent[$parentKey][] = $row;
+        }
+
+        return $this->buildSidebarTree($childrenByParent, self::ROOT_KEY);
+    }
+
+    /**
+     * Assemble the nested menu tree from rows pre-grouped by parent id.
+     *
+     * Each node is visited exactly once (O(N)); the depth/sequence ordering of
+     * the source rows is preserved within every group.
+     *
+     * @param  array<int, array<int, object>>  $childrenByParent
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildSidebarTree(array $childrenByParent, int $parentKey): array
+    {
+        $branch = [];
+
+        foreach ($childrenByParent[$parentKey] ?? [] as $row) {
+            $children = $this->buildSidebarTree($childrenByParent, (int) $row->id);
+
+            $branch[] = [
+                'label' => $row->label,
+                'icon' => $row->icon,
+                'to' => $row->route_name,
+                'items' => $children !== [] ? $children : null,
+            ];
+        }
+
+        return $branch;
+    }
+
     /**
      * Getting the available menu
      * Compare the route names with registered in database
@@ -32,13 +91,13 @@ class MenuService
         $routes = $routes->map(function (RoutingRoute $route) {
             $parameters = $route->parameterNames();
 
-            if (!empty($parameters)) {
+            if (! empty($parameters)) {
                 return null;
             }
 
             return [
                 'uri' => route($route->getName()),
-                'name' => $route->getName()
+                'name' => $route->getName(),
             ];
         })->filter()->whereNotIn('name', $existing_menu)->values();
 
@@ -50,7 +109,7 @@ class MenuService
      */
     public function getByUuid(string $uuid): Menu
     {
-        if (!Guid::isValid($uuid)) {
+        if (! Guid::isValid($uuid)) {
             abort(404);
         }
 
@@ -82,7 +141,7 @@ class MenuService
 
                 $count_uri = Menu::whereRaw("LOWER(REPLACE(label, ' ', '-')) = ?", Str::slug($input->label))->count();
 
-                $uri = $count_uri > 1 ? $uri . "-" . $count_uri + 1 : $uri;
+                $uri = $count_uri > 1 ? $uri.'-'.$count_uri + 1 : $uri;
             }
 
             $actions = ['create', 'read', 'update', 'delete'];

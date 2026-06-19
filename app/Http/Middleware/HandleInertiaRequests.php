@@ -3,16 +3,16 @@
 namespace App\Http\Middleware;
 
 use App\Facades\Sqids;
-use App\Http\Resources\Menu\MenuSidebarResource;
-use App\Models\Menu;
+use App\Services\MenuService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(private MenuService $menuService) {}
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -37,12 +37,9 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
-        $sidebar_menu = Menu::whereRelation('permissions.roles.users', 'id', Auth::id())
-            ->whereNull('parent_id')
-            ->orderBy('sequence_number')
-            ->get();
-
         $user = $request->user();
+
+        $menu = $user ? $this->menuService->getSidebarMenu($user->id) : [];
 
         return [
             ...parent::share($request),
@@ -54,7 +51,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user ? Sqids::rec_encode_ids_in_list($user->toArray()) : null,
                 'role' => $user ? $user->getRoleNames()[0] : null,
-                'menu' => MenuSidebarResource::collection($sidebar_menu)->resolve(),
+                'menu' => $menu,
                 'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
             ],
             'flash' => [

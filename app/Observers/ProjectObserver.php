@@ -11,9 +11,7 @@ class ProjectObserver
 
     public function updated(Project $project): void
     {
-        if ($project->wasChanged(['status_id', 'priority_id'])) {
-            $this->projects->forgetShell($project->id);
-        }
+        $this->projects->forgetShell($project->id);
     }
 
     public function deleted(Project $project): void

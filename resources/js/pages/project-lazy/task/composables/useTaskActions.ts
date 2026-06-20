@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
@@ -49,14 +50,32 @@ export const useTaskActions = (projectId: string) => {
             acceptLabel: 'Yes, delete',
             acceptClass: 'p-button-danger',
             rejectLabel: 'Cancel',
-            accept: () => {
-                ids.forEach((id) => {
-                    router.delete(route('project.tasks.destroy', { projectEncoded: projectId, taskEncoded: id }), {
-                        preserveScroll: true,
+            accept: async () => {
+                deleteLoading.value = true;
+                try {
+                    // Single bulk request so feedback reflects the server's real outcome
+                    // (incl. partial failures) instead of an optimistic per-row fire-and-forget.
+                    const { data } = await axios.delete<{ deleted: number; failed: number; message: string }>(
+                        route('project.tasks.bulk-destroy', { projectEncoded: projectId }),
+                        { data: { ids } },
+                    );
+
+                    if (data.deleted > 0) {
+                        onCleared();
+                        router.reload({ only: ['tasks'] });
+                    }
+
+                    toast.add({
+                        severity: data.failed > 0 ? (data.deleted > 0 ? 'warn' : 'error') : 'success',
+                        summary: data.failed > 0 ? (data.deleted > 0 ? 'Partially deleted' : 'Delete failed') : 'Success',
+                        detail: data.message,
+                        life: 3000,
                     });
-                });
-                onCleared();
-                toast.add({ severity: 'success', summary: 'Success', detail: `${ids.length} tasks deleted successfully`, life: 3000 });
+                } catch {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete the selected tasks.', life: 3000 });
+                } finally {
+                    deleteLoading.value = false;
+                }
             },
         });
     };

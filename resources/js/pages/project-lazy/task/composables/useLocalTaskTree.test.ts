@@ -33,8 +33,8 @@ describe('useLocalTaskTree.recalc', () => {
             node({
                 id: 'p',
                 sub_task_recursive: [
-                    node({ id: 'a', parent_id: 'p', status: { score: 40 }, progress: 40 }),
-                    node({ id: 'b', parent_id: 'p', status: { score: 60 }, progress: 60 }),
+                    node({ id: 'a', parent_id: 'p', status: { score: 40 }, progress: 0 }),
+                    node({ id: 'b', parent_id: 'p', status: { score: 60 }, progress: 0 }),
                 ],
             }),
         ]);
@@ -43,6 +43,8 @@ describe('useLocalTaskTree.recalc', () => {
 
         recalc();
 
+        expect(tasks.value[0].sub_task_recursive[0].progress).toBe(40);
+        expect(tasks.value[0].sub_task_recursive[1].progress).toBe(60);
         expect(tasks.value[0].progress).toBe(50);
         expect(onProjectProgress).toHaveBeenLastCalledWith(50);
     });

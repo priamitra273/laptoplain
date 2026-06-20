@@ -138,7 +138,7 @@ it('returns 422 when creating a task with invalid data via the lazy endpoint', f
         ['project_id' => $this->encoded],
     );
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $response->assertJsonValidationErrors(['title', 'status_id', 'priority_id', 'type_id']);
 });
 

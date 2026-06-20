@@ -3,7 +3,7 @@ const appendValue = (fd: FormData, key: string, value: unknown): void => {
         return;
     }
     if (value instanceof File || value instanceof Blob) {
-        fd.append(key, value as Blob);
+        fd.append(key, value);
         return;
     }
     if (Array.isArray(value)) {

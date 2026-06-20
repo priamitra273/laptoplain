@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { ListProps, ListTask, SavedTaskPayload } from './index';
-import { LiveProjectProgressKey } from '@/types/type';
 import { Deferred, Head } from '@inertiajs/vue3';
-import { computed, inject, ref } from 'vue';
+import { computed, ref } from 'vue';
 import ProjectShellLayout from './layouts/ProjectShellLayout.vue';
 import ListTableSkeleton from './partials/ListTableSkeleton.vue';
 import TaskFormDrawer from './task/TaskFormDrawer.vue';
@@ -14,15 +13,13 @@ const props = defineProps<ListProps>();
 
 const drawer = ref<InstanceType<typeof TaskFormDrawer> | null>(null);
 
-const liveProgress = inject(LiveProjectProgressKey, null);
+const localProgress = ref(props.project.progress);
 
 const { tasks, applySaved } = useLocalTaskTree<ListTask>(
     computed(() => props.tasks),
     {
         onProjectProgress: (value) => {
-            if (liveProgress) {
-                liveProgress.value = value;
-            }
+            localProgress.value = value;
         },
     },
 );
@@ -35,7 +32,7 @@ const onSaved = (payload: SavedTaskPayload) => applySaved(payload, { build: buil
 <template>
     <Head :title="`List - ${props.project.title}`" />
 
-    <ProjectShellLayout>
+    <ProjectShellLayout :liveProgress="localProgress">
         <Deferred :data="['tasks', 'assignableUsers']">
             <template #fallback>
                 <ListTableSkeleton />

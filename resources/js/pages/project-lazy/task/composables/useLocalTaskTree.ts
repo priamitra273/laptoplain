@@ -86,6 +86,7 @@ export const useLocalTaskTree = <T extends TaskTreeNode<T>>(source: LocalTaskTre
 
     const recalc = (): void => {
         const rootScores = tasks.value.map((item) => recalcNode(item));
+
         if (options.onProjectProgress) {
             const projectProgress = rootScores.length === 0 ? 0 : round2(rootScores.reduce((s, v) => s + v, 0) / rootScores.length);
             options.onProjectProgress(projectProgress);
@@ -115,6 +116,8 @@ export const useLocalTaskTree = <T extends TaskTreeNode<T>>(source: LocalTaskTre
         }
 
         recalc();
+
+        // mutate the original array
         tasks.value = [...tasks.value];
     };
 

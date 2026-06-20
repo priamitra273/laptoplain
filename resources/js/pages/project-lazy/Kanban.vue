@@ -13,12 +13,21 @@ const props = defineProps<KanbanProps>();
 
 const drawer = ref<InstanceType<typeof TaskFormDrawer> | null>(null);
 
-const { tasks, applySaved } = useLocalTaskTree<KanbanCard>(computed(() => props.tasks), {});
+const { tasks, applySaved } = useLocalTaskTree<KanbanCard>(
+    computed(() => props.tasks),
+    {},
+);
 
 const openCreate = (parentId: string | null) => drawer.value?.openCreate(parentId ?? null);
 const onEdit = (task: { id: string; parent_id?: string | null }) => drawer.value?.openEdit(task);
-const onStatusUpdate = () => router.reload({ only: ['tasks'] });
-const onSaved = (payload: SavedTaskPayload) => applySaved(payload, { build: buildKanbanCardNode, patch: patchKanbanCardNode });
+
+const onStatusUpdate = () => {
+    router.reload({ only: ['tasks', 'project', 'members'] });
+};
+
+const onSaved = (payload: SavedTaskPayload) => {
+    applySaved(payload, { build: buildKanbanCardNode, patch: patchKanbanCardNode });
+};
 </script>
 
 <template>

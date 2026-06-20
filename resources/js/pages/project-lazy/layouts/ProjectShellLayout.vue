@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { LiveProjectProgressKey, ProjectPolicyKey } from '@/types/type';
+import { ProjectPolicyKey } from '@/types/type';
 import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
@@ -10,22 +10,21 @@ import type { ShellProps, TabItem } from '../index';
 import ProjectHeader from '../partials/ProjectHeader.vue';
 import ProjectStats from '../partials/ProjectStats.vue';
 
+interface Props {
+    liveProgress?: number;
+}
+
 const page = usePage();
 const toast = useToast();
+
+const props = defineProps<Props>();
 
 const shell = computed(() => page.props as unknown as ShellProps);
 const project = computed(() => shell.value.project);
 
-const liveProgress = ref(project.value.progress);
-provide(LiveProjectProgressKey, liveProgress);
-watch(
-    () => project.value.progress,
-    (value) => {
-        liveProgress.value = value;
-    },
-);
+const internalProgress = ref(props.liveProgress ?? project.value.progress);
 
-const projectForStats = computed(() => ({ ...project.value, progress: liveProgress.value }));
+const projectForStats = computed(() => ({ ...project.value, progress: internalProgress.value }));
 
 // Children expect the raw policy value (see useProjectPermissions); tab pages that
 // need the freshest policy read it from page props directly.
@@ -52,6 +51,7 @@ const activeKey = computed(() => {
 
 const navigate = (key: string) => {
     if (key === activeKey.value) return;
+
     router.visit(route(`project.show.${key}`, { encoded: project.value.id }), {
         preserveScroll: true,
     });
@@ -64,6 +64,7 @@ const updateProject = (newValue: any, field: string) => {
     }
 
     let value = newValue;
+
     if (field === 'start_date' || field === 'due_date') {
         value = moment(newValue).format('YYYY-MM-DD');
     }
@@ -84,6 +85,22 @@ const updateProject = (newValue: any, field: string) => {
         },
     );
 };
+
+watch(
+    () => props.liveProgress,
+    (value) => {
+        if (value !== undefined) {
+            internalProgress.value = value;
+        }
+    },
+);
+
+watch(
+    () => project.value.progress,
+    (value) => {
+        internalProgress.value = value;
+    },
+);
 </script>
 
 <template>

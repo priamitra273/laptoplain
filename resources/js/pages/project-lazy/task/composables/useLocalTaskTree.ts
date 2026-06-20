@@ -14,14 +14,17 @@ export interface NodeAdapter<T> {
     patch: (node: T, payload: SavedTaskPayload) => void;
 }
 
+export type LocalTaskTreeSource<T> = Ref<T[]> | ComputedRef<T[]>;
+
+export interface LocalTaskTreeOptions {
+    onProjectProgress?: (value: number) => void;
+}
+
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
-const cloneTree = <T,>(list: T[]): T[] => JSON.parse(JSON.stringify(list ?? []));
+const cloneTree = <T>(list: T[]): T[] => JSON.parse(JSON.stringify(list ?? []));
 
-export const useLocalTaskTree = <T extends TaskTreeNode<T>>(
-    source: Ref<T[]> | ComputedRef<T[]>,
-    options: { onProjectProgress?: (value: number) => void } = {},
-) => {
+export const useLocalTaskTree = <T extends TaskTreeNode<T>>(source: LocalTaskTreeSource<T>, options: LocalTaskTreeOptions = {}) => {
     const tasks = ref<T[]>([]) as Ref<T[]>;
 
     watch(
@@ -94,20 +97,25 @@ export const useLocalTaskTree = <T extends TaskTreeNode<T>>(
             insert(adapter.build(payload), payload.parentId);
         } else {
             const node = findIn(tasks.value, payload.id);
-            if (!node) {
-                return;
-            }
+
+            if (!node) return;
+
             const previousParentId = node.parent_id;
             adapter.patch(node, payload);
+
             const nextParentId = payload.parentId ?? null;
+
             if ((previousParentId ?? null) !== nextParentId) {
                 const detached = removeFrom(tasks.value, payload.id);
+
                 if (detached) {
                     insert(detached, nextParentId);
                 }
             }
         }
+
         recalc();
+        tasks.value = [...tasks.value];
     };
 
     return {

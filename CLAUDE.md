@@ -378,3 +378,13 @@ it('has emails', function (string $email) {
 
 - Always use Tailwind CSS v3 - verify you're using only classes supported by this version.
 </laravel-boost-guidelines>
+
+# Project-Specific Rules
+
+> Aturan kustom proyek (di luar blok Laravel Boost agar tidak tertimpa saat regenerasi).
+
+## Testing Database Safety (CRITICAL)
+
+- **Saat menjalankan test di git worktree ATAU di branch aktif, WAJIB memakai `.env.testing`.** Worktree baru TIDAK mewarisi `.env.testing` — `.env` (symlink/salinan) menunjuk ke database dev bersama `dev_project_management` di host remote. Tanpa `.env.testing`, `php artisan test` akan menarget database dev. Sebelum menjalankan test apa pun, pastikan database yang ter-resolve adalah database test, bukan dev/prod, contoh verifikasi:
+  `APP_ENV=testing php artisan tinker --execute="echo config('database.connections.pgsql.database');"`
+- **Test apa pun yang memakai trait `RefreshDatabase` menjalankan `migrate:fresh` (drop + migrasi ulang seluruh tabel) pada database yang terkoneksi.** Sebelum menjalankan test seperti ini, BERHENTI dan konfirmasi ulang ke user bahwa target database adalah database test yang disposable. Jangan jalankan sampai dikonfirmasi.

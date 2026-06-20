@@ -6,6 +6,7 @@ import { ProjectPolicyKey } from '@/types/type';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useSessionStorage } from '@vueuse/core';
 import moment from 'moment';
+import type { MenuItem } from 'primevue/menuitem';
 import { TreeTableFilterMeta } from 'primevue/treetable';
 import { computed, inject, ref } from 'vue';
 import { useTaskActions } from './composables/useTaskActions';
@@ -86,6 +87,41 @@ const formatDate = (date: string | null | undefined): string => {
 };
 
 const onRemoveSelected = () => removeSelected(selectedIds.value, () => setSelected({}));
+
+const rowMenu = ref<{ toggle: (event: Event) => void } | null>(null);
+const rowMenuItems = ref<MenuItem[]>([]);
+
+const buildRowMenuItems = (node: { data: ListTask; original: ListTask }): MenuItem[] => [
+    {
+        label: 'Add Subtask',
+        icon: 'pi pi-plus',
+        visible: canTaskCreate.value,
+        disabled: deleteLoading.value,
+        command: () => emit('add', node.data.id),
+    },
+    {
+        label: 'History Log',
+        icon: 'pi pi-history',
+        command: () => openActivityLog(node.original),
+    },
+    {
+        separator: true,
+        visible: canTaskDelete.value && hasAccessToEditAndDelete(),
+    },
+    {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        visible: canTaskDelete.value && hasAccessToEditAndDelete(),
+        disabled: deleteLoading.value,
+        class: 'text-red-600 dark:text-red-400',
+        command: () => remove(node.original),
+    },
+];
+
+const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask }) => {
+    rowMenuItems.value = buildRowMenuItems(node);
+    rowMenu.value?.toggle(event);
+};
 </script>
 
 <template>
@@ -142,7 +178,7 @@ const onRemoveSelected = () => removeSelected(selectedIds.value, () => setSelect
                     </template>
                 </Column>
 
-                <Column field="title" header="Title" sortable frozen expander align-frozen="left">
+                <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 240px">
                     <template #body="{ node }">
                         <div
                             data-task-drop-row="true"
@@ -163,7 +199,7 @@ const onRemoveSelected = () => removeSelected(selectedIds.value, () => setSelect
 
                             <div
                                 :title="node.data.title"
-                                class="max-w-[150px] select-none truncate text-ellipsis rounded px-1 py-0.5"
+                                class="max-w-[12rem] select-none truncate text-ellipsis rounded px-1 py-0.5 sm:max-w-[18rem] lg:max-w-[26rem]"
                                 :class="[
                                     hasAccessToEditAndDelete() ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
@@ -204,7 +240,17 @@ const onRemoveSelected = () => removeSelected(selectedIds.value, () => setSelect
 
                 <Column field="due_date" header="Due Date" style="min-width: 120px" sortable>
                     <template #body="{ node }">
-                        <span :class="{ 'text-red-500': node.data.is_overdue }">{{ formatDate(node.data.due_date) }}</span>
+                        <span v-if="!node.data.due_date">-</span>
+                        <span
+                            v-else-if="node.data.is_overdue"
+                            v-tooltip.top="'Overdue'"
+                            class="inline-flex items-center gap-1 font-medium text-red-600 dark:text-red-400"
+                        >
+                            <i class="pi pi-exclamation-circle text-xs" aria-hidden="true" />
+                            {{ formatDate(node.data.due_date) }}
+                            <span class="sr-only">(overdue)</span>
+                        </span>
+                        <span v-else>{{ formatDate(node.data.due_date) }}</span>
                     </template>
                 </Column>
 
@@ -224,48 +270,46 @@ const onRemoveSelected = () => removeSelected(selectedIds.value, () => setSelect
                     <template #body="{ node }">
                         <div class="flex gap-1">
                             <Link :href="route('task.show', node.original)">
-                                <Button icon="pi pi-eye" size="small" severity="secondary" v-tooltip.top="'View Task'" />
+                                <Button icon="pi pi-eye" size="small" severity="secondary" v-tooltip.top="'View Task'" aria-label="View task" />
                             </Link>
-                            <Button
-                                icon="pi pi-plus"
-                                size="small"
-                                severity="info"
-                                v-tooltip.top="'Add Subtask'"
-                                :disabled="deleteLoading || !canTaskCreate"
-                                @click="emit('add', node.data.id)"
-                            />
                             <Button
                                 icon="pi pi-pencil"
                                 size="small"
                                 severity="warning"
                                 v-tooltip.top="'Edit Task'"
+                                aria-label="Edit task"
                                 :disabled="deleteLoading || !canTaskUpdate || !hasAccessToEditAndDelete()"
                                 @click="emit('edit', node.original, node.data.parent_id)"
                             />
                             <Button
-                                icon="pi pi-trash"
-                                size="small"
-                                severity="danger"
-                                v-tooltip.top="'Delete'"
-                                :disabled="deleteLoading || !canTaskDelete || !hasAccessToEditAndDelete()"
-                                @click="remove(node.original)"
-                            />
-                            <Button
-                                icon="pi pi-history"
+                                icon="pi pi-ellipsis-v"
                                 size="small"
                                 severity="secondary"
-                                v-tooltip.top="'History Log'"
-                                @click="openActivityLog(node.original)"
+                                text
+                                v-tooltip.top="'More actions'"
+                                aria-label="More actions"
+                                aria-haspopup="true"
+                                :disabled="deleteLoading"
+                                @click="toggleRowMenu($event, node)"
                             />
                         </div>
                     </template>
                 </Column>
 
                 <template #empty>
-                    <p class="text-center">No Data Available</p>
+                    <div class="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                        <i class="pi pi-inbox text-3xl text-surface-300 dark:text-surface-600" aria-hidden="true" />
+                        <div class="flex flex-col gap-1">
+                            <p class="font-medium text-surface-700 dark:text-surface-200">No tasks yet</p>
+                            <p class="text-sm text-surface-500 dark:text-surface-400">Create the first task to start tracking progress for this project.</p>
+                        </div>
+                        <Button v-if="canTaskCreate" label="Add Task" icon="pi pi-plus" size="small" @click="emit('add', null)" />
+                    </div>
                 </template>
             </TreeTable>
         </div>
+
+        <Menu ref="rowMenu" :model="rowMenuItems" popup />
 
         <TaskActivityLogModal v-model:visible="activityModal.visible" :taskId="activityModal.taskId" :taskTitle="activityModal.taskTitle" />
     </div>

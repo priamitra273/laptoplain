@@ -94,6 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('tasks/{task}/edit', [ProjectTabController::class, 'taskEdit'])->name('tasks.edit');
 
         Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::delete('tasks', [TaskController::class, 'bulkDestroy'])->name('tasks.bulk-destroy');
         Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
         Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
         Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');

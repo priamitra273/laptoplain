@@ -51,4 +51,11 @@ describe('patchListTaskNode', () => {
         expect(node.parent_id).toBe('P2');
         expect(node.sub_task_recursive).toHaveLength(1);
     });
+
+    it('updates progress when status score changes', () => {
+        const node = buildListTaskNode(payload());
+        expect(node.progress).toBe(50);
+        patchListTaskNode(node, payload({ status: { id: 'S2', name: 'Completed', severity: 'success', score: 100 } }));
+        expect(node.progress).toBe(100);
+    });
 });

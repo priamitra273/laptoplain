@@ -28,6 +28,7 @@ export const patchListTaskNode = (node: ListTask, payload: SavedTaskPayload): vo
     node.start_date = payload.startDate;
     node.due_date = payload.dueDate;
     node.status = payload.status;
+    node.progress = payload.status?.score ?? 0;
     node.type = payload.type;
     node.category = payload.category;
     node.users = payload.users;

@@ -5,7 +5,7 @@ import Button from 'primevue/button';
 import { inject } from 'vue';
 
 interface Props {
-    hasSelectedTasks: boolean;
+    selectedCount: number;
 }
 
 defineProps<Props>();
@@ -31,8 +31,8 @@ const { canAction } = useProjectPermissions(policy);
                 :disabled="!canAction('task', 'create')"
             />
             <Button
-                v-if="hasSelectedTasks"
-                label="Delete Selected"
+                v-if="selectedCount > 0"
+                :label="`Delete Selected (${selectedCount})`"
                 icon="pi pi-trash"
                 severity="danger"
                 @click="emit('removeSelected')"

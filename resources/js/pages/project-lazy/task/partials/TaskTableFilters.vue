@@ -78,11 +78,6 @@ const handleClearTypes = () => {
                     <template #option="slotProps">
                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
                     </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
-                    </template>
                 </MultiSelect>
             </div>
             <div class="w-full">
@@ -100,11 +95,6 @@ const handleClearTypes = () => {
                 >
                     <template #option="slotProps">
                         <Tag :value="slotProps.option.name" :severity="slotProps.option.severity" />
-                    </template>
-                    <template #header>
-                        <div class="flex items-center gap-2 px-3 py-2">
-                            <span class="font-semibold">Select All</span>
-                        </div>
                     </template>
                 </MultiSelect>
             </div>

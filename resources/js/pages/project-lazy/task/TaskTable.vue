@@ -30,13 +30,13 @@ const canTaskUpdate = computed(() => canAction('task', 'update'));
 const canTaskDelete = computed(() => canAction('task', 'delete'));
 const canMoveTask = computed(() => canAction('task', 'update'));
 
-const hasAccessToEditAndDelete = (): boolean => canTaskUpdate.value || canTaskDelete.value;
+const canEditOrDelete = computed<boolean>(() => canTaskUpdate.value || canTaskDelete.value);
 
 const tasksRef = computed(() => props.tasks);
 
 const { formattedTasks, isDescendant } = useTaskTree(tasksRef);
 
-const { selectedKey, expandedKeys, isAllSelected, hasSelectedTasks, selectedIds, toggleSelectAll, setSelected } = useTaskSelection(formattedTasks);
+const { selectedKey, expandedKeys, isAllSelected, selectedIds, toggleSelectAll, setSelected } = useTaskSelection(formattedTasks);
 
 const { deleteLoading, remove, removeSelected } = useTaskActions(props.projectId);
 
@@ -106,12 +106,12 @@ const buildRowMenuItems = (node: { data: ListTask; original: ListTask }): MenuIt
     },
     {
         separator: true,
-        visible: canTaskDelete.value && hasAccessToEditAndDelete(),
+        visible: canTaskDelete.value && canEditOrDelete.value,
     },
     {
         label: 'Delete',
         icon: 'pi pi-trash',
-        visible: canTaskDelete.value && hasAccessToEditAndDelete(),
+        visible: canTaskDelete.value && canEditOrDelete.value,
         disabled: deleteLoading.value,
         class: 'text-red-600 dark:text-red-400',
         command: () => remove(node.original),
@@ -126,7 +126,7 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
 
 <template>
     <div class="flex flex-col gap-4">
-        <TaskTableToolbar :hasSelectedTasks="hasSelectedTasks" @add="(parentId) => emit('add', parentId)" @removeSelected="onRemoveSelected" />
+        <TaskTableToolbar :selectedCount="selectedIds.length" @add="(parentId) => emit('add', parentId)" @removeSelected="onRemoveSelected" />
 
         <TaskTableFilters v-model:filters="filters" :statusOptions="props.taskStatuses" :typeOptions="props.taskTypes" />
 
@@ -157,12 +157,13 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
             >
                 <Column :expander="false" style="width: 3rem" v-if="canTaskCreate || canTaskUpdate || canTaskDelete" frozen align-frozen="left">
                     <template #header>
-                        <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary />
+                        <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary aria-label="Select all tasks" />
                     </template>
 
                     <template #body="{ node }">
                         <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
+                            :aria-label="`Select task ${node.data.title}`"
                             @update:modelValue="
                                 (value) => {
                                     if (value) {
@@ -201,7 +202,7 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                                 :title="node.data.title"
                                 class="max-w-[12rem] select-none truncate text-ellipsis rounded px-1 py-0.5 sm:max-w-[18rem] lg:max-w-[26rem]"
                                 :class="[
-                                    hasAccessToEditAndDelete() ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
+                                    canEditOrDelete ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
                                     activeDragTaskId === node.key
                                         ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
                                         : '',
@@ -222,13 +223,15 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
 
                 <Column field="status.name" header="Status" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
-                        <Tag :value="node.data.status?.name" :severity="node.data.status?.severity" />
+                        <Tag v-if="node.data.status" :value="node.data.status.name" :severity="node.data.status.severity" />
+                        <span v-else class="text-surface-400 dark:text-surface-500">-</span>
                     </template>
                 </Column>
 
                 <Column field="type.name" header="Type" filterMatchMode="in" style="min-width: 120px" sortable>
                     <template #body="{ node }">
-                        <Tag :value="node.data.type?.name" :severity="node.data.type?.severity" />
+                        <Tag v-if="node.data.type" :value="node.data.type.name" :severity="node.data.type.severity" />
+                        <span v-else class="text-surface-400 dark:text-surface-500">-</span>
                     </template>
                 </Column>
 
@@ -254,7 +257,7 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                     </template>
                 </Column>
 
-                <Column field="completed_at" header="Complete Date" style="min-width: 160px" sortable>
+                <Column field="completed_at" header="Completed" style="min-width: 160px" sortable>
                     <template #body="{ node }">
                         <span>{{ formatDate(node.data.completed_at) }}</span>
                     </template>
@@ -278,7 +281,7 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                                 severity="warning"
                                 v-tooltip.top="'Edit Task'"
                                 aria-label="Edit task"
-                                :disabled="deleteLoading || !canTaskUpdate || !hasAccessToEditAndDelete()"
+                                :disabled="deleteLoading || !canTaskUpdate || !canEditOrDelete"
                                 @click="emit('edit', node.original, node.data.parent_id)"
                             />
                             <Button

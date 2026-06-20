@@ -5,11 +5,11 @@ export default { layout: ProjectShellLayout };
 </script>
 
 <script setup lang="ts">
-import TaskTable from '@/pages/project/task/Table.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import type { ListProps, ListTask } from './index';
 import TaskFormDrawer from './task/TaskFormDrawer.vue';
+import TaskTable from './task/TaskTable.vue';
 
 const props = defineProps<ListProps>();
 

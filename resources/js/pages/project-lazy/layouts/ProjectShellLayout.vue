@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
-import { ProjectPolicyKey } from '@/types/type';
+import { LiveProjectProgressKey, ProjectPolicyKey } from '@/types/type';
 import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
-import { computed, provide } from 'vue';
+import { computed, provide, ref, watch } from 'vue';
 import type { ShellProps, TabItem } from '../index';
 import ProjectHeader from '../partials/ProjectHeader.vue';
 import ProjectStats from '../partials/ProjectStats.vue';
@@ -15,6 +15,17 @@ const toast = useToast();
 
 const shell = computed(() => page.props as unknown as ShellProps);
 const project = computed(() => shell.value.project);
+
+const liveProgress = ref(project.value.progress);
+provide(LiveProjectProgressKey, liveProgress);
+watch(
+    () => project.value.progress,
+    (value) => {
+        liveProgress.value = value;
+    },
+);
+
+const projectForStats = computed(() => ({ ...project.value, progress: liveProgress.value }));
 
 // Children expect the raw policy value (see useProjectPermissions); tab pages that
 // need the freshest policy read it from page props directly.
@@ -81,7 +92,7 @@ const updateProject = (newValue: any, field: string) => {
             <ProjectHeader :project="project" :members="shell.members" :canEdit="canEdit" :isMember="shell.isMember" @update="updateProject" />
 
             <ProjectStats
-                :project="project"
+                :project="projectForStats"
                 :statuses="shell.statuses || []"
                 :priorities="shell.priorities || []"
                 :canEdit="canEdit"

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\SprintReportController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LazyTaskController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\MsProjectPriorityController;
 use App\Http\Controllers\MsProjectRoleController;
@@ -96,6 +97,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
         Route::delete('tasks', [TaskController::class, 'bulkDestroy'])->name('tasks.bulk-destroy');
         Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');
+        // Lazy detail (project-lazy) write flow — JSON responses for the axios/local-state UI.
+        Route::post('tasks/lazy', [LazyTaskController::class, 'store'])->name('tasks.lazy-store');
+        Route::put('tasks/{taskEncoded}/lazy', [LazyTaskController::class, 'update'])->name('tasks.lazy-update');
         Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
         Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
         Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');

@@ -50,7 +50,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'auth' => [
                 'user' => $user ? Sqids::rec_encode_ids_in_list($user->toArray()) : null,
-                'role' => $user ? $user->getRoleNames()[0] : null,
+                'role' => $user ? $user->getRoleNames()->first() : null,
                 'menu' => $menu,
                 'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
             ],

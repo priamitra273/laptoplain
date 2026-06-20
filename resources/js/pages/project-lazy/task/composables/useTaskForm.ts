@@ -23,7 +23,12 @@ const findParentTaskById = (tasks: ParentTaskNode[], id: string): ParentTaskNode
     return null;
 };
 
-export const useTaskForm = (props: LazyTaskFormProps, emit: (e: 'close' | 'saved') => void) => {
+interface TaskFormEmit {
+    (e: 'close'): void;
+    (e: 'saved'): void;
+}
+
+export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
     const toast = useToast();
 
     const policy = inject(ProjectPolicyKey, null);

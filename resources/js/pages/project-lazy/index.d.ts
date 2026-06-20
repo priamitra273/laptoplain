@@ -1,4 +1,4 @@
-import { PrimeSeverity } from '@/types';
+import { PrimeSeverity, UploadedFile } from '@/types';
 
 /*
 |--------------------------------------------------------------------------
@@ -192,4 +192,109 @@ export interface ParentTaskOption {
     parent_id: string | null;
     title: string;
     category?: { id: string; name: string } | null;
+}
+
+/* ---- Task table (List tab) ---- */
+
+export interface LazyTaskFormattedData {
+    id: string;
+    parent_id: string | null;
+    title: string;
+    status?: TaskStatusOption;
+    type?: TaskTypeOption;
+    category?: TaskCategoryOption;
+    users: SlimUser[];
+    progress: number;
+    start_date: string | null;
+    due_date: string | null;
+    completed_at: string | null;
+    is_overdue: boolean;
+    level?: number;
+}
+
+export interface LazyTaskFormatted {
+    key: string;
+    data: LazyTaskFormattedData;
+    children: LazyTaskFormatted[];
+    original: ListTask;
+}
+
+export interface LazyTaskTableProps {
+    projectId: string;
+    tasks: ListTask[];
+    taskStatuses: TaskStatusOption[];
+    taskPriorities: TaskPriorityOption[];
+    taskTypes: TaskTypeOption[];
+    taskCategories: TaskCategoryOption[];
+}
+
+export interface LazyTaskTableEmits {
+    (e: 'add', parentId: string | null): void;
+    (e: 'edit', task: ListTask, parentId: string | null): void;
+}
+
+export interface LazyTaskTableFilter {
+    global: string;
+    'status.name': string[] | null;
+    'type.name': string[] | null;
+}
+
+/* ---- Task form (drawer) ---- */
+
+export type TaskFormPayload = App.Data.Task.ProjectTaskData;
+
+export interface LazyMember {
+    user: SlimUser;
+}
+
+export interface ParentTaskNode {
+    id: string;
+    title: string;
+    category?: { id: string; name: string } | null;
+    sub_task_recursive: ParentTaskNode[];
+}
+
+export interface LazyTagForm {
+    name: string;
+    severity: string;
+}
+
+export interface LazyTaskFormProps {
+    parentId: string | null;
+    projectId: string;
+    task: TaskFormPayload | null;
+    sprintId?: string | null;
+    tasks: ParentTaskNode[];
+    taskTypes: TaskTypeOption[];
+    taskStatuses: TaskStatusOption[];
+    taskPriorities: TaskPriorityOption[];
+    taskCategories?: TaskCategoryOption[];
+    excludeEpicCategory?: boolean;
+    onlyEpicCategory?: boolean;
+    hideParentTaskField?: boolean;
+    tags: TagOption[];
+    members: LazyMember[];
+}
+
+export interface LazyTaskFormData {
+    _method: 'POST' | 'PUT';
+    title: string;
+    description: string;
+    project_id: string;
+    type_id: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    task_category_id: string | null;
+    sprint_id: string | null;
+    parent_id: string | null;
+    start_date: Date | null;
+    due_date: Date | null;
+    is_archived: boolean;
+    progress_value: number;
+    assign_users: string[];
+    unassign_users: string[];
+    add_tag: { new: LazyTagForm[]; exists: string[] };
+    remove_tag: string[];
+    attachments: File[] | UploadedFile[] | null;
+    [key: string]: any;
 }

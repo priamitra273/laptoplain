@@ -92,7 +92,6 @@ export const useTaskFormDrawer = (projectId: string, emit: (e: 'saved', payload:
 
     const onSaved = (payload: SavedTaskPayload): void => {
         emit('saved', payload);
-        close();
     };
 
     return { visible, loading, task, parentTree, parentId, header, openCreate, openEdit, onSaved, close };

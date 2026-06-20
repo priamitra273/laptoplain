@@ -95,4 +95,29 @@ describe('useTaskForm.submit (create)', () => {
         expect((form.errors as Record<string, string>).title).toBe('Required');
         expect(emit.mock.calls.find((c) => c[0] === 'saved')).toBeFalsy();
     });
+
+    it('posts to the lazy-update route and emits a saved payload with mode=edit', async () => {
+        postMock.mockResolvedValue({ data: { success: true } });
+        const emit = vi.fn();
+        const props = baseProps();
+        props.task = { id: 'EXIST', title: 'X' } as never;
+        const { form, submit } = useTaskForm(props, emit);
+        form.title = 'Edited';
+        form.status_id = 'S1';
+        form.priority_id = 'P1';
+        form.type_id = 'T1';
+
+        await submit();
+
+        expect((globalThis as unknown as { route: ReturnType<typeof vi.fn> }).route).toHaveBeenCalledWith(
+            'project.tasks.lazy-update',
+            { projectEncoded: 'PROJ', taskEncoded: 'EXIST' },
+        );
+        expect(postMock).toHaveBeenCalledTimes(1);
+        const savedCall = emit.mock.calls.find((c) => c[0] === 'saved');
+        expect(savedCall).toBeTruthy();
+        const payload = savedCall![1];
+        expect(payload.mode).toBe('edit');
+        expect(payload.id).toBe('EXIST');
+    });
 });

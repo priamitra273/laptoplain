@@ -40,6 +40,7 @@ class UpdateTaskAction
 
             $allUserIds = $this->syncUsers($task, $assignUserIds, $unassignUserIds);
             $this->recalculateParentProgress($task, $data);
+            $this->recalculateProjectProgress($task);
             $this->sendNotification($task, $allUserIds);
 
             return $task->fresh();
@@ -168,6 +169,11 @@ class UpdateTaskAction
                 $parent = $parent->parent;
             }
         }
+    }
+
+    private function recalculateProjectProgress(Task $task): void
+    {
+        $task->project->update(['progress' => $task->project->calculateProgress()]);
     }
 
     /**

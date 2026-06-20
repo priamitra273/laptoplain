@@ -95,6 +95,8 @@ class TaskService
             $this->calculateParentProgress($task);
         }
 
+        $task->project->update(['progress' => $task->project->calculateProgress()]);
+
         $this->dispatchNotification($task);
     }
 

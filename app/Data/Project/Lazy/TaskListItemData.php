@@ -26,6 +26,7 @@ class TaskListItemData extends Data
     public function __construct(
         public int $id,
         public ?int $parent_id,
+        public int $sequence_number,
         public string $title,
         public float $progress,
         public ?string $start_date,
@@ -37,8 +38,10 @@ class TaskListItemData extends Data
         public ?TaskStatusData $status,
         public ?TaskTypeData $type,
         public ?TaskCategoryData $category,
+
         /** @var DataCollection<int, UserData> */
         public DataCollection $users,
+
         /** @var DataCollection<int, TaskListItemData> */
         public DataCollection $sub_task_recursive,
     ) {}
@@ -53,6 +56,7 @@ class TaskListItemData extends Data
         return new self(
             id: (int) $task->id,
             parent_id: $task->parent_id !== null ? (int) $task->parent_id : null,
+            sequence_number: $task->sequence_number,
             title: (string) $task->title,
             progress: (float) $task->progress,
             start_date: self::asDate($task->start_date),

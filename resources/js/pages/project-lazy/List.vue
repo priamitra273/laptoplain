@@ -1,19 +1,35 @@
 <script setup lang="ts">
-import { Deferred, Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import type { ListProps, ListTask } from './index';
+import type { ListProps, ListTask, SavedTaskPayload } from './index';
+import { LiveProjectProgressKey } from '@/types/type';
+import { Deferred, Head } from '@inertiajs/vue3';
+import { computed, inject, ref } from 'vue';
 import ProjectShellLayout from './layouts/ProjectShellLayout.vue';
 import ListTableSkeleton from './partials/ListTableSkeleton.vue';
 import TaskFormDrawer from './task/TaskFormDrawer.vue';
 import TaskTable from './task/TaskTable.vue';
+import { useLocalTaskTree } from './task/composables/useLocalTaskTree';
+import { buildListTaskNode, patchListTaskNode } from './task/nodes/listTaskNode';
 
 const props = defineProps<ListProps>();
 
 const drawer = ref<InstanceType<typeof TaskFormDrawer> | null>(null);
 
+const liveProgress = inject(LiveProjectProgressKey, null);
+
+const { tasks, applySaved } = useLocalTaskTree<ListTask>(
+    computed(() => props.tasks),
+    {
+        onProjectProgress: (value) => {
+            if (liveProgress) {
+                liveProgress.value = value;
+            }
+        },
+    },
+);
+
 const openCreate = (parentId: string | null) => drawer.value?.openCreate(parentId ?? null);
 const onEdit = (task: ListTask) => drawer.value?.openEdit(task);
-const onSaved = () => router.reload({ only: ['tasks'] });
+const onSaved = (payload: SavedTaskPayload) => applySaved(payload, { build: buildListTaskNode, patch: patchListTaskNode });
 </script>
 
 <template>
@@ -27,7 +43,7 @@ const onSaved = () => router.reload({ only: ['tasks'] });
 
             <TaskTable
                 :projectId="props.project.id"
-                :tasks="props.tasks"
+                :tasks="tasks"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"
                 :taskTypes="props.taskTypes"

@@ -57,7 +57,12 @@ export const useTaskFormDrawer = (projectId: string, emit: (e: 'saved') => void)
         task.value = null;
         parentId.value = parent;
         visible.value = true;
-        await fetchParentOptions();
+        loading.value = true;
+        try {
+            await fetchParentOptions();
+        } finally {
+            loading.value = false;
+        }
     };
 
     const openEdit = async (taskCard: { id: string; parent_id?: string | null }): Promise<void> => {

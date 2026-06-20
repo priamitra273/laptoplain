@@ -1,6 +1,11 @@
 import type { ParentTaskOption } from '@/pages/project-lazy';
-import { describe, expect, it } from 'vitest';
-import { buildParentTree } from './useTaskFormDrawer';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildParentTree, useTaskFormDrawer } from './useTaskFormDrawer';
+
+const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
+
+vi.mock('axios', () => ({ default: { get: getMock } }));
+vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: vi.fn() }) }));
 
 describe('buildParentTree', () => {
     it('nests children under their parent', () => {
@@ -30,5 +35,45 @@ describe('buildParentTree', () => {
 
     it('returns an empty array for an empty list', () => {
         expect(buildParentTree([])).toEqual([]);
+    });
+});
+
+describe('useTaskFormDrawer.openCreate', () => {
+    beforeEach(() => {
+        getMock.mockReset();
+        (globalThis as unknown as { route: unknown }).route = vi.fn(() => '/parent-options');
+    });
+
+    it('keeps loading until parent options are fetched so the form mounts with populated options', async () => {
+        let resolveFetch!: (value: { data: { data: ParentTaskOption[] } }) => void;
+        getMock.mockReturnValue(
+            new Promise((resolve) => {
+                resolveFetch = resolve;
+            }),
+        );
+
+        const drawer = useTaskFormDrawer('proj-1', vi.fn());
+        const opening = drawer.openCreate('parent-1');
+
+        expect(drawer.visible.value).toBe(true);
+        expect(drawer.loading.value).toBe(true);
+        expect(drawer.parentTree.value).toEqual([]);
+
+        resolveFetch({ data: { data: [{ id: '1', parent_id: null, title: 'root' }] } });
+        await opening;
+
+        expect(drawer.loading.value).toBe(false);
+        expect(drawer.parentTree.value).toHaveLength(1);
+        expect(drawer.parentTree.value[0].id).toBe('1');
+    });
+
+    it('clears loading even when fetching parent options fails', async () => {
+        getMock.mockRejectedValue(new Error('network'));
+
+        const drawer = useTaskFormDrawer('proj-1', vi.fn());
+        await drawer.openCreate('parent-1');
+
+        expect(drawer.loading.value).toBe(false);
+        expect(drawer.parentTree.value).toEqual([]);
     });
 });

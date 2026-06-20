@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import KanbanBoard from '@/pages/project/task/partials/TaskKanbanBoard.vue';
 import { Deferred, Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { KanbanCard, KanbanProps, SavedTaskPayload } from './index';
@@ -8,6 +7,7 @@ import KanbanBoardSkeleton from './partials/KanbanBoardSkeleton.vue';
 import TaskFormDrawer from './task/TaskFormDrawer.vue';
 import { useLocalTaskTree } from './task/composables/useLocalTaskTree';
 import { buildKanbanCardNode, patchKanbanCardNode } from './task/nodes/kanbanCardNode';
+import KanbanBoard from './task/partials/TaskKanbanBoard.vue';
 
 const props = defineProps<KanbanProps>();
 

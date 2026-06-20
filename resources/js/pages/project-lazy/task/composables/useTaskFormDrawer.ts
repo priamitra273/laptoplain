@@ -1,4 +1,4 @@
-import type { ParentTaskNode, ParentTaskOption, TaskFormPayload } from '@/pages/project-lazy';
+import type { ParentTaskNode, ParentTaskOption, SavedTaskPayload, TaskFormPayload } from '@/pages/project-lazy';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
@@ -28,7 +28,7 @@ export const buildParentTree = (flat: ParentTaskOption[]): ParentTaskNode[] => {
     return roots;
 };
 
-export const useTaskFormDrawer = (projectId: string, emit: (e: 'saved') => void) => {
+export const useTaskFormDrawer = (projectId: string, emit: (e: 'saved', payload: SavedTaskPayload) => void) => {
     const toast = useToast();
 
     const visible = ref(false);
@@ -90,8 +90,8 @@ export const useTaskFormDrawer = (projectId: string, emit: (e: 'saved') => void)
         parentTree.value = [];
     };
 
-    const onSaved = (): void => {
-        emit('saved');
+    const onSaved = (payload: SavedTaskPayload): void => {
+        emit('saved', payload);
         close();
     };
 

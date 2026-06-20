@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LazyMember, SlimUser, TagOption, TaskCategoryOption, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from '@/pages/project-lazy';
+import type { LazyMember, SavedTaskPayload, SlimUser, TagOption, TaskCategoryOption, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from '@/pages/project-lazy';
 import { computed } from 'vue';
 import TaskForm from './TaskForm.vue';
 import { useTaskFormDrawer } from './composables/useTaskFormDrawer';
@@ -15,7 +15,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{ (e: 'saved'): void }>();
+const emit = defineEmits<{ (e: 'saved', payload: SavedTaskPayload): void }>();
 
 const { visible, loading, task, parentTree, parentId, header, openCreate, openEdit, onSaved, close } = useTaskFormDrawer(props.projectId, emit);
 

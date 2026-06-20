@@ -341,3 +341,18 @@ export interface LazyTaskFormData {
     attachments: File[] | UploadedFile[] | null;
     [key: string]: any;
 }
+
+export interface SavedTaskPayload {
+    mode: 'create' | 'edit';
+    id: string;
+    parentId: string | null;
+    title: string;
+    startDate: string | null;
+    dueDate: string | null;
+    isArchived: boolean;
+    status: TaskStatusOption | null;
+    type: TaskTypeOption | null;
+    category: TaskCategoryOption | null;
+    priority: TaskPriorityOption | null;
+    users: SlimUser[];
+}

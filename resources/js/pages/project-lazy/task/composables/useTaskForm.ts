@@ -1,11 +1,13 @@
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
-import type { LazyTaskFormData, LazyTaskFormProps, ParentTaskNode, SlimUser, TagOption, TaskCategoryOption } from '@/pages/project-lazy';
+import type { LazyTaskFormData, LazyTaskFormProps, ParentTaskNode, SavedTaskPayload, SlimUser, TagOption, TaskCategoryOption, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from '@/pages/project-lazy';
 import type { UploadedFile } from '@/types';
 import { ProjectPolicyKey } from '@/types/type';
 import { useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, inject, ref, watch } from 'vue';
+import { buildTaskFormData } from './taskFormData';
 
 const findParentTaskById = (tasks: ParentTaskNode[], id: string): ParentTaskNode | null => {
     for (const task of tasks) {
@@ -25,7 +27,7 @@ const findParentTaskById = (tasks: ParentTaskNode[], id: string): ParentTaskNode
 
 interface TaskFormEmit {
     (e: 'close'): void;
-    (e: 'saved'): void;
+    (e: 'saved', payload: SavedTaskPayload): void;
 }
 
 export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
@@ -62,6 +64,7 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
     const selectedMembers = ref<SlimUser[]>([]);
     const selectedTags = ref<TagOption[]>([]);
     const validationErrors = ref<Record<string, string>>({});
+    const processing = ref(false);
 
     const authUser = computed(() => usePage().props.auth.user);
 
@@ -155,12 +158,28 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
         }
     };
 
-    const submit = (): void => {
+    const findOption = <T extends { id: string }>(list: T[], id: string | null): T | null =>
+        id ? (list.find((option) => option.id === id) ?? null) : null;
+
+    const buildSavedPayload = (id: string): SavedTaskPayload => ({
+        mode: isEdit.value ? 'edit' : 'create',
+        id,
+        parentId: form.parent_id ?? null,
+        title: form.title,
+        startDate: form.start_date ? moment(form.start_date).format('YYYY-MM-DD') : null,
+        dueDate: form.due_date ? moment(form.due_date).format('YYYY-MM-DD') : null,
+        isArchived: form.is_archived,
+        status: findOption<TaskStatusOption>(props.taskStatuses, form.status_id),
+        type: findOption<TaskTypeOption>(props.taskTypes, form.type_id),
+        category: findOption<TaskCategoryOption>(props.taskCategories ?? [], form.task_category_id),
+        priority: findOption<TaskPriorityOption>(props.taskPriorities, form.priority_id),
+        users: [...selectedMembers.value],
+    });
+
+    const submit = async (): Promise<void> => {
         if (props.onlyEpicCategory) {
             form.parent_id = null;
         }
-
-        const routeName = isEdit.value ? 'project.tasks.update' : 'project.tasks.store';
 
         const existed = existedMembers.value.map((u) => u.id);
         const selected = selectedMembers.value.map((u) => u.id);
@@ -179,35 +198,62 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
         form.add_tag.exists = addTagExist;
         form.remove_tag = removeTags;
 
-        const param: Record<string, string | undefined> = { projectEncoded: props.projectId };
+        const requestData: Record<string, unknown> = {
+            _method: form._method,
+            project_id: form.project_id,
+            title: form.title,
+            description: form.description,
+            type_id: form.type_id,
+            status_id: form.status_id,
+            priority_id: form.priority_id,
+            task_category_id: form.task_category_id,
+            sprint_id: form.sprint_id,
+            parent_id: form.parent_id,
+            is_archived: form.is_archived,
+            progress_value: form.progress_value,
+            assign_users: form.assign_users,
+            unassign_users: form.unassign_users,
+            add_tag: form.add_tag,
+            remove_tag: form.remove_tag,
+            attachments: form.attachments,
+            start_date: form.start_date ? moment(form.start_date).format('YYYY-MM-DD') : null,
+            due_date: form.due_date ? moment(form.due_date).format('YYYY-MM-DD') : null,
+        };
 
-        if (isEdit.value) {
-            param.taskEncoded = props.task?.id;
-        }
+        const url = isEdit.value
+            ? route('project.tasks.lazy-update', { projectEncoded: props.projectId, taskEncoded: props.task!.id })
+            : route('project.tasks.lazy-store', { projectEncoded: props.projectId });
 
-        form.transform(function (data) {
-            return {
-                ...data,
-                start_date: data.start_date ? moment(data.start_date).format('YYYY-MM-DD') : null,
-                due_date: data.due_date ? moment(data.due_date).format('YYYY-MM-DD') : null,
-            };
-        }).post(route(routeName, param), {
-            preserveScroll: true,
-            onSuccess: () => {
-                emit('saved');
-                emit('close');
-                form.reset();
-                validationErrors.value = {};
-            },
-            onError: () => {
+        processing.value = true;
+        form.clearErrors();
+
+        try {
+            const response = await axios.post(url, buildTaskFormData(requestData), {
+                headers: { Accept: 'application/json' },
+            });
+
+            const id = isEdit.value ? props.task!.id : String(response.data.id);
+            emit('saved', buildSavedPayload(id));
+            emit('close');
+            form.reset();
+            validationErrors.value = {};
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 422) {
+                const errors = (error.response.data?.errors ?? {}) as Record<string, string[] | string>;
+                Object.entries(errors).forEach(([key, value]) => {
+                    form.setError(key, Array.isArray(value) ? value[0] : String(value));
+                });
+            } else {
                 toast.add({
                     severity: 'error',
                     summary: 'Error',
                     detail: isEdit.value ? 'Failed to update task' : 'Failed to store task',
                     life: 3000,
                 });
-            },
-        });
+            }
+        } finally {
+            processing.value = false;
+        }
     };
 
     watch(
@@ -265,6 +311,7 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
 
     return {
         form,
+        processing,
         selectedMembers,
         selectedTags,
         validationErrors,

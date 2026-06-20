@@ -20,10 +20,13 @@ const props = withDefaults(defineProps<LazyTaskFormProps>(), {
     sprintId: null,
 });
 
-const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>();
+import type { SavedTaskPayload } from '@/pages/project-lazy';
+
+const emit = defineEmits<{ (e: 'close'): void; (e: 'saved', payload: SavedTaskPayload): void }>();
 
 const {
     form,
+    processing,
     selectedMembers,
     selectedTags,
     validationErrors,
@@ -116,15 +119,15 @@ const {
         <SelectArchivedProgress v-model:isArchived="form.is_archived" :archivedDisabled="fieldDisabled('is_archived')" />
 
         <div class="sticky mt-4 flex justify-end gap-2">
-            <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="form.processing" />
-            <Button v-if="!isEdit" label="Create Task" @click="submit" icon="pi pi-save" :loading="form.processing" :disabled="form.processing" />
+            <Button label="Cancel" severity="secondary" @click="emit('close')" :disabled="processing" />
+            <Button v-if="!isEdit" label="Create Task" @click="submit" icon="pi pi-save" :loading="processing" :disabled="processing" />
             <Button
                 v-else
                 label="Update Task"
                 severity="warning"
                 @click="submit"
-                :loading="form.processing"
-                :disabled="form.processing"
+                :loading="processing"
+                :disabled="processing"
                 icon="pi pi-save"
             />
         </div>

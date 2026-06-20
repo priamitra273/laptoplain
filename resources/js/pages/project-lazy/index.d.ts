@@ -193,3 +193,46 @@ export interface ParentTaskOption {
     title: string;
     category?: { id: string; name: string } | null;
 }
+
+/* ---- Backlog tab payload (slim sprint + backlog board) ---- */
+
+export interface SprintStatusOption {
+    id: string;
+    name: string;
+    severity?: string | null;
+}
+
+export interface BacklogTask {
+    id: string;
+    parent_id: string | null;
+    title: string;
+    story_points?: number | null;
+    status?: TaskStatusOption | null;
+    priority?: TaskPriorityOption | null;
+    category?: TaskCategoryOption | null;
+    users: SlimUser[];
+}
+
+export interface BacklogSprint {
+    id: string;
+    name: string;
+    goal?: string | null;
+    duration?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    order?: number | null;
+    status?: SprintStatusOption | null;
+    tasks: BacklogTask[];
+}
+
+export interface BacklogProps extends ShellProps {
+    sprints: BacklogSprint[];
+    backlog: BacklogTask[];
+    epics: Epic[];
+    taskStatuses: TaskStatusOption[];
+    taskPriorities: TaskPriorityOption[];
+    taskTypes: TaskTypeOption[];
+    taskCategories: TaskCategoryOption[];
+    tags: TagOption[];
+    assignableUsers: SlimUser[];
+}

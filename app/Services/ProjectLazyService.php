@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Data\Project\Lazy\BacklogSprintData;
+use App\Data\Project\Lazy\BacklogTaskData;
 use App\Data\Project\Lazy\ShellMemberData;
 use App\Data\Project\ProjectPriorityData;
 use App\Data\Project\ProjectRoleData;
@@ -17,8 +19,10 @@ use App\Data\UserData;
 use App\Facades\Sqids;
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Models\ProjectSprint;
 use App\Models\Task;
 use App\Repositories\ProjectRepository;
+use App\Repositories\SprintRepository;
 use Illuminate\Support\Facades\Auth;
 use Inertia\DeferProp;
 use Inertia\Inertia;
@@ -32,7 +36,10 @@ use Spatie\LaravelData\DataCollection;
  */
 class ProjectLazyService
 {
-    public function __construct(private ProjectRepository $projectRepository) {}
+    public function __construct(
+        private ProjectRepository $projectRepository,
+        private SprintRepository $sprintRepository,
+    ) {}
 
     /**
      * Cheap props rendered by the persistent shell on every tab
@@ -100,6 +107,24 @@ class ProjectLazyService
         return array_merge($this->taskFormOptions(), [
             'tasks' => $this->projectRepository->getTaskListTree($project->id)->toArray(),
             'assignableUsers' => $this->assignableUsers($project),
+        ]);
+    }
+
+    /**
+     * Backlog tab: planning/active sprints with their (non-epic) tasks, the backlog
+     * tasks, the epic option list and assignable users — all deferred behind the cheap
+     * shell — plus the small master option lists the create/edit form needs (bundled
+     * eagerly, like the List tab).
+     *
+     * @return array<string, mixed>
+     */
+    public function backlogData(Project $project): array
+    {
+        return array_merge($this->taskFormOptions(), [
+            'sprints' => $this->deferred(fn () => $this->backlogSprints($project->id), 'backlog'),
+            'backlog' => $this->deferred(fn () => $this->backlogTasks($project->id), 'backlog'),
+            'epics' => $this->deferred(fn () => $this->projectRepository->getEpics($project->id)->toArray(), 'backlog'),
+            'assignableUsers' => $this->deferred(fn () => $this->assignableUsers($project), 'backlog'),
         ]);
     }
 
@@ -233,6 +258,33 @@ class ProjectLazyService
                 ? ['id' => (int) $project->priority->id, 'name' => $project->priority->name, 'severity' => $project->priority->severity]
                 : null,
         ];
+    }
+
+    /**
+     * Planning/active sprints (no Completed) mapped to the slim board shape.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function backlogSprints(int $projectId): array
+    {
+        return $this->sprintRepository->getActiveSprintsWithTasks($projectId)
+            ->map(fn (ProjectSprint $sprint) => BacklogSprintData::fromModel($sprint)->toArray())
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Unassigned (root or epic-parented) backlog tasks, slim and without epic rows.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function backlogTasks(int $projectId): array
+    {
+        return $this->sprintRepository->getBacklogTasks($projectId)
+            ->reject(fn (Task $task) => strtolower((string) $task->category?->name) === 'epic')
+            ->map(fn (Task $task) => BacklogTaskData::fromModel($task)->toArray())
+            ->values()
+            ->all();
     }
 
     /**

@@ -43,7 +43,7 @@ class ProjectTabController extends Controller
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/Backlog', $project, []);
+        return $this->renderTab('project-lazy/Backlog', $project, $this->service->backlogData($project));
     }
 
     public function detail(string $encoded): Response

@@ -4,14 +4,15 @@ import CommentEditor from '@/components/ui/comment/CommentEditor.vue';
 import CommentItem from '@/components/ui/comment/CommentItem.vue';
 import type { Comment } from '@/components/ui/comment/type';
 import UserAvatar from '@/components/UserAvatar.vue';
+import type { Epic, KanbanCard, SlimUser } from '@/pages/project-lazy';
 import { FormDataConvertible } from '@inertiajs/core';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import moment from 'moment';
 import { ListboxChangeEvent } from 'primevue/listbox';
 import { MenuItem } from 'primevue/menuitem';
+import ProgressBar from 'primevue/progressbar';
 import { computed, ref, useTemplateRef } from 'vue';
-import type { Epic, KanbanCard, SlimUser } from '@/pages/project-lazy';
 import KanbanRow from './KanbanRow.vue';
 
 import TaskActivity = App.Data.Task.TaskActivityData;
@@ -245,11 +246,13 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
 
                     <div class="mb-4 space-y-3">
                         <KanbanRow label="Assignee" icon="UsersRound">
-                            <Chip v-for="user in task.users" :label="user.name" :key="user.id" class="!py-1 !pl-1 !pr-2 text-sm">
-                                <template #icon>
-                                    <UserAvatar :user="user" fontSize=".75rem" />
-                                </template>
-                            </Chip>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Chip v-for="user in task.users" :label="user.name" :key="user.id" class="!py-1 !pl-1 !pr-2 text-sm">
+                                    <template #icon>
+                                        <UserAvatar :user="user" fontSize=".75rem" />
+                                    </template>
+                                </Chip>
+                            </div>
                         </KanbanRow>
 
                         <KanbanRow label="Status" icon="Loader">

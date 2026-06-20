@@ -160,3 +160,92 @@ it('forbids creating a task for a user without permission via the lazy endpoint'
 
     $response->assertForbidden();
 });
+
+it('updates a task via the lazy endpoint and returns success', function () {
+    $task = lazyWriteTask($this->project->id, [
+        'title' => 'Before',
+        'status_id' => $this->status->id,
+        'priority_id' => $this->priority->id,
+        'type_id' => $this->type->id,
+        'task_category_id' => $this->category->id,
+    ]);
+
+    $response = $this->actingAs($this->user)->putJson(
+        route('project.tasks.lazy-update', [
+            'projectEncoded' => $this->encoded,
+            'taskEncoded' => Sqids::encode($task->id),
+        ]),
+        [
+            'title' => 'After',
+            'status_id' => Sqids::encode($this->status->id),
+            'priority_id' => Sqids::encode($this->priority->id),
+            'type_id' => Sqids::encode($this->type->id),
+            'start_date' => '2026-01-01',
+            'due_date' => '2026-01-10',
+        ],
+    );
+
+    $response->assertSuccessful();
+    $response->assertJson(['success' => true]);
+    expect($task->fresh()->title)->toBe('After');
+});
+
+it('recalculates parent progress when a leaf status changes via the lazy update endpoint', function () {
+    $initialStatus = MsTaskStatus::query()->where('id', '!=', $this->status->id)->orderBy('score')->firstOrFail();
+
+    $parent = lazyWriteTask($this->project->id, ['title' => 'Parent', 'progress' => 0]);
+    $child = lazyWriteTask($this->project->id, [
+        'title' => 'Child',
+        'parent_id' => $parent->id,
+        'status_id' => $initialStatus->id,
+        'priority_id' => $this->priority->id,
+        'type_id' => $this->type->id,
+        'progress' => 0,
+    ]);
+    $score = (float) $this->status->score;
+
+    $this->actingAs($this->user)->putJson(
+        route('project.tasks.lazy-update', [
+            'projectEncoded' => $this->encoded,
+            'taskEncoded' => Sqids::encode($child->id),
+        ]),
+        [
+            'title' => 'Child',
+            'status_id' => Sqids::encode($this->status->id),
+            'priority_id' => Sqids::encode($this->priority->id),
+            'type_id' => Sqids::encode($this->type->id),
+            'start_date' => '2026-01-01',
+            'due_date' => '2026-01-10',
+        ],
+    )->assertSuccessful();
+
+    expect((float) $parent->fresh()->progress)->toBe($score)
+        ->and((float) $this->project->fresh()->progress)->toBe($score);
+});
+
+it('returns 422 when updating a task with invalid data via the lazy endpoint', function () {
+    $task = lazyWriteTask($this->project->id, [
+        'title' => 'X',
+        'status_id' => $this->status->id,
+        'priority_id' => $this->priority->id,
+        'type_id' => $this->type->id,
+    ]);
+
+    $response = $this->actingAs($this->user)->putJson(
+        route('project.tasks.lazy-update', [
+            'projectEncoded' => $this->encoded,
+            'taskEncoded' => Sqids::encode($task->id),
+        ]),
+        [
+            'title' => 'X',
+            'status_id' => Sqids::encode(999999),
+            'priority_id' => Sqids::encode($this->priority->id),
+            'type_id' => Sqids::encode($this->type->id),
+            'start_date' => '2026-01-01',
+            'due_date' => '2026-01-10',
+        ],
+    );
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['status_id']);
+});

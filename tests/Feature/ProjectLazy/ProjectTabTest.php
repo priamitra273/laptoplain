@@ -150,7 +150,7 @@ it('kanban tab defers the board payload behind the cheap shell, then resolves it
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project-lazy/Kanban')
+        ->component('project-lazy/kanban/Kanban')
         // cheap shell paints immediately
         ->has('project.title')
         ->has('policy')
@@ -192,7 +192,7 @@ it('list tab defers the slim task tree and assignable users behind the shell, bu
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project-lazy/List')
+        ->component('project-lazy/task/List')
         // cheap shell paints immediately
         ->has('project.title')
         ->has('policy')
@@ -242,7 +242,7 @@ it('team tab returns members, roles and assignable users — not tasks', functio
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project-lazy/Team')
+        ->component('project-lazy/team/Team')
         ->has('members', 1)
         ->where('members.0.role.name', 'Owner')
         ->has('members.0.user.email')
@@ -273,7 +273,7 @@ it('shell members carry a slim user and exclude members whose user is inactive',
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project-lazy/Detail')
+        ->component('project-lazy/detail/Detail')
         // the inactive user's member is filtered out at the query level (findShell),
         // so the redundant null-user guard in shellData is unnecessary
         ->has('members', 1)
@@ -291,7 +291,7 @@ it('backlog tab defers sprints/backlog/epics behind the shell, bundles slim form
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project-lazy/Backlog')
+        ->component('project-lazy/backlog/Backlog')
         // cheap shell paints immediately
         ->has('project.title')
         ->has('policy')

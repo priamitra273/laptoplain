@@ -7,7 +7,7 @@ import AvatarGroup from 'primevue/avatargroup';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { ref, watch } from 'vue';
-import type { ShellMember, ShellProject, SlimUser } from '../index';
+import type { ShellMember, ShellProject, SlimUser } from '@/pages/project-lazy';
 
 interface Props {
     project: ShellProject;

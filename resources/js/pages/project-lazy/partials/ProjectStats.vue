@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import moment from 'moment';
 import { ref, watch } from 'vue';
-import type { ProjectPriorityOption, ProjectStatusOption, ShellProject } from '../index';
+import type { ProjectPriorityOption, ProjectStatusOption, ShellProject } from '@/pages/project-lazy';
 
 interface Props {
     project: ShellProject;

@@ -61,7 +61,7 @@ const {
 
 const { getCategoryIcon, getCategoryColor } = useTaskCategoryStyle();
 
-const filters = useSessionStorage<LazyTaskTableFilter>('task-table-filters-' + currentUser.id, {
+const filters = useSessionStorage<LazyTaskTableFilter>(`task-table-filters:${props.projectId}:${currentUser.id}`, {
     global: '',
     'status.name': null,
     'type.name': null,
@@ -304,7 +304,9 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                         <i class="pi pi-inbox text-3xl text-surface-300 dark:text-surface-600" aria-hidden="true" />
                         <div class="flex flex-col gap-1">
                             <p class="font-medium text-surface-700 dark:text-surface-200">No tasks yet</p>
-                            <p class="text-sm text-surface-500 dark:text-surface-400">Create the first task to start tracking progress for this project.</p>
+                            <p class="text-sm text-surface-500 dark:text-surface-400">
+                                Create the first task to start tracking progress for this project.
+                            </p>
                         </div>
                         <Button v-if="canTaskCreate" label="Add Task" icon="pi pi-plus" size="small" @click="emit('add', null)" />
                     </div>

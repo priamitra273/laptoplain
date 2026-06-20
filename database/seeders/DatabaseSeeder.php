@@ -23,16 +23,16 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         $this->call([
-            // TeamSeeder::class,
-            // MenuSeeder::class,
-            // RoleSeeder::class,
-            // UserSeeder::class,
-            // MsProjectPrioritySeeder::class,
-            // MsProjectStatusSeeder::class,
-            // MsProjectRoleSeeder::class,
-            // MsTaskPrioritySeeder::class,
-            // MsTaskStatusSeeder::class,
-            // MsTaskTypeSeeder::class,
+            TeamSeeder::class,
+            MenuSeeder::class,
+            RoleSeeder::class,
+            UserSeeder::class,
+            MsProjectPrioritySeeder::class,
+            MsProjectStatusSeeder::class,
+            MsProjectRoleSeeder::class,
+            MsTaskPrioritySeeder::class,
+            MsTaskStatusSeeder::class,
+            MsTaskTypeSeeder::class,
             MsSprintStatusSeeder::class,
             TaskCategorySeeder::class,
         ]);

@@ -26,7 +26,7 @@ class TaskListItemData extends Data
     public function __construct(
         public int $id,
         public ?int $parent_id,
-        public int $sequence_number,
+        public ?int $sequence_number,
         public string $title,
         public float $progress,
         public ?string $start_date,

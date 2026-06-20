@@ -41,7 +41,8 @@ class LazyTaskController extends Controller
         TaskUpdateRequest $request,
         string $encoded,
         string $taskEncoded,
-        UpdateTaskAction $updateTaskAction
+        UpdateTaskAction $updateTaskAction,
+        RecalculateProgressAction $recalculateProgressAction
     ): JsonResponse {
         $taskId = Sqids::decode($taskEncoded);
 
@@ -51,8 +52,37 @@ class LazyTaskController extends Controller
         abort_if($project->id !== $task->project_id, 404);
         abort_if($request->user()->cannot('update', $task), 403);
 
-        $updateTaskAction->execute($task, $request->validated());
+        $oldParentId = $task->parent_id;
+
+        $task = $updateTaskAction->execute($task, $request->validated());
+
+        if ($task->parent_id !== $oldParentId) {
+            $this->recomputeChangedParent($task->parent, $recalculateProgressAction);
+            $this->recomputeChangedParent(
+                $oldParentId !== null ? Task::query()->find($oldParentId) : null,
+                $recalculateProgressAction
+            );
+        }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Recompute a parent whose child set changed during a re-parent, then its ancestors and the project.
+     * A parent that became childless falls back to its own status score (mirrors the frontend leaf rule).
+     */
+    private function recomputeChangedParent(?Task $parent, RecalculateProgressAction $recalculateProgressAction): void
+    {
+        if ($parent === null) {
+            return;
+        }
+
+        $progress = $parent->children()->exists()
+            ? $parent->calculateProgress()
+            : (float) ($parent->status?->score ?? 0);
+
+        $parent->update(['progress' => $progress]);
+
+        $recalculateProgressAction->execute($parent);
     }
 }

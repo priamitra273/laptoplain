@@ -249,3 +249,40 @@ it('returns 422 when updating a task with invalid data via the lazy endpoint', f
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors(['status_id']);
 });
+
+it('recalculates old and new parent progress when a task is re-parented via the lazy update endpoint', function () {
+    $oldParent = lazyWriteTask($this->project->id, ['title' => 'Old Parent', 'progress' => 0]);
+    $newParent = lazyWriteTask($this->project->id, ['title' => 'New Parent', 'progress' => 0]);
+    $child = lazyWriteTask($this->project->id, [
+        'title' => 'Movable',
+        'parent_id' => $oldParent->id,
+        'status_id' => $this->status->id,
+        'priority_id' => $this->priority->id,
+        'type_id' => $this->type->id,
+        'progress' => (float) $this->status->score,
+    ]);
+    $score = (float) $this->status->score;
+
+    $this->actingAs($this->user)->putJson(
+        route('project.tasks.lazy-update', [
+            'projectEncoded' => $this->encoded,
+            'taskEncoded' => Sqids::encode($child->id),
+        ]),
+        [
+            'title' => 'Movable',
+            'status_id' => Sqids::encode($this->status->id),
+            'priority_id' => Sqids::encode($this->priority->id),
+            'type_id' => Sqids::encode($this->type->id),
+            'parent_id' => Sqids::encode($newParent->id),
+            'start_date' => '2026-01-01',
+            'due_date' => '2026-01-10',
+        ],
+    )->assertSuccessful();
+
+    // New parent holds the child → its progress = child's status score.
+    // Old parent is now childless → falls back to its own status score (0; it has no status).
+    // Project = average of the two root parents.
+    expect((float) $newParent->fresh()->progress)->toBe($score)
+        ->and((float) $oldParent->fresh()->progress)->toBe(0.0)
+        ->and((float) $this->project->fresh()->progress)->toBe(round($score / 2, 2));
+});

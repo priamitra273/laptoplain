@@ -31,3 +31,5 @@ yarn-error.log
 /.cursor/skills/
 /.gemini/skills/
 /.github/skills/
+
+.worktree/

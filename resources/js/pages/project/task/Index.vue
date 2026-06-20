@@ -293,13 +293,9 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
                     </div>
 
                     <!-- Board view -->
-                    <TaskKanban
-                        v-else-if="viewMode === 'board'"
-                        key="board"
-                        :tasks="filteredTasks"
-                        :statuses="statuses"
-                        @status-update="onStatusUpdate"
-                    />
+                    <div v-else-if="viewMode === 'board'" key="board">
+                        <TaskKanban :tasks="filteredTasks" :statuses="statuses" @status-update="onStatusUpdate" />
+                    </div>
 
                     <!-- List view -->
                     <div v-else key="list" class="overflow-x-auto">
@@ -323,7 +319,7 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
                                 <template #body="{ data: task }">
                                     <div class="flex flex-col gap-0.5">
                                         <Link
-                                            :href="route('task.show', { encoded: task.id, from: 'task' })"
+                                            :href="route('task.show', task.id)"
                                             class="font-medium text-surface-900 hover:text-primary-600 hover:underline dark:text-surface-50 dark:hover:text-primary-400"
                                             :title="task.title"
                                             @click.stop

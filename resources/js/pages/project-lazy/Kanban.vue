@@ -1,19 +1,24 @@
 <script setup lang="ts">
 import KanbanBoard from '@/pages/project/task/partials/TaskKanbanBoard.vue';
 import { Deferred, Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import type { KanbanProps } from './index';
+import { computed, ref } from 'vue';
+import type { KanbanCard, KanbanProps, SavedTaskPayload } from './index';
 import ProjectShellLayout from './layouts/ProjectShellLayout.vue';
 import KanbanBoardSkeleton from './partials/KanbanBoardSkeleton.vue';
 import TaskFormDrawer from './task/TaskFormDrawer.vue';
+import { useLocalTaskTree } from './task/composables/useLocalTaskTree';
+import { buildKanbanCardNode, patchKanbanCardNode } from './task/nodes/kanbanCardNode';
 
 const props = defineProps<KanbanProps>();
 
 const drawer = ref<InstanceType<typeof TaskFormDrawer> | null>(null);
 
+const { tasks, applySaved } = useLocalTaskTree<KanbanCard>(computed(() => props.tasks), {});
+
 const openCreate = (parentId: string | null) => drawer.value?.openCreate(parentId ?? null);
 const onEdit = (task: { id: string; parent_id?: string | null }) => drawer.value?.openEdit(task);
 const onStatusUpdate = () => router.reload({ only: ['tasks'] });
+const onSaved = (payload: SavedTaskPayload) => applySaved(payload, { build: buildKanbanCardNode, patch: patchKanbanCardNode });
 </script>
 
 <template>
@@ -27,7 +32,7 @@ const onStatusUpdate = () => router.reload({ only: ['tasks'] });
 
             <KanbanBoard
                 :projectId="props.project.id"
-                :tasks="props.tasks"
+                :tasks="tasks"
                 :statuses="props.taskStatuses"
                 :taskStatuses="props.taskStatuses"
                 :taskPriorities="props.taskPriorities"
@@ -48,7 +53,7 @@ const onStatusUpdate = () => router.reload({ only: ['tasks'] });
                 :taskCategories="props.taskCategories"
                 :tags="props.tags"
                 :assignableUsers="props.assignableUsers"
-                @saved="onStatusUpdate"
+                @saved="onSaved"
             />
         </Deferred>
     </ProjectShellLayout>

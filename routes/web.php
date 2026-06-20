@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectSummaryController;
+use App\Http\Controllers\ProjectTabController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SprintController;
@@ -57,6 +58,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('project/{encoded}', [ProjectController::class, 'show'])->name('project.show');
         Route::get('project/{encoded}/summary', ProjectSummaryController::class)->name('project.summary');
 
+        // Lazy, per-tab project detail (project-lazy/*). Each tab loads only its own data.
+        Route::prefix('project/{encoded}')->name('project.show.')->group(function () {
+            Route::get('kanban', [ProjectTabController::class, 'kanban'])->name('kanban');
+            Route::get('list', [ProjectTabController::class, 'list'])->name('list');
+            Route::get('backlog', [ProjectTabController::class, 'backlog'])->name('backlog');
+            Route::get('detail', [ProjectTabController::class, 'detail'])->name('detail');
+            Route::get('team', [ProjectTabController::class, 'team'])->name('team');
+            Route::get('timeline', [ProjectTabController::class, 'timeline'])->name('timeline');
+            Route::get('report', [ProjectTabController::class, 'report'])->name('report');
+        });
+
         Route::get('task', [TaskController::class, 'index'])->name('task.index');
 
         Route::get('reports/tasks', [TaskReportController::class, 'index'])->name('reports.tasks.index');
@@ -76,6 +88,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');
         Route::put('members/{memberEncoded}', [ProjectMemberController::class, 'update'])->name('members.update');
         Route::delete('members/{memberEncoded}', [ProjectMemberController::class, 'destroy'])->name('members.destroy');
+
+        // On-demand JSON for the lazy detail's task form (fetched when a form opens).
+        Route::get('tasks/parent-options', [ProjectTabController::class, 'taskParentOptions'])->name('tasks.parent-options');
+        Route::get('tasks/{task}/edit', [ProjectTabController::class, 'taskEdit'])->name('tasks.edit');
 
         Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
         Route::put('tasks/{taskEncoded}', [TaskController::class, 'update'])->name('tasks.update');

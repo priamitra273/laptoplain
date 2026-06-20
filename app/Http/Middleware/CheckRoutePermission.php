@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -20,7 +19,7 @@ class CheckRoutePermission
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401);
         }
 
@@ -30,17 +29,17 @@ class CheckRoutePermission
             return $next($request);
         }
 
-        if (!$routeName) {
+        if (! $routeName) {
             throw new NotFoundHttpException(404);
         }
 
-        if ($user->getRoleNames()->contains(fn($role) => str_starts_with($role, 'super-admin-'))) {
+        if ($user->getRoleNames()->contains(fn ($role) => str_starts_with($role, 'super-admin-'))) {
             return $next($request);
         }
 
         $permission = $this->mapRouteToPermission($routeName);
 
-        if (!$permission) {
+        if (! $permission) {
             throw new NotFoundHttpException(404);
         }
 
@@ -57,6 +56,12 @@ class CheckRoutePermission
 
     protected function mapRouteToPermission(string $routeName): ?string
     {
+        // Lazy per-tab detail routes (project.show.kanban, project.show.list, …)
+        // all share the same gate as the classic detail page: project.read.
+        if (str_starts_with($routeName, 'project.show.')) {
+            return 'project.read';
+        }
+
         // task.index → ['task', 'index']
         $parts = explode('.', $routeName);
 
@@ -69,10 +74,10 @@ class CheckRoutePermission
 
         $map = config('permission-map');
 
-        if (!isset($map[$action])) {
+        if (! isset($map[$action])) {
             return null;
         }
 
-        return $resource . '.' . $map[$action];
+        return $resource.'.'.$map[$action];
     }
 }

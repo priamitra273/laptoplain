@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Observers\UserObserver;
 use App\Traits\LogsActivityUser;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +17,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Concerns\HasUuid;
 use Spatie\Permission\Traits\HasRoles;
 
+#[ObservedBy(UserObserver::class)]
 class User extends Authenticatable implements HasMedia
 {
     use HasFactory, HasRoles, HasUuid, Notifiable;

@@ -183,7 +183,7 @@ class Task extends Model implements HasMedia
             'priority:id,name,severity',
             'type:id,name,severity',
             'category:id,name,icon,severity',
-            'users:id,name',
+            'users:id,name,email',
             'tags:id,name,severity',
             'creator:id,name',
             'creator.media',

@@ -62,6 +62,7 @@ class ProjectService
         $project = $this->projectRepository->findWithRelationsForShow($encoded);
 
         $progress = $project->calculateProgress();
+
         if (abs((float) $project->progress - $progress) > 0.001) {
             $project->update(['progress' => $progress]);
         }

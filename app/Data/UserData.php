@@ -14,8 +14,7 @@ class UserData extends Data
         public string $name,
         public string $email,
         public ?string $avatar_url,
-    ) {
-    }
+    ) {}
 
     public static function fromModel(User $user): self
     {

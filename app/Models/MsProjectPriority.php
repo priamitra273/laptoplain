@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Observers\MsProjectPriorityObserver;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy(MsProjectPriorityObserver::class)]
 class MsProjectPriority extends Model
 {
-    use SoftDeletes, LogUsers;
+    use LogUsers, SoftDeletes;
 
     protected $table = 'ms_project_priority';
 
@@ -19,12 +22,12 @@ class MsProjectPriority extends Model
         'owned_id',
         'created_by',
         'updated_by',
-        'deleted_by'
+        'deleted_by',
     ];
 
     protected $casts = [
         'id' => 'integer',
-        'owned_id' => 'integer'
+        'owned_id' => 'integer',
     ];
 
     public function owned(): BelongsTo

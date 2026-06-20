@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use App\Facades\Sqids;
+use App\Observers\ProjectObserver;
 use App\Traits\LogsActivityProject;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
+#[ObservedBy(ProjectObserver::class)]
 class Project extends Model
 {
     use LogsActivityProject, LogUsers, SoftDeletes;

@@ -178,7 +178,7 @@ it('kanban tab defers the board payload behind the cheap shell, then resolves it
     );
 });
 
-it('list tab returns a slim task tree (no description/priority/media) and only filter options', function () {
+it('list tab defers the slim task tree and assignable users behind the shell, bundles slim form options, and resolves (with encoded ids) on the follow-up request', function () {
     $root = lazyTask($this->project->id, [
         'title' => 'Root',
         'status_id' => $this->status->id,
@@ -193,23 +193,37 @@ it('list tab returns a slim task tree (no description/priority/media) and only f
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->component('project-lazy/List')
-        ->has('tasks', 1)
-        ->has('tasks.0.sub_task_recursive', 1)
-        ->has('tasks.0.status.name')
+        // cheap shell paints immediately
+        ->has('project.title')
+        ->has('policy')
+        // small master option lists are bundled eagerly with the tab
         ->has('taskStatuses')
+        ->has('taskPriorities')
         ->has('taskTypes')
-        // form option lists are bundled with the tab (small master tables)
         ->has('taskCategories')
         ->has('tags')
-        // slim task shape: heavy per-task fields are intentionally absent
-        ->missing('tasks.0.description')
-        ->missing('tasks.0.priority')
-        ->missing('tasks.0.media')
-        ->missing('tasks.0.tags')
+        // the task tree + assignable users are deferred — absent from the first render
+        ->missing('tasks')
+        ->missing('assignableUsers')
         // bulk data belonging to other tabs must NOT be sent
         ->missing('sprints')
         ->missing('backlog')
         ->missing('roles')
+        // ...and fetched together as the 'list' deferred group on the follow-up request
+        ->loadDeferredProps('list', fn ($page) => $page
+            ->has('tasks', 1)
+            ->has('tasks.0.sub_task_recursive', 1)
+            ->where('tasks.0.title', 'Root')
+            ->has('tasks.0.status.name')
+            // ids are sqid strings, not raw integers (encoded inside the deferred closure)
+            ->whereType('tasks.0.id', 'string')
+            // slim task shape: heavy per-task fields are intentionally absent
+            ->missing('tasks.0.description')
+            ->missing('tasks.0.priority')
+            ->missing('tasks.0.media')
+            ->missing('tasks.0.tags')
+            ->has('assignableUsers')
+        )
     );
 });
 

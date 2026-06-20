@@ -97,16 +97,17 @@ class ProjectLazyService
     }
 
     /**
-     * List tab: slim task tree + the small master option lists its create/edit
-     * form needs (per the "options bundled with the tab" decision).
+     * List tab: slim task tree + assignable users deferred behind the cheap shell
+     * (like the Backlog tab), plus the small master option lists its create/edit
+     * form needs bundled eagerly (per the "options bundled with the tab" decision).
      *
      * @return array<string, mixed>
      */
     public function listData(Project $project): array
     {
         return array_merge($this->taskFormOptions(), [
-            'tasks' => $this->projectRepository->getTaskListTree($project->id)->toArray(),
-            'assignableUsers' => $this->assignableUsers($project),
+            'tasks' => $this->deferred(fn () => $this->projectRepository->getTaskListTree($project->id)->toArray(), 'list'),
+            'assignableUsers' => $this->deferred(fn () => $this->assignableUsers($project), 'list'),
         ]);
     }
 

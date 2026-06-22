@@ -78,7 +78,11 @@ export const useTaskTree = (tasks: Ref<ListTask[]> | ComputedRef<ListTask[]>) =>
                 formattedTasks.value = [];
                 return;
             }
-            formattedTasks.value = sortByRecency(formatTasks(list));
+
+            // temporary disabled
+            // formattedTasks.value = sortByRecency(formatTasks(list));
+
+            formattedTasks.value = formatTasks(list);
         },
         { immediate: true, deep: false },
     );

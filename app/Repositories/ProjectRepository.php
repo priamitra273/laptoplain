@@ -179,7 +179,7 @@ class ProjectRepository
                 WHERE c.deleted_at IS NULL
             )
             SELECT * FROM task_tree
-            ORDER BY depth, sequence_number, id
+            ORDER BY depth, id
             SQL;
     }
 

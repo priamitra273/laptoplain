@@ -41,23 +41,18 @@ const { selectedKey, expandedKeys, isAllSelected, selectedIds, toggleSelectAll, 
 const { deleteLoading, remove, removeSelected } = useTaskActions(props.projectId);
 
 const {
-    dropTargetTaskId,
-    dragArmedTaskId,
-    activeDragTaskId,
+    draggedKey,
+    dropTargetKey,
+    dropMode,
     isDraggingTask,
     isRootDropActive,
-    onHandleDragStart,
-    onHandleDragEnd,
+    onDragStart,
+    onDragEnd,
     onRowDragOver,
     onRowDrop,
     onRootDragOver,
     onRootDrop,
-    onPointerHoldStart,
-    cancelPointerHold,
-    onPointerRowEnter,
-    onPointerRootLeave,
-    onPointerContainerMove,
-} = useTaskDragDrop({ projectId: props.projectId, expandedKeys, canMove: canMoveTask, isDescendant });
+} = useTaskDragDrop({ tree: tasksRef, canMove: canMoveTask, isDescendant, onMove: (payload) => emit('move', payload) });
 
 const { getCategoryIcon, getCategoryColor } = useTaskCategoryStyle();
 
@@ -142,8 +137,6 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
             @dragover.prevent="onRootDragOver"
             @dragenter.prevent="onRootDragOver"
             @drop.stop.prevent="onRootDrop"
-            @mousemove="onPointerContainerMove"
-            @mouseleave="onPointerRootLeave"
         >
             <TreeTable
                 v-model:expandedKeys="expandedKeys"
@@ -184,12 +177,29 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                         <div
                             data-task-drop-row="true"
                             class="flex items-center gap-2 rounded px-1 py-1 transition-colors"
-                            :class="dropTargetTaskId === node.key ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70' : ''"
+                            :class="[
+                                dropTargetKey === node.key && dropMode === 'inside'
+                                    ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70'
+                                    : '',
+                                dropTargetKey === node.key && dropMode === 'before' ? 'border-t-2 border-blue-500' : '',
+                                dropTargetKey === node.key && dropMode === 'after' ? 'border-b-2 border-blue-500' : '',
+                            ]"
                             @dragover.prevent="onRowDragOver($event, node)"
                             @dragenter.prevent="onRowDragOver($event, node)"
                             @drop.stop.prevent="onRowDrop($event, node)"
-                            @mouseenter="onPointerRowEnter(node)"
                         >
+                            <i
+                                v-if="canMoveTask"
+                                class="pi pi-bars shrink-0 cursor-grab text-surface-400 transition-colors hover:text-surface-600 active:cursor-grabbing dark:text-surface-500 dark:hover:text-surface-300"
+                                :class="draggedKey === node.key ? 'text-blue-500 dark:text-blue-400' : ''"
+                                :draggable="true"
+                                style="-webkit-user-drag: element"
+                                aria-label="Drag to reorder or nest"
+                                v-tooltip.top="'Drag to reorder / nest'"
+                                @dragstart.stop="onDragStart($event, node)"
+                                @dragend="onDragEnd"
+                            />
+
                             <i
                                 v-if="node.data.category?.id"
                                 v-tooltip.top="node.data.category.name"
@@ -201,19 +211,6 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                             <div
                                 :title="node.data.title"
                                 class="max-w-[12rem] select-none truncate text-ellipsis rounded px-1 py-0.5 sm:max-w-[18rem] lg:max-w-[26rem]"
-                                :class="[
-                                    canEditOrDelete ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-50',
-                                    activeDragTaskId === node.key
-                                        ? 'bg-blue-100/80 text-blue-800 ring-1 ring-blue-300 dark:bg-blue-900/35 dark:text-blue-100 dark:ring-blue-600/60'
-                                        : '',
-                                ]"
-                                :draggable="canMoveTask && dragArmedTaskId === node.key"
-                                style="-webkit-user-drag: element"
-                                @mousedown.left.stop.prevent="onPointerHoldStart(node)"
-                                @mouseup.left="cancelPointerHold"
-                                @mouseleave="cancelPointerHold"
-                                @dragstart.stop="onHandleDragStart($event, node)"
-                                @dragend="onHandleDragEnd"
                             >
                                 {{ node.data.title }}
                             </div>

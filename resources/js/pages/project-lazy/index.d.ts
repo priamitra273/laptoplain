@@ -271,9 +271,16 @@ export interface LazyTaskTableProps {
     taskCategories: TaskCategoryOption[];
 }
 
+export interface TaskMovePayload {
+    taskId: string;
+    parentId: string | null;
+    position: number;
+}
+
 export interface LazyTaskTableEmits {
     (e: 'add', parentId: string | null): void;
     (e: 'edit', task: ListTask, parentId: string | null): void;
+    (e: 'move', payload: TaskMovePayload): void;
 }
 
 export interface LazyTaskTableFilter {

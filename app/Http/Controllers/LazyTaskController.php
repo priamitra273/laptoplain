@@ -49,6 +49,7 @@ class LazyTaskController extends Controller
         $task = Task::query()->findOrFail($taskId);
 
         $project = $this->projectService->findByEncodedId($encoded);
+
         abort_if($project->id !== $task->project_id, 404);
         abort_if($request->user()->cannot('update', $task), 403);
 

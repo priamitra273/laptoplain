@@ -35,7 +35,7 @@ const breadcrumbItems = ref<MenuItem[]>([]);
 const projectItem = (): MenuItem => ({
     label: props.project.title,
     icon: 'pi pi-folder',
-    command: () => router.visit(route('project.show', { encoded: props.project.id })),
+    command: () => router.visit(route('project.show.kanban', { encoded: props.project.id })),
 });
 
 const fetchParents = async () => {

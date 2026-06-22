@@ -145,12 +145,18 @@ const autoSave = (field: TaskFormField, value: any, extraFields?: Partial<TaskFo
                 cancelEdit();
                 handleClickOutside(new MouseEvent('click') as any);
             },
-            onError: () => {
+            onError: (errors) => {
+                let errorMessage = `Failed to update ${getFieldLabel(field as string)}. Please try again.`;
+
+                if (Object.keys(errors).length) {
+                    errorMessage = errors[Object.keys(errors)[0]];
+                }
+
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
-                    detail: `Failed to update ${getFieldLabel(field as string)}. Please try again.`,
-                    life: 3000,
+                    detail: errorMessage,
+                    life: 5000,
                 });
             },
         },

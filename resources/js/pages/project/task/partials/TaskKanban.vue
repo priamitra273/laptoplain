@@ -8,16 +8,33 @@ import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
-import { onMounted, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import { Task, TaskStatus } from '../type';
 
-interface Props {
-    tasks: Task[];
-    statuses: TaskStatus[];
+type AssignedTask = App.Data.Task.AssignedTaskData;
+type TaskStatusOption = App.Data.Task.TaskStatusData;
+
+interface BoardColumn {
+    status: TaskStatusOption;
+    tasks: AssignedTask[];
+    total: number;
+    has_more: boolean;
 }
 
-const props = defineProps<Props>();
+interface LocalColumn extends BoardColumn {
+    page: number;
+    loadingMore: boolean;
+}
+
+interface Props {
+    columns: BoardColumn[];
+    filterParams?: Record<string, string>;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    columns: () => [],
+    filterParams: () => ({}),
+});
 
 const emit = defineEmits<{
     statusUpdate: [taskId: string, newStatusId: string];
@@ -25,56 +42,34 @@ const emit = defineEmits<{
 
 const toast = useToast();
 
-const grouped = ref<Record<string, Task[]>>({});
+const columns = ref<LocalColumn[]>([]);
 const draggingItem = ref(false);
-const preDragSnapshot = ref<Record<string, Task[]> | null>(null);
+const preDragSnapshot = ref<Record<string, AssignedTask[]> | null>(null);
 
-const onDragStart = () => {
-    draggingItem.value = true;
-    const snapshot: Record<string, Task[]> = {};
-    for (const [sid, tasks] of Object.entries(grouped.value)) {
-        snapshot[sid] = [...tasks];
-    }
-    preDragSnapshot.value = snapshot;
-};
+const cloneColumns = (source: BoardColumn[]): LocalColumn[] =>
+    source.map((column) => ({
+        status: column.status,
+        tasks: JSON.parse(JSON.stringify(column.tasks)),
+        total: column.total,
+        has_more: column.has_more,
+        page: 1,
+        loadingMore: false,
+    }));
 
-const inProgressDialog = ref<{
-    visible: boolean;
-    task: Task | null;
-    newStatusId: string | null;
-    dueDate: Date | null;
-    snapshot: Record<string, Task[]> | null;
-}>({
-    visible: false,
-    task: null,
-    newStatusId: null,
-    dueDate: null,
-    snapshot: null,
-});
-const inProgressLoading = ref(false);
+watch(
+    () => props.columns,
+    (value) => {
+        // Re-sync only when not mid-drag (a server reload after filter change).
+        if (!draggingItem.value) {
+            columns.value = cloneColumns(value ?? []);
+        }
+    },
+    { immediate: true, deep: true },
+);
 
-const getGroupedTasks = () => {
-    const groupedTasks: Record<string, Task[]> = {};
-    for (const status of props.statuses) {
-        groupedTasks[status.id] = [];
-    }
-    props.tasks.forEach((task) => {
-        const status = props.statuses.find((s) => s.id === task.status?.id);
-        if (!status) return;
-        if (!groupedTasks[status.id]) groupedTasks[status.id] = [];
-        groupedTasks[status.id].push(task);
-    });
-    return groupedTasks;
-};
+const findColumn = (statusId: string) => columns.value.find((column) => column.status.id === statusId);
 
-const getStatusMeta = (statusId: string) => {
-    const status = props.statuses.find((s) => s.id === statusId);
-    return severityClasses[status?.severity ?? 'default'] ?? severityClasses['default'];
-};
-
-const getStatusName = (statusId: string) => {
-    return props.statuses.find((s) => s.id === statusId)?.name ?? 'Unknown';
-};
+const getStatusMeta = (status: TaskStatusOption) => severityClasses[status.severity ?? 'default'] ?? severityClasses['default'];
 
 const requiresDueDateForStatus = (statusName?: string) => !!statusName && !['To Do', 'Blocked'].includes(statusName);
 
@@ -87,15 +82,68 @@ const getErrorMessage = (error: any, fallback: string) => {
     return error?.response?.data?.message || fallback;
 };
 
-const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string | null) => {
+const inProgressDialog = ref<{
+    visible: boolean;
+    task: AssignedTask | null;
+    targetStatus: TaskStatusOption | null;
+    dueDate: Date | null;
+}>({
+    visible: false,
+    task: null,
+    targetStatus: null,
+    dueDate: null,
+});
+const inProgressLoading = ref(false);
+
+const onDragStart = () => {
+    draggingItem.value = true;
+    const snapshot: Record<string, AssignedTask[]> = {};
+    for (const column of columns.value) {
+        snapshot[column.status.id] = [...column.tasks];
+    }
+    preDragSnapshot.value = snapshot;
+};
+
+const restoreSnapshot = () => {
+    if (!preDragSnapshot.value) {
+        return;
+    }
+    for (const column of columns.value) {
+        const snapshot = preDragSnapshot.value[column.status.id];
+        if (snapshot) {
+            column.tasks = [...snapshot];
+        }
+    }
+};
+
+const adjustTotals = (fromStatusId: string, toStatusId: string) => {
+    const from = findColumn(fromStatusId);
+    const to = findColumn(toStatusId);
+    if (from) {
+        from.total = Math.max(0, from.total - 1);
+    }
+    if (to) {
+        to.total += 1;
+    }
+};
+
+const doStatusUpdate = async (task: AssignedTask, targetStatus: TaskStatusOption, dueDate: string | null) => {
+    const fromStatusId = task.status?.id ?? null;
     try {
         const response = await axios.post(route('task.status.update', task.id), {
             _method: 'PUT',
-            status_id: newStatusId,
+            status_id: targetStatus.id,
             ...(dueDate ? { due_date: dueDate } : {}),
         });
         if (response.status === 200) {
-            emit('statusUpdate', task.id, newStatusId);
+            if (fromStatusId && fromStatusId !== targetStatus.id) {
+                adjustTotals(fromStatusId, targetStatus.id);
+            }
+            task.status = targetStatus;
+            if (dueDate) {
+                task.due_date = dueDate;
+            }
+            emit('statusUpdate', task.id, targetStatus.id);
         }
     } catch (error: any) {
         toast.add({
@@ -104,18 +152,20 @@ const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string |
             detail: getErrorMessage(error, 'Gagal memperbarui status task.'),
             life: 3000,
         });
-        grouped.value = preDragSnapshot.value ?? getGroupedTasks();
+        restoreSnapshot();
     }
 };
 
-const onGroupChange = async (task: Task, newStatusId: string) => {
-    const targetStatus = props.statuses.find((s) => s.id === newStatusId);
-    const dueDateMissing = !task.due_date;
-    if (requiresDueDateForStatus(targetStatus?.name) && dueDateMissing) {
-        inProgressDialog.value = { visible: true, task, newStatusId, dueDate: null, snapshot: preDragSnapshot.value };
+const onCardAdded = (event: DraggableEvent<AssignedTask>, targetColumn: LocalColumn) => {
+    const task = event.data;
+    const targetStatus = targetColumn.status;
+
+    if (requiresDueDateForStatus(targetStatus.name) && !task.due_date) {
+        inProgressDialog.value = { visible: true, task, targetStatus, dueDate: null };
         return;
     }
-    await doStatusUpdate(task, newStatusId, null);
+
+    doStatusUpdate(task, targetStatus, null);
 };
 
 const submitInProgressDialog = async () => {
@@ -130,19 +180,46 @@ const submitInProgressDialog = async () => {
     }
     inProgressLoading.value = true;
     const formattedDueDate = moment(inProgressDialog.value.dueDate).format('YYYY-MM-DD');
-    await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.newStatusId!, formattedDueDate);
+    await doStatusUpdate(inProgressDialog.value.task!, inProgressDialog.value.targetStatus!, formattedDueDate);
     inProgressLoading.value = false;
-    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+    inProgressDialog.value = { visible: false, task: null, targetStatus: null, dueDate: null };
 };
 
 const cancelInProgressDialog = () => {
-    if (inProgressDialog.value.snapshot) {
-        grouped.value = inProgressDialog.value.snapshot;
-    }
-    inProgressDialog.value = { visible: false, task: null, newStatusId: null, dueDate: null, snapshot: null };
+    restoreSnapshot();
+    inProgressDialog.value = { visible: false, task: null, targetStatus: null, dueDate: null };
 };
 
-const dueDateClasses = (task: Task) => {
+const loadMore = async (column: LocalColumn) => {
+    if (column.loadingMore || !column.has_more) {
+        return;
+    }
+    column.loadingMore = true;
+    try {
+        const response = await axios.get(route('task.board'), {
+            params: {
+                status_id: column.status.id,
+                page: column.page + 1,
+                per_page: 10,
+                ...props.filterParams,
+            },
+        });
+        column.tasks.push(...(response.data.data ?? []));
+        column.page += 1;
+        column.has_more = !!response.data.has_more;
+    } catch (error: any) {
+        toast.add({
+            severity: 'error',
+            summary: 'Gagal',
+            detail: getErrorMessage(error, 'Gagal memuat task tambahan.'),
+            life: 3000,
+        });
+    } finally {
+        column.loadingMore = false;
+    }
+};
+
+const dueDateClasses = (task: AssignedTask) => {
     if (!task.due_date) return 'text-surface-400 dark:text-surface-500';
     if (task.is_overdue) return 'text-rose-500 dark:text-rose-400';
     const daysLeft = moment(task.due_date).diff(moment(), 'days');
@@ -150,25 +227,10 @@ const dueDateClasses = (task: Task) => {
     return 'text-surface-500 dark:text-surface-400';
 };
 
-const subtaskCounts = (task: Task) => {
-    const subs = task.sub_task ?? [];
-    const done = subs.filter((s) => s.completed_at !== null).length;
-    return { total: subs.length, done };
-};
-
-onMounted(() => {
-    grouped.value = getGroupedTasks();
+const subtaskCounts = (task: AssignedTask) => ({
+    total: task.sub_task_count ?? 0,
+    done: task.sub_task_done_count ?? 0,
 });
-
-watch(
-    () => props.tasks,
-    () => {
-        if (!draggingItem.value) {
-            grouped.value = getGroupedTasks();
-        }
-    },
-    { deep: true },
-);
 </script>
 
 <template>
@@ -176,27 +238,27 @@ watch(
         <div class="flex flex-nowrap gap-3 pb-1">
             <!-- Column -->
             <div
-                v-for="(group, statusId) in grouped"
-                :key="statusId"
+                v-for="column in columns"
+                :key="column.status.id"
                 class="flex w-[300px] shrink-0 flex-col rounded-xl border transition-colors duration-150"
-                :class="[getStatusMeta(statusId).colBg, getStatusMeta(statusId).colBorder]"
+                :class="[getStatusMeta(column.status).colBg, getStatusMeta(column.status).colBorder]"
             >
                 <!-- Column header -->
                 <div class="flex items-center gap-2 px-3 py-2.5">
-                    <span class="h-2 w-2 shrink-0 rounded-full" :class="getStatusMeta(statusId).dot" />
-                    <span class="flex-1 truncate text-[11px] font-semibold uppercase tracking-wider" :class="getStatusMeta(statusId).headerText">
-                        {{ getStatusName(statusId) }}
+                    <span class="h-2 w-2 shrink-0 rounded-full" :class="getStatusMeta(column.status).dot" />
+                    <span class="flex-1 truncate text-[11px] font-semibold uppercase tracking-wider" :class="getStatusMeta(column.status).headerText">
+                        {{ column.status.name }}
                     </span>
                     <span
                         class="min-w-[20px] rounded-full bg-surface-200/80 px-1.5 py-0.5 text-center text-[11px] font-bold text-surface-600 dark:bg-surface-700 dark:text-surface-300"
                     >
-                        {{ group.length }}
+                        {{ column.total }}
                     </span>
                 </div>
 
                 <!-- Drop zone + cards (bounded scroll: kolom tidak memanjang tanpa batas) -->
                 <VueDraggable
-                    v-model="grouped[statusId]"
+                    v-model="column.tasks"
                     class="kanban-col-scroll flex max-h-[70vh] min-h-[80px] flex-col gap-2 overflow-y-auto px-2 pb-2"
                     :animation="150"
                     ghostClass="opacity-40"
@@ -205,15 +267,15 @@ watch(
                     :scrollSensitivity="80"
                     :scrollSpeed="14"
                     :bubbleScroll="true"
-                    @add="(e: DraggableEvent<Task>) => onGroupChange(e.data, statusId)"
+                    @add="(e: DraggableEvent<AssignedTask>) => onCardAdded(e, column)"
                     @start="onDragStart"
                     @end="draggingItem = false"
                 >
                     <!-- Empty state -->
                     <div
-                        v-if="group.length === 0"
+                        v-if="column.tasks.length === 0"
                         class="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed py-7 text-center transition-colors duration-150"
-                        :class="[getStatusMeta(statusId).colBorder]"
+                        :class="[getStatusMeta(column.status).colBorder]"
                     >
                         <i class="pi pi-inbox text-lg text-surface-300 dark:text-surface-600" />
                         <span class="text-[11px] text-surface-400 dark:text-surface-500">Tidak ada task</span>
@@ -221,7 +283,7 @@ watch(
 
                     <!-- Card -->
                     <div
-                        v-for="item in group"
+                        v-for="item in column.tasks"
                         :key="item.id"
                         class="group relative cursor-grab rounded-lg border bg-white shadow-sm transition-all duration-150 active:cursor-grabbing dark:bg-surface-800"
                         :class="[
@@ -329,6 +391,18 @@ watch(
                         </div>
                     </div>
                 </VueDraggable>
+
+                <!-- Load more -->
+                <button
+                    v-if="column.has_more"
+                    type="button"
+                    :disabled="column.loadingMore"
+                    class="mx-2 mb-2 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-surface-300 py-2 text-[11px] font-medium text-surface-500 transition-colors hover:border-surface-400 hover:text-surface-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-surface-600 dark:text-surface-400 dark:hover:text-surface-200"
+                    @click="loadMore(column)"
+                >
+                    <i :class="column.loadingMore ? 'pi pi-spinner pi-spin text-[10px]' : 'pi pi-plus text-[10px]'" />
+                    {{ column.loadingMore ? 'Memuat…' : `Muat lagi (${Math.max(0, column.total - column.tasks.length)})` }}
+                </button>
             </div>
         </div>
     </div>
@@ -351,9 +425,7 @@ watch(
             <p class="text-sm text-surface-600 dark:text-surface-300">
                 <span class="font-medium text-surface-800 dark:text-surface-100">"{{ inProgressDialog.task?.title }}"</span>
                 belum memiliki due date. Tetapkan sebelum memindahkan ke status
-                <span class="font-semibold text-blue-600 dark:text-blue-400">{{
-                    inProgressDialog.newStatusId ? getStatusName(inProgressDialog.newStatusId) : 'ini'
-                }}</span
+                <span class="font-semibold text-blue-600 dark:text-blue-400">{{ inProgressDialog.targetStatus?.name ?? 'ini' }}</span
                 >.
             </p>
             <div class="flex flex-col gap-1.5">

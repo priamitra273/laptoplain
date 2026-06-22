@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getInitials } from '@/lib/utils';
+import UserAvatar from '@/components/UserAvatar.vue';
 import { router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useConfirm } from 'primevue/useconfirm';
@@ -203,11 +203,18 @@ const deleteComment = (id: string) => {
         <CommentItemSkeleton v-if="deleteLoadingId === comment.id" :comment="comment" />
 
         <div v-else class="group">
-            <div class="">
-                <div class="flex w-full gap-2">
-                    <Avatar :image="comment.user?.avatar_url ?? undefined" :label="getInitials(comment.user?.name ?? '')" shape="circle" />
+            <div class="flex w-full gap-3">
+                <UserAvatar
+                    :user="comment.user"
+                    :size="currentLevel > 0 ? '!h-7 !w-7' : '!h-9 !w-9'"
+                    :fontSize="currentLevel > 0 ? '.7rem' : '.8rem'"
+                    class="mt-0.5 shrink-0 ring-2 ring-surface-0 dark:ring-surface-900"
+                />
 
-                    <div class="min-w-0 flex-1 space-y-3">
+                <div class="min-w-0 flex-1">
+                    <div
+                        class="-mx-2 rounded-lg px-2 py-1.5 transition-colors duration-200 group-hover:bg-surface-50 motion-reduce:transition-none dark:group-hover:bg-surface-800/40"
+                    >
                         <CommentHeader
                             :comment="comment"
                             :currentUserId="CurrentUser.id"
@@ -218,7 +225,7 @@ const deleteComment = (id: string) => {
                             @delete="deleteComment"
                         />
 
-                        <div v-if="editingCommentId === comment.id">
+                        <div v-if="editingCommentId === comment.id" class="mt-2">
                             <CommentEditor
                                 v-model="replyText"
                                 :projectMembers="props.projectMembers"
@@ -229,9 +236,9 @@ const deleteComment = (id: string) => {
                             />
                         </div>
 
-                        <div v-else class="space-y-3">
+                        <div v-else class="mt-1 space-y-2.5">
                             <div
-                                class="prose prose-sm dark:prose-invert overflow-wrap-anywhere max-w-none break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                                class="prose prose-sm dark:prose-invert overflow-wrap-anywhere max-w-none break-words leading-relaxed text-surface-700 dark:text-surface-300"
                                 v-html="comment.body"
                             ></div>
 
@@ -245,8 +252,13 @@ const deleteComment = (id: string) => {
 
                             <div
                                 v-if="replyTarget === comment.id && currentLevel < 1"
-                                class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700"
+                                class="mt-3 space-y-2 border-t border-surface-200 pt-3 dark:border-surface-700"
                             >
+                                <p class="flex items-center gap-1.5 text-xs font-medium text-surface-500 dark:text-surface-400">
+                                    <i class="pi pi-reply text-[10px]" />
+                                    Membalas
+                                    <span class="text-surface-700 dark:text-surface-200">{{ comment.user?.name }}</span>
+                                </p>
                                 <CommentEditor
                                     v-model="replyText"
                                     :projectMembers="props.projectMembers"
@@ -258,16 +270,18 @@ const deleteComment = (id: string) => {
                                     @cancel="cancelReply"
                                 />
                             </div>
-
-                            <CommentReplies
-                                :comment="comment"
-                                :taskId="props.taskId"
-                                :currentLevel="currentLevel"
-                                :currentUserId="props.currentUserId"
-                                :projectMembers="props.projectMembers"
-                            />
                         </div>
                     </div>
+
+                    <CommentReplies
+                        v-if="editingCommentId !== comment.id"
+                        :comment="comment"
+                        :taskId="props.taskId"
+                        :currentLevel="currentLevel"
+                        :currentUserId="props.currentUserId"
+                        :projectMembers="props.projectMembers"
+                        class="mt-1"
+                    />
                 </div>
             </div>
         </div>

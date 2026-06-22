@@ -2,12 +2,19 @@
 
 namespace App\Services;
 
+use App\Data\MediaData;
+use App\Data\Project\ProjectOptionData;
+use App\Data\Task\AssignedTaskData;
 use App\Data\Task\TaskActivityData;
 use App\Data\Task\TaskActivityFieldData;
 use App\Data\Task\TaskCommentData;
 use App\Data\Task\TaskParentData;
+use App\Data\Task\TaskPriorityData;
+use App\Data\Task\TaskStatusData;
+use App\Data\Task\TaskTypeData;
 use App\Data\UserData;
 use App\Enums\TaskNotificationType;
+use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
@@ -21,6 +28,8 @@ use Spatie\LaravelData\DataCollection;
 
 class TaskService
 {
+    private const BOARD_COLUMN_SIZE = 10;
+
     public function __construct(
         protected TaskRepository $repository
     ) {}
@@ -34,34 +43,199 @@ class TaskService
     }
 
     /**
-     * Get props for task index page
+     * Get props for the "My Task" index page.
+     *
+     * Server-driven: filters/search/pagination run in the query, not the client.
+     * - view=list  → `tasks` is a paginator.
+     * - view=board → `board` is one column per status (first page + total + has_more).
+     *
+     * @param  array<string, mixed>  $params  raw request query (filter ids are Sqids-encoded)
      */
-    public function indexProps(int $userId): array
+    public function indexProps(int $userId, array $params = []): array
     {
-        $tasks = $this->repository->getAssignedRecursive($userId);
+        $view = ($params['view'] ?? 'board') === 'list' ? 'list' : 'board';
+        $perPage = $this->resolvePerPage($params);
+        $filters = $this->normalizeFilters($params);
 
-        $totalAssigned = $tasks->where('is_assigned', true)->count();
-
-        $statuses = MsTaskStatus::select('id', 'name', 'severity')->orderBy('id')->get();
-        $priorities = MsTaskPriority::select('id', 'name', 'severity')->get();
-        $types = MsTaskType::select('id', 'name', 'severity')->get();
-        $categories = TaskCategory::select('id', 'name', 'icon', 'severity')->get();
-
-        $projects = Project::visibleFor(User::find($userId))
-            ->select('id', 'title')
-            ->get();
+        $statuses = MsTaskStatus::select('id', 'name', 'severity', 'score')->orderBy('id')->get();
 
         $props = [
-            'tasks' => $tasks->toArray(),
-            'statuses' => $statuses->toArray(),
-            'priorities' => $priorities->toArray(),
-            'types' => $types->toArray(),
-            'categories' => $categories->toArray(),
-            'projects' => $projects->toArray(),
-            'totalAssigned' => $totalAssigned,
+            'view' => $view,
+            'filters' => $this->echoFilters($params, $perPage),
+            'statuses' => TaskStatusData::collect($statuses, DataCollection::class)->toArray(),
+            'priorities' => TaskPriorityData::collect(
+                MsTaskPriority::select('id', 'name', 'severity')->get(),
+                DataCollection::class
+            )->toArray(),
+            'types' => TaskTypeData::collect(
+                MsTaskType::select('id', 'name', 'severity')->get(),
+                DataCollection::class
+            )->toArray(),
+            'projects' => ProjectOptionData::collect(
+                Project::visibleFor(User::find($userId))->select('id', 'title')->get(),
+                DataCollection::class
+            )->toArray(),
+            'summary' => $this->buildStatusSummary($userId, $filters, $statuses),
         ];
 
+        if ($view === 'list') {
+            $paginator = $this->repository->assignedTasksQuery($userId, $filters)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->paginate($perPage)
+                ->withQueryString();
+
+            $props['tasks'] = $paginator
+                ->through(fn (Task $task) => AssignedTaskData::fromModel($task)->toArray())
+                ->toArray();
+        } else {
+            $props['board'] = $this->buildBoardColumns($userId, $filters, $statuses);
+        }
+
         return $props;
+    }
+
+    /**
+     * Paginate a single board column ("Load more"). Returns Sqids-encoded data
+     * since the JSON endpoint response is not passed through the controller boundary encoder.
+     *
+     * @param  array<string, mixed>  $params  raw request query (status_id + filters are Sqids-encoded)
+     * @return array{data: array<int, array<string, mixed>>, has_more: bool, next_page: ?int}
+     */
+    public function boardColumn(int $userId, array $params): array
+    {
+        $perPage = max(1, min((int) ($params['per_page'] ?? self::BOARD_COLUMN_SIZE), 50));
+        $page = max(1, (int) ($params['page'] ?? 1));
+        $filters = $this->normalizeFilters($params);
+
+        if (empty($filters['status_id'])) {
+            return ['data' => [], 'has_more' => false, 'next_page' => null];
+        }
+
+        $paginator = $this->repository->assignedTasksQuery($userId, $filters)
+            ->orderByRaw('due_date asc nulls last')
+            ->orderBy('id')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'data' => Sqids::rec_encode_ids_in_list(
+                $paginator->getCollection()
+                    ->map(fn (Task $task) => AssignedTaskData::fromModel($task)->toArray())
+                    ->values()
+                    ->toArray()
+            ),
+            'has_more' => $paginator->hasMorePages(),
+            'next_page' => $paginator->hasMorePages() ? $page + 1 : null,
+        ];
+    }
+
+    /**
+     * Build one board column per status: first page of tasks + the true total.
+     *
+     * @param  array<string, mixed>  $filters  decoded filters
+     * @param  \Illuminate\Support\Collection<int, MsTaskStatus>  $statuses
+     * @return array<int, array{status: array<string, mixed>, tasks: array<int, array<string, mixed>>, total: int, has_more: bool}>
+     */
+    protected function buildBoardColumns(int $userId, array $filters, $statuses): array
+    {
+        $counts = $this->repository->assignedStatusCounts($userId, $filters);
+        $statusFilter = $filters['status_id'] ?? null;
+
+        return $statuses
+            ->when($statusFilter, fn ($collection) => $collection->where('id', $statusFilter))
+            ->map(function ($status) use ($userId, $filters, $counts) {
+                $total = (int) ($counts[$status->id] ?? 0);
+
+                $tasks = $this->repository
+                    ->assignedTasksQuery($userId, array_merge($filters, ['status_id' => $status->id]))
+                    ->orderByRaw('due_date asc nulls last')
+                    ->orderBy('id')
+                    ->limit(self::BOARD_COLUMN_SIZE)
+                    ->get();
+
+                return [
+                    'status' => TaskStatusData::from($status)->toArray(),
+                    'tasks' => $tasks
+                        ->map(fn (Task $task) => AssignedTaskData::fromModel($task)->toArray())
+                        ->values()
+                        ->toArray(),
+                    'total' => $total,
+                    'has_more' => $total > self::BOARD_COLUMN_SIZE,
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    protected function resolvePerPage(array $params): int
+    {
+        return max(1, min((int) ($params['per_page'] ?? 25), 100));
+    }
+
+    /**
+     * Decode Sqids-encoded filter ids into integers for querying.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    protected function normalizeFilters(array $params): array
+    {
+        $filters = [];
+
+        if (! empty($params['search'])) {
+            $filters['search'] = (string) $params['search'];
+        }
+
+        foreach (['project_id', 'status_id', 'priority_id', 'type_id'] as $key) {
+            if (! empty($params[$key])) {
+                try {
+                    $filters[$key] = Sqids::decode($params[$key]);
+                } catch (\Throwable) {
+                    // Ignore invalid encoded ids — treated as no filter.
+                }
+            }
+        }
+
+        return $filters;
+    }
+
+    /**
+     * Echo the active filters back (encoded) so the client can re-hydrate its controls.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    protected function echoFilters(array $params, int $perPage): array
+    {
+        return [
+            'search' => $params['search'] ?? null,
+            'project_id' => $params['project_id'] ?? null,
+            'status_id' => $params['status_id'] ?? null,
+            'priority_id' => $params['priority_id'] ?? null,
+            'type_id' => $params['type_id'] ?? null,
+            'per_page' => $perPage,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters  decoded filters
+     * @param  \Illuminate\Support\Collection<int, MsTaskStatus>  $statuses
+     * @return array<int, array{id:int, name:string, severity:?string, count:int}>
+     */
+    protected function buildStatusSummary(int $userId, array $filters, $statuses): array
+    {
+        $counts = $this->repository->assignedStatusCounts($userId, $filters);
+
+        return $statuses
+            ->filter(fn ($status) => (int) ($counts[$status->id] ?? 0) > 0)
+            ->map(fn ($status) => [
+                'id' => $status->id,
+                'name' => $status->name,
+                'severity' => $status->severity,
+                'count' => (int) ($counts[$status->id] ?? 0),
+            ])
+            ->values()
+            ->toArray();
     }
 
     public function updateStatus(Task $task, MsTaskStatus $status, ?string $due_date): void
@@ -165,8 +339,13 @@ class TaskService
 
         $comments = TaskCommentData::collect($task->comments ?? [], DataCollection::class);
 
+        $taskData = $task->toArray();
+        $taskData['media'] = $task->relationLoaded('media')
+            ? MediaData::collect($task->media, DataCollection::class)->toArray()
+            : [];
+
         return [
-            'task' => $task->toArray(),
+            'task' => $taskData,
             'project' => $project->toArray(),
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,

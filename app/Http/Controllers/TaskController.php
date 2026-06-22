@@ -37,13 +37,29 @@ class TaskController extends Controller
     }
 
     /**
-     * Get all tasks for the authenticated user.
+     * Get the authenticated user's tasks for the "My Task" index (server-driven).
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $data = $this->service->indexProps(Auth::id());
+        $params = $request->only([
+            'view', 'per_page', 'search', 'project_id', 'status_id', 'priority_id', 'type_id',
+        ]);
+
+        $data = $this->service->indexProps(Auth::id(), $params);
 
         return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($data));
+    }
+
+    /**
+     * Paginate a single board column ("Load more") for the "My Task" board.
+     */
+    public function boardColumn(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $params = $request->only([
+            'status_id', 'page', 'per_page', 'search', 'project_id', 'priority_id', 'type_id',
+        ]);
+
+        return response()->json($this->service->boardColumn(Auth::id(), $params));
     }
 
     /**

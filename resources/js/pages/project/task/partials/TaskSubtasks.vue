@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import Card from 'primevue/card';
-import Chip from 'primevue/chip';
-import Divider from 'primevue/divider';
 import Tag from 'primevue/tag';
+import { computed } from 'vue';
 import type { Task } from '../../index.d.ts';
+import SectionPanel from './SectionPanel.vue';
 
 interface Props {
     task: Task;
 }
 
 const props = defineProps<Props>();
+
+const subtasks = computed(() => props.task.sub_task_recursive ?? []);
 
 const goToSubTask = (subTaskId: string) => {
     if (subTaskId) {
@@ -20,52 +21,41 @@ const goToSubTask = (subTaskId: string) => {
 </script>
 
 <template>
-    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
-        <template #title>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <i class="pi pi-list text-indigo-500"></i>
-                    <h2 class="text-lg font-bold">Subtasks</h2>
-                </div>
-                <Chip
-                    v-if="props.task.sub_task_recursive.length"
-                    :label="`${props.task.sub_task_recursive.length}`"
-                    class="bg-indigo-100 text-indigo-700"
-                />
-            </div>
+    <SectionPanel title="Subtasks" icon="pi pi-list-check" body-class="!p-0" toggleable>
+        <template #actions>
+            <span
+                v-if="subtasks.length"
+                class="rounded-full bg-surface-100 px-2 py-0.5 text-xs font-medium tabular-nums text-surface-600 dark:bg-surface-800 dark:text-surface-300"
+            >
+                {{ subtasks.length }}
+            </span>
         </template>
-        <template #content>
-            <Divider class="my-3" />
-            <div v-if="props.task.sub_task_recursive.length" class="space-y-3">
-                <div
-                    v-for="subTask in props.task.sub_task_recursive"
-                    :key="subTask.id"
-                    @click="goToSubTask(subTask.id)"
-                    class="group cursor-pointer rounded-xl border-2 border-gray-100 bg-white p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-600"
+
+        <div v-if="subtasks.length" class="max-h-96 divide-y divide-surface-200 overflow-y-auto overscroll-contain dark:divide-surface-700">
+            <button
+                v-for="subTask in subtasks"
+                :key="subTask.id"
+                type="button"
+                :aria-label="`${subTask.title} — ${subTask.status?.name ?? 'No status'}`"
+                class="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 dark:hover:bg-surface-800"
+                @click="goToSubTask(subTask.id)"
+            >
+                <span
+                    :title="subTask.title"
+                    class="min-w-0 flex-1 truncate text-sm font-medium text-surface-800 transition-colors group-hover:text-primary-600 dark:text-surface-100 dark:group-hover:text-primary-400"
                 >
-                    <div class="mb-3 flex items-start justify-between gap-3">
-                        <div class="flex min-w-0 flex-1 items-start gap-3">
-                            <p
-                                :title="subTask.title"
-                                class="max-w-full truncate break-words text-base font-semibold text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400"
-                            >
-                                {{ subTask.title }}
-                            </p>
-                        </div>
-                        <Tag :value="subTask.status?.name" :severity="subTask.status?.severity" class="shrink-0" />
-                    </div>
-                    <div class="text-sm text-gray-600 dark:text-gray-300">
-                        <div
-                            class="prose prose-sm dark:prose-invert max-h-32 overflow-auto break-words"
-                            v-html="subTask.description || '<span class=\'text-gray-400 italic\'>No description</span>'"
-                        ></div>
-                    </div>
-                </div>
+                    {{ subTask.title }}
+                </span>
+                <Tag v-if="subTask.status?.name" :value="subTask.status.name" :severity="subTask.status.severity" class="shrink-0" />
+                <i class="pi pi-chevron-right text-xs text-surface-400 dark:text-surface-500" />
+            </button>
+        </div>
+
+        <div v-else class="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800">
+                <i class="pi pi-list-check text-lg text-surface-400 dark:text-surface-500" />
             </div>
-            <div v-else class="flex flex-col items-center justify-center py-8 text-gray-400">
-                <i class="pi pi-inbox mb-3 text-4xl opacity-50"></i>
-                <p class="italic">No subtasks available</p>
-            </div>
-        </template>
-    </Card>
+            <p class="text-sm text-surface-500 dark:text-surface-400">No subtasks yet</p>
+        </div>
+    </SectionPanel>
 </template>

@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import MentionEditor from '@/components/Mentioneditor.vue';
+import UserAvatar from '@/components/UserAvatar.vue';
 import CommentItem from '@/components/ui/comment/CommentItem.vue';
-import { useLayout } from '@/composables/useLayouts.js';
 import { ProjectUserOption } from '@/types/task-comment';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import Card from 'primevue/card';
-import Chip from 'primevue/chip';
-import Divider from 'primevue/divider';
 import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 import type { Comment, Task } from '../../index.d.ts';
-
-import 'emoji-mart-vue-fast/css/emoji-mart.css';
-import emojiData from 'emoji-mart-vue-fast/data/all.json';
-import { EmojiIndex } from 'emoji-mart-vue-fast/src';
+import SectionPanel from './SectionPanel.vue';
 
 interface Props {
     task: Task;
@@ -26,9 +20,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const toast = useToast();
-const { isDarkTheme } = useLayout();
 
-const emojiIndex = new EmojiIndex(emojiData);
+const currentUser = usePage().props.auth.user;
 
 const commentLoading = ref(false);
 const newComment = ref('');
@@ -87,48 +80,85 @@ const submitComment = () => {
 </script>
 
 <template>
-    <div v-for="comment in props.comments" :key="comment.id">
-        <div class="w-full pl-8">
-            <div class="h-6 border-l-2 border-gray-200 dark:border-gray-700"></div>
-        </div>
-
-        <div class="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm dark:bg-surface-900">
-            <CommentItem :currentUserId="props.currentUserId" :comment="comment" :taskId="props.task.id" :projectMembers="props.mentionMembers" />
-        </div>
-    </div>
-
-    <Card class="mt-4 rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
-        <template #title>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <i class="pi pi-comments text-teal-500"></i>
-                    <h2 class="text-lg font-bold">Comments</h2>
-                </div>
-                <Chip v-if="props.comments?.length" :label="`${props.comments.length}`" class="bg-teal-100 text-teal-700" />
-            </div>
+    <SectionPanel title="Comments" icon="pi pi-comments" toggleable>
+        <template #actions>
+            <span
+                v-if="props.comments?.length"
+                class="rounded-full bg-surface-100 px-2 py-0.5 text-xs font-medium tabular-nums text-surface-600 dark:bg-surface-800 dark:text-surface-300"
+            >
+                {{ props.comments.length }}
+            </span>
         </template>
 
-        <template #content>
-            <Divider class="my-3" />
-            <div class="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+        <!-- Composer: avatar + unified editor/action bar mirrors the thread items -->
+        <div class="flex gap-3">
+            <UserAvatar
+                :user="currentUser"
+                size="!h-9 !w-9"
+                fontSize=".8rem"
+                class="mt-0.5 hidden shrink-0 ring-2 ring-surface-0 sm:block dark:ring-surface-900"
+            />
+            <div
+                class="comment-composer min-w-0 flex-1 overflow-hidden rounded-xl border border-surface-300 bg-surface-0 shadow-sm transition-colors focus-within:border-primary-400 dark:border-surface-600 dark:bg-surface-900"
+            >
                 <MentionEditor
                     v-model="newComment"
                     :projectMembers="props.mentionMembers"
-                    height="200px"
+                    height="140px"
                     placeholder="Write a comment... Use @ to mention someone"
-                    class="mb-3"
                 />
-                <div class="mt-3 flex justify-end">
+                <div class="flex items-center gap-2 border-t border-surface-200 px-3 py-2 dark:border-surface-700">
+                    <span class="hidden items-center gap-1.5 text-xs text-surface-500 sm:flex dark:text-surface-400">
+                        <i class="pi pi-at text-[10px]" />
+                        Mention teammates with @
+                    </span>
                     <Button
                         label="Post Comment"
                         icon="pi pi-send"
-                        @click="submitComment"
+                        size="small"
+                        class="ml-auto"
                         :disabled="!newComment.trim() || commentLoading"
                         :loading="commentLoading"
-                        class="shadow-md"
+                        @click="submitComment"
                     />
                 </div>
             </div>
-        </template>
-    </Card>
+        </div>
+
+        <!-- Thread -->
+        <div v-if="props.comments?.length" class="mt-6 space-y-6 border-t border-surface-200 pt-6 dark:border-surface-700">
+            <CommentItem
+                v-for="comment in props.comments"
+                :key="comment.id"
+                :currentUserId="props.currentUserId"
+                :comment="comment"
+                :taskId="props.task.id"
+                :projectMembers="props.mentionMembers"
+            />
+        </div>
+        <div
+            v-else
+            class="mt-6 flex flex-col items-center justify-center gap-2 border-t border-surface-200 py-10 text-center dark:border-surface-700"
+        >
+            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800">
+                <i class="pi pi-comments text-lg text-surface-400 dark:text-surface-500" />
+            </div>
+            <p class="text-sm text-surface-500 dark:text-surface-400">No comments yet — start the conversation.</p>
+        </div>
+    </SectionPanel>
 </template>
+
+<style scoped>
+.comment-composer :deep(.ql-toolbar) {
+    border: 0 !important;
+    border-bottom: 1px solid var(--p-content-border-color) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.comment-composer :deep(.ql-container) {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+</style>

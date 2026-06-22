@@ -3,33 +3,86 @@
 namespace App\Repositories;
 
 use App\Models\Task;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection as SupportCollection;
 
 class TaskRepository
 {
-    public function getAssignedRecursive(int $userId)
+    /**
+     * Base query for the "My Task" index: root-level tasks assigned to (or created by)
+     * the user, with the slim relations + aggregate subtask counts the view needs.
+     *
+     * Returns a Builder so callers decide ordering + pagination (list) or limit (board).
+     *
+     * @param  array<string, mixed>  $filters  decoded (int) filter values
+     */
+    public function assignedTasksQuery(int $userId, array $filters = []): Builder
     {
-        $tasks = Task::with([
-            'users:id,name',
-            'users.media',
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'type:id,name,severity',
-            'category:id,name,icon,severity',
-            'project:id,title',
-            'tags:id,name,severity',
-            'subTaskRecursive',
-            'creator:id,name',
-            'creator.media',
-        ])
-            ->where(function ($query) use ($userId) {
-                $query->where('created_by', $userId)->orWhereRelation('users', 'users.id', $userId);
-            })
+        $query = Task::query()
+            ->with([
+                'users:id,name,email',
+                'users.media',
+                'status:id,name,severity',
+                'priority:id,name,severity',
+                'type:id,name,severity',
+                'project:id,title',
+            ])
+            ->withCount([
+                'children as sub_task_count',
+                'children as sub_task_done_count' => fn ($q) => $q->whereNotNull('completed_at'),
+            ])
+            ->where(fn (Builder $q) => $this->scopeAssigned($q, $userId))
             ->whereNull('parent_id')
-            ->whereHas('project')
-            ->orderBy('id')
-            ->get();
+            ->whereHas('project');
 
-        return $tasks;
+        $this->applyTaskFilters($query, $filters);
+
+        return $query;
+    }
+
+    /**
+     * Count assigned root tasks grouped by status, for the status-summary chips.
+     * Respects every filter except status (so all status chips remain visible).
+     *
+     * @param  array<string, mixed>  $filters  decoded (int) filter values
+     * @return SupportCollection<int, int> keyed by status_id => count
+     */
+    public function assignedStatusCounts(int $userId, array $filters = []): SupportCollection
+    {
+        unset($filters['status_id']);
+
+        $query = Task::query()
+            ->where(fn (Builder $q) => $this->scopeAssigned($q, $userId))
+            ->whereNull('parent_id')
+            ->whereHas('project');
+
+        $this->applyTaskFilters($query, $filters);
+
+        return $query->selectRaw('status_id, count(*) as total')
+            ->groupBy('status_id')
+            ->pluck('total', 'status_id');
+    }
+
+    protected function scopeAssigned(Builder $query, int $userId): void
+    {
+        $query->where('created_by', $userId)
+            ->orWhereRelation('users', 'users.id', $userId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters  decoded (int) filter values
+     */
+    protected function applyTaskFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['search'])) {
+            $query->where('title', 'ilike', '%'.$filters['search'].'%');
+        }
+
+        foreach (['project_id', 'status_id', 'priority_id', 'type_id'] as $column) {
+            if (! empty($filters[$column])) {
+                $query->where($column, $filters[$column]);
+            }
+        }
     }
 
     public function findByIdForDetail(int $taskId, int $userId): Task
@@ -50,6 +103,7 @@ class TaskRepository
             'subTaskRecursive.users:id,name',
             'creator:id,name', // Add creator relationship
             'creator.media',
+            'media' => fn ($q) => $q->where('collection_name', 'attachments'),
             'comments' => function ($query) {
                 $query->whereNull('parent_id')
                     ->orderBy('id', 'asc')

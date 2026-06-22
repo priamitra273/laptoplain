@@ -31,25 +31,25 @@ const closeDialog = () => emit('cancel');
     >
         <template #header>
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                    <i class="pi pi-calendar-clock text-blue-600 dark:text-blue-300"></i>
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/30">
+                    <i class="pi pi-calendar-clock text-primary-600 dark:text-primary-300"></i>
                 </div>
                 <div>
-                    <p class="text-base font-semibold text-gray-800 dark:text-white">Set Due Date</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Required to move task to In Progress</p>
+                    <p class="text-base font-semibold text-surface-900 dark:text-surface-50">Set Due Date</p>
+                    <p class="text-xs text-surface-500 dark:text-surface-400">Required to move task to In Progress</p>
                 </div>
             </div>
         </template>
 
         <div class="flex flex-col gap-4 py-2">
-            <p class="text-sm text-gray-600 dark:text-gray-300">
+            <p class="text-sm text-surface-600 dark:text-surface-300">
                 This task doesn't have a due date yet. Please set a due date before marking it as
-                <span class="font-semibold text-blue-600 dark:text-blue-400">In Progress</span>.
+                <span class="font-semibold text-primary-600 dark:text-primary-400">In Progress</span>.
             </p>
 
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE <span class="text-red-500">*</span>
+                <label class="text-xs font-medium text-surface-500 dark:text-surface-400">
+                    Due date <span class="text-rose-600 dark:text-rose-400">*</span>
                 </label>
                 <DatePicker
                     :modelValue="props.dueDate"

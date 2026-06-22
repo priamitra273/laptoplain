@@ -20,15 +20,18 @@ const onCancel = () => {
 </script>
 
 <template>
-    <div class="space-y-2">
+    <div
+        class="comment-editor overflow-hidden rounded-xl border border-surface-300 bg-surface-0 shadow-sm transition-colors focus-within:border-primary-400 dark:border-surface-600 dark:bg-surface-900"
+    >
         <MentionEditor
             :model-value="modelValue"
             @update:model-value="onUpdate"
             :projectMembers="projectMembers"
-            :height="height || '120px'"
+            :height="height || '110px'"
             :placeholder="placeholder || 'Write your message...'"
         />
-        <div class="flex gap-1">
+        <div class="flex items-center justify-end gap-2 border-t border-surface-200 px-3 py-2 dark:border-surface-700">
+            <Button label="Cancel" size="small" severity="secondary" text :disabled="loading" @click="onCancel" />
             <Button
                 :label="submitLabel || 'Save'"
                 :icon="submitIcon || 'pi pi-check'"
@@ -37,17 +40,22 @@ const onCancel = () => {
                 :loading="loading"
                 :disabled="loading"
                 @click="onSubmit"
-                class="shadow-sm hover:shadow"
-            />
-            <Button
-                label="Cancel"
-                size="small"
-                severity="secondary"
-                text
-                :disabled="loading"
-                @click="onCancel"
-                class="dark:text-gray-300 dark:hover:bg-gray-700"
             />
         </div>
     </div>
 </template>
+
+<style scoped>
+.comment-editor :deep(.ql-toolbar) {
+    border: 0 !important;
+    border-bottom: 1px solid var(--p-content-border-color) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.comment-editor :deep(.ql-container) {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+</style>

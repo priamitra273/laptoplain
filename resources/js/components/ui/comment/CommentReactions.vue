@@ -41,39 +41,50 @@ const selectEmoji = (emoji: string) => {
 </script>
 
 <template>
-    <div class="flex items-center gap-1 pt-0.5">
+    <div class="flex flex-wrap items-center gap-1.5">
         <button
-            class="rounded-full border bg-gray-100 p-1 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            type="button"
+            aria-label="Add reaction"
+            class="inline-flex size-7 items-center justify-center rounded-full border border-surface-200 bg-surface-0 text-surface-400 transition-colors hover:border-surface-300 hover:bg-surface-100 hover:text-surface-600 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400 dark:hover:bg-surface-700 dark:hover:text-surface-200"
             @click="op?.toggle($event)"
         >
-            <Icon name="Smile" class="size-5" />
+            <Icon name="Smile" class="size-4" />
         </button>
 
         <button
             v-for="reaction in reactions"
             :key="reaction.reaction"
-            class="flex items-center gap-1 rounded-full border px-2 py-1"
-            :class="[reaction.reaction === currentUserReaction ? 'border-primary-300 bg-primary-50/50' : 'bg-white hover:bg-surface-100']"
+            type="button"
+            class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors"
+            :class="
+                reaction.reaction === currentUserReaction
+                    ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/15 dark:text-primary-300'
+                    : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300 dark:hover:bg-surface-700'
+            "
             @click="emit('react', reaction.reaction)"
         >
-            <span class="text-sm" :class="{ 'text-primary-500': reaction.reaction === currentUserReaction }">{{ reaction.count }}</span>
-            <Emoji v-if="reaction.reaction.startsWith(':')" :data="emojiIndex" :emoji="reaction.reaction" set="google" :size="12" class="!p-0" />
-            <span v-else class="text-sm">{{ availableReactions[reaction.reaction] }}</span>
+            <Emoji
+                v-if="reaction.reaction.startsWith(':')"
+                :data="emojiIndex"
+                :emoji="reaction.reaction"
+                set="google"
+                :size="14"
+                class="!p-0"
+            />
+            <span v-else class="text-sm leading-none">{{ availableReactions[reaction.reaction] }}</span>
+            <span class="text-xs font-semibold tabular-nums">{{ reaction.count }}</span>
         </button>
 
         <template v-if="showReply">
-            <Divider layout="vertical" class="!mx-2" />
-            <Button
-                label="Reply"
-                icon="pi pi-reply"
-                icon-pos="left"
-                size="small"
-                severity="secondary"
-                text
-                rounded
-                class="p-1"
+            <span class="mx-0.5 h-4 w-px bg-surface-200 dark:bg-surface-700" aria-hidden="true" />
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-surface-500 transition-colors hover:bg-surface-100 hover:text-surface-700 dark:text-surface-400 dark:hover:bg-surface-700 dark:hover:text-surface-200"
                 @click="emit('reply')"
-            />
+            >
+                <i class="pi pi-reply text-[11px]" />
+                Reply
+            </button>
         </template>
     </div>
 
@@ -85,14 +96,15 @@ const selectEmoji = (emoji: string) => {
             marginBlockStart: '0.5rem',
         }"
     >
-        <div class="flex gap-2">
+        <div class="flex gap-1">
             <button
                 v-for="emoji in emojies"
                 :key="emoji"
-                class="flex size-8 items-center justify-center rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                type="button"
+                class="flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-700"
                 @click="selectEmoji(emoji)"
             >
-                <Emoji :data="emojiIndex" :emoji="emoji" :size="14" class="!p-0" />
+                <Emoji :data="emojiIndex" :emoji="emoji" :size="16" class="!p-0" />
             </button>
         </div>
     </Popover>

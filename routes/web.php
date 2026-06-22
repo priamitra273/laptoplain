@@ -77,6 +77,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('task')->name('task.')->group(function () {
+        // Registered before {task} so "/task/board" is not captured as a task id.
+        Route::get('board', [TaskController::class, 'boardColumn'])->name('board');
         Route::get('{task}', [TaskController::class, 'show'])->name('show');
         Route::get('{task}/comment', [TaskController::class, 'comments'])->name('comments');
         Route::get('{task}/parents', [TaskController::class, 'parents'])->name('parents');

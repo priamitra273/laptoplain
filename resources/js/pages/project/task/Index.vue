@@ -5,58 +5,84 @@ import AppLayout from '@/layouts/avalon/AppLayout.vue';
 import { severityClasses } from '@/lib/severity';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
-import AutoComplete from 'primevue/autocomplete';
-import Button from 'primevue/button';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import SelectButton from 'primevue/selectbutton';
-import Tag from 'primevue/tag';
 import { computed, ref, watch } from 'vue';
 import TaskKanban from './partials/TaskKanban.vue';
-import { Task, TaskPriority, TaskStatus, TaskType } from './type';
+import TaskKanbanSkeleton from './partials/TaskKanbanSkeleton.vue';
+import TaskListSkeleton from './partials/TaskListSkeleton.vue';
+
+type AssignedTask = App.Data.Task.AssignedTaskData;
+type ProjectOption = App.Data.Project.ProjectOptionData;
+type TaskStatusOption = App.Data.Task.TaskStatusData;
+type TaskPriorityOption = App.Data.Task.TaskPriorityData;
+type TaskTypeOption = App.Data.Task.TaskTypeData;
+
+interface Paginator<T> {
+    data: T[];
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+}
+
+interface SummaryEntry {
+    id: string;
+    name: string;
+    severity: string | null;
+    count: number;
+}
+
+interface Filters {
+    search: string | null;
+    project_id: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    type_id: string | null;
+    per_page: number;
+}
+
+interface BoardColumn {
+    status: TaskStatusOption;
+    tasks: AssignedTask[];
+    total: number;
+    has_more: boolean;
+}
 
 interface Props {
-    tasks: Task[];
-    projects: { id: string; title: string }[];
-    statuses: TaskStatus[];
-    priorities: TaskPriority[];
-    types: TaskType[];
-    totalAssigned?: number;
+    view: 'board' | 'list';
+    filters: Filters;
+    statuses: TaskStatusOption[];
+    priorities: TaskPriorityOption[];
+    types: TaskTypeOption[];
+    projects: ProjectOption[];
+    summary: SummaryEntry[];
+    board?: BoardColumn[];
+    tasks?: Paginator<AssignedTask>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    tasks: () => [],
-    projects: () => [],
     statuses: () => [],
     priorities: () => [],
     types: () => [],
-    totalAssigned: 0,
+    projects: () => [],
+    summary: () => [],
+    board: () => [],
+    tasks: undefined,
 });
 
 const user = usePage().props.auth.user;
 
-const tasksData = ref<Task[]>(JSON.parse(JSON.stringify(props.tasks)));
-const filteredTasks = ref<Task[]>([...tasksData.value]);
-const projectsData = ref<{ id: string; title: string }[]>([]);
-const totalAssigned = ref<number>(props.totalAssigned || 0);
+// View mode (server-driven)
+const viewMode = ref<'board' | 'list'>(props.view);
 
-// Pagination
-const rows = ref<number>(10);
-const first = ref<number>(0);
+// Filter controls — hydrated from the echoed server filters.
+const searchQuery = ref<string>(props.filters.search ?? '');
+const filterProject = ref<ProjectOption | null>(props.projects.find((p) => p.id === props.filters.project_id) ?? null);
+const filterStatus = ref<TaskStatusOption | null>(props.statuses.find((s) => s.id === props.filters.status_id) ?? null);
+const filterPriority = ref<TaskPriorityOption | null>(props.priorities.find((p) => p.id === props.filters.priority_id) ?? null);
+const filterType = ref<TaskTypeOption | null>(props.types.find((t) => t.id === props.filters.type_id) ?? null);
+const perPage = ref<number>(props.filters.per_page ?? 25);
 
-// Search & filter
-const searchQuery = ref<string>('');
-const filterStatus = ref<TaskStatus | null>(null);
-const filterPriority = ref<TaskPriority | null>(null);
-const filterType = ref<TaskType | null>(null);
-const filterProject = ref<{ id: string; title: string } | null>(null);
-
-// View mode
-const viewMode = ref<'list' | 'board'>('board');
+const projectSuggestions = ref<ProjectOption[]>([]);
 
 const viewModeOptions = [
     { icon: 'pi pi-th-large', label: 'Board', value: 'board' },
@@ -67,56 +93,86 @@ const hasActiveFilters = computed(
     () => !!(searchQuery.value || filterProject.value || filterStatus.value || filterPriority.value || filterType.value),
 );
 
+const boardTotal = computed(() => (props.board ?? []).reduce((sum, column) => sum + column.total, 0));
+
+const isEmpty = computed(() => (viewMode.value === 'list' ? (props.tasks?.data.length ?? 0) === 0 : boardTotal.value === 0));
+
+const totalText = computed(() => {
+    const total = viewMode.value === 'list' ? (props.tasks?.total ?? 0) : boardTotal.value;
+    return `${total} assignment${total === 1 ? '' : 's'}`;
+});
+
+// Active filters (encoded) forwarded to the board's per-column "Load more" requests.
+const boardFilterParams = computed<Record<string, string>>(() => {
+    const params: Record<string, string> = {};
+    if (searchQuery.value) params.search = searchQuery.value;
+    if (filterProject.value) params.project_id = filterProject.value.id;
+    if (filterPriority.value) params.priority_id = filterPriority.value.id;
+    if (filterType.value) params.type_id = filterType.value.id;
+
+    return params;
+});
+
 const searchProjects = (event: { query: string }) => {
     const query = event.query.toLowerCase();
-    projectsData.value = props.projects.filter((project) => project.title.toLowerCase().includes(query));
+    projectSuggestions.value = props.projects.filter((project) => project.title.toLowerCase().includes(query));
 };
 
-const applyFilters = () => {
-    let result = [...tasksData.value];
+// ── Server-driven reload ─────────────────────────────────────────────────
+let suppressReload = false;
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+const reloading = ref(false);
 
-    if (searchQuery.value) {
-        result = result.filter((task) => task.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
-    }
-    if (filterProject.value) {
-        result = result.filter((task) => task.project?.id == filterProject.value?.id);
-    }
-    if (filterStatus.value) {
-        result = result.filter((task) => task.status?.id === filterStatus.value?.id);
-    }
-    if (filterPriority.value) {
-        result = result.filter((task) => task.priority?.id === filterPriority.value?.id);
-    }
-    if (filterType.value) {
-        result = result.filter((task) => task.type?.id === filterType.value?.id);
-    }
+const buildQuery = (): Record<string, string | number> => {
+    const query: Record<string, string | number> = { view: viewMode.value };
 
-    filteredTasks.value = result;
-    first.value = 0;
+    if (searchQuery.value) query.search = searchQuery.value;
+    if (filterProject.value) query.project_id = filterProject.value.id;
+    if (filterStatus.value) query.status_id = filterStatus.value.id;
+    if (filterPriority.value) query.priority_id = filterPriority.value.id;
+    if (filterType.value) query.type_id = filterType.value.id;
+    if (viewMode.value === 'list') query.per_page = perPage.value;
+
+    return query;
 };
 
-watch([searchQuery, filterStatus, filterPriority, filterType, filterProject], applyFilters);
+const reload = (extra: Record<string, string | number> = {}) => {
+    router.get(
+        route('task.index'),
+        { ...buildQuery(), ...extra },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['tasks', 'board', 'summary', 'filters', 'view'],
+            showProgress: false,
+            onStart: () => {
+                reloading.value = true;
+            },
+            onFinish: () => {
+                reloading.value = false;
+            },
+        },
+    );
+};
 
 const clearFilters = () => {
+    suppressReload = true;
     searchQuery.value = '';
+    filterProject.value = null;
     filterStatus.value = null;
     filterPriority.value = null;
     filterType.value = null;
-    filterProject.value = null;
+    suppressReload = false;
+    reload();
 };
 
-const statusSummary = computed(() =>
-    props.statuses
-        .map((status) => ({
-            id: status.id,
-            name: status.name,
-            severity: status.severity,
-            count: tasksData.value.filter((task) => task.status?.id === status.id).length,
-        }))
-        .filter((entry) => entry.count > 0),
-);
+const onPage = (event: { page: number; rows: number }) => {
+    perPage.value = event.rows;
+    reload({ page: event.page + 1, per_page: event.rows });
+};
 
-const dotClass = (severity?: string) => (severityClasses[severity ?? 'default'] ?? severityClasses.default).dot;
+const dotClass = (severity?: string | null) => (severityClasses[severity ?? 'default'] ?? severityClasses.default).dot;
 
 const truncateText = (text: string, maxLength = 50) => {
     if (!text) {
@@ -125,7 +181,7 @@ const truncateText = (text: string, maxLength = 50) => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}…` : text;
 };
 
-const formatDueDate = (date?: string) => {
+const formatDueDate = (date?: string | null) => {
     if (!date) {
         return '—';
     }
@@ -145,18 +201,26 @@ const formatDueDate = (date?: string) => {
     return formatted;
 };
 
-const totalText = computed(() => `${filteredTasks.value.length} of ${totalAssigned.value} assignments`);
-
-const onStatusUpdate = (taskId: string, newStatusId: string) => {
-    const task = tasksData.value.find((item) => item.id === taskId);
-    if (!task) {
-        return;
-    }
-    const newStatus = props.statuses.find((status) => status.id === newStatusId);
-    if (newStatus) {
-        task.status = newStatus;
-    }
+const onStatusUpdate = () => {
+    // Refresh the per-status summary chips after a drag-drop move.
+    router.reload({ only: ['summary'] });
 };
+
+watch([filterProject, filterStatus, filterPriority, filterType], () => {
+    if (suppressReload) return;
+    reload();
+});
+
+watch(searchQuery, () => {
+    if (suppressReload) return;
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => reload(), 300);
+});
+
+watch(viewMode, () => {
+    if (suppressReload) return;
+    reload();
+});
 </script>
 
 <template>
@@ -199,7 +263,7 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
                 <div class="flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center">
                     <AutoComplete
                         v-model="filterProject"
-                        :suggestions="projectsData"
+                        :suggestions="projectSuggestions"
                         optionLabel="title"
                         placeholder="Project"
                         dropdown
@@ -262,10 +326,10 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
 
                 <!-- Status summary -->
                 <div
-                    v-if="statusSummary.length"
+                    v-if="summary.length"
                     class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-surface-200 pt-3 dark:border-surface-700"
                 >
-                    <div v-for="entry in statusSummary" :key="entry.id" class="flex items-center gap-1.5 text-sm">
+                    <div v-for="entry in summary" :key="entry.id" class="flex items-center gap-1.5 text-sm">
                         <span class="h-2 w-2 shrink-0 rounded-full" :class="dotClass(entry.severity)" />
                         <span class="text-surface-600 dark:text-surface-300">{{ entry.name }}</span>
                         <span class="font-semibold tabular-nums text-surface-900 dark:text-surface-100">{{ entry.count }}</span>
@@ -276,8 +340,14 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
             <!-- Content -->
             <div class="card !mb-0">
                 <Transition name="view-fade" mode="out-in">
+                    <!-- Loading skeleton (selama reload server-driven) -->
+                    <div v-if="reloading" key="loading">
+                        <TaskKanbanSkeleton v-if="viewMode === 'board'" :columns="statuses.length || 4" />
+                        <TaskListSkeleton v-else />
+                    </div>
+
                     <!-- Empty state -->
-                    <div v-if="filteredTasks.length === 0" key="empty" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                    <div v-else-if="isEmpty" key="empty" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
                         <div class="flex h-14 w-14 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800">
                             <i class="pi pi-inbox text-2xl text-surface-400 dark:text-surface-500" />
                         </div>
@@ -294,25 +364,22 @@ const onStatusUpdate = (taskId: string, newStatusId: string) => {
 
                     <!-- Board view -->
                     <div v-else-if="viewMode === 'board'" key="board">
-                        <TaskKanban :tasks="filteredTasks" :statuses="statuses" @status-update="onStatusUpdate" />
+                        <TaskKanban :columns="board ?? []" :filter-params="boardFilterParams" @status-update="onStatusUpdate" />
                     </div>
 
                     <!-- List view -->
                     <div v-else key="list" class="overflow-x-auto">
                         <DataTable
-                            :value="filteredTasks"
+                            :value="tasks?.data ?? []"
                             dataKey="id"
+                            lazy
                             paginator
-                            :rows="rows"
-                            :first="first"
+                            :rows="tasks?.per_page ?? perPage"
+                            :totalRecords="tasks?.total ?? 0"
+                            :first="((tasks?.current_page ?? 1) - 1) * (tasks?.per_page ?? perPage)"
                             rowHover
                             class="p-datatable-sm cursor-pointer"
-                            @page="
-                                (event) => {
-                                    first = event.first;
-                                    rows = event.rows;
-                                }
-                            "
+                            @page="onPage"
                             @row-click="(event) => router.get(route('task.show', event.data.id))"
                         >
                             <Column header="Task" style="width: 40%">

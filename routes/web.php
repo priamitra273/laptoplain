@@ -104,6 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('tasks/{taskEncoded}/lazy', [LazyTaskController::class, 'update'])->name('tasks.lazy-update');
         Route::put('tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.priority.update');
         Route::put('tasks/{task}/parent', [TaskController::class, 'updateParent'])->name('tasks.parent.update');
+        Route::put('tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
         Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
         Route::prefix('sprints')->name('sprints.')->group(function () {

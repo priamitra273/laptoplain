@@ -24,6 +24,7 @@ use App\Models\Task;
 use App\Models\TaskCategory;
 use App\Models\User;
 use App\Repositories\TaskRepository;
+use Illuminate\Support\Facades\DB;
 use Spatie\LaravelData\DataCollection;
 
 class TaskService
@@ -294,6 +295,52 @@ class TaskService
         if ($oldParentForProgress) {
             $this->calculateParentProgress($oldParentForProgress);
         }
+    }
+
+    public function move(Task $task, ?int $parentId, int $position): void
+    {
+        DB::transaction(function () use ($task, $parentId, $position): void {
+            $oldParent = $task->parent;
+
+            if ($oldParent) {
+                $hasSiblings = $oldParent->children()->where('id', '!=', $task->id)->exists();
+                $oldParentForProgress = $hasSiblings
+                    ? $oldParent->children()->where('id', '!=', $task->id)->first()
+                    : $oldParent;
+            } else {
+                $oldParentForProgress = null;
+            }
+
+            $task->update(['parent_id' => $parentId]);
+            $task->unsetRelation('parent'); // drop the stale cached relation so the NEW parent is recalculated
+
+            $siblings = Task::query()
+                ->where('project_id', $task->project_id)
+                ->when(
+                    $parentId === null,
+                    fn ($query) => $query->whereNull('parent_id'),
+                    fn ($query) => $query->where('parent_id', $parentId),
+                )
+                ->where('id', '!=', $task->id)
+                ->orderByRaw('sequence_number IS NULL, sequence_number, id')
+                ->get();
+
+            $ordered = $siblings->all();
+            $clamped = max(0, min($position, count($ordered)));
+            array_splice($ordered, $clamped, 0, [$task]);
+
+            foreach ($ordered as $index => $sibling) {
+                if ((int) $sibling->sequence_number !== $index) {
+                    $sibling->update(['sequence_number' => $index]);
+                }
+            }
+
+            $this->calculateParentProgress($task);
+
+            if ($oldParentForProgress) {
+                $this->calculateParentProgress($oldParentForProgress);
+            }
+        });
     }
 
     protected function calculateParentProgress(Task $task): void

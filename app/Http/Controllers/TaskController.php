@@ -6,6 +6,7 @@ use App\Actions\Task\CreateTaskAction;
 use App\Actions\Task\UpdateTaskAction;
 use App\Facades\Sqids;
 use App\Http\Requests\Task\TaskBulkDestroyRequest;
+use App\Http\Requests\Task\TaskMoveRequest;
 use App\Http\Requests\Task\TaskStoreRequest;
 use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
@@ -228,6 +229,20 @@ class TaskController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Task parent updated successfully.',
+        ]);
+    }
+
+    public function move(TaskMoveRequest $request, string $projectEncoded, Task $task): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $projectEncoded, $task);
+
+        $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
+
+        $this->service->move($task, $parentId, $request->integer('position'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task moved successfully.',
         ]);
     }
 

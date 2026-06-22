@@ -74,6 +74,56 @@ export const useLocalTaskTree = <T extends TaskTreeNode<T>>(source: LocalTaskTre
         }
     };
 
+    const findParentList = (id: string): T[] | null => {
+        const search = (list: T[]): T[] | null => {
+            if (list.some((item) => item.id === id)) {
+                return list;
+            }
+            for (const item of list) {
+                const found = search(item.sub_task_recursive ?? []);
+                if (found) {
+                    return found;
+                }
+            }
+            return null;
+        };
+        return search(tasks.value);
+    };
+
+    const insertAt = (item: T, parentId: string | null, position: number): void => {
+        const list = parentId ? (findIn(tasks.value, parentId)?.sub_task_recursive ?? null) : tasks.value;
+        if (!list) {
+            tasks.value.push(item);
+            return;
+        }
+        const clamped = Math.max(0, Math.min(position, list.length));
+        list.splice(clamped, 0, item);
+    };
+
+    const moveNode = (id: string, parentId: string | null, position: number): { parentId: string | null; index: number } | null => {
+        const node = findIn(tasks.value, id);
+        if (!node) {
+            return null;
+        }
+
+        const previousParentId = node.parent_id ?? null;
+        const previousList = findParentList(id);
+        const previousIndex = previousList ? previousList.findIndex((item) => item.id === id) : 0;
+
+        const detached = removeFrom(tasks.value, id);
+        if (!detached) {
+            return null;
+        }
+
+        detached.parent_id = parentId;
+        insertAt(detached, parentId, position);
+
+        recalc();
+        tasks.value = [...tasks.value];
+
+        return { parentId: previousParentId, index: previousIndex };
+    };
+
     const recalcNode = (item: T): number => {
         const children = item.sub_task_recursive ?? [];
         const value =
@@ -125,6 +175,7 @@ export const useLocalTaskTree = <T extends TaskTreeNode<T>>(source: LocalTaskTre
         tasks,
         applySaved,
         recalc,
+        moveNode,
         findNode: (id: string): T | null => findIn(tasks.value, id),
     };
 };

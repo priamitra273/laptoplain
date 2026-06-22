@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TaskActivityLogModal from '@/components/TaskActivityLogModal.vue';
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
-import type { LazyTaskTableEmits, LazyTaskTableFilter, LazyTaskTableProps, ListTask } from '@/pages/project-lazy';
+import type { LazyTaskFormatted, LazyTaskTableEmits, LazyTaskTableFilter, LazyTaskTableProps, ListTask } from '@/pages/project-lazy';
 import { ProjectPolicyKey } from '@/types/type';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useSessionStorage } from '@vueuse/core';
@@ -48,11 +48,31 @@ const {
     isRootDropActive,
     onDragStart,
     onDragEnd,
+    onRowMouseDown,
     onRowDragOver,
     onRowDrop,
     onRootDragOver,
     onRootDrop,
 } = useTaskDragDrop({ tree: tasksRef, canMove: canMoveTask, isDescendant, onMove: (payload) => emit('move', payload) });
+
+// Drag/drop is wired to the whole row (like PrimeVue DataTable reorder) via TreeTable's pt('row'),
+// so the drop zone covers every column, not just the Title cell.
+const rowPt = (options: { instance?: { node?: LazyTaskFormatted } }): Record<string, unknown> => {
+    const node = options?.instance?.node;
+    const attrs: Record<string, unknown> = {
+        'data-task-drop-row': 'true',
+        onMousedown: onRowMouseDown,
+        onDragstart: (event: DragEvent) => node && onDragStart(event, node),
+        onDragover: (event: DragEvent) => node && onRowDragOver(event, node),
+        onDragenter: (event: DragEvent) => node && onRowDragOver(event, node),
+        onDrop: (event: DragEvent) => node && onRowDrop(event, node),
+        onDragend: onDragEnd,
+    };
+    if (node?.key && node.key === dropTargetKey.value && dropMode.value) {
+        attrs.class = dropMode.value === 'before' ? 'tt-drop-before' : dropMode.value === 'after' ? 'tt-drop-after' : 'tt-drop-inside';
+    }
+    return attrs;
+};
 
 const { getCategoryIcon, getCategoryColor } = useTaskCategoryStyle();
 
@@ -147,6 +167,7 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                 scrollable
                 scrollHeight="600px"
                 removableSort
+                :pt="{ row: rowPt }"
             >
                 <Column :expander="false" style="width: 3rem" v-if="canTaskCreate || canTaskUpdate || canTaskDelete" frozen align-frozen="left">
                     <template #header>
@@ -174,30 +195,14 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
 
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 240px">
                     <template #body="{ node }">
-                        <div
-                            data-task-drop-row="true"
-                            class="flex items-center gap-2 rounded px-1 py-1 transition-colors"
-                            :class="[
-                                dropTargetKey === node.key && dropMode === 'inside'
-                                    ? 'bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/40 dark:ring-blue-600/70'
-                                    : '',
-                                dropTargetKey === node.key && dropMode === 'before' ? 'border-t-2 border-blue-500' : '',
-                                dropTargetKey === node.key && dropMode === 'after' ? 'border-b-2 border-blue-500' : '',
-                            ]"
-                            @dragover.prevent="onRowDragOver($event, node)"
-                            @dragenter.prevent="onRowDragOver($event, node)"
-                            @drop.stop.prevent="onRowDrop($event, node)"
-                        >
+                        <div class="flex items-center gap-2 rounded px-1 py-1">
                             <i
                                 v-if="canMoveTask"
+                                data-task-drag-handle="true"
                                 class="pi pi-bars shrink-0 cursor-grab text-surface-400 transition-colors hover:text-surface-600 active:cursor-grabbing dark:text-surface-500 dark:hover:text-surface-300"
-                                :class="draggedKey === node.key ? 'text-blue-500 dark:text-blue-400' : ''"
-                                :draggable="true"
-                                style="-webkit-user-drag: element"
+                                :style="draggedKey === node.key ? { color: 'var(--p-primary-color)' } : undefined"
                                 aria-label="Drag to reorder or nest"
                                 v-tooltip.top="'Drag to reorder / nest'"
-                                @dragstart.stop="onDragStart($event, node)"
-                                @dragend="onDragEnd"
                             />
 
                             <i
@@ -316,3 +321,21 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
         <TaskActivityLogModal v-model:visible="activityModal.visible" :taskId="activityModal.taskId" :taskTitle="activityModal.taskTitle" />
     </div>
 </template>
+
+<style scoped>
+/* DataTable-style drop indicator, applied to the whole row via TreeTable pt('row'). */
+:deep(tr.tt-drop-before) > td {
+    box-shadow: inset 0 2px 0 0 var(--p-primary-color);
+}
+
+:deep(tr.tt-drop-after) > td {
+    box-shadow: inset 0 -2px 0 0 var(--p-primary-color);
+}
+
+:deep(tr.tt-drop-inside) > td {
+    background-color: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+    box-shadow:
+        inset 0 2px 0 0 var(--p-primary-color),
+        inset 0 -2px 0 0 var(--p-primary-color);
+}
+</style>

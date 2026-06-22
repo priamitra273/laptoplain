@@ -164,3 +164,27 @@ Sukses senyap (UI sudah pindah, `sequence_number` server authoritative & tidak d
 ### Verifikasi format
 
 - `vendor/bin/pint --dirty` (PHP), dan jalankan test terfilter terkait.
+
+## Revisi pasca-QA browser (2026-06-23)
+
+Setelah implementasi awal di-review di browser, model interaksi drag disesuaikan agar meniru komponen **PrimeVue DataTable (row reorder)**. Logika inti tidak berubah (3 zona before/inside/after, `computeMoveTarget`, optimistic `moveNode`, endpoint `tasks/{task}/move`, ordering `sequence_number NULLS LAST`); hanya **lapisan interaksi & indikator visual** yang diubah, seluruhnya di `TaskTable.vue` + `useTaskDragDrop.ts`.
+
+### 1. Indikator drop selebar baris (warna primary)
+
+Indikator `border-t/b-2` lama hanya menempel di div sel **Title** sehingga lemah/terbatas pada satu kolom. Diganti dengan indikator **selebar baris** yang dipasang di `<tr>` lewat `TreeTable :pt="{ row: rowPt }"`:
+
+- `before` → `box-shadow: inset 0 2px 0 0 var(--p-primary-color)` (garis di batas atas).
+- `after` → `inset 0 -2px 0 0 …` (garis di batas bawah).
+- `inside` → tint `color-mix(... var(--p-primary-color) 12% ...)` + garis atas & bawah.
+
+Warna memakai `var(--p-primary-color)` (token DataTable `dropPoint`), via `<style scoped>` `:deep(tr.tt-drop-* ) > td`. `rowPt` membaca `dropTargetKey`/`dropMode` + key baris dari `options.instance.node` (terkonfirmasi `$params.instance = this` di `@primevue/core` BaseComponent), sehingga reaktif terhadap perubahan zona.
+
+### 2. Dropzone & drag pada seluruh baris (pola DataTable `onRowMouseDown`)
+
+Handler drag/drop dipindah dari div sel Title ke **seluruh `<tr>`** (via `pt('row')`), meniru `DataTable.BodyRow` + `DataTable.onRowMouseDown`:
+
+- `onRowMouseDown(event)` men-set `event.currentTarget.draggable = true` **secara imperatif** hanya bila `event.target` berada di dalam handle (`[data-task-drag-handle="true"]`), selain itu `false`. Tidak ada timer; baris menjadi sumber drag sehingga **ghost = baris penuh** dan **dropzone mencakup semua kolom**, bukan hanya Title.
+- Grip ☰ kini hanya penanda handle (`data-task-drag-handle`, tanpa `:draggable`/`@dragstart`); klik/seleksi di badan baris tetap normal.
+- `pt('row')` menempelkan `data-task-drop-row` + `onMousedown/onDragstart/onDragover/onDragenter/onDrop/onDragend` + class indikator pada `<tr>`. `onDragEnd` mereset `tr.draggable=false`; `onRowDrop` memanggil `stopPropagation` agar tidak ikut memicu root drop.
+
+Guard cycle (`isDescendant`), root dropzone, dan kontrak payload `{ taskId, parentId, position }` tetap sama.

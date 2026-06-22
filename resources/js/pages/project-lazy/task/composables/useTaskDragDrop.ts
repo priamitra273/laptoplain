@@ -73,8 +73,26 @@ export const useTaskDragDrop = ({ tree, canMove, isDescendant, onMove }: DragDro
         }
     };
 
-    const onDragEnd = (): void => {
+    const onDragEnd = (event: DragEvent): void => {
+        const row = event.currentTarget as HTMLElement | null;
+        if (row) {
+            row.draggable = false;
+        }
         resetDragState();
+    };
+
+    /**
+     * Mirrors PrimeVue DataTable: the row only becomes draggable when the press
+     * starts on the grip handle, so plain clicks/selection on the row still work.
+     */
+    const onRowMouseDown = (event: MouseEvent): void => {
+        const row = event.currentTarget as HTMLElement | null;
+        if (!row) {
+            return;
+        }
+        const target = event.target as Element | null;
+        const onHandle = !!target?.closest('[data-task-drag-handle="true"]');
+        row.draggable = canMove.value && onHandle;
     };
 
     const onRowDragOver = (event: DragEvent, node: LazyTaskFormatted): void => {
@@ -95,6 +113,7 @@ export const useTaskDragDrop = ({ tree, canMove, isDescendant, onMove }: DragDro
             return;
         }
         event.preventDefault();
+        event.stopPropagation();
 
         const mode = dropMode.value ?? 'inside';
         const target = computeMoveTarget(tree.value, draggedKey.value, node.key, mode);
@@ -147,6 +166,7 @@ export const useTaskDragDrop = ({ tree, canMove, isDescendant, onMove }: DragDro
         isRootDropActive,
         onDragStart,
         onDragEnd,
+        onRowMouseDown,
         onRowDragOver,
         onRowDrop,
         onRootDragOver,

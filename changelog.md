@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.2.1] - 2026-06-23
+
+### Added
+
+- Added the `predis/predis` dependency for Redis client support. (b7538eb)
+
+### Fixed
+
+- Standardized project routing and redirections to target the correct project sub-views (`project.show.team`, `project.show.list`, `project.show.kanban`) instead of the generic `project.show`, with minor code-style cleanup (spacing, braces, trailing commas in error arrays). (91cc5eb, 695eab8)
+- Corrected formatting in the GitLab CI configuration for build scripts. (44ab72b)
+
 ## [1.2.0] - 2026-06-23
 
 ### Added
@@ -295,7 +306,8 @@ Notes:
 - Version `1.1.1` covers changes after `f2f16cf` through `8b0f72a`.
 - Version `1.1.2` covers changes after `8b0f72a` through `c2361f1`.
 - Version `1.2.0` covers changes after `c2361f1` through `231fe51`.
-- Latest commit incorporated: `231fe51` (chore(gitignore): add .impeccable and .superpowers directories).
+- Version `1.2.1` covers changes after `8c0e08c` (the v1.2.0 changelog commit) through `695eab8`.
+- Latest commit incorporated: `695eab8` (fix: update route redirections to project sub-views).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

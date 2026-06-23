@@ -6,6 +6,7 @@ use App\Observers\MediaObserver;
 use App\Services\SqidsService;
 use App\Services\TaskNotificationService;
 use Illuminate\Support\ServiceProvider;
+use Opcodes\LogViewer\Facades\LogViewer;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Media::observe(MediaObserver::class);
+
+        LogViewer::auth(function ($request) {
+            return $request->user() && $request->user()->email === 'dhenistian.dickie@balitower.co.id';
+        });
     }
 }

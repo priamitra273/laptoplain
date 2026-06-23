@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.2.2] - 2026-06-23
+
+### Added
+
+- Added LogViewer authentication callback via `AppServiceProvider`, restricting access to a specific email in production while allowing all access in non-production environments. (d364ce9, d749453)
+
+### Changed
+
+- Relaxed validation rules in `ProjectUpdateRequest`: removed `required` from `title`, `start_date`, `due_date`, `status_id`, and `priority_id` fields to allow partial updates. (d749453)
+- Conditionally decode `status_id` and `priority_id` Sqids only when the fields are present in the request, preventing null decode errors on partial updates. (d749453)
+
 ## [1.2.1] - 2026-06-23
 
 ### Added
@@ -307,7 +318,8 @@ Notes:
 - Version `1.1.2` covers changes after `8b0f72a` through `c2361f1`.
 - Version `1.2.0` covers changes after `c2361f1` through `231fe51`.
 - Version `1.2.1` covers changes after `8c0e08c` (the v1.2.0 changelog commit) through `695eab8`.
-- Latest commit incorporated: `695eab8` (fix: update route redirections to project sub-views).
+- Version `1.2.2` covers changes after `172449f` (the v1.2.1 changelog commit) through `d749453`.
+- Latest commit incorporated: `d749453` (refactor: update validation rules in ProjectUpdateRequest and improve LogViewer authentication logic).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

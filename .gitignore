@@ -33,3 +33,5 @@ yarn-error.log
 /.github/skills/
 
 .worktree/
+.impeccable/
+.superpowers/

@@ -7,6 +7,36 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.2.0] - 2026-06-23
+
+### Added
+
+- Client-side ("lazy") task flow on the project detail page: the List and Kanban tabs keep local task state, submit task create/update via axios (with a multipart `taskFormData` serializer), emit a saved payload, and recompute progress live in the browser for ancestors and the project header through `useLocalTaskTree` and a new `RecalculateProgressAction`. (7c4bb3c, 838f52e, 2f614f7, 9662565, 570b0cd, ad81d24, e591a5f, 1e9c7af, 85062cd, 753b8b3)
+- Drag-to-reorder for the task list: a native drag grip in the selection column with zone-based reorder and re-parent, DataTable-style full-row dropzone with insertion line / nest highlight, optimistic `moveNode`, a `computeMoveTarget` helper, and a backend move endpoint that normalizes sequence numbers. (a672463, 9719187, c1a6d1e, 97d696f, 5092fcb, 54b28ca)
+- Bulk delete for tasks via `TaskBulkDestroy`. (4fcfcad, 49218a9)
+- Project Report tab now renders the `ProjectReportTab` component instead of a placeholder. (d9e2269)
+- `sequence_number` added to task list item data (nullable) for ordering, plus a project option data type and assigned task data structure. (00d8512, 6e9e54c, 2e9f26b)
+- Test coverage for the lazy task update endpoint and progress recalculation. (b05cb41, 373bd3f)
+
+### Changed
+
+- Modernized the "My Task" layout for a cleaner SaaS feel. (1d9318c)
+- Reorganized project detail tabs into per-domain directories and made the Kanban tab self-contained with slim backend types. (92d1c45, 3161b6b, 3150fbe, 475107a)
+- Deferred the task tree and assignable users on the project detail page using Inertia deferred props. (7c4bb3c)
+- Simplified `TaskTable` access-control logic, improved its toolbar, and updated the session-storage key format. (c193a09, 3ef2f1a)
+- Recalculate project progress in `UpdateTaskAction`/`TaskService` and on lazy re-parent (both old and new parent). (8b48834, a516856)
+- `SprintRepository` now includes the user email in the task user relationship. (b69513a, 48a631c)
+- Simplified the `ProjectObserver` updated method to always forget its cache. (86db849)
+- Ordered the task tree by `sequence_number` (nulls last) so reorder persists. (19f623d, b4b4cdb)
+
+### Fixed
+
+- Improved error feedback for task field updates. (548df64)
+- Prevented setting a null `task_category_id` when no category is provided. (76af967)
+- Navigate to the Kanban view on dashboard project-row click and the project breadcrumb. (ff01778, f4772ae)
+- Wrapped assignee chips in a flex container for proper layout. (a26a574)
+- Deduped task-form close handling and improved loading-state management in `useTaskFormDrawer`. (97e97c3, e076673)
+
 ## [1.1.2] - 2026-06-12
 
 ### Changed
@@ -264,7 +294,8 @@ Notes:
 - Versions above are organized semantically from historical milestones in `git log`.
 - Version `1.1.1` covers changes after `f2f16cf` through `8b0f72a`.
 - Version `1.1.2` covers changes after `8b0f72a` through `c2361f1`.
-- Latest commit incorporated: `c2361f1` (feat: update fieldDisabled logic to check for task existence before permission validation).
+- Version `1.2.0` covers changes after `c2361f1` through `231fe51`.
+- Latest commit incorporated: `231fe51` (chore(gitignore): add .impeccable and .superpowers directories).
 - Future releases should increment:
     - `PATCH` for backward-compatible bug fixes,
     - `MINOR` for backward-compatible features,

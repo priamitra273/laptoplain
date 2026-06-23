@@ -163,7 +163,7 @@ class ProjectRepository
                        t.task_category_id, t.created_by, t.updated_by, t.deleted_by,
                        t.emoji, t.title, t.description, t.start_date, t.due_date,
                        t.progress, t.story_points, t.sequence_number, t.is_archived,
-                       t.project_id, t.created_at, t.updated_at, t.deleted_at, 0 AS depth
+                       t.project_id, t.completed_at, t.created_at, t.updated_at, t.deleted_at, 0 AS depth
                 FROM tasks t
                 WHERE t.project_id = :projectId
                   AND t.parent_id IS NULL
@@ -173,7 +173,7 @@ class ProjectRepository
                        c.task_category_id, c.created_by, c.updated_by, c.deleted_by,
                        c.emoji, c.title, c.description, c.start_date, c.due_date,
                        c.progress, c.story_points, c.sequence_number, c.is_archived,
-                       c.project_id, c.created_at, c.updated_at, c.deleted_at, tt.depth + 1
+                       c.project_id, c.completed_at, c.created_at, c.updated_at, c.deleted_at, tt.depth + 1
                 FROM tasks c
                 JOIN task_tree tt ON c.parent_id = tt.id
                 WHERE c.deleted_at IS NULL

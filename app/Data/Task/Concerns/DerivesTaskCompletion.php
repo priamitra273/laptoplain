@@ -23,10 +23,10 @@ trait DerivesTaskCompletion
 
         $isCompleted = in_array(strtoupper($statusName), self::COMPLETED_STATUSES, true);
 
-        $completedAt = $isCompleted ? $task->updated_at?->toJSON() : null;
+        $completedAt = $isCompleted ? $task->completed_at : null;
 
         $isOverdue = $isCompleted
-            ? Carbon::parse($task->updated_at)->isAfter(Carbon::parse($task->due_date)->endOfDay())
+            ? Carbon::parse($task->completed_at)->isAfter(Carbon::parse($task->due_date)->endOfDay())
             : Carbon::parse($task->due_date)->endOfDay()->isPast();
 
         return [$completedAt, $isOverdue];

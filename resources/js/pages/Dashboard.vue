@@ -107,7 +107,7 @@ const onTaskRowClick = (event: any) => {
 };
 
 const onProjectRowClick = (event: any) => {
-    router.visit(route('project.show', event.data.id));
+    router.visit(route('project.show.kanban', event.data.id));
 };
 
 const validMembers = computed(() => props.stats.members.list.filter((member) => member !== null && member !== undefined));

@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { ProjectPriorityOption, ProjectStatusOption, ShellProject } from '@/pages/project-lazy';
 import moment from 'moment';
 import { ref, watch } from 'vue';
-import type { ProjectPriorityOption, ProjectStatusOption, ShellProject } from '@/pages/project-lazy';
 
 interface Props {
     project: ShellProject;
@@ -61,6 +61,7 @@ const onDueDateChange = (value: Date | Date[] | (Date | null)[] | null | undefin
     if (value instanceof Date) {
         emit('update', value, 'due_date');
     }
+
     editMode.value.dueDate = false;
 };
 </script>

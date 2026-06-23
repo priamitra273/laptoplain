@@ -17,13 +17,13 @@ class ProjectUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'sometimes|required|string|max:255',
+            'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'emoji' => 'sometimes|nullable|string|max:10',
-            'start_date' => 'sometimes|required|date',
-            'due_date' => 'sometimes|required|date|after_or_equal:start_date',
-            'status_id' => 'sometimes|required|exists:ms_project_statuses,id',
-            'priority_id' => 'sometimes|required|exists:ms_project_priority,id',
+            'emoji' => 'sometimes|string|max:10',
+            'start_date' => 'sometimes|date',
+            'due_date' => 'sometimes|date|after_or_equal:start_date',
+            'status_id' => 'sometimes|exists:ms_project_statuses,id',
+            'priority_id' => 'sometimes|exists:ms_project_priority,id',
         ];
     }
 
@@ -40,7 +40,7 @@ class ProjectUpdateRequest extends FormRequest
             $projectRouteParam = $this->route('project');
             $projectId = is_string($projectRouteParam) ? Sqids::decode($projectRouteParam) : $projectRouteParam;
 
-            if (!$projectId) {
+            if (! $projectId) {
                 return;
             }
 
@@ -59,18 +59,22 @@ class ProjectUpdateRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        if (!$this->has('owned_id')) {
+        if (! $this->has('owned_id')) {
             $this->merge([
                 'owned_id' => Auth::id(),
             ]);
         }
 
-        $statusId = $this->status_id;
-        $priorityId = $this->priority_id;
+        if ($this->status_id) {
+            $this->merge([
+                'status_id' => Sqids::decode($this->status_id),
+            ]);
+        }
 
-        $this->merge([
-            'status_id'   => is_string($statusId) ? Sqids::decode($statusId) : $statusId,
-            'priority_id' => is_string($priorityId) ? Sqids::decode($priorityId) : $priorityId,
-        ]);
+        if ($this->priority_id) {
+            $this->merge([
+                'priority_id' => Sqids::decode($this->priority_id),
+            ]);
+        }
     }
 }

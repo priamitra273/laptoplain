@@ -32,7 +32,9 @@ class AppServiceProvider extends ServiceProvider
         Media::observe(MediaObserver::class);
 
         LogViewer::auth(function ($request) {
-            return $request->user() && $request->user()->email === 'dhenistian.dickie@balitower.co.id';
+            return app()->isProduction()
+                ? $request->user() && $request->user()->email === 'dhenistian.dickie@balitower.co.id'
+                : true;
         });
     }
 }

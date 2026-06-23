@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import AppLayout from '@/layouts/avalon/AppLayout.vue';
+import type { ShellProps, TabItem } from '@/pages/project-lazy';
 import { ProjectPolicyKey } from '@/types/type';
 import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, provide, ref, watch } from 'vue';
-import type { ShellProps, TabItem } from '@/pages/project-lazy';
 import ProjectHeader from '../partials/ProjectHeader.vue';
 import ProjectStats from '../partials/ProjectStats.vue';
 

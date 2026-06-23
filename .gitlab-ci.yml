@@ -14,8 +14,9 @@ build_development:
       cd /var/www/Development_Gitlab/devitproject/ &&
       git reset --hard HEAD &&
       git clean -fd &&
-      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git development && 
+      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git development &&
       composer install &&
+      php artisan optimize:clear &&
       npm install &&
       npm run build &&
       php artisan optimize
@@ -39,9 +40,10 @@ build_production:
       cd /var/www/Production_Gitlab/itproject/ &&
       git reset --hard HEAD &&
       git clean -fd &&
-      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git main && 
+      git pull https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.balitower.co.id/balitower/itproject.balitower.co.id.git main &&
       composer install &&
       php artisan migrate --force &&
+      php artisan optimize:clear &&
       npm install &&
       npm run build &&
       php artisan optimize

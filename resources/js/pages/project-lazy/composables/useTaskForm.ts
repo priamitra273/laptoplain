@@ -1,5 +1,16 @@
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
-import type { LazyTaskFormData, LazyTaskFormProps, ParentTaskNode, SavedTaskPayload, SlimUser, TagOption, TaskCategoryOption, TaskPriorityOption, TaskStatusOption, TaskTypeOption } from '@/pages/project-lazy';
+import type {
+    LazyTaskFormData,
+    LazyTaskFormProps,
+    ParentTaskNode,
+    SavedTaskPayload,
+    SlimUser,
+    TagOption,
+    TaskCategoryOption,
+    TaskPriorityOption,
+    TaskStatusOption,
+    TaskTypeOption,
+} from '@/pages/project-lazy';
 import type { UploadedFile } from '@/types';
 import { ProjectPolicyKey } from '@/types/type';
 import { useForm, usePage } from '@inertiajs/vue3';
@@ -68,7 +79,9 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
 
     const authUser = computed(() => usePage().props.auth.user);
 
-    const fieldDisabled = (field: string): boolean => !canUpdateTaskField(field);
+    const fieldDisabled = (field: string): boolean => {
+        return !!props.task && !canUpdateTaskField(field);
+    };
 
     const formattedMemberOption = computed<SlimUser[]>(() => props.members.map((m) => m.user));
 
@@ -270,7 +283,12 @@ export const useTaskForm = (props: LazyTaskFormProps, emit: TaskFormEmit) => {
             const authExistsInMembers = members.some((m) => m.id === authUser.value.id);
 
             if (authExistsInOptions && !authExistsInMembers) {
-                members.push({ id: authUser.value.id, name: authUser.value.name, avatar_url: authUser.value.avatar_url, email: authUser.value.email });
+                members.push({
+                    id: authUser.value.id,
+                    name: authUser.value.name,
+                    avatar_url: authUser.value.avatar_url,
+                    email: authUser.value.email,
+                });
             }
 
             selectedMembers.value = members;

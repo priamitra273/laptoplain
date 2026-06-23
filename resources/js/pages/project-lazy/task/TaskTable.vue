@@ -169,13 +169,13 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                 removableSort
                 :pt="{ row: rowPt }"
             >
-                <Column :expander="false" style="width: 3rem" v-if="canTaskCreate || canTaskUpdate || canTaskDelete" frozen align-frozen="left">
+                <Column :expander="false" v-if="canTaskCreate || canTaskUpdate || canTaskDelete" frozen align-frozen="left">
                     <template #header>
-                        <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary aria-label="Select all tasks" />
+                        <!-- <Checkbox :modelValue="isAllSelected" @update:modelValue="toggleSelectAll" binary aria-label="Select all tasks" /> -->
                     </template>
 
                     <template #body="{ node }">
-                        <Checkbox
+                        <!-- <Checkbox
                             :modelValue="selectedKey[node.key]?.checked"
                             :aria-label="`Select task ${node.data.title}`"
                             @update:modelValue="
@@ -189,6 +189,14 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                                 }
                             "
                             binary
+                        /> -->
+                        <i
+                            v-if="canMoveTask"
+                            data-task-drag-handle="true"
+                            class="pi pi-bars shrink-0 cursor-grab text-surface-400/90 transition-colors hover:text-surface-600 active:cursor-grabbing dark:text-surface-500 dark:hover:text-surface-300"
+                            :style="draggedKey === node.key ? { color: 'var(--p-primary-color)' } : undefined"
+                            aria-label="Drag to reorder or nest"
+                            v-tooltip.top="'Drag to reorder / nest'"
                         />
                     </template>
                 </Column>
@@ -196,15 +204,6 @@ const toggleRowMenu = (event: Event, node: { data: ListTask; original: ListTask 
                 <Column field="title" header="Title" sortable frozen expander align-frozen="left" style="min-width: 240px">
                     <template #body="{ node }">
                         <div class="flex items-center gap-2 rounded px-1 py-1">
-                            <i
-                                v-if="canMoveTask"
-                                data-task-drag-handle="true"
-                                class="pi pi-bars shrink-0 cursor-grab text-surface-400 transition-colors hover:text-surface-600 active:cursor-grabbing dark:text-surface-500 dark:hover:text-surface-300"
-                                :style="draggedKey === node.key ? { color: 'var(--p-primary-color)' } : undefined"
-                                aria-label="Drag to reorder or nest"
-                                v-tooltip.top="'Drag to reorder / nest'"
-                            />
-
                             <i
                                 v-if="node.data.category?.id"
                                 v-tooltip.top="node.data.category.name"

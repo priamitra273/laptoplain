@@ -343,7 +343,7 @@ watch(visibleForm, (val) => {
                 <Column header="Action" frozen alignFrozen="right" style="min-width: 100px">
                     <template #body="{ data }">
                         <div class="flex gap-2">
-                            <Link :href="route('project.show', { encoded: data.id })">
+                            <Link :href="route('project.show.kanban', { encoded: data.id })">
                                 <Button
                                     icon="pi pi-eye"
                                     severity="secondary"

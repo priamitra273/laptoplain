@@ -395,7 +395,7 @@ watch(viewMode, () => {
                                         </Link>
                                         <Link
                                             v-if="task.project"
-                                            :href="route('project.show', { encoded: task.project.id })"
+                                            :href="route('project.show.kanban', { encoded: task.project.id })"
                                             class="inline-flex w-fit items-center gap-1 text-xs text-surface-500 hover:text-primary-600 dark:text-surface-400 dark:hover:text-primary-400"
                                             :title="task.project.title"
                                             @click.stop

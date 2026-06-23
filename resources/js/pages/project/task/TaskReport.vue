@@ -141,7 +141,7 @@ const toggleFilters = () => {
 };
 
 const navigateToProject = (encodedProjectId: string) => {
-    router.visit(route('project.show', { encoded: encodedProjectId }));
+    router.visit(route('project.show.kanban', { encoded: encodedProjectId }));
 };
 
 const exportReport = () => {

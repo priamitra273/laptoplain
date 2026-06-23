@@ -323,7 +323,7 @@ const subtaskCounts = (task: AssignedTask) => ({
                             <!-- Project link -->
                             <Link
                                 v-if="item.project"
-                                :href="route('project.show', item.project.id)"
+                                :href="route('project.show.kanban', item.project.id)"
                                 class="mb-2 inline-flex items-center gap-1 text-[11px] text-surface-400 transition-colors hover:text-surface-700 dark:text-surface-500 dark:hover:text-surface-300"
                                 @click.stop
                             >

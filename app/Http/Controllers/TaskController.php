@@ -252,7 +252,7 @@ class TaskController extends Controller
 
         $task->delete();
 
-        return to_route('project.show', ['encoded' => $encoded])
+        return to_route('project.show.list', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');
     }
 

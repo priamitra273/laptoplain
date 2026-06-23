@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import Breadcrumb from 'primevue/breadcrumb';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
-import { computed } from 'vue';
+import { MenuItem } from 'primevue/menuitem';
+import Skeleton from 'primevue/skeleton';
+import { computed, onMounted, ref } from 'vue';
 
 import 'emoji-mart-vue-fast/css/emoji-mart.css';
 import emojiData from 'emoji-mart-vue-fast/data/all.json';
 import { Emoji, EmojiIndex } from 'emoji-mart-vue-fast/src';
-import { MenuItem } from 'primevue/menuitem';
 import type { Project, Task } from '../../index.d.ts';
+
+interface TaskParent {
+    id: string;
+    key: string;
+    title: string;
+    category?: { name?: string; icon?: string } | null;
+}
 
 const emojiIndex = new EmojiIndex(emojiData);
 
@@ -20,94 +27,83 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const breadcrumbItems = computed<MenuItem[]>(() => [
-    {
-        label: 'Projects',
-        icon: 'pi pi-folder',
-        command: () => router.visit(route('project.index')),
-    },
-    {
-        label: props.project.title,
-        icon: 'pi pi-folder-open',
-        command: () => router.visit(route('project.show', { encoded: props.project.id })),
-    },
-    {
-        label: props.task.title,
-        icon: 'pi pi-file',
-    },
-]);
+const headerEmoji = computed(() => props.task.emoji || props.project.emoji || '');
 
-const breadcrumbHome = {
-    icon: 'pi pi-home',
-    command: () => router.visit(route('dashboard')),
-};
+const loadingParents = ref(true);
+const breadcrumbItems = ref<MenuItem[]>([]);
 
-const goToProject = () => {
-    if (props.project?.id) {
-        router.visit(route('project.show', { encoded: props.project.id }));
+const projectItem = (): MenuItem => ({
+    label: props.project.title,
+    icon: 'pi pi-folder',
+    command: () => router.visit(route('project.show.kanban', { encoded: props.project.id })),
+});
+
+const fetchParents = async () => {
+    loadingParents.value = true;
+
+    try {
+        const { data } = await axios.get(route('task.parents', { task: props.task.id }));
+        const parents = (data?.data ?? []) as TaskParent[];
+
+        const items: MenuItem[] = [projectItem()];
+
+        if (parents.length) {
+            // getParents() returns root → … → current task (current is last).
+            parents.forEach((parent, index) => {
+                const isCurrent = index === parents.length - 1;
+                items.push({
+                    label: parent.title || parent.key,
+                    icon: parent.category?.icon ?? (isCurrent ? 'pi pi-file' : 'pi pi-sitemap'),
+                    command: isCurrent ? undefined : () => router.visit(route('task.show', parent.id)),
+                });
+            });
+        } else {
+            items.push({ label: props.task.title, icon: 'pi pi-file' });
+        }
+
+        breadcrumbItems.value = items;
+    } catch {
+        breadcrumbItems.value = [projectItem(), { label: props.task.title, icon: 'pi pi-file' }];
+    } finally {
+        loadingParents.value = false;
     }
 };
+
+onMounted(fetchParents);
 </script>
 
 <template>
-    <div class="flex flex-col gap-6">
-        <Card class="rounded-2xl border-0 shadow-md">
-            <template #content>
-                <Breadcrumb :home="breadcrumbHome" :model="breadcrumbItems" class="border-none bg-transparent p-0 text-sm">
-                    <template #item="{ item, props }">
-                        <a
-                            v-bind="props.action"
-                            class="flex cursor-pointer items-center gap-1.5 text-gray-500 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                        >
-                            <i :class="item.icon" class="text-xs"></i>
-                            <span class="max-w-prose truncate font-medium" :title="item.label as string">
-                                {{ item.label }}
-                            </span>
-                        </a>
-                    </template>
-                </Breadcrumb>
+    <div class="flex flex-col gap-3 border-b border-surface-200 pb-4 dark:border-surface-700">
+        <Skeleton v-if="loadingParents" width="22rem" height="1rem" />
+        <Breadcrumb v-else :model="breadcrumbItems" :pt="{ root: '!overflow-x-auto !border-0 !bg-transparent !p-0' }">
+            <template #item="{ item }">
+                <button
+                    v-if="item.command"
+                    type="button"
+                    class="flex items-center gap-1.5 rounded text-surface-500 transition-colors hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-primary-400"
+                    @click="item.command?.({ originalEvent: $event, item })"
+                >
+                    <i v-if="item.icon" :class="item.icon" class="text-xs" />
+                    <span class="max-w-[10rem] truncate">{{ item.label }}</span>
+                </button>
+                <span v-else class="flex items-center gap-1.5 font-medium text-surface-700 dark:text-surface-200">
+                    <i v-if="item.icon" :class="item.icon" class="text-xs" />
+                    <span class="max-w-[14rem] truncate">{{ item.label }}</span>
+                </span>
             </template>
-        </Card>
+            <template #separator>
+                <span class="text-surface-300 dark:text-surface-600">/</span>
+            </template>
+        </Breadcrumb>
 
-        <Card class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:from-gray-800 dark:to-gray-900">
-            <template #content>
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <Button
-                        icon="pi pi-arrow-left"
-                        text
-                        rounded
-                        severity="secondary"
-                        @click="router.visit(route('project.show', { encoded: project.id }))"
-                        class="hover:bg-surface-100 dark:hover:bg-surface-800"
-                    />
-                    <div class="flex cursor-pointer items-start gap-4 transition-transform hover:scale-[1.02]" @click="goToProject">
-                        <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800">
-                            <Emoji
-                                v-if="props.project?.emoji?.startsWith(':')"
-                                :data="emojiIndex"
-                                :emoji="props.project.emoji"
-                                set="google"
-                                :size="36"
-                            />
-                            <span v-else class="text-4xl">
-                                {{ props.project.emoji }}
-                            </span>
-                        </div>
-                        <div class="flex-1">
-                            <h1 class="mb-1 break-all text-3xl font-bold text-gray-800 dark:text-white">
-                                {{ props.task.title }}
-                            </h1>
-                            <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                <i class="pi pi-folder text-blue-500"></i>
-                                <span>Project:</span>
-                                <span class="font-semibold text-blue-600 dark:text-blue-400">
-                                    {{ props.project.title }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </Card>
+        <div class="flex items-center gap-3">
+            <span v-if="headerEmoji" class="shrink-0 leading-none" aria-hidden="true">
+                <Emoji v-if="headerEmoji.startsWith(':')" :data="emojiIndex" :emoji="headerEmoji" set="google" :size="34" />
+                <span v-else class="text-4xl leading-none">{{ headerEmoji }}</span>
+            </span>
+            <h1 class="min-w-0 break-words text-2xl font-semibold leading-tight tracking-tight text-surface-900 dark:text-surface-0">
+                {{ props.task.title }}
+            </h1>
+        </div>
     </div>
 </template>

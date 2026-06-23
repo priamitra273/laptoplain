@@ -47,10 +47,14 @@ class SprintController extends Controller
     }
 
     // PUT /project/{projectEncoded}/sprints/{sprintEncoded}
-    public function update(SprintUpdateRequest $request, string $projectEncoded, string $sprintEncoded): RedirectResponse
+    public function update(SprintUpdateRequest $request, string $projectEncoded, string $sprintEncoded): JsonResponse|RedirectResponse
     {
         $sprint = $this->service->findByProject(Sqids::decode($sprintEncoded), Sqids::decode($projectEncoded));
         $this->service->update($sprint, $request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Sprint updated successfully']);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', 'Sprint updated successfully');
@@ -80,20 +84,28 @@ class SprintController extends Controller
     }
 
     // PATCH /project/{projectEncoded}/sprints/{sprintEncoded}/start
-    public function start(SprintStartRequest $request, string $projectEncoded, string $sprintEncoded): RedirectResponse
+    public function start(SprintStartRequest $request, string $projectEncoded, string $sprintEncoded): JsonResponse|RedirectResponse
     {
         $sprint = $this->service->findByProject(Sqids::decode($sprintEncoded), Sqids::decode($projectEncoded));
         $this->service->start($sprint, $request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => "Sprint \"{$sprint->name}\" started"]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', "Sprint \"{$sprint->name}\" started");
     }
 
     // PATCH /project/{projectEncoded}/sprints/{sprintEncoded}/complete
-    public function complete(SprintCompleteRequest $request, string $projectEncoded, string $sprintEncoded): RedirectResponse
+    public function complete(SprintCompleteRequest $request, string $projectEncoded, string $sprintEncoded): JsonResponse|RedirectResponse
     {
         $sprint = $this->service->findByProject(Sqids::decode($sprintEncoded), Sqids::decode($projectEncoded));
         $this->service->complete($sprint, $request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => "Sprint \"{$sprint->name}\" completed"]);
+        }
 
         return to_route('project.show', ['encoded' => $projectEncoded])
             ->with('success', "Sprint \"{$sprint->name}\" completed");

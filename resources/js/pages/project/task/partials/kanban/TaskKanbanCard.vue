@@ -3,10 +3,10 @@ import TaskPriorityIcon from '@/components/TaskPriorityIcon.vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import { Link } from '@inertiajs/vue3';
 import moment from 'moment';
-import type { Task } from '../../..';
+import type { ProjectTask } from '../../..';
 
 const props = defineProps<{
-    task: Task;
+    task: ProjectTask;
     dragging: boolean;
     isOverdue: boolean;
     subtaskCount: number;
@@ -15,11 +15,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    detail: [task: Task];
-    menu: [e: MouseEvent, task: Task];
+    detail: [task: ProjectTask];
+    menu: [e: MouseEvent, task: ProjectTask];
     add: [taskId: string];
-    edit: [task: Task, parentId: string | null];
-    delete: [task: Task];
+    edit: [task: ProjectTask, parentId: string | null];
+    delete: [task: ProjectTask];
 }>();
 </script>
 

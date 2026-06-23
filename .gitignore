@@ -11,6 +11,7 @@
 .env.backup
 .env.production
 .env.local
+.env.testing
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -26,3 +27,11 @@ yarn-error.log
 **/.DS_Store
 
 /.agents
+/.claude
+/.cursor/skills/
+/.gemini/skills/
+/.github/skills/
+
+.worktree/
+.impeccable/
+.superpowers/

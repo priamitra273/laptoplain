@@ -1,12 +1,19 @@
 {
     "agents": [
-        "cursor",
-        "gemini"
-    ],
-    "editors": [
+        "claude_code",
+        "codex",
         "cursor",
         "gemini",
+        "opencode"
+    ],
+    "editors": [
+        "claude_code",
+        "codex",
+        "cursor",
+        "gemini",
+        "opencode",
         "vscode"
     ],
-    "guidelines": []
+    "guidelines": [],
+    "herd_mcp": true
 }

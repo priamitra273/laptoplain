@@ -183,8 +183,11 @@ class TaskUpdateRequest extends FormRequest
             ],
             'remove_tag' => $removeTag,
             'progress' => $this->progress_value,
-            'task_category_id' => is_string($categoryId) ? Sqids::decode($categoryId) : null, // ← fix: selalu di-merge, null jika kosong
         ];
+
+        if ($categoryId) {
+            $merged['task_category_id'] = Sqids::decode($categoryId);
+        }
 
         if ($statusId) {
             $merged['status_id'] = Sqids::decode($statusId);

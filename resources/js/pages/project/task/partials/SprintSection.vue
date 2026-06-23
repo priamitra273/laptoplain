@@ -6,7 +6,7 @@ import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import { computed, inject, ref, watch } from 'vue';
 import { DraggableEvent, VueDraggable } from 'vue-draggable-plus';
-import type { Sprint, Task } from '../type.d';
+import type { ProjectTask, Sprint } from '../type.d';
 import { BacklogKey } from '../types';
 import TaskRow from './Taskrow.vue';
 
@@ -61,7 +61,7 @@ const onSort = (e: any) => {
     // Actually, VueDraggablePlus 'add' and 'remove' events are better for cross-list
 };
 
-const onAdd = (e: DraggableEvent<Task>) => {
+const onAdd = (e: DraggableEvent<ProjectTask>) => {
     if (e.data) {
         emit('taskMoved', e.data.id, e.from.dataset.sprintId ?? null, props.sprint.id);
     }

@@ -9,8 +9,8 @@ GanttModule(Highcharts);
 interface TaskNode {
     id: string | number;
     title: string;
-    start_date?: string;
-    due_date?: string;
+    start_date?: string | null;
+    due_date?: string | null;
     progress?: number;
     dependency_id?: string | number;
     sub_task_recursive?: TaskNode[];

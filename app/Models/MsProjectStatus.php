@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Observers\MsProjectStatusObserver;
 use App\Traits\LogsActivityProjectStatus;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy(MsProjectStatusObserver::class)]
 class MsProjectStatus extends Model
 {
-    use SoftDeletes, LogUsers, LogsActivityProjectStatus;
+    use LogsActivityProjectStatus, LogUsers, SoftDeletes;
 
     protected $table = 'ms_project_statuses';
 
@@ -20,12 +23,12 @@ class MsProjectStatus extends Model
         'owned_id',
         'created_by',
         'updated_by',
-        'deleted_by'
+        'deleted_by',
     ];
 
     protected $casts = [
         'id' => 'integer',
-        'owned_id' => 'integer'
+        'owned_id' => 'integer',
     ];
 
     public function getRouteKeyName()

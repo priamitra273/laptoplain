@@ -3,7 +3,7 @@ import { computed } from 'vue';
 
 const props = withDefaults(
     defineProps<{
-        priority: { name: string; severity?: string };
+        priority: { name: string; severity?: string | null };
         size?: string;
     }>(),
     {

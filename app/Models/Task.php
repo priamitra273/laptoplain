@@ -183,7 +183,7 @@ class Task extends Model implements HasMedia
             'priority:id,name,severity',
             'type:id,name,severity',
             'category:id,name,icon,severity',
-            'users:id,name',
+            'users:id,name,email',
             'tags:id,name,severity',
             'creator:id,name',
             'creator.media',
@@ -215,7 +215,13 @@ class Task extends Model implements HasMedia
 
     public function calculateProgress(): float
     {
-        $avg = $this->children()->avg('progress');
+        // Pakai relasi children yang sudah di-eager-load (Project::tasks()->with('children')
+        // dan scopeWithRecursive() memuatnya). Hanya query bila benar-benar belum dimuat.
+        $children = $this->relationLoaded('children')
+            ? $this->children
+            : $this->children()->get(['id', 'parent_id', 'progress']);
+
+        $avg = $children->isEmpty() ? null : $children->avg('progress');
 
         return round($avg ?? (float) $this->progress, 2);
     }

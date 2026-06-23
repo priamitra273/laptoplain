@@ -1,15 +1,14 @@
 <script setup lang="ts">
+import UserAvatar from '@/components/UserAvatar.vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
-import Avatar from 'primevue/avatar';
-import Card from 'primevue/card';
 import Chip from 'primevue/chip';
 import DatePicker from 'primevue/datepicker';
-import Divider from 'primevue/divider';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import SectionPanel from './SectionPanel.vue';
 
 import type { Project, Task, TaskFormField, TaskFormInput, TaskPriority, TaskStatus, TaskType, User } from '../../index.d.ts';
 
@@ -21,6 +20,7 @@ interface Props {
     types: TaskType[];
     isTaskMember: boolean;
     creator?: User;
+    assignedUsers?: User[];
 }
 
 const props = defineProps<Props>();
@@ -43,23 +43,16 @@ const isOwner = computed(() => {
     return props.project.project_members.some((member: any) => member.user.id === authUser.value.id && member.role.name === 'Owner');
 });
 
+const canEdit = computed(() => props.isTaskMember || hasPermission() || isOwner.value);
+
+const assignees = computed<User[]>(() => props.assignedUsers ?? []);
+
 const statusOption = computed(() => {
     return isDeveloper.value ? props.statuses.filter((status) => ['In Progress', 'In Review'].includes(status.name)) : props.statuses;
 });
 const requiresDueDateForStatus = (statusName?: string) => statusName === 'In Progress';
 
 const formatDate = (date?: string) => (date ? moment(date).format('DD MMM YYYY') : '-');
-const formatDateTime = (date?: string) => (date ? moment(date).format('DD MMM YYYY HH:mm') : '-');
-
-const getInitials = (name: string) =>
-    name
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-
-const getUserColor = (index: number) => `hsl(${index * 60}, 70%, 60%)`;
 
 const editingField = ref<string | null>(null);
 const editValue = ref<any>(null);
@@ -152,12 +145,18 @@ const autoSave = (field: TaskFormField, value: any, extraFields?: Partial<TaskFo
                 cancelEdit();
                 handleClickOutside(new MouseEvent('click') as any);
             },
-            onError: () => {
+            onError: (errors) => {
+                let errorMessage = `Failed to update ${getFieldLabel(field as string)}. Please try again.`;
+
+                if (Object.keys(errors).length) {
+                    errorMessage = errors[Object.keys(errors)[0]];
+                }
+
                 toast.add({
                     severity: 'error',
                     summary: 'Update Failed',
-                    detail: `Failed to update ${getFieldLabel(field as string)}. Please try again.`,
-                    life: 3000,
+                    detail: errorMessage,
+                    life: 5000,
                 });
             },
         },
@@ -233,207 +232,194 @@ const hasSubTasks = computed(() => {
 </script>
 
 <template>
-    <Card class="rounded-2xl border-0 shadow-lg transition-shadow hover:shadow-xl">
-        <template #title>
-            <div class="flex items-center gap-2">
-                <i class="pi pi-info-circle text-purple-500"></i>
-                <h2 class="text-lg font-bold">Details</h2>
-            </div>
-        </template>
-        <template #content>
-            <Divider class="my-3" />
-            <div class="space-y-4">
-                <!-- Created By Section -->
-                <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                    <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400"><i class="pi pi-user mr-1 text-indigo-500"></i>CREATED BY</p>
-                    <div v-if="props.creator" class="flex items-center gap-2">
-                        <Avatar
-                            :image="
-                                props.creator.avatar_url && props.creator.avatar_url !== '/images/default-avatar.png'
-                                    ? props.creator.avatar_url
-                                    : undefined
-                            "
-                            :label="
-                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
-                                    ? getInitials(props.creator.name)
-                                    : undefined
-                            "
-                            shape="circle"
-                            size="normal"
-                            :style="
-                                !props.creator.avatar_url || props.creator.avatar_url === '/images/default-avatar.png'
-                                    ? { backgroundColor: getUserColor(0), color: 'white', fontWeight: '600' }
-                                    : {}
-                            "
+    <SectionPanel title="Details" icon="pi pi-sliders-h">
+        <dl class="divide-y divide-surface-200 dark:divide-surface-700">
+            <!-- Status -->
+            <div class="flex items-center justify-between gap-3 py-3 first:pt-0">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Status</dt>
+                <dd data-editable class="flex min-w-0 flex-1 justify-end">
+                    <button
+                        v-if="editingField !== 'status_id'"
+                        type="button"
+                        class="-mr-1.5 rounded-md px-1.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :class="canEdit ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800' : 'cursor-not-allowed opacity-70'"
+                        @click="startEdit('status_id', props.task.status_id, $event)"
+                    >
+                        <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" />
+                    </button>
+                    <div v-else class="flex w-full justify-end" @click.stop>
+                        <Select
+                            v-model="editValue"
+                            :options="statusOption"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="Select Status"
+                            class="w-full max-w-[12rem]"
+                            @change="handleSelectChange('status_id', editValue)"
                         />
-                        <div>
-                            <p class="text-sm font-semibold">{{ props.creator.name }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDateTime(props.task.created_at) }}</p>
-                        </div>
                     </div>
-                    <p v-else class="text-sm italic text-gray-400">Unknown</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">STATUS</p>
-                        <div
-                            v-if="editingField !== 'status_id'"
-                            @click="startEdit('status_id', props.task.status_id, $event)"
-                            :class="[
-                                props.isTaskMember || hasPermission() || isOwner
-                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed opacity-75',
-                                'rounded p-1 transition-all',
-                            ]"
-                        >
-                            <Tag :value="props.task.status?.name" :severity="props.task.status?.severity" class="w-full" />
-                        </div>
-                        <div v-else @click.stop>
-                            <Select
-                                v-model="editValue"
-                                :options="statusOption"
-                                optionLabel="name"
-                                optionValue="id"
-                                placeholder="Select Status"
-                                class="w-full"
-                                @change="handleSelectChange('status_id', editValue)"
-                            />
-                        </div>
-                    </div>
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">PRIORITY</p>
-                        <div
-                            v-if="editingField !== 'priority_id'"
-                            @click="startEdit('priority_id', props.task.priority_id, $event)"
-                            :class="[
-                                props.isTaskMember || hasPermission() || isOwner
-                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed opacity-75',
-                                'rounded p-1 transition-all',
-                            ]"
-                        >
-                            <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" class="w-full" />
-                        </div>
-                        <div v-else @click.stop>
-                            <Select
-                                v-model="editValue"
-                                :options="props.priorities"
-                                optionLabel="name"
-                                optionValue="id"
-                                placeholder="Select Priority"
-                                class="w-full"
-                                @change="handleSelectChange('priority_id', editValue)"
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">TYPE</p>
-                        <div
-                            v-if="editingField !== 'type_id'"
-                            @click="startEdit('type_id', props.task.type_id, $event)"
-                            :class="[
-                                props.isTaskMember || hasPermission() || isOwner
-                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed opacity-75',
-                                'rounded p-1 transition-all',
-                            ]"
-                        >
-                            <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" class="w-full" />
-                        </div>
-                        <div v-else @click.stop>
-                            <Select
-                                v-model="editValue"
-                                :options="props.types"
-                                optionLabel="name"
-                                optionValue="id"
-                                placeholder="Select Type"
-                                class="w-full"
-                                @change="handleSelectChange('type_id', editValue)"
-                            />
-                        </div>
-                    </div>
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                        <p class="mb-2 flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                            PROGRESS
-                            <Tag v-if="hasSubTasks" value="Auto" severity="info" class="text-[10px]" />
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <div class="relative h-5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                                <div
-                                    class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
-                                    :style="{ width: `${props.task.progress}%` }"
-                                />
-                                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
-                                    {{ props.task.progress }}%
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                            <i class="pi pi-calendar mr-1 text-blue-500"></i>START DATE
-                        </p>
-                        <div
-                            v-if="editingField !== 'start_date'"
-                            @click="startEdit('start_date', props.task.start_date, $event)"
-                            :class="[
-                                props.isTaskMember || hasPermission() || isOwner
-                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed opacity-75',
-                                'rounded p-1 transition-all',
-                            ]"
-                        >
-                            <p class="text-sm font-semibold">{{ formatDate(props.task.start_date) }}</p>
-                        </div>
-                        <div v-else @click.stop>
-                            <DatePicker
-                                v-model="editValue"
-                                dateFormat="dd M yy"
-                                class="w-full"
-                                showIcon
-                                @date-select="handleSelectChange('start_date', editValue)"
-                            />
-                        </div>
-                    </div>
-                    <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800" data-editable>
-                        <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                            <i class="pi pi-calendar-times mr-1 text-red-500"></i>DUE DATE
-                        </p>
-                        <div
-                            v-if="editingField !== 'due_date'"
-                            @click="startEdit('due_date', props.task.due_date, $event)"
-                            :class="[
-                                props.isTaskMember || hasPermission() || isOwner
-                                    ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed opacity-75',
-                                'rounded p-1 transition-all',
-                            ]"
-                        >
-                            <p class="text-sm font-semibold">{{ formatDate(props.task.due_date) }}</p>
-                        </div>
-                        <div v-else @click.stop>
-                            <DatePicker
-                                v-model="editValue"
-                                dateFormat="dd M yy"
-                                class="w-full"
-                                showIcon
-                                @date-select="handleSelectChange('due_date', editValue)"
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div v-if="props.task.tags?.length" class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                    <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400"><i class="pi pi-tags mr-1 text-orange-500"></i>TAGS</p>
-                    <div class="flex flex-wrap gap-2">
-                        <Chip v-for="tag in props.task.tags" :key="tag.id ?? tag.name" :label="tag.name" class="text-xs" />
-                    </div>
-                </div>
+                </dd>
             </div>
-        </template>
-    </Card>
+
+            <!-- Priority -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Priority</dt>
+                <dd data-editable class="flex min-w-0 flex-1 justify-end">
+                    <button
+                        v-if="editingField !== 'priority_id'"
+                        type="button"
+                        class="-mr-1.5 rounded-md px-1.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :class="canEdit ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800' : 'cursor-not-allowed opacity-70'"
+                        @click="startEdit('priority_id', props.task.priority_id, $event)"
+                    >
+                        <Tag :value="props.task.priority?.name" :severity="props.task.priority?.severity" />
+                    </button>
+                    <div v-else class="flex w-full justify-end" @click.stop>
+                        <Select
+                            v-model="editValue"
+                            :options="props.priorities"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="Select Priority"
+                            class="w-full max-w-[12rem]"
+                            @change="handleSelectChange('priority_id', editValue)"
+                        />
+                    </div>
+                </dd>
+            </div>
+
+            <!-- Type -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Type</dt>
+                <dd data-editable class="flex min-w-0 flex-1 justify-end">
+                    <button
+                        v-if="editingField !== 'type_id'"
+                        type="button"
+                        class="-mr-1.5 rounded-md px-1.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :class="canEdit ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800' : 'cursor-not-allowed opacity-70'"
+                        @click="startEdit('type_id', props.task.type_id, $event)"
+                    >
+                        <Tag :value="props.task.type?.name" :severity="props.task.type?.severity" />
+                    </button>
+                    <div v-else class="flex w-full justify-end" @click.stop>
+                        <Select
+                            v-model="editValue"
+                            :options="props.types"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="Select Type"
+                            class="w-full max-w-[12rem]"
+                            @change="handleSelectChange('type_id', editValue)"
+                        />
+                    </div>
+                </dd>
+            </div>
+
+            <!-- Assignees -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Assignees</dt>
+                <dd class="flex min-w-0 justify-end">
+                    <div v-if="assignees.length" class="flex items-center -space-x-2">
+                        <UserAvatar
+                            v-for="user in assignees.slice(0, 5)"
+                            :key="user.id"
+                            :user="user"
+                            size="!h-7 !w-7 ring-2 ring-surface-0 dark:ring-surface-900"
+                        />
+                        <span
+                            v-if="assignees.length > 5"
+                            class="flex h-7 w-7 items-center justify-center rounded-full bg-surface-200 text-xs font-medium text-surface-700 ring-2 ring-surface-0 dark:bg-surface-700 dark:text-surface-200 dark:ring-surface-900"
+                        >
+                            +{{ assignees.length - 5 }}
+                        </span>
+                    </div>
+                    <span v-else class="text-sm text-surface-500 dark:text-surface-400">Unassigned</span>
+                </dd>
+            </div>
+
+            <!-- Progress -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400">
+                    Progress
+                    <Tag v-if="hasSubTasks" value="Auto" severity="secondary" class="!px-1.5 !py-0 !text-[10px] !font-medium" />
+                </dt>
+                <dd class="flex items-center gap-2">
+                    <div class="h-1.5 w-24 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700">
+                        <div class="h-full rounded-full bg-primary-500 transition-all duration-300" :style="{ width: `${props.task.progress}%` }" />
+                    </div>
+                    <span class="w-9 text-right text-sm font-medium tabular-nums text-surface-700 dark:text-surface-200"
+                        >{{ props.task.progress }}%</span
+                    >
+                </dd>
+            </div>
+
+            <!-- Start date -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Start date</dt>
+                <dd data-editable class="flex min-w-0 flex-1 justify-end">
+                    <button
+                        v-if="editingField !== 'start_date'"
+                        type="button"
+                        class="-mr-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-surface-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-200"
+                        :class="canEdit ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800' : 'cursor-not-allowed opacity-70'"
+                        @click="startEdit('start_date', props.task.start_date, $event)"
+                    >
+                        {{ formatDate(props.task.start_date) }}
+                    </button>
+                    <div v-else class="flex w-full justify-end" @click.stop>
+                        <DatePicker
+                            v-model="editValue"
+                            dateFormat="dd M yy"
+                            class="w-full max-w-[12rem]"
+                            showIcon
+                            @date-select="handleSelectChange('start_date', editValue)"
+                        />
+                    </div>
+                </dd>
+            </div>
+
+            <!-- Due date -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Due date</dt>
+                <dd data-editable class="flex min-w-0 flex-1 justify-end">
+                    <button
+                        v-if="editingField !== 'due_date'"
+                        type="button"
+                        class="-mr-1.5 flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :class="[
+                            canEdit ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800' : 'cursor-not-allowed opacity-70',
+                            props.task.is_overdue ? 'text-rose-600 dark:text-rose-400' : 'text-surface-700 dark:text-surface-200',
+                        ]"
+                        @click="startEdit('due_date', props.task.due_date, $event)"
+                    >
+                        <i v-if="props.task.is_overdue" class="pi pi-exclamation-circle text-xs" />
+                        {{ formatDate(props.task.due_date) }}
+                    </button>
+                    <div v-else class="flex w-full justify-end" @click.stop>
+                        <DatePicker
+                            v-model="editValue"
+                            dateFormat="dd M yy"
+                            class="w-full max-w-[12rem]"
+                            showIcon
+                            @date-select="handleSelectChange('due_date', editValue)"
+                        />
+                    </div>
+                </dd>
+            </div>
+
+            <!-- Tags -->
+            <div v-if="props.task.tags?.length" class="flex items-start justify-between gap-3 py-3">
+                <dt class="shrink-0 pt-1 text-sm text-surface-500 dark:text-surface-400">Tags</dt>
+                <dd class="flex flex-wrap justify-end gap-1.5">
+                    <Chip v-for="tag in props.task.tags" :key="tag.id ?? tag.name" :label="tag.name" class="!py-0.5 !text-xs" />
+                </dd>
+            </div>
+
+            <!-- Created -->
+            <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="text-sm text-surface-500 dark:text-surface-400">Created</dt>
+                <dd class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ formatDate(props.task.created_at) }}</dd>
+            </div>
+        </dl>
+    </SectionPanel>
 </template>

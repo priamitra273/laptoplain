@@ -10,7 +10,7 @@ import moment from 'moment';
 import { ListboxChangeEvent } from 'primevue/listbox';
 import { MenuItem } from 'primevue/menuitem';
 import { computed, ref, useTemplateRef } from 'vue';
-import type { Comment, Epic, Task, User } from '../../..';
+import type { Comment, Epic, ProjectTask, User } from '../../..';
 import KanbanRow from './KanbanRow.vue';
 
 import TaskActivity = App.Data.Task.TaskActivityData;
@@ -18,15 +18,15 @@ import TaskParent = App.Data.Task.TaskParentData;
 type FormDataType = Record<string, FormDataConvertible>;
 
 interface Props {
-    task: Task | null;
+    task: ProjectTask | null;
     epicTasks: Epic[];
     canAct: boolean;
     projectMembers?: User[];
 }
 
 interface Emits {
-    edit: [task: Task, parentId: string | null];
-    delete: [task: Task];
+    edit: [task: ProjectTask, parentId: string | null];
+    delete: [task: ProjectTask];
     add: [taskId: string];
 }
 
@@ -73,9 +73,9 @@ const parentForm = useForm<ParentFormData>({
     parent_id: null,
 });
 
-const subtaskCount = (task: Task) => task.sub_task_recursive?.length || 0;
+const subtaskCount = (task: ProjectTask) => task.sub_task_recursive?.length || 0;
 
-const doneSubtaskCount = (task: Task) => {
+const doneSubtaskCount = (task: ProjectTask) => {
     return (task.sub_task_recursive || []).filter((s) => s.status?.name?.toLowerCase().includes('done')).length;
 };
 
@@ -252,7 +252,7 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
                         </KanbanRow>
 
                         <KanbanRow label="Status" icon="Loader">
-                            <Tag v-if="task.status" :value="task.status?.name" :severity="task.status?.severity" />
+                            <Tag v-if="task.status" :value="task.status?.name" :severity="task.status?.severity ?? undefined" />
                         </KanbanRow>
 
                         <KanbanRow label="Start Date" icon="Calendar">
@@ -264,11 +264,11 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
                         </KanbanRow>
 
                         <KanbanRow label="Priority" icon="Target">
-                            <Tag v-if="task.priority" :value="task.priority?.name" :severity="task.priority?.severity" />
+                            <Tag v-if="task.priority" :value="task.priority?.name" :severity="task.priority?.severity ?? undefined" />
                         </KanbanRow>
 
                         <KanbanRow label="Type" icon="Tag">
-                            <Tag v-if="task.type" :value="task.type?.name" :severity="task.type?.severity" />
+                            <Tag v-if="task.type" :value="task.type?.name" :severity="task.type?.severity ?? undefined" />
                         </KanbanRow>
 
                         <KanbanRow label="Progress" icon="ClipboardCheck">
@@ -305,7 +305,7 @@ const onSelectEpic = (event: ListboxChangeEvent) => {
                                         >
                                             <span class="truncate text-surface-700 dark:text-surface-200">{{ sub.title }}</span>
                                             <div class="ml-2 flex shrink-0 items-center gap-1">
-                                                <Tag v-if="sub.status" :value="sub.status?.name" :severity="sub.status?.severity" />
+                                                <Tag v-if="sub.status" :value="sub.status?.name" :severity="sub.status?.severity ?? undefined" />
                                                 <Link :href="route('task.show', sub.id)">
                                                     <button class="rounded p-0.5 text-surface-400 hover:text-surface-700">
                                                         <i class="pi pi-external-link text-[10px]" />

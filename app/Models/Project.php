@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use App\Facades\Sqids;
+use App\Observers\ProjectObserver;
 use App\Traits\LogsActivityProject;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
+#[ObservedBy(ProjectObserver::class)]
 class Project extends Model
 {
     use LogsActivityProject, LogUsers, SoftDeletes;
@@ -165,21 +168,17 @@ class Project extends Model
 
     public function calculateProgress(): float
     {
-        $tasks = $this->tasks()->with('children')->get();
+        // Pakai relasi tasks yang sudah di-eager-load (findWithRelationsForShow).
+        // Hanya query bila belum dimuat (mis. dipanggil di luar alur show).
+        $tasks = $this->relationLoaded('tasks')
+            ? $this->tasks
+            : $this->tasks()->with('children')->get();
 
         if ($tasks->isEmpty()) {
             return 0;
         }
 
-        $total = 0;
-        $count = 0;
-
-        foreach ($tasks as $task) {
-            $total += $task->calculateProgress();
-            $count++;
-        }
-
-        return round($total / $count, 2);
+        return round($tasks->avg(fn (Task $task) => $task->calculateProgress()), 2);
     }
 
     public function scopeVisibleFor($query, User $user)

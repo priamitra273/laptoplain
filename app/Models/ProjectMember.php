@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Observers\ProjectMemberObserver;
 use App\Traits\LogsActivityProjectMember;
 use App\Traits\LogUsers;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy(ProjectMemberObserver::class)]
 class ProjectMember extends Model
 {
-    use SoftDeletes, LogUsers, LogsActivityProjectMember;
+    use LogsActivityProjectMember, LogUsers, SoftDeletes;
 
     protected $table = 'project_members';
 
@@ -22,7 +25,7 @@ class ProjectMember extends Model
         'is_active',
         'created_by',
         'updated_by',
-        'deleted_by'
+        'deleted_by',
     ];
 
     protected $casts = [
@@ -31,7 +34,7 @@ class ProjectMember extends Model
         'user_id' => 'integer',
         'project_role_id' => 'integer',
         'owned_id' => 'integer',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
     ];
 
     protected static function booted()
@@ -47,7 +50,6 @@ class ProjectMember extends Model
             }
         });
     }
-
 
     public function project(): BelongsTo
     {

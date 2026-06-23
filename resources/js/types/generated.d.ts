@@ -1,5 +1,14 @@
 declare namespace App {
     namespace Data {
+        export type MediaData = {
+            uuid: string;
+            file_name: string;
+            size: number;
+            mime_type: string;
+            url: string;
+            created_at: undefined;
+            updated_at: undefined;
+        };
         export type UserData = {
             id: number;
             name: string;
@@ -33,6 +42,10 @@ declare namespace App {
                 is_active: boolean;
                 user: App.Data.UserData;
                 role: App.Data.Project.ProjectRoleData;
+            };
+            export type ProjectOptionData = {
+                id: string;
+                title: string;
             };
             export type ProjectPriorityData = {
                 id: number;
@@ -90,11 +103,63 @@ declare namespace App {
             };
         }
         namespace Task {
+            export type AssignedTaskData = {
+                id: string;
+                title: string;
+                due_date: string | null;
+                is_overdue: boolean;
+                sequence_number: number | null;
+                status: App.Data.Task.TaskStatusData | null;
+                priority: App.Data.Task.TaskPriorityData | null;
+                type: App.Data.Task.TaskTypeData | null;
+                project: App.Data.Project.ProjectOptionData | null;
+                users: App.Data.UserData[];
+                sub_task_count: number;
+                sub_task_done_count: number;
+            };
             export type FilterOptionData = {
                 id: string;
                 name: string;
                 severity: string | null;
                 avatar_url: string | null;
+            };
+            export type ProjectTaskData = {
+                id: string;
+                owned_id: string | null;
+                parent_id: string | null;
+                status_id: string | null;
+                priority_id: string | null;
+                type_id: string | null;
+                created_by: number | null;
+                updated_by: number | null;
+                deleted_by: number | null;
+                emoji: string | null;
+                title: string;
+                description: string | null;
+                start_date: string | null;
+                due_date: string | null;
+                progress: number;
+                story_points: number | null;
+                sequence_number: number | null;
+                is_archived: boolean;
+                created_at: string | null;
+                updated_at: string | null;
+                deleted_at: string | null;
+                completed_at: string | null;
+                is_overdue: boolean;
+                project_id: string;
+                status: App.Data.Task.TaskStatusData | null;
+                priority: App.Data.Task.TaskPriorityData | null;
+                type: App.Data.Task.TaskTypeData | null;
+                category: App.Data.Task.TaskCategoryData | null;
+                creator: App.Data.UserData | null;
+                users: App.Data.UserData[];
+                tags: App.Data.Task.TagData[];
+                media: App.Data.MediaData[];
+                sub_task: App.Data.Task.ProjectTaskData[];
+                sub_task_recursive: App.Data.Task.ProjectTaskData[];
+                is_assigned: boolean | null;
+                is_created_by_me: boolean | null;
             };
             export type TagData = {
                 id: number;
@@ -140,7 +205,7 @@ declare namespace App {
                 category: App.Data.Task.TaskCategoryData | null;
             };
             export type TaskPriorityData = {
-                id: number;
+                id: string;
                 name: string;
                 severity: string | null;
             };
@@ -167,13 +232,13 @@ declare namespace App {
                 project_statuses: Array<any>;
             };
             export type TaskStatusData = {
-                id: number;
+                id: string;
                 name: string;
                 severity: string | null;
                 score: number | null;
             };
             export type TaskTypeData = {
-                id: number;
+                id: string;
                 name: string;
                 severity: string | null;
             };
@@ -197,6 +262,7 @@ declare namespace App {
             | 'assignee'
             | 'parent';
         export type TaskNotificationType = 'created' | 'updated' | 'deleted' | 'mentioned';
+        export type TaskStatusEnum = 'To Do' | 'In Progress' | 'In Review' | 'Completed' | 'Blocked' | 'Finished';
         export type WorkloadStatus = 'Free' | 'Almost Done' | 'Ongoing' | 'Overloaded';
     }
 }

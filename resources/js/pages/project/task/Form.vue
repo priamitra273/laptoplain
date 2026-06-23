@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
+import type { UploadedFile } from '@/types';
 import { ProjectPolicyKey } from '@/types/type';
 import { useForm, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 import { computed, inject, ref, watch } from 'vue';
-import type { Task, TaskCategory, TaskFormData, TaskFormProps, User } from '..';
+import type { ProjectTask, TaskCategory, TaskFormData, TaskFormProps, User } from '..';
 import InputAttachment from './partials/form-ui/InputAttachment.vue';
 import InputDateRange from './partials/form-ui/InputDateRange.vue';
 import InputDescription from './partials/form-ui/InputDescription.vue';
@@ -48,9 +49,9 @@ const form = useForm<TaskFormData>({
     project_id: props.projectId,
     title: props?.task?.title ?? '',
     description: props?.task?.description ?? '',
-    type_id: props?.task?.type?.id ?? null,
-    status_id: props?.task?.status?.id ?? null,
-    priority_id: props?.task?.priority?.id ?? null,
+    type_id: props?.task?.type?.id != null ? String(props.task.type.id) : null,
+    status_id: props?.task?.status?.id != null ? String(props.task.status.id) : null,
+    priority_id: props?.task?.priority?.id != null ? String(props.task.priority.id) : null,
     task_category_id: props?.task?.category?.id ?? (props.excludeEpicCategory ? null : null),
     sprint_id: props.sprintId,
     parent_id: props.onlyEpicCategory ? null : (props?.parentId ?? null),
@@ -64,7 +65,7 @@ const form = useForm<TaskFormData>({
         new: [],
         exists: [],
     },
-    attachments: props.task?.media ?? [],
+    attachments: (props.task?.media as UploadedFile[] | undefined) ?? [],
     remove_tag: [],
 });
 
@@ -142,7 +143,7 @@ const requiresDates = computed(() => {
 
 const isEdit = computed(() => !!props.task);
 
-const findTaskById = (tasks: Task[], id: string): Task | null => {
+const findTaskById = (tasks: ProjectTask[], id: string): ProjectTask | null => {
     for (const task of tasks) {
         if (task.id === id) return task;
         const children = task.sub_task_recursive ?? [];
@@ -183,7 +184,7 @@ const submit = () => {
     form.assign_users = selected.filter((id) => !existed.includes(id));
     form.unassign_users = existed.filter((id) => !selected.includes(id));
 
-    const oldTags = props?.task?.tags?.map((t) => t.id) ?? [];
+    const oldTags = props?.task?.tags?.map((t) => String(t.id)) ?? [];
     const tagExist = selectedTags.value.filter((t) => t.id);
     const tagExistIds = tagExist.map((t) => t.id);
     const addTagExist = tagExistIds.filter((id) => !oldTags.includes(id));
@@ -265,7 +266,7 @@ watch(
     (tags) => {
         if (tags && Array.isArray(tags)) {
             selectedTags.value = tags.map((t) => ({
-                id: t.id,
+                id: String(t.id),
                 name: t.name,
                 severity: t.severity ?? '',
             }));

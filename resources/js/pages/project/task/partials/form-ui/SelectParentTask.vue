@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import Label from '@/components/Label.vue';
-import { Task } from '@/pages/project';
+import { ProjectTask } from '@/pages/project';
 import type { TreeNode } from 'primevue/treenode';
 import { computed } from 'vue';
 
 interface Props {
-    task: Task | null;
-    tasks: Task[];
+    task: ProjectTask | null;
+    tasks: ProjectTask[];
     error?: string | null;
     disabled?: boolean;
 }
@@ -23,7 +23,7 @@ const parentTreeOptions = computed<TreeNode[]>(() => {
         collectDescendants(props.task).forEach((id) => excludeIds.add(id));
     }
 
-    const build = (tasks: Task[]): TreeNode[] => {
+    const build = (tasks: ProjectTask[]): TreeNode[] => {
         return tasks
             .filter((t) => !excludeIds.has(t.id))
             .map((t) => ({
@@ -36,10 +36,10 @@ const parentTreeOptions = computed<TreeNode[]>(() => {
     return build(props.tasks);
 });
 
-function collectDescendants(task: Task): string[] {
+function collectDescendants(task: ProjectTask): string[] {
     const ids: string[] = [];
 
-    const walk = (node: Task) => {
+    const walk = (node: ProjectTask) => {
         if (!node.sub_task_recursive) return;
         for (const child of node.sub_task_recursive) {
             ids.push(child.id);

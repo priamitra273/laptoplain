@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\Task\CreateTaskAction;
 use App\Actions\Task\UpdateTaskAction;
 use App\Facades\Sqids;
+use App\Http\Requests\Task\TaskBulkDestroyRequest;
+use App\Http\Requests\Task\TaskMoveRequest;
 use App\Http\Requests\Task\TaskStoreRequest;
 use App\Http\Requests\Task\TaskUpdateParentRequest;
 use App\Http\Requests\Task\TaskUpdatePriorityRequest;
@@ -36,13 +38,29 @@ class TaskController extends Controller
     }
 
     /**
-     * Get all tasks for the authenticated user.
+     * Get the authenticated user's tasks for the "My Task" index (server-driven).
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $data = $this->service->indexProps(Auth::id());
+        $params = $request->only([
+            'view', 'per_page', 'search', 'project_id', 'status_id', 'priority_id', 'type_id',
+        ]);
+
+        $data = $this->service->indexProps(Auth::id(), $params);
 
         return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($data));
+    }
+
+    /**
+     * Paginate a single board column ("Load more") for the "My Task" board.
+     */
+    public function boardColumn(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $params = $request->only([
+            'status_id', 'page', 'per_page', 'search', 'project_id', 'priority_id', 'type_id',
+        ]);
+
+        return response()->json($this->service->boardColumn(Auth::id(), $params));
     }
 
     /**
@@ -214,6 +232,20 @@ class TaskController extends Controller
         ]);
     }
 
+    public function move(TaskMoveRequest $request, string $projectEncoded, Task $task): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $projectEncoded, $task);
+
+        $parentId = $request->parent_id ? Sqids::decode($request->parent_id) : null;
+
+        $this->service->move($task, $parentId, $request->integer('position'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task moved successfully.',
+        ]);
+    }
+
     public function destroy(Request $request, string $encoded, Task $task)
     {
         $this->authorize('delete', $encoded, $task);
@@ -222,5 +254,42 @@ class TaskController extends Controller
 
         return to_route('project.show', ['encoded' => $encoded])
             ->with('success', 'Task deleted successfully');
+    }
+
+    public function bulkDestroy(TaskBulkDestroyRequest $request, string $projectEncoded): \Illuminate\Http\JsonResponse
+    {
+        $project = $this->projectService->findByEncodedId($projectEncoded);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $deleted = 0;
+        $failed = 0;
+
+        foreach ($request->validated()['ids'] as $encodedId) {
+            try {
+                $task = Task::find(Sqids::decode($encodedId));
+            } catch (\Throwable) {
+                $task = null;
+            }
+
+            if (! $task || $task->project_id !== $project->id || $user->cannot('delete', $task)) {
+                $failed++;
+
+                continue;
+            }
+
+            $task->delete();
+            $deleted++;
+        }
+
+        return response()->json([
+            'success' => $deleted > 0,
+            'deleted' => $deleted,
+            'failed' => $failed,
+            'message' => $failed === 0
+                ? "{$deleted} task(s) deleted successfully."
+                : "{$deleted} task(s) deleted, {$failed} could not be deleted.",
+        ]);
     }
 }

@@ -3,12 +3,12 @@ import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import { computed, inject, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import { Task } from '../..';
+import { ProjectTask } from '../..';
 import { BacklogKey } from '../types';
 import TaskRow from './Taskrow.vue';
 
 interface Props {
-    tasks: Task[];
+    tasks: ProjectTask[];
     selectedIds: string[];
     loading: boolean;
 }

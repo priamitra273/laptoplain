@@ -9,7 +9,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, inject, onMounted, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import type { Epic, Task, TaskPriority, TaskStatus, TaskType, User } from '../..';
+import type { Epic, ProjectTask, TaskPriority, TaskStatus, TaskType, User } from '../..';
 import TaskKanbanCard from './kanban/TaskKanbanCard.vue';
 import TaskKanbanColumn from './kanban/TaskKanbanColumn.vue';
 import TaskKanbanDetailPanel from './kanban/TaskKanbanDetailPanel.vue';
@@ -18,7 +18,7 @@ import TaskKanbanToolbar from './kanban/TaskKanbanToolbar.vue';
 
 interface Props {
     projectId: string;
-    tasks: Task[];
+    tasks: ProjectTask[];
     epicTasks: Epic[];
     statuses: TaskStatus[];
     taskStatuses: TaskStatus[];
@@ -30,15 +30,15 @@ interface Props {
 interface Emits {
     statusUpdate: [taskId: string, newStatusId: string];
     add: [parentId: string | null, statusId?: string];
-    edit: [task: Task, parentId: string | null];
+    edit: [task: ProjectTask, parentId: string | null];
 }
 
 interface ProgressDialog {
     visible: boolean;
-    task: Task | null;
+    task: ProjectTask | null;
     newStatusId: string | null;
     dueDate: Date | null;
-    snapshot: Record<string, Task[]> | null;
+    snapshot: Record<string, ProjectTask[]> | null;
 }
 
 const props = defineProps<Props>();
@@ -53,7 +53,7 @@ const page = usePage();
 const { canAction, canUpdateTaskStatus } = useProjectPermissions(policy);
 
 // ─── State ────────────────────────────────────────────────────────────────────
-const grouped = ref<Record<string, Task[]>>({});
+const grouped = ref<Record<string, ProjectTask[]>>({});
 const draggingItem = ref(false);
 const draggingTaskId = ref<string | null>(null);
 const searchQuery = ref('');
@@ -61,7 +61,7 @@ const filterAssignee = ref<string[]>([]);
 const filterPriority = ref<string[]>([]);
 const filterType = ref<string[]>([]);
 const collapsedCols = ref<Set<string>>(new Set());
-const preDragSnapshot = ref<Record<string, Task[]> | null>(null);
+const preDragSnapshot = ref<Record<string, ProjectTask[]> | null>(null);
 
 // Quick-add per column
 const quickAddStatus = ref<string | null>(null);
@@ -69,11 +69,11 @@ const quickAddLoading = ref(false);
 const quickErrors = ref<Record<string, string>>({});
 
 // Detail slide-over
-const detailPanel = ref<{ visible: boolean; task: Task | null }>({ visible: false, task: null });
+const detailPanel = ref<{ visible: boolean; task: ProjectTask | null }>({ visible: false, task: null });
 
 // Context menu
 const cardMenu = ref();
-const cardMenuTask = ref<Task | null>(null);
+const cardMenuTask = ref<ProjectTask | null>(null);
 const cardMenuItems = computed(() => [
     {
         label: 'View Detail',
@@ -114,7 +114,7 @@ const currentUser = computed(() => page.props.auth?.user as User | undefined);
 
 const allAssignees = computed(() => {
     const map = new Map<string, User>();
-    props.tasks.forEach((t) => (t.users || []).forEach((u) => map.set(u.id as string, u as unknown as User)));
+    props.tasks.forEach((t) => (t.users || []).forEach((u) => map.set(String(u.id), u as unknown as User)));
 
     return Array.from(map.values());
 });
@@ -127,13 +127,13 @@ const userOptions = computed<User[]>(() => {
 
 const filteredGrouped = computed(() => {
     const q = searchQuery.value.toLowerCase().trim();
-    const result: Record<string, Task[]> = {};
+    const result: Record<string, ProjectTask[]> = {};
     for (const [sid, tasks] of Object.entries(grouped.value)) {
         result[sid] = tasks.filter((t) => {
             const matchQ = !q || t.title.toLowerCase().includes(q);
-            const matchA = !filterAssignee.value.length || (t.users || []).some((u) => filterAssignee.value.includes(u.id as string));
-            const matchP = !filterPriority.value.length || filterPriority.value.includes(t.priority?.id ?? '');
-            const matchT = !filterType.value.length || filterType.value.includes(t.type?.id ?? '');
+            const matchA = !filterAssignee.value.length || (t.users || []).some((u) => filterAssignee.value.includes(String(u.id)));
+            const matchP = !filterPriority.value.length || filterPriority.value.includes(t.priority?.id != null ? String(t.priority.id) : '');
+            const matchT = !filterType.value.length || filterType.value.includes(t.type?.id != null ? String(t.type.id) : '');
             return matchQ && matchA && matchP && matchT;
         });
     }
@@ -154,26 +154,26 @@ const getStatusName = (id: string) => props.statuses.find((s) => s.id === id)?.n
 const requiresDueDateForStatus = (statusName?: string) => !!statusName && !['To Do', 'Blocked'].includes(statusName);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
-const isOverdue = (task: Task) =>
+const isOverdue = (task: ProjectTask) =>
     !!task.due_date &&
     moment(task.due_date).isBefore(moment(), 'day') &&
     !props.statuses
-        .find((s) => s.id === task.status?.id)
+        .find((s) => String(s.id) === String(task.status?.id))
         ?.name?.toLowerCase()
         .includes('done');
 
-const subtaskCount = (task: Task) => task.sub_task_recursive?.length || 0;
-const doneSubtaskCount = (task: Task) => {
+const subtaskCount = (task: ProjectTask) => task.sub_task_recursive?.length || 0;
+const doneSubtaskCount = (task: ProjectTask) => {
     const ds = props.statuses.find((s) => s.name?.toLowerCase().includes('done'));
-    return ds ? (task.sub_task_recursive || []).filter((s) => s.status?.id === ds.id).length : 0;
+    return ds ? (task.sub_task_recursive || []).filter((s) => String(s.status?.id) === String(ds.id)).length : 0;
 };
 
 // ─── Board build ──────────────────────────────────────────────────────────────
 const buildGrouped = () => {
-    const g: Record<string, Task[]> = {};
+    const g: Record<string, ProjectTask[]> = {};
     props.statuses.forEach((s) => (g[s.id] = []));
     props.tasks.forEach((t) => {
-        const sid = t.status?.id;
+        const sid = t.status?.id != null ? String(t.status.id) : null;
         if (sid && g[sid] !== undefined) g[sid].push(t);
     });
     return g;
@@ -192,7 +192,7 @@ watch(
 );
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
-const onGroupChange = async (task: Task, newStatusId: string) => {
+const onGroupChange = async (task: ProjectTask, newStatusId: string) => {
     if (!canUpdateTaskStatus(newStatusId)) {
         toast.add({ severity: 'warn', summary: 'Access Denied', detail: 'You are not allowed to set this status', life: 3000 });
         grouped.value = buildGrouped();
@@ -221,7 +221,7 @@ const onDragStart = (e: any) => {
     draggingItem.value = true;
     draggingTaskId.value = e.item?.dataset?.taskId || null;
 
-    const snapshot: Record<string, Task[]> = {};
+    const snapshot: Record<string, ProjectTask[]> = {};
 
     for (const [sid, tasks] of Object.entries(grouped.value)) {
         snapshot[sid] = [...tasks];
@@ -240,7 +240,7 @@ const getErrorMessage = (error: any, fallback: string) => {
     return error?.response?.data?.message || fallback;
 };
 
-const doStatusUpdate = async (task: Task, newStatusId: string, dueDate: string | null) => {
+const doStatusUpdate = async (task: ProjectTask, newStatusId: string, dueDate: string | null) => {
     try {
         await axios.post(route('task.status.update', task.id), {
             _method: 'PUT',
@@ -280,7 +280,7 @@ const cancelInProgressDialog = () => {
 };
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
-const deleteTask = (task: Task) => {
+const deleteTask = (task: ProjectTask) => {
     confirm.require({
         message: `Delete task "${task.title}"? This cannot be undone.`,
         header: 'Confirm Delete',
@@ -367,7 +367,7 @@ const toggleCollapse = (sid: string) => {
 };
 
 // ─── Context menu ─────────────────────────────────────────────────────────────
-const openCardMenu = (e: MouseEvent, task: Task) => {
+const openCardMenu = (e: MouseEvent, task: ProjectTask) => {
     e.preventDefault();
     e.stopPropagation();
     cardMenuTask.value = task;
@@ -496,7 +496,10 @@ const openCardMenu = (e: MouseEvent, task: Task) => {
             <p class="text-sm text-gray-600 dark:text-gray-300">
                 <span class="font-medium text-surface-800 dark:text-surface-100"> "{{ inProgressDialog.task?.title }}" </span>
                 doesn't have a due date yet. Please set one before moving it to
-                <span class="font-semibold text-blue-600 dark:text-blue-400">{{ inProgressDialog.newStatusId ? getStatusName(inProgressDialog.newStatusId) : 'this status' }}</span>.
+                <span class="font-semibold text-blue-600 dark:text-blue-400">{{
+                    inProgressDialog.newStatusId ? getStatusName(inProgressDialog.newStatusId) : 'this status'
+                }}</span
+                >.
             </p>
 
             <div class="flex flex-col gap-1.5">

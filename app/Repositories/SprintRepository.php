@@ -23,7 +23,7 @@ class SprintRepository
             'tasks.status:id,name,severity',
             'tasks.priority:id,name,severity',
             'tasks.category:id,name,icon,severity',
-            'tasks.users:id,name',
+            'tasks.users:id,name,email',
             'tasks.users.media',
         ])
             ->where('project_id', $projectId)
@@ -38,7 +38,7 @@ class SprintRepository
             'status:id,name,severity',
             'priority:id,name,severity',
             'category:id,name,icon,severity',
-            'users:id,name',
+            'users:id,name,email',
             'users.media',
         ])
             ->where('project_id', $projectId)

@@ -8,7 +8,7 @@ import Menu from 'primevue/menu';
 import { useToast } from 'primevue/usetoast';
 import Swal from 'sweetalert2';
 import { computed, inject, provide, ref, watch } from 'vue';
-import type { Epic, Sprint, Task, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
+import type { Epic, ProjectTask, Sprint, TaskCategory, TaskPriority, TaskStatus, TaskType, User } from '..';
 import BacklogSection from './partials/BacklogSection.vue';
 import CompleteSprintDialog from './partials/CompleteSprintDialog.vue';
 import EditSprintDialog from './partials/EditSprintDialog.vue';
@@ -16,17 +16,19 @@ import SprintSection from './partials/SprintSection.vue';
 import StartSprintDialog from './partials/StartSprintDialog.vue';
 import { BacklogKey } from './types';
 
-const props = defineProps<{
+interface Props {
     projectId: string;
     sprints: Sprint[];
-    backlog: Task[];
+    backlog: ProjectTask[];
     epics: Epic[];
     taskStatuses: TaskStatus[];
     taskPriorities: TaskPriority[];
     taskTypes: TaskType[];
     taskCategories: TaskCategory[];
     assignableUsers: User[];
-}>();
+}
+
+const props = defineProps<Props>();
 
 const emit = defineEmits(['add', 'addBacklog', 'edit', 'activeSprintTaskIds']);
 
@@ -43,7 +45,7 @@ const canSprintDelete = computed(() => canAction('sprint', 'delete'));
 const canAct = computed(() => canTaskCreate.value || canSprintCreate.value);
 
 const localSprints = ref<Sprint[]>([...props.sprints]);
-const localBacklog = ref<Task[]>([...props.backlog]);
+const localBacklog = ref<ProjectTask[]>([...props.backlog]);
 const selectedTaskIds = ref<string[]>([]);
 
 const loading = ref({
@@ -59,7 +61,7 @@ const r = (name: string, sprintId?: string) =>
 
 const notify = (severity: 'success' | 'error', summary: string) => toast.add({ severity, summary, life: 2500 });
 
-const syncBoardData = (payload: { sprints?: Sprint[]; backlog?: Task[] }) => {
+const syncBoardData = (payload: { sprints?: Sprint[]; backlog?: ProjectTask[] }) => {
     localSprints.value = payload.sprints ?? [];
     localBacklog.value = payload.backlog ?? [];
 };
@@ -251,7 +253,7 @@ const onTaskMoved = async (taskId: string, fromSprintId: string | null, toSprint
 const sprintMenu = ref();
 const taskMenu = ref();
 const activeSprintForMenu = ref<Sprint | null>(null);
-const activeTaskCtx = ref<{ task: Task; sprintId: string | null } | null>(null);
+const activeTaskCtx = ref<{ task: ProjectTask; sprintId: string | null } | null>(null);
 
 const sprintMenuItems = computed(() => {
     const s = activeSprintForMenu.value;
@@ -304,7 +306,7 @@ const updatePriority = async (task: any, priorityId: string) => {
         });
         const priority = props.taskPriorities.find((p) => p.id === priorityId);
         if (priority) {
-            patchTaskInCollections(task.id, { priority });
+            patchTaskInCollections(task.id, { priority: priority as unknown as ProjectTask['priority'] });
         }
         refreshBoardData().catch(() => null);
         router.reload({ only: ['tasks', 'sprints', 'backlog'] });
@@ -314,7 +316,7 @@ const updatePriority = async (task: any, priorityId: string) => {
     }
 };
 
-const patchTaskInCollections = (taskId: string | number, patch: Partial<Task>) => {
+const patchTaskInCollections = (taskId: string | number, patch: Partial<ProjectTask>) => {
     const id = String(taskId);
     localBacklog.value = localBacklog.value.map((t) => (String(t.id) === id ? { ...t, ...patch } : t));
     localSprints.value = localSprints.value.map((s) => ({
@@ -355,13 +357,27 @@ const openCreateTask = (sprintId: string | null = null, parentTaskId: string | n
 // ─── Provide Context ──────────────────────────────────────────────
 provide(BacklogKey, {
     projectId: props.projectId,
-    epics: props.epics,
-    taskPriorities: props.taskPriorities,
-    taskStatuses: props.taskStatuses,
-    canAct: canAct.value,
-    canSprintCreate: canSprintCreate.value,
-    canSprintUpdate: canSprintUpdate.value,
-    canSprintDelete: canSprintDelete.value,
+    get epics() {
+        return props.epics;
+    },
+    get taskPriorities() {
+        return props.taskPriorities;
+    },
+    get taskStatuses() {
+        return props.taskStatuses;
+    },
+    get canAct() {
+        return canAct.value;
+    },
+    get canSprintCreate() {
+        return canSprintCreate.value;
+    },
+    get canSprintUpdate() {
+        return canSprintUpdate.value;
+    },
+    get canSprintDelete() {
+        return canSprintDelete.value;
+    },
     editTask: (task) => emit('edit', task, null),
     addEpic: assignTaskToEpic,
     updatePriority,

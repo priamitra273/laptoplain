@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
 use App\Models\Notification;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
@@ -23,6 +22,7 @@ class NotificationController extends Controller
             ->map(function ($notification) {
                 // Ambil pivot dari user yang login
                 $userPivot = $notification->users->first()->pivot;
+
                 return [
                     'id' => $notification['id'],
                     'message' => $notification['message'],
@@ -42,6 +42,7 @@ class NotificationController extends Controller
             while (ob_get_level() > 0) {
                 ob_end_flush();
             }
+
             ob_implicit_flush(true);
 
             $userId = Auth::id();
@@ -49,37 +50,32 @@ class NotificationController extends Controller
             $PING_INTERVAL = 30;
             $lastPing = time();
 
-            $initial = Notification::whereHas(
-                'users',
-                fn($q) => $q->where('user_id', $userId)
-            )
+            $initial = Notification::whereHas('users', fn ($q) => $q->where('user_id', $userId))
                 ->with([
-                    'users' => fn($q) =>
-                    $q->where('user_id', $userId)->withPivot('is_read'),
+                    'users' => fn ($q) => $q->where('user_id', $userId)->withPivot('is_read'),
                 ])
                 ->latest()
                 ->get()
-                ->map(fn($n) => [
+                ->map(fn ($n) => [
                     'id' => $n->id,
                     'message' => $n->message,
                     'task_id' => $n->task_id,
                     'is_read' => $n->users->first()->pivot->is_read,
                 ]);
 
-
             echo "event: init\n";
-            echo "data: " . json_encode(
+            echo 'data: '.json_encode(
                 Sqids::rec_encode_ids_in_list($initial)
-            ) . "\n\n";
+            )."\n\n";
             flush();
 
-            while (!connection_aborted()) {
+            while (! connection_aborted()) {
                 $cached = Cache::store('redis')->get($key, []);
 
-                if (!empty($cached)) {
+                if (! empty($cached)) {
                     foreach ($cached as $notif) {
                         echo "event: notification\n";
-                        echo "data: " . json_encode($notif) . "\n\n";
+                        echo 'data: '.json_encode($notif)."\n\n";
                     }
 
                     Cache::store('redis')->forget($key);
@@ -111,6 +107,7 @@ class NotificationController extends Controller
         $id = Sqids::decode($encoded);
         $notification = Notification::findOrFail($id);
         $notification->users()->updateExistingPivot(Auth::id(), ['is_read' => true]);
+
         return response()->json(['success' => true]);
     }
 

@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Released]
 
+## [1.2.3] - 2026-06-25
+
+### Fixed
+
+- Excluded Epics and tasks that have children from the assigned-task queries (`assignedTasksQuery`, `assignedStatusCounts`) so only leaf tasks are counted; tasks without a category are still included. (9c67967)
+- Derived task completion and overdue status from the dedicated `completed_at` column instead of `updated_at`, and added `completed_at` to the task tree query in `ProjectRepository` so the field is available for these derivations. (451abac)
+- Disabled task form fields only when a task already exists and the field is not updatable, preventing fields from being prematurely disabled during task creation. (632ea59)
+
 ## [1.2.2] - 2026-06-23
 
 ### Added

@@ -56,6 +56,22 @@ const markAsRead = async (notificationId: string) => {
     }
 }
 
+const markAllAsRead = async () => {
+    const snapshot = notifications.value.map((n) => ({ ...n }))
+    const currentCount = unreadCount.value
+    try {
+        notifications.value.forEach((n) => {
+            n.is_read = true
+        })
+        unreadCount.value = 0
+        await axios.post(route('notifications.read-all'));
+    } catch (error) {
+        notifications.value = snapshot
+        unreadCount.value = currentCount
+        console.error(error);
+    }
+}
+
 const clearNotifications = async () => {
     const currentCount = unreadCount.value
     try {
@@ -72,6 +88,7 @@ provide('notifications', {
     notifications,
     unreadCount,
     markAsRead,
+    markAllAsRead,
     clearNotifications,
     connect,
     disconnect

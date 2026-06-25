@@ -202,6 +202,17 @@ watch(
                                         <span>You're all caught up</span>
                                     </li>
                                 </ul>
+
+                                <Link
+                                    v-if="notifications.length > 0"
+                                    :href="route('notifications.index')"
+                                    class="block border-t border-[color:var(--surface-border)] px-3.5 py-2.5 text-center no-underline"
+                                    @click="showNotificationDropdown = false"
+                                >
+                                    <span class="cursor-pointer text-[12px] font-medium text-[var(--primary-color)] transition-colors duration-100 hover:underline">
+                                        View all notifications
+                                    </span>
+                                </Link>
                             </div>
                         </Transition>
                     </li>

@@ -6,10 +6,13 @@ use App\Facades\Sqids;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NotificationController extends Controller
 {
-    public function index()
+    public function index(): Response
     {
         $notifications = Notification::with(['users' => function ($query) {
             $query->where('user_id', Auth::id());
@@ -20,18 +23,21 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($notification) {
-                // Ambil pivot dari user yang login
                 $userPivot = $notification->users->first()->pivot;
 
                 return [
                     'id' => $notification['id'],
                     'message' => $notification['message'],
                     'task_id' => $notification['task_id'],
-                    'is_read' => $userPivot['is_read'],
+                    'is_read' => (bool) $userPivot['is_read'],
+                    'is_mention' => Str::contains(Str::lower($notification['message']), 'mention'),
+                    'created_at' => $notification['created_at'],
                 ];
             });
 
-        return response()->json(Sqids::rec_encode_ids_in_list($notifications));
+        return Inertia::render('notifications/Index', [
+            'notifications' => Sqids::rec_encode_ids_in_list($notifications),
+        ]);
     }
 
     public function stream()
@@ -107,6 +113,19 @@ class NotificationController extends Controller
         $id = Sqids::decode($encoded);
         $notification = Notification::findOrFail($id);
         $notification->users()->updateExistingPivot(Auth::id(), ['is_read' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function markAllAsRead()
+    {
+        $user = Auth::user();
+
+        $notificationIds = $user->notifications()->pluck('notifications.id')->all();
+
+        if (! empty($notificationIds)) {
+            $user->notifications()->updateExistingPivot($notificationIds, ['is_read' => true]);
+        }
 
         return response()->json(['success' => true]);
     }

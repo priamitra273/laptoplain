@@ -138,6 +138,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
         Route::get('stream', [NotificationController::class, 'stream'])->name('stream');
         Route::post('{encoded}/read', [NotificationController::class, 'markAsRead'])->name('read');
+        Route::post('read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
         Route::post('clear', [NotificationController::class, 'clearAll'])->name('clear');
     });
 

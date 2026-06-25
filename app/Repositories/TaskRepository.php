@@ -32,7 +32,11 @@ class TaskRepository
                 'children as sub_task_done_count' => fn ($q) => $q->whereNotNull('completed_at'),
             ])
             ->where(fn (Builder $q) => $this->scopeAssigned($q, $userId))
-            ->whereNull('parent_id')
+            ->where(function (Builder $q) {
+                $q->whereRelation('category', 'task_categories.name', '!=', 'Epic')
+                    ->orWhereNull('task_category_id');
+            })
+            ->whereDoesntHave('children')
             ->whereHas('project');
 
         $this->applyTaskFilters($query, $filters);
@@ -43,6 +47,7 @@ class TaskRepository
     /**
      * Count assigned root tasks grouped by status, for the status-summary chips.
      * Respects every filter except status (so all status chips remain visible).
+     * Filtering only task, not the parent task
      *
      * @param  array<string, mixed>  $filters  decoded (int) filter values
      * @return SupportCollection<int, int> keyed by status_id => count
@@ -53,7 +58,11 @@ class TaskRepository
 
         $query = Task::query()
             ->where(fn (Builder $q) => $this->scopeAssigned($q, $userId))
-            ->whereNull('parent_id')
+            ->where(function (Builder $q) {
+                $q->whereRelation('category', 'task_categories.name', '!=', 'Epic')
+                    ->orWhereNull('task_category_id');
+            })
+            ->whereDoesntHave('children')
             ->whereHas('project');
 
         $this->applyTaskFilters($query, $filters);
@@ -158,11 +167,11 @@ class TaskRepository
                 INNER JOIN projects ON tasks.project_id = projects.id
                 LEFT JOIN task_categories tc ON tasks.task_category_id = tc.id
                 WHERE tasks.id = :id
-                
+
                 UNION ALL
-                
+
                 SELECT c.*,
-                    CONCAT(projects.code, '-', c.sequence_number) as key, 
+                    CONCAT(projects.code, '-', c.sequence_number) as key,
                     tc.name as task_category_name,
                     tc.icon as task_category_icon,
                     tc.severity as task_category_severity,

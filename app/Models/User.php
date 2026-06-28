@@ -12,16 +12,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Concerns\HasUuid;
 use Spatie\Permission\Traits\HasRoles;
 
 #[ObservedBy(UserObserver::class)]
-class User extends Authenticatable implements HasMedia
+class User extends Authenticatable implements HasMedia, OAuthenticatable
 {
+    use HasApiTokens, InteractsWithMedia, LogsActivityUser, LogUsers, SoftDeletes;
     use HasFactory, HasRoles, HasUuid, Notifiable;
-    use InteractsWithMedia, LogsActivityUser, LogUsers, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.

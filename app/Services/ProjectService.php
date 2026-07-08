@@ -16,17 +16,72 @@ use App\Data\Task\TaskStatusData;
 use App\Data\Task\TaskTypeData;
 use App\Data\UserData;
 use App\Facades\Sqids;
+use App\Models\MsProjectRole;
 use App\Models\Project;
+use App\Models\ProjectMember;
 use App\Models\ProjectSprint;
 use App\Models\Task;
 use App\Repositories\ProjectRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Spatie\LaravelData\DataCollection;
 
 class ProjectService
 {
     public function __construct(private ProjectRepository $projectRepository) {}
+
+    /**
+     * Create a project and attach the current user as its Owner member, returning the project.
+     *
+     * Shared by ProjectController::store and the create-project MCP tool. Authorization is the
+     * caller's responsibility (route middleware for the controller, the tool's own gate for MCP).
+     *
+     * @param  array<string, mixed>  $attributes  Validated project attributes (status_id/priority_id as integers).
+     */
+    public function createProject(array $attributes): Project
+    {
+        return DB::transaction(function () use ($attributes) {
+            $userId = Auth::id();
+
+            $project = Project::create($attributes);
+
+            $project->update([
+                'progress' => $project->calculateProgress(),
+            ]);
+
+            ProjectMember::create([
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'project_role_id' => MsProjectRole::where('name', 'Owner')->value('id'),
+                'owned_id' => $userId,
+                'is_active' => true,
+            ]);
+
+            return $project;
+        });
+    }
+
+    /**
+     * Update a project with the given attributes and recalculate its progress, returning it.
+     *
+     * Shared by ProjectController::update and the update-project MCP tool. Resolving the project
+     * and authorization are the caller's responsibility.
+     *
+     * @param  array<string, mixed>  $attributes  Validated project attributes (status_id/priority_id as integers).
+     */
+    public function updateProject(Project $project, array $attributes): Project
+    {
+        return DB::transaction(function () use ($project, $attributes) {
+            $project->update($attributes);
+
+            $project->update([
+                'progress' => $project->calculateProgress(),
+            ]);
+
+            return $project;
+        });
+    }
 
     public function findByEncodedId(string $encodedId): Project
     {

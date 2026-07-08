@@ -8,20 +8,23 @@ use App\Traits\LogUsers;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Concerns\HasUuid;
 use Spatie\Permission\Traits\HasRoles;
 
 #[ObservedBy(UserObserver::class)]
-class User extends Authenticatable implements HasMedia
+class User extends Authenticatable implements HasMedia, OAuthenticatable
 {
+    use HasApiTokens, InteractsWithMedia, LogsActivityUser, LogUsers, SoftDeletes;
     use HasFactory, HasRoles, HasUuid, Notifiable;
-    use InteractsWithMedia, LogsActivityUser, LogUsers, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -118,6 +121,19 @@ class User extends Authenticatable implements HasMedia
     public function reactedComments(): HasMany
     {
         return $this->hasMany(CommentReaction::class, 'user_id');
+    }
+
+    public function projectMembers(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class, 'user_id');
+    }
+
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'project_members')
+            ->withPivot('owned_id')
+            ->withTimestamps()
+            ->wherePivotNull('deleted_at');
     }
 
     /**

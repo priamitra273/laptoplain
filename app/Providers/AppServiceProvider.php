@@ -6,6 +6,7 @@ use App\Observers\MediaObserver;
 use App\Services\SqidsService;
 use App\Services\TaskNotificationService;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Passport;
 use Opcodes\LogViewer\Facades\LogViewer;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -30,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Media::observe(MediaObserver::class);
+
+        Passport::authorizationView(function ($parameters) {
+            return view('mcp.authorize', $parameters);
+        });
 
         LogViewer::auth(function ($request) {
             return app()->isProduction()

@@ -7,11 +7,8 @@ use App\Facades\Sqids;
 use App\Facades\TaskNotification;
 use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Http\Requests\Project\ProjectUpdateRequest;
-use App\Models\MsProjectRole;
 use App\Models\Project;
-use App\Models\ProjectMember;
 use App\Services\ProjectService;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,25 +35,7 @@ class ProjectController extends Controller
 
     public function store(ProjectStoreRequest $request)
     {
-        $project = Project::create($request->validated());
-
-        $project->update([
-            'progress' => $project->calculateProgress(),
-        ]);
-
-        $projectId = $project->id;
-        $userId = Auth::id();
-        $projectRoleId = MsProjectRole::where('name', 'Owner')->first()->id;
-
-        ProjectMember::create([
-            'project_id' => $projectId,
-            'user_id' => $userId,
-            'project_role_id' => $projectRoleId,
-            'owned_id' => $request['owned_id'],
-            'created_by' => $request['created_by'],
-            'updated_by' => $request['updated_by'],
-            'is_active' => true,
-        ]);
+        $this->projectService->createProject($request->validated());
 
         return to_route('project.index')->with('success', 'Project added successfully');
     }
@@ -70,10 +49,7 @@ class ProjectController extends Controller
             return back()->with('error', 'Project not found.');
         }
 
-        $project->update($request->validated());
-        $project->update([
-            'progress' => $project->calculateProgress(),
-        ]);
+        $this->projectService->updateProject($project, $request->validated());
 
         $referer = $request->header('referer');
         $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);

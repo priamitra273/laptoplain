@@ -169,3 +169,23 @@ it('scopes a project-scoped relation loaded from a global base model', function 
     // The acting user only sees their own project through the relation.
     expect(collect($rows[0]['projects'])->pluck('title')->all())->toBe(['Mine']);
 });
+
+it('scopes a project-scoped relation to the acting user, not the row owner', function () {
+    ($this->makeProject)($this->user, 'Mine');
+    $outsider = User::factory()->create(['id' => 2]);
+    ($this->makeProject)($outsider, 'Theirs');
+
+    // Acting as $this->user (who can see only 'Mine'), load the OUTSIDER's user
+    // row with its projects. The outsider is a member of 'Theirs', but the acting
+    // user cannot see 'Theirs', so the nested projects must be empty — scope
+    // follows the actor, not the row owner.
+    $rows = $this->service->run([
+        'model' => 'user',
+        'select' => ['id', 'name'],
+        'with' => ['projects'],
+        'filters' => [['column' => 'id', 'operator' => '=', 'value' => Sqids::encode($outsider->id)]],
+    ], $this->user);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['projects'])->toBe([]);
+});

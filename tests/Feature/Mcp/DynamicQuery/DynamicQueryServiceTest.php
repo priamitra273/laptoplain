@@ -261,6 +261,28 @@ it('never selects sensitive user columns even with default select', function () 
 
     expect($rows[0])->not->toHaveKey('password')
         ->and($rows[0])->not->toHaveKey('remember_token')
+        ->and($rows[0])->not->toHaveKey('uuid')   // uuid is NOT in User::$hidden — real allowlist check
+        ->and($rows[0])->toHaveKey('email');
+});
+
+it('never selects sensitive user columns in join mode (no eloquent hidden backstop)', function () {
+    ($this->makeProject)($this->user, 'Mine');
+
+    // Join mode builds via DB::table (bypasses Eloquent $hidden), so the column
+    // allowlist is the ONLY thing keeping password/uuid out. Default select =
+    // the user model's allowlist columns, qualified.
+    $rows = $this->service->run([
+        'model' => 'user',
+        'joins' => [[
+            'model' => 'project_member',
+            'on' => [['left' => 'users.id', 'operator' => '=', 'right' => 'project_members.user_id']],
+        ]],
+    ], $this->user);
+
+    expect($rows)->not->toBeEmpty();
+    expect($rows[0])->not->toHaveKey('password')
+        ->and($rows[0])->not->toHaveKey('remember_token')
+        ->and($rows[0])->not->toHaveKey('uuid')
         ->and($rows[0])->toHaveKey('email');
 });
 
@@ -278,7 +300,12 @@ it('excludes soft-deleted rows by default and includes them with with_trashed', 
 });
 
 it('returns nothing for a user who is a member of no projects', function () {
-    ($this->makeProject)($this->user, 'Mine');
+    $mine = ($this->makeProject)($this->user, 'Mine');
+
+    // A task DOES exist in a project the stranger cannot see, so 0 results
+    // genuinely depends on the visibility scope (not just an empty table).
+    Task::create(['project_id' => $mine->id, 'title' => 'Hidden', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
     $stranger = User::factory()->create(['id' => 99]);
 
     $rows = $this->service->run(['model' => 'task', 'select' => ['title']], $stranger);

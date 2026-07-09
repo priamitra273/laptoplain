@@ -3,6 +3,9 @@
 namespace App\Services\DynamicQuery;
 
 use App\Facades\Sqids;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DynamicQueryService
 {
@@ -413,5 +416,171 @@ class DynamicQueryService
         } catch (\Throwable $e) {
             throw new QueryException("Invalid encoded id '{$value}'. Pass the sqid-encoded id returned by other tools.");
         }
+    }
+
+    /**
+     * Validate and execute a dynamic query for the given user.
+     *
+     * @param  array<string, mixed>  $query
+     * @return array<int, array<string, mixed>>
+     */
+    public function run(array $query, User $user): array
+    {
+        $normalized = $this->validate($query);
+        $ctx = $this->visibilityContext($user);
+
+        $rows = $this->buildRelationQuery($normalized, $ctx);
+
+        return $this->encode($rows);
+    }
+
+    /**
+     * @return array{seesAll: bool, projectIds: list<int>}
+     */
+    public function visibilityContext(User $user): array
+    {
+        $superRoles = $this->registry->defaults()['super_admin_roles'];
+        $seesAll = $user->getRoleNames()->intersect($superRoles)->isNotEmpty();
+
+        return [
+            'seesAll' => $seesAll,
+            'projectIds' => $seesAll ? [] : $user->projects()->pluck('projects.id')->all(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $q
+     * @param  array{seesAll: bool, projectIds: list<int>}  $ctx
+     * @return array<int, mixed>
+     */
+    protected function buildRelationQuery(array $q, array $ctx): array
+    {
+        /** @var Builder $query */
+        $query = $q['model']::query();
+
+        $query->select(array_map(fn ($c) => "{$q['table']}.{$c}", $q['select']));
+
+        if ($q['distinct']) {
+            $query->distinct();
+        }
+
+        if ($q['with_trashed'] && $this->usesSoftDeletes($q['model'])) {
+            $query->withTrashed();
+        }
+
+        $this->applyProjectScope($query, $q['alias'], $ctx);
+        $this->applyFilters($query, $q['filters']);
+        $this->applyRelations($query, $q, $ctx);
+
+        foreach ($q['order_by'] as $order) {
+            $query->orderBy($order['column'], $order['direction']);
+        }
+
+        $query->limit($q['limit'])->offset($q['offset']);
+
+        return $query->get()->toArray();
+    }
+
+    /**
+     * Apply `with` relations, scoping any relation whose target is project-scoped.
+     *
+     * @param  array<string, mixed>  $q
+     * @param  array{seesAll: bool, projectIds: list<int>}  $ctx
+     */
+    protected function applyRelations(Builder $query, array $q, array $ctx): void
+    {
+        $eager = [];
+
+        foreach ($q['with_targets'] as $relation => $targetAlias) {
+            $targetDef = $this->registry->get($targetAlias);
+
+            if ($targetDef['scope'] === 'project') {
+                $eager[$relation] = fn ($related) => $this->applyProjectScope($related->getQuery(), $targetAlias, $ctx);
+            } else {
+                $eager[] = $relation;
+            }
+        }
+
+        if (! empty($eager)) {
+            $query->with($eager);
+        }
+    }
+
+    /**
+     * Inject the visibility constraint for a project-scoped table. No-op for
+     * global tables or when the user sees everything.
+     *
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  array{seesAll: bool, projectIds: list<int>}  $ctx
+     */
+    protected function applyProjectScope($query, string $alias, array $ctx): void
+    {
+        if ($ctx['seesAll']) {
+            return;
+        }
+
+        $def = $this->registry->get($alias);
+
+        if ($def['scope'] !== 'project') {
+            return;
+        }
+
+        $key = $def['project_key'];
+        $ids = $ctx['projectIds'];
+
+        if ($key['type'] === 'column') {
+            $query->whereIn("{$def['table']}.{$key['column']}", $ids);
+
+            return;
+        }
+
+        // subquery: column IN (SELECT via_select FROM via_table WHERE via_where IN ids [AND deleted_at IS NULL])
+        $query->whereIn("{$def['table']}.{$key['column']}", function ($sub) use ($key, $ids) {
+            $sub->select($key['via_select'])
+                ->from($key['via_table'])
+                ->whereIn("{$key['via_table']}.{$key['via_where']}", $ids);
+
+            if (! empty($key['via_soft_delete'])) {
+                $sub->whereNull("{$key['via_table']}.deleted_at");
+            }
+        });
+    }
+
+    /**
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  list<array<string, mixed>>  $filters
+     */
+    protected function applyFilters($query, array $filters): void
+    {
+        foreach ($filters as $filter) {
+            $boolean = $filter['boolean'];
+
+            match ($filter['operator']) {
+                'is null' => $query->whereNull($filter['column'], $boolean),
+                'is not null' => $query->whereNotNull($filter['column'], $boolean),
+                'in' => $query->whereIn($filter['column'], $filter['values'], $boolean),
+                'not in' => $query->whereNotIn($filter['column'], $filter['values'], $boolean, true),
+                default => $query->where($filter['column'], $filter['operator'], $filter['value'], $boolean),
+            };
+        }
+    }
+
+    /**
+     * @param  class-string  $modelClass
+     */
+    protected function usesSoftDeletes(string $modelClass): bool
+    {
+        return in_array(SoftDeletes::class, class_uses_recursive($modelClass), true);
+    }
+
+    /**
+     * Encode all id / *_id columns in the result set (nested or flat).
+     *
+     * @param  array<int, mixed>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    protected function encode(array $rows): array
+    {
+        return Sqids::rec_encode_ids_in_list($rows);
     }
 }

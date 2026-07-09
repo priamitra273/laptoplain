@@ -253,3 +253,73 @@ it('aggregates task counts grouped by a joined column', function () {
     expect($rows[0]['name'])->toBe($this->status->name)
         ->and((int) $rows[0]['total'])->toBe(2);
 });
+
+it('never selects sensitive user columns even with default select', function () {
+    ($this->makeProject)($this->user, 'Mine');
+
+    $rows = $this->service->run(['model' => 'user'], $this->user);
+
+    expect($rows[0])->not->toHaveKey('password')
+        ->and($rows[0])->not->toHaveKey('remember_token')
+        ->and($rows[0])->toHaveKey('email');
+});
+
+it('excludes soft-deleted rows by default and includes them with with_trashed', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+
+    $task = Task::create(['project_id' => $project->id, 'title' => 'Gone', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    $task->delete();
+
+    $without = $this->service->run(['model' => 'task', 'select' => ['title']], $this->user);
+    expect($without)->toHaveCount(0);
+
+    $with = $this->service->run(['model' => 'task', 'select' => ['title'], 'with_trashed' => true], $this->user);
+    expect(collect($with)->pluck('title')->all())->toBe(['Gone']);
+});
+
+it('returns nothing for a user who is a member of no projects', function () {
+    ($this->makeProject)($this->user, 'Mine');
+    $stranger = User::factory()->create(['id' => 99]);
+
+    $rows = $this->service->run(['model' => 'task', 'select' => ['title']], $stranger);
+
+    expect($rows)->toHaveCount(0);
+});
+
+it('excludes soft-deleted rows in join mode by default and includes them with with_trashed', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+    $task = Task::create(['project_id' => $project->id, 'title' => 'JoinGone', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    $task->delete();
+
+    $join = [[
+        'model' => 'ms_task_status',
+        'on' => [['left' => 'tasks.status_id', 'operator' => '=', 'right' => 'ms_task_statuses.id']],
+    ]];
+
+    $without = $this->service->run(['model' => 'task', 'select' => ['tasks.title'], 'joins' => $join], $this->user);
+    expect($without)->toHaveCount(0);
+
+    $with = $this->service->run(['model' => 'task', 'select' => ['tasks.title'], 'joins' => $join, 'with_trashed' => true], $this->user);
+    expect(collect($with)->pluck('title')->all())->toBe(['JoinGone']);
+});
+
+it('scopes a project-scoped joined table, not just the base', function () {
+    $mine = ($this->makeProject)($this->user, 'Mine');
+    $outsider = User::factory()->create(['id' => 2]);
+    ($this->makeProject)($outsider, 'Theirs');
+
+    // Base = user (global) joined to project_members (project-scoped). Acting as
+    // $this->user (can see only 'Mine'), the join to project_members must be scoped
+    // to visible projects — the outsider's membership in 'Theirs' must be excluded.
+    $rows = $this->service->run([
+        'model' => 'user',
+        'select' => ['users.name', 'project_members.project_id'],
+        'joins' => [[
+            'model' => 'project_member',
+            'on' => [['left' => 'users.id', 'operator' => '=', 'right' => 'project_members.user_id']],
+        ]],
+    ], $this->user);
+
+    expect(collect($rows)->pluck('project_id')->unique()->values()->all())
+        ->toBe([Sqids::encode($mine->id)]);
+});

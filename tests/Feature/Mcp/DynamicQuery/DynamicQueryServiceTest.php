@@ -229,3 +229,27 @@ it('scopes join-mode queries to visible projects', function () {
 
     expect(collect($rows)->pluck('title')->all())->toBe(['Mine']);
 });
+
+it('aggregates task counts grouped by a joined column', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+    $other = MsTaskStatus::query()->where('id', '!=', $this->status->id)->firstOrFail();
+
+    Task::create(['project_id' => $project->id, 'title' => 'A', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $project->id, 'title' => 'B', 'progress' => 0, 'sequence_number' => 2, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $project->id, 'title' => 'C', 'progress' => 0, 'sequence_number' => 3, 'status_id' => $other->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'select' => ['ms_task_statuses.name'],
+        'joins' => [[
+            'model' => 'ms_task_status',
+            'on' => [['left' => 'tasks.status_id', 'operator' => '=', 'right' => 'ms_task_statuses.id']],
+        ]],
+        'group_by' => ['ms_task_statuses.name'],
+        'aggregates' => [['function' => 'count', 'column' => 'tasks.id', 'alias' => 'total']],
+        'order_by' => [['column' => 'total', 'direction' => 'desc']],
+    ], $this->user);
+
+    expect($rows[0]['name'])->toBe($this->status->name)
+        ->and((int) $rows[0]['total'])->toBe(2);
+});

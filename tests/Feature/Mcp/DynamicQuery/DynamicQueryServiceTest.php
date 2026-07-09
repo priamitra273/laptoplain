@@ -137,3 +137,35 @@ it('does not let an or-boolean filter bypass project scoping', function () {
 
     expect(collect($rows)->pluck('title')->all())->toBe(['Mine task']);
 });
+
+it('loads whitelisted relations as nested data', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+
+    Task::create(['project_id' => $project->id, 'title' => 'With status', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'select' => ['id', 'title', 'status_id'],
+        'with' => ['status'],
+    ], $this->user);
+
+    expect($rows[0]['status'])->toBeArray()
+        ->and($rows[0]['status']['name'])->toBe($this->status->name)
+        ->and($rows[0]['status']['id'])->toBe(Sqids::encode($this->status->id));
+});
+
+it('scopes a project-scoped relation loaded from a global base model', function () {
+    $mine = ($this->makeProject)($this->user, 'Mine');
+    $outsider = User::factory()->create(['id' => 2]);
+    ($this->makeProject)($outsider, 'Theirs');
+
+    $rows = $this->service->run([
+        'model' => 'user',
+        'select' => ['id', 'name'],
+        'with' => ['projects'],
+        'filters' => [['column' => 'id', 'operator' => '=', 'value' => Sqids::encode($this->user->id)]],
+    ], $this->user);
+
+    // The acting user only sees their own project through the relation.
+    expect(collect($rows[0]['projects'])->pluck('title')->all())->toBe(['Mine']);
+});

@@ -189,3 +189,43 @@ it('scopes a project-scoped relation to the acting user, not the row owner', fun
     expect($rows)->toHaveCount(1)
         ->and($rows[0]['projects'])->toBe([]);
 });
+
+it('runs an explicit join and returns flat rows', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+
+    Task::create(['project_id' => $project->id, 'title' => 'Joined', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'select' => ['tasks.title', 'ms_task_statuses.name'],
+        'joins' => [[
+            'type' => 'left',
+            'model' => 'ms_task_status',
+            'on' => [['left' => 'tasks.status_id', 'operator' => '=', 'right' => 'ms_task_statuses.id']],
+        ]],
+    ], $this->user);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['title'])->toBe('Joined')
+        ->and($rows[0]['name'])->toBe($this->status->name);
+});
+
+it('scopes join-mode queries to visible projects', function () {
+    $mine = ($this->makeProject)($this->user, 'Mine');
+    $outsider = User::factory()->create(['id' => 2]);
+    $theirs = ($this->makeProject)($outsider, 'Theirs');
+
+    Task::create(['project_id' => $mine->id, 'title' => 'Mine', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $theirs->id, 'title' => 'Theirs', 'progress' => 0, 'sequence_number' => 2, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'select' => ['tasks.title'],
+        'joins' => [[
+            'model' => 'ms_task_status',
+            'on' => [['left' => 'tasks.status_id', 'operator' => '=', 'right' => 'ms_task_statuses.id']],
+        ]],
+    ], $this->user);
+
+    expect(collect($rows)->pluck('title')->all())->toBe(['Mine']);
+});

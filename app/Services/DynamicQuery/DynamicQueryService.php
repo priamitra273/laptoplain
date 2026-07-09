@@ -6,6 +6,7 @@ use App\Facades\Sqids;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class DynamicQueryService
 {
@@ -429,7 +430,9 @@ class DynamicQueryService
         $normalized = $this->validate($query);
         $ctx = $this->visibilityContext($user);
 
-        $rows = $this->buildRelationQuery($normalized, $ctx);
+        $rows = $normalized['mode'] === 'join'
+            ? $this->buildJoinQuery($normalized, $ctx)
+            : $this->buildRelationQuery($normalized, $ctx);
 
         return $this->encode($rows);
     }
@@ -485,6 +488,81 @@ class DynamicQueryService
         $query->limit($q['limit'])->offset($q['offset']);
 
         return $query->get()->toArray();
+    }
+
+    /**
+     * Join/aggregate mode: build on the query builder for clean flat rows,
+     * bypassing Eloquent's default eager-loads and appended accessors.
+     *
+     * @param  array<string, mixed>  $q
+     * @param  array{seesAll: bool, projectIds: list<int>}  $ctx
+     * @return array<int, mixed>
+     */
+    protected function buildJoinQuery(array $q, array $ctx): array
+    {
+        $query = DB::table($q['table']);
+
+        foreach ($q['joins'] as $join) {
+            $method = $join['type'] === 'left' ? 'leftJoin' : 'join';
+            $query->{$method}($join['table'], function ($j) use ($join) {
+                foreach ($join['on'] as $on) {
+                    $j->on($on['left'], $on['operator'], $on['right']);
+                }
+            });
+        }
+
+        // Soft-delete + visibility scope for every table present in the query.
+        foreach ($q['tables'] as $table) {
+            $alias = $q['table_scope'][$table];
+            $this->applySoftDeleteFilter($query, $alias, $q['with_trashed']);
+            $this->applyProjectScope($query, $alias, $ctx);
+        }
+
+        // Nest user filters in a group so a caller-supplied `or` boolean cannot
+        // break out of the AND-ed visibility scope (see Task 3 security fix).
+        if (! empty($q['filters'])) {
+            $query->where(fn ($nested) => $this->applyFilters($nested, $q['filters']));
+        }
+
+        if (empty($q['aggregates'])) {
+            $query->select($q['select']);
+
+            if ($q['distinct']) {
+                $query->distinct();
+            }
+        } else {
+            $query->select($q['select']);
+
+            foreach ($q['aggregates'] as $agg) {
+                $query->selectRaw("{$agg['function']}({$agg['column']}) as {$agg['alias']}");
+            }
+
+            $query->groupBy($q['group_by']);
+        }
+
+        foreach ($q['order_by'] as $order) {
+            $query->orderBy($order['column'], $order['direction']);
+        }
+
+        $query->limit($q['limit'])->offset($q['offset']);
+
+        return $query->get()->map(fn ($row) => (array) $row)->all();
+    }
+
+    /**
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    protected function applySoftDeleteFilter($query, string $alias, bool $withTrashed): void
+    {
+        if ($withTrashed) {
+            return;
+        }
+
+        $def = $this->registry->get($alias);
+
+        if ($def['soft_delete']) {
+            $query->whereNull("{$def['table']}.deleted_at");
+        }
     }
 
     /**

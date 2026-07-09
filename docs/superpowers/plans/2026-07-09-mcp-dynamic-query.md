@@ -1514,7 +1514,11 @@ Then add these methods to `app/Services/DynamicQuery/DynamicQueryService.php`:
             $this->applyProjectScope($query, $alias, $ctx);
         }
 
-        $this->applyFilters($query, $q['filters']);
+        // Nest user filters in a group so a caller-supplied `or` boolean cannot
+        // break out of the AND-ed visibility scope (see Task 3 security fix).
+        if (! empty($q['filters'])) {
+            $query->where(fn ($nested) => $this->applyFilters($nested, $q['filters']));
+        }
 
         if (empty($q['aggregates'])) {
             $query->select($q['select']);

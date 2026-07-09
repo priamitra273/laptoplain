@@ -7,6 +7,7 @@ use App\Mcp\Tools\MyProjectTool;
 use App\Mcp\Tools\ProjectDetailTool;
 use App\Mcp\Tools\ProjectOptionsTool;
 use App\Mcp\Tools\QueryableSchemaTool;
+use App\Mcp\Tools\QueryDataTool;
 use App\Mcp\Tools\TaskOptionsTool;
 use App\Mcp\Tools\TaskProjectTools;
 use App\Mcp\Tools\UpdateProjectTool;
@@ -31,6 +32,7 @@ class ProjectManagementServer extends Server
         UpdateProjectTool::class,
         UpdateTaskStatusTool::class,
         QueryableSchemaTool::class,
+        QueryDataTool::class,
     ];
 
     protected array $resources = [

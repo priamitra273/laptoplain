@@ -350,3 +350,23 @@ it('scopes a project-scoped joined table, not just the base', function () {
     expect(collect($rows)->pluck('project_id')->unique()->values()->all())
         ->toBe([Sqids::encode($mine->id)]);
 });
+
+it('does not leak non-allowlisted columns via relation-mode eager loads', function () {
+    ($this->makeProject)($this->user, 'Mine');
+
+    // A bare project query auto-eager-loads owner/owned (User models) via
+    // Project::$with. Those User models must not leak users.uuid — uuid is a
+    // real column NOT covered by Eloquent's $hidden, so only the mcp_query
+    // allowlist can keep it out.
+    $rows = $this->service->run(['model' => 'project'], $this->user);
+
+    expect($rows)->not->toBeEmpty();
+
+    $json = json_encode($rows);
+    expect($json)->not->toContain('uuid')
+        ->and($json)->not->toContain('password')
+        ->and($json)->not->toContain('remember_token');
+
+    // Projection must not over-strip: safe relation columns still come through.
+    expect($rows[0]['owner']['name'])->toBe($this->user->name);
+});

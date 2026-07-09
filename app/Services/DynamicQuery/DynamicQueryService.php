@@ -274,11 +274,22 @@ class DynamicQueryService
                     throw new QueryException("Operator '{$op}' requires a non-empty `values` array.");
                 }
 
+                foreach ($values as $v) {
+                    if (! is_scalar($v) && ! is_null($v)) {
+                        throw new QueryException("Filter `values` for '{$column}' must be scalars.");
+                    }
+                }
+
                 $entry['values'] = $isId
                     ? array_map(fn ($v) => $this->decodeId($v), $values)
                     : array_values($values);
             } elseif (! in_array($op, ['is null', 'is not null'], true)) {
                 $value = $filter['value'] ?? null;
+
+                if (! is_scalar($value) && ! is_null($value)) {
+                    throw new QueryException("Filter `value` for '{$column}' must be a scalar or null.");
+                }
+
                 $entry['value'] = $isId ? $this->decodeId($value) : $value;
             }
 
@@ -487,7 +498,46 @@ class DynamicQueryService
 
         $query->limit($q['limit'])->offset($q['offset']);
 
-        return $query->get()->toArray();
+        $rows = $query->get()->toArray();
+
+        return array_map(fn (array $row) => $this->projectRow($row, $q['alias']), $rows);
+    }
+
+    /**
+     * Recursively strip any key that is neither an allowlisted column nor a
+     * declared relation of the given model; relation subtrees are projected
+     * with their own model's allowlist. Safety net for relation mode, where
+     * eager-loaded models (including Eloquent auto-$with and appended
+     * accessors) would otherwise serialize columns outside the registry
+     * allowlist (e.g. users.uuid, which Eloquent's $hidden does not cover).
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    protected function projectRow(array $row, string $alias): array
+    {
+        $def = $this->registry->get($alias);
+        $columns = $def['columns'];
+        $relations = $def['relations'];
+        $projected = [];
+
+        foreach ($row as $key => $value) {
+            if (array_key_exists($key, $relations)) {
+                $target = $relations[$key];
+
+                if (is_array($value)) {
+                    $projected[$key] = array_is_list($value)
+                        ? array_map(fn ($item) => is_array($item) ? $this->projectRow($item, $target) : $item, $value)
+                        : $this->projectRow($value, $target);
+                } else {
+                    $projected[$key] = $value;
+                }
+            } elseif (in_array($key, $columns, true)) {
+                $projected[$key] = $value;
+            }
+        }
+
+        return $projected;
     }
 
     /**

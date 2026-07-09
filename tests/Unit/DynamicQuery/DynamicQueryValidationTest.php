@@ -72,3 +72,19 @@ it('decodes sqid id filter values to integers', function () {
     expect($n['filters'][0]['value'])->toBe(123)
         ->and($n['filters'][0]['is_id'])->toBeTrue();
 });
+
+it('rejects an aggregate over a non-allowlisted column', function () {
+    expect(fn () => $this->service->validate([
+        'model' => 'task',
+        'joins' => [['model' => 'user', 'on' => [['left' => 'tasks.owned_id', 'right' => 'users.id']]]],
+        'group_by' => ['users.name'],
+        'aggregates' => [['function' => 'max', 'column' => 'users.password', 'alias' => 'p']],
+    ]))->toThrow(QueryException::class, 'password');
+});
+
+it('rejects a join on-condition referencing a non-allowlisted column', function () {
+    expect(fn () => $this->service->validate([
+        'model' => 'task',
+        'joins' => [['model' => 'user', 'on' => [['left' => 'tasks.owned_id', 'right' => 'users.password']]]],
+    ]))->toThrow(QueryException::class, 'password');
+});

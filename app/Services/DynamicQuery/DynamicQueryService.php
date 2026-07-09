@@ -26,22 +26,24 @@ class DynamicQueryService
 
         $def = $this->registry->get($alias);
 
-        $joins = $this->normalizeJoins($query['joins'] ?? [], $def, $defaults);
-        $aggregates = $this->normalizeAggregates($query['aggregates'] ?? [], $defaults);
-        $groupBy = $query['group_by'] ?? [];
+        $joins = $this->normalizeJoins($query['joins'] ?? [], $alias, $def, $defaults);
         $with = array_values($query['with'] ?? []);
+        $groupBy = $query['group_by'] ?? [];
+
+        // Tables available for column/scope resolution: base + joined. Computed
+        // before column/aggregate validation so every reference can be checked.
+        $tables = array_merge([$def['table']], array_map(fn ($j) => $j['table'], $joins));
+        $tableScope = [$def['table'] => $alias];
+        foreach ($joins as $join) {
+            $tableScope[$join['table']] = $join['alias'];
+        }
+
+        $aggregates = $this->normalizeAggregates($query['aggregates'] ?? [], $defaults, $tables, $tableScope);
 
         $mode = (! empty($joins) || ! empty($aggregates) || ! empty($groupBy)) ? 'join' : 'relation';
 
         if (! empty($with) && $mode === 'join') {
             throw new QueryException('`with` (relation loading) cannot be combined with joins/aggregates/group_by. Use either relation mode or join mode.');
-        }
-
-        // Tables available for column/scope resolution: base + joined.
-        $tables = array_merge([$def['table']], array_map(fn ($j) => $j['table'], $joins));
-        $tableScope = [$def['table'] => $alias];
-        foreach ($joins as $join) {
-            $tableScope[$join['table']] = $join['alias'];
         }
 
         $select = $this->normalizeSelect($query['select'] ?? [], $def, $mode, $tables, $tableScope);
@@ -93,10 +95,9 @@ class DynamicQueryService
      * @param  array<string, mixed>  $defaults
      * @return list<array<string, mixed>>
      */
-    protected function normalizeJoins(array $joins, array $def, array $defaults): array
+    protected function normalizeJoins(array $joins, string $baseAlias, array $def, array $defaults): array
     {
-        $available = [$def['table']];
-        $availableAliases = [$def['alias'] ?? null];
+        $availableScope = [$def['table'] => $baseAlias];
         $joinableFrom = $def['joinable'];
         $normalized = [];
 
@@ -104,17 +105,21 @@ class DynamicQueryService
             $targetAlias = $join['model'] ?? null;
 
             if (! is_string($targetAlias) || ! in_array($targetAlias, $joinableFrom, true)) {
-                throw new QueryException("Cannot join model '".($targetAlias ?? '?')."' from '{$def['table']}'. Allowed join targets: ".implode(', ', $joinableFrom).'.');
+                throw new QueryException("Cannot join model '".(is_string($targetAlias) ? $targetAlias : '?')."' from '{$def['table']}'. Allowed join targets: ".implode(', ', $joinableFrom).'.');
             }
 
             $targetDef = $this->registry->get($targetAlias);
             $type = ($join['type'] ?? 'inner') === 'left' ? 'left' : 'inner';
 
+            // The target's own columns become referenceable in its on-conditions.
+            $availableScope[$targetDef['table']] = $targetAlias;
+            $availableTables = array_keys($availableScope);
+
             $on = [];
             foreach (($join['on'] ?? []) as $cond) {
-                $left = $this->assertQualifiedColumn($cond['left'] ?? '', array_merge($available, [$targetDef['table']]));
-                $right = $this->assertQualifiedColumn($cond['right'] ?? '', array_merge($available, [$targetDef['table']]));
-                $op = $cond['operator'] ?? '=';
+                $left = $this->assertQualifiedColumn($this->stringRef($cond['left'] ?? '', 'join on.left'), $availableTables, $availableScope);
+                $right = $this->assertQualifiedColumn($this->stringRef($cond['right'] ?? '', 'join on.right'), $availableTables, $availableScope);
+                $op = $this->stringRef($cond['operator'] ?? '=', 'join operator');
 
                 if (! in_array($op, ['=', '!=', '>', '>=', '<', '<='], true)) {
                     throw new QueryException("Invalid join operator '{$op}'.");
@@ -128,7 +133,6 @@ class DynamicQueryService
             }
 
             $normalized[] = ['type' => $type, 'alias' => $targetAlias, 'table' => $targetDef['table'], 'on' => $on];
-            $available[] = $targetDef['table'];
             $joinableFrom = array_merge($joinableFrom, $targetDef['joinable']);
         }
 
@@ -138,26 +142,28 @@ class DynamicQueryService
     /**
      * @param  array<int, mixed>  $aggregates
      * @param  array<string, mixed>  $defaults
+     * @param  array<int, string>  $tables
+     * @param  array<string, string>  $tableScope
      * @return list<array{function:string, column:string, alias:string}>
      */
-    protected function normalizeAggregates(array $aggregates, array $defaults): array
+    protected function normalizeAggregates(array $aggregates, array $defaults, array $tables, array $tableScope): array
     {
         $normalized = [];
 
         foreach ($aggregates as $agg) {
-            $fn = strtolower((string) ($agg['function'] ?? ''));
+            $fn = strtolower($this->stringRef($agg['function'] ?? '', 'aggregate function'));
 
             if (! in_array($fn, $defaults['allowed_aggregates'], true)) {
                 throw new QueryException("Invalid aggregate function '{$fn}'. Allowed: ".implode(', ', $defaults['allowed_aggregates']).'.');
             }
 
-            $column = (string) ($agg['column'] ?? '');
+            $column = $this->stringRef($agg['column'] ?? '', 'aggregate column');
 
-            if ($column !== '*' && ! preg_match('/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/i', $column)) {
-                throw new QueryException("Aggregate column must be '*' or a qualified `table.column`. Got '{$column}'.");
+            if ($column !== '*') {
+                $column = $this->assertQualifiedColumn($column, $tables, $tableScope);
             }
 
-            $alias = (string) ($agg['alias'] ?? '');
+            $alias = $this->stringRef($agg['alias'] ?? '', 'aggregate alias');
 
             if (! preg_match('/^[a-z_][a-z0-9_]*$/i', $alias)) {
                 throw new QueryException("Aggregate alias '{$alias}' must match [a-z_][a-z0-9_]*.");
@@ -185,7 +191,9 @@ class DynamicQueryService
                 : $def['columns'];
         }
 
-        return array_map(function (string $col) use ($def, $mode, $tables, $tableScope) {
+        return array_map(function ($col) use ($def, $mode, $tables, $tableScope) {
+            $col = $this->stringRef($col, 'select column');
+
             if ($mode === 'join') {
                 return $this->assertQualifiedColumn($col, $tables, $tableScope);
             }
@@ -208,6 +216,8 @@ class DynamicQueryService
         $targets = [];
 
         foreach ($with as $relation) {
+            $relation = $this->stringRef($relation, 'relation name');
+
             if (! array_key_exists($relation, $def['relations'])) {
                 throw new QueryException("Relation '{$relation}' is not loadable on '{$def['table']}'. Allowed: ".implode(', ', array_keys($def['relations'])).'.');
             }
@@ -237,7 +247,7 @@ class DynamicQueryService
                 throw new QueryException("Invalid filter operator '{$op}'. Allowed: ".implode(', ', $defaults['allowed_operators']).'.');
             }
 
-            $column = (string) ($filter['column'] ?? '');
+            $column = $this->stringRef($filter['column'] ?? '', 'filter column');
             $column = $mode === 'join'
                 ? $this->assertQualifiedColumn($column, $tables, $tableScope)
                 : $this->assertBaseColumn($column, $def);
@@ -288,7 +298,7 @@ class DynamicQueryService
         $normalized = [];
 
         foreach ($orderBy as $order) {
-            $column = (string) ($order['column'] ?? '');
+            $column = $this->stringRef($order['column'] ?? '', 'order_by column');
             $direction = ($order['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
             if (in_array($column, $aggregateAliases, true)) {
@@ -316,7 +326,9 @@ class DynamicQueryService
      */
     protected function normalizeColumnList(array $columns, array $def, string $mode, array $tables, array $tableScope, string $context): array
     {
-        return array_map(function (string $col) use ($def, $mode, $tables, $tableScope) {
+        return array_map(function ($col) use ($def, $mode, $tables, $tableScope) {
+            $col = $this->stringRef($col, 'column');
+
             return $mode === 'join'
                 ? $this->assertQualifiedColumn($col, $tables, $tableScope)
                 : $this->assertBaseColumn($col, $def);
@@ -372,6 +384,19 @@ class DynamicQueryService
         $name = str_contains($column, '.') ? explode('.', $column, 2)[1] : $column;
 
         return $name === 'id' || str_ends_with($name, '_id');
+    }
+
+    /**
+     * Ensure a reference (column/relation/operator name) is a string, yielding
+     * an actionable QueryException rather than a raw TypeError on bad input.
+     */
+    protected function stringRef(mixed $value, string $context): string
+    {
+        if (! is_string($value)) {
+            throw new QueryException("Expected a string for {$context}, got ".gettype($value).'.');
+        }
+
+        return $value;
     }
 
     /**

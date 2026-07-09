@@ -118,3 +118,22 @@ it('filters with a decoded sqid id and honors the limit', function () {
 
     expect(collect($rows)->pluck('title')->all())->toBe(['Keep']);
 });
+
+it('does not let an or-boolean filter bypass project scoping', function () {
+    $mine = ($this->makeProject)($this->user, 'Mine');
+    $outsider = User::factory()->create(['id' => 2]);
+    $theirs = ($this->makeProject)($outsider, 'Theirs');
+
+    Task::create(['project_id' => $mine->id, 'title' => 'Mine task', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $theirs->id, 'title' => 'Their task', 'progress' => 0, 'sequence_number' => 2, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'select' => ['title'],
+        'filters' => [
+            ['column' => 'progress', 'operator' => '>=', 'value' => 0, 'boolean' => 'or'],
+        ],
+    ], $this->user);
+
+    expect(collect($rows)->pluck('title')->all())->toBe(['Mine task']);
+});

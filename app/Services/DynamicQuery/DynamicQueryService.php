@@ -469,7 +469,13 @@ class DynamicQueryService
         }
 
         $this->applyProjectScope($query, $q['alias'], $ctx);
-        $this->applyFilters($query, $q['filters']);
+
+        // Nest user filters in a group so a caller-supplied `or` boolean cannot
+        // break out of the AND-ed visibility scope.
+        if (! empty($q['filters'])) {
+            $query->where(fn ($nested) => $this->applyFilters($nested, $q['filters']));
+        }
+
         $this->applyRelations($query, $q, $ctx);
 
         foreach ($q['order_by'] as $order) {

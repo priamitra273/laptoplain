@@ -50,11 +50,11 @@ class DynamicQueryService
             throw new QueryException('`with` (relation loading) cannot be combined with joins/aggregates/group_by. Use either relation mode or join mode.');
         }
 
-        $select = $this->normalizeSelect($query['select'] ?? [], $def, $mode, $tables, $tableScope);
+        $groupBy = $this->normalizeColumnList($groupBy, $def, $mode, $tables, $tableScope, 'group_by');
+        $select = $this->normalizeSelect($query['select'] ?? [], $def, $mode, $tables, $tableScope, $aggregates, $groupBy);
         $withTargets = $this->normalizeWith($with, $def);
         $filters = $this->normalizeFilters($query['filters'] ?? [], $def, $mode, $tables, $tableScope, $defaults);
         $orderBy = $this->normalizeOrderBy($query['order_by'] ?? [], $def, $mode, $tables, $tableScope, $aggregates);
-        $groupBy = $this->normalizeColumnList($groupBy, $def, $mode, $tables, $tableScope, 'group_by');
 
         if (! empty($aggregates)) {
             foreach ($select as $col) {
@@ -184,11 +184,21 @@ class DynamicQueryService
      * @param  array<string, mixed>  $def
      * @param  array<int, string>  $tables
      * @param  array<string, string>  $tableScope
+     * @param  list<array{function:string, column:string, alias:string}>  $aggregates
+     * @param  list<string>  $groupBy  already-normalized group_by columns
      * @return list<string>
      */
-    protected function normalizeSelect(array $select, array $def, string $mode, array $tables, array $tableScope): array
+    protected function normalizeSelect(array $select, array $def, string $mode, array $tables, array $tableScope, array $aggregates = [], array $groupBy = []): array
     {
         if (empty($select)) {
+            // In aggregate mode an empty select means "no plain columns", not
+            // "every column": default to the grouped columns — none of them for a
+            // global aggregate — so we never expand to the full allowlist and trip
+            // the "every selected column must be grouped" rule in validate().
+            if (! empty($aggregates)) {
+                return $groupBy;
+            }
+
             // Default: the base model's allowlisted columns (never '*' — protects sensitive columns).
             return $mode === 'join'
                 ? array_map(fn ($c) => "{$def['table']}.{$c}", $def['columns'])
@@ -587,7 +597,12 @@ class DynamicQueryService
                 $query->selectRaw("{$agg['function']}({$agg['column']}) as {$agg['alias']}");
             }
 
-            $query->groupBy($q['group_by']);
+            // Only emit GROUP BY when there are columns to group by; a global
+            // aggregate has none. `groupBy([])` would still render an (invalid)
+            // empty `group by` clause because the grammar checks isset, not count.
+            if (! empty($q['group_by'])) {
+                $query->groupBy($q['group_by']);
+            }
         }
 
         foreach ($q['order_by'] as $order) {

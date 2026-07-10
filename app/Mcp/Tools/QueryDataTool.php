@@ -63,6 +63,7 @@ class QueryDataTool extends Tool
 
         // `value` is intentionally unconstrained (string/number/bool), so it is read from the raw request.
         $raw = $request->all();
+
         foreach (($raw['filters'] ?? []) as $index => $filter) {
             if (array_key_exists('value', $filter)) {
                 $validated['filters'][$index]['value'] = $filter['value'];

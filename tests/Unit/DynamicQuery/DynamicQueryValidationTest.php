@@ -44,6 +44,29 @@ it('rejects combining with and aggregates', function () {
     ]))->toThrow(QueryException::class, 'cannot be combined');
 });
 
+it('treats an aggregate with no select and no group_by as a global aggregate', function () {
+    $n = $this->service->validate([
+        'model' => 'task',
+        'aggregates' => [['function' => 'count', 'column' => '*', 'alias' => 'total']],
+    ]);
+
+    expect($n['mode'])->toBe('join')
+        ->and($n['select'])->toBe([])
+        ->and($n['group_by'])->toBe([])
+        ->and($n['aggregates'])->toBe([['function' => 'count', 'column' => '*', 'alias' => 'total']]);
+});
+
+it('defaults an aggregate select to the grouped columns when group_by is given', function () {
+    $n = $this->service->validate([
+        'model' => 'task',
+        'group_by' => ['tasks.status_id'],
+        'aggregates' => [['function' => 'count', 'column' => '*', 'alias' => 'total']],
+    ]);
+
+    expect($n['select'])->toBe(['tasks.status_id'])
+        ->and($n['group_by'])->toBe(['tasks.status_id']);
+});
+
 it('caps the limit at the hard maximum', function () {
     expect(fn () => $this->service->validate([
         'model' => 'task',

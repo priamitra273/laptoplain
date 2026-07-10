@@ -254,6 +254,41 @@ it('aggregates task counts grouped by a joined column', function () {
         ->and((int) $rows[0]['total'])->toBe(2);
 });
 
+it('counts all visible tasks as a global aggregate with no select or group_by', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+
+    Task::create(['project_id' => $project->id, 'title' => 'A', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $project->id, 'title' => 'B', 'progress' => 0, 'sequence_number' => 2, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'aggregates' => [['function' => 'count', 'column' => '*', 'alias' => 'total']],
+    ], $this->user);
+
+    expect($rows)->toHaveCount(1)
+        ->and((int) $rows[0]['total'])->toBe(2);
+});
+
+it('groups an aggregate by a base column with no explicit select', function () {
+    $project = ($this->makeProject)($this->user, 'Mine');
+    $other = MsTaskStatus::query()->where('id', '!=', $this->status->id)->firstOrFail();
+
+    Task::create(['project_id' => $project->id, 'title' => 'A', 'progress' => 0, 'sequence_number' => 1, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $project->id, 'title' => 'B', 'progress' => 0, 'sequence_number' => 2, 'status_id' => $this->status->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+    Task::create(['project_id' => $project->id, 'title' => 'C', 'progress' => 0, 'sequence_number' => 3, 'status_id' => $other->id, 'type_id' => $this->type->id, 'task_category_id' => $this->category->id]);
+
+    $rows = $this->service->run([
+        'model' => 'task',
+        'group_by' => ['tasks.status_id'],
+        'aggregates' => [['function' => 'count', 'column' => '*', 'alias' => 'total']],
+        'order_by' => [['column' => 'total', 'direction' => 'desc']],
+    ], $this->user);
+
+    expect($rows)->toHaveCount(2)
+        ->and((int) $rows[0]['total'])->toBe(2)
+        ->and((int) $rows[1]['total'])->toBe(1);
+});
+
 it('never selects sensitive user columns even with default select', function () {
     ($this->makeProject)($this->user, 'Mine');
 

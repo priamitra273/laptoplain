@@ -32,7 +32,7 @@ class RoleController extends Controller
 
         $roles = $query->get();
 
-        return Inertia::render('role/Role', [
+        return Inertia::render('settings/role/Role', [
             // using "resolve" to avoid wrapping
             'roles' => RoleListResource::collection($roles)->resolve(),
         ]);
@@ -45,18 +45,16 @@ class RoleController extends Controller
     {
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
         $menu = Menu::whereNull('parent_id')->orderBy('sequence_number')->get();
-        $total_menu = Menu::count();
 
         $menu_permissions = $this->menu_service->getMenuPermissions('menus.uuid', 'menus.label', 'p.name', 'route_name');
 
-        return Inertia::render('role/RoleForm', [
+        return Inertia::render('settings/role/RoleForm', [
             'teams' => $teams,
 
             // using "resolve" to avoid wrapping
             'menu' => MenuNestedResource::collection($menu)->resolve(),
 
             'menu_permissions' => $menu_permissions,
-            'total_menu' => $total_menu,
         ]);
     }
 
@@ -77,7 +75,7 @@ class RoleController extends Controller
 
         $role->syncPermissions($request->permissions);
 
-        return redirect()->route('role.index');
+        return redirect()->route('role.index')->with('success', 'Successfully save data');
     }
 
     /**
@@ -97,11 +95,10 @@ class RoleController extends Controller
 
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
         $menu = Menu::whereNull('parent_id')->orderBy('sequence_number')->get();
-        $total_menu = Menu::count();
 
         $menu_permissions = $this->menu_service->getMenuPermissions('menus.uuid', 'menus.label', 'p.name', 'route_name');
 
-        return Inertia::render('role/RoleForm', [
+        return Inertia::render('settings/role/RoleForm', [
             'pageTitle' => 'Edit Role',
             'role' => $data->resolve(),
             'teams' => $teams,
@@ -110,7 +107,6 @@ class RoleController extends Controller
             'menu' => MenuNestedResource::collection($menu)->resolve(),
 
             'menu_permissions' => $menu_permissions,
-            'total_menu' => $total_menu,
         ]);
     }
 
@@ -130,7 +126,7 @@ class RoleController extends Controller
 
         $role->syncPermissions($request->permissions);
 
-        return redirect()->route('role.index');
+        return redirect()->route('role.index')->with('success', 'Successfully save data');
     }
 
     /**

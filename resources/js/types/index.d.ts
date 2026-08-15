@@ -150,6 +150,7 @@ export interface Department {
 export interface RoleList {
     id: number;
     name: string;
+    label: string;
     team_name: string;
     is_active: boolean;
     created_at?: string;

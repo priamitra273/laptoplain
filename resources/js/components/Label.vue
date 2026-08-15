@@ -17,7 +17,8 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <component :is="props.as" :class="cn('flex items-center gap-2 text-surface-600 dark:text-surface-200', props.class)">
+    <component :is="props.as"
+        :class="cn('flex items-center gap-2 text-neutral-600 dark:text-neutral-200 text-sm', props.class)">
         <Icon v-if="props.icon" :name="props.icon" />
         <span>{{ props.value }}</span>
         <span v-if="props.required" class="text-red-500">*</span>

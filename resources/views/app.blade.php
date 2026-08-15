@@ -19,14 +19,14 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Warna --ui-bg dari app.css, ditulis literal: style ini jalan sebelum CSS termuat --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: #fff;
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: oklch(14.1% 0.005 285.823); /* zinc-950 */
             }
         </style>
 

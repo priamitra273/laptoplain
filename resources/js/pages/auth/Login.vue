@@ -1,23 +1,68 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import AuthLayout from '@/layouts/AuthLayout.vue';
+import { Head, router } from '@inertiajs/vue3';
+import type { AuthFormField, FormError, FormSubmitEvent } from '@nuxt/ui';
+import { ref, useTemplateRef } from 'vue';
 
-defineOptions({ layout: AppLayout });
+defineOptions({ layout: AuthLayout });
 
-defineProps<{
+const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
 
-const form = useForm({
-    email: '',
-    password: '',
-    remember: false,
-});
+const authForm = useTemplateRef('authForm');
+const loading = ref(false);
 
-const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+// `name` wajib di tiap field; type 'password' otomatis dapat tombol lihat/sembunyi.
+const fields: AuthFormField[] = [
+    {
+        name: 'email',
+        type: 'email',
+        label: 'Email',
+        placeholder: 'nama@contoh.com',
+        autocomplete: 'email',
+        autofocus: true,
+        required: true,
+    },
+    {
+        name: 'password',
+        type: 'password',
+        label: 'Kata sandi',
+        placeholder: '••••••••',
+        autocomplete: 'current-password',
+        required: true,
+    },
+    { name: 'remember', type: 'checkbox', label: 'Ingat saya', defaultValue: false },
+];
+
+// Validasi klien seadanya; kebenaran kredensial tetap diputuskan server.
+const validate = (state: Record<string, unknown>): FormError[] => {
+    const errors: FormError[] = [];
+
+    if (!String(state.email ?? '')) {
+        errors.push({ name: 'email', message: 'Email wajib diisi.' });
+    }
+
+    if (!String(state.password ?? '')) {
+        errors.push({ name: 'password', message: 'Kata sandi wajib diisi.' });
+    }
+
+    return errors;
+};
+
+interface LoginPayload extends Record<string, string | boolean> {
+    email: string;
+    password: string;
+    remember: boolean;
+}
+
+const onSubmit = (event: FormSubmitEvent<LoginPayload>) => {
+    router.post(route('login'), event.data, {
+        onStart: () => (loading.value = true),
+        onFinish: () => (loading.value = false),
+        // Error validasi Laravel dipasang balik ke field-nya masing-masing.
+        onError: (errors) => authForm.value?.formRef?.setErrors(Object.entries(errors).map(([name, message]) => ({ name, message }))),
     });
 };
 </script>
@@ -26,35 +71,24 @@ const submit = () => {
     <div class="flex min-h-screen items-center justify-center p-4">
         <Head title="Log in" />
 
-        <UCard class="w-full max-w-sm">
-            <template #header>
-                <div class="flex items-center gap-2">
-                    <UIcon name="i-lucide-shield-check" class="size-6 text-primary" />
-                    <h1 class="text-lg font-semibold">Log in</h1>
-                </div>
-            </template>
+        <div class="w-full max-w-sm">
+            <UAlert v-if="props.status" color="success" variant="subtle" :description="props.status" class="mb-4" />
 
-            <UAlert v-if="status" color="success" variant="subtle" :description="status" class="mb-4" />
-
-            <form class="space-y-4" @submit.prevent="submit">
-                <UFormField label="Email address" :error="form.errors.email" required>
-                    <UInput v-model="form.email" type="email" placeholder="email@example.com" autocomplete="email" autofocus class="w-full" />
-                </UFormField>
-
-                <UFormField label="Password" :error="form.errors.password" required>
-                    <UInput v-model="form.password" type="password" placeholder="••••••••" autocomplete="current-password" class="w-full" />
-                </UFormField>
-
-                <div class="flex items-center justify-between">
-                    <UCheckbox v-model="form.remember" label="Remember me" />
-
-                    <Link v-if="canResetPassword" :href="route('password.request')" class="text-sm text-primary hover:underline">
-                        Forgot password?
-                    </Link>
-                </div>
-
-                <UButton type="submit" block icon="i-lucide-log-in" :loading="form.processing"> Log in </UButton>
-            </form>
-        </UCard>
+            <UAuthForm
+                ref="authForm"
+                icon="i-lucide-shield-check"
+                title="Selamat datang kembali"
+                description="Masuk untuk melanjutkan ke dashboard."
+                :fields="fields"
+                :validate="validate"
+                :loading="loading"
+                :submit="{ label: 'Masuk' }"
+                @submit="onSubmit"
+            >
+                <template v-if="props.canResetPassword" #password-hint>
+                    <ULink :to="route('password.request')" class="font-medium text-primary">Lupa sandi?</ULink>
+                </template>
+            </UAuthForm>
+        </div>
     </div>
 </template>

@@ -3,7 +3,51 @@
 
 @source not '../js/**/*_v1/**';
 
+/* Class dari template literal di resources/js/theme/ui-thing.ts tidak terlihat oleh Tailwind */
+@source inline('{hover:,active:}bg-{primary,secondary,success,info,warning,error,inverted}/90');
+@source inline('outline-{primary,secondary,success,info,warning,error,inverted}/50');
+@source inline('{disabled:,aria-disabled:}{opacity-50,pointer-events-none}');
+
 @theme static {
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ————— token ui-thing (shadcn, tema violet) ————— */
+
+/* `bg-card`: permukaan terangkat — putih di light, zinc-900 di dark (shadcn --card/--popover) */
+@theme inline {
+    --color-card: var(--ui-card);
+}
+
+:root {
+    /* shadcn --radius 0.65rem; Nuxt UI menurunkan rounded-md dari 1.5 × --ui-radius */
+    --ui-radius: 0.35rem;
+    --ui-card: #fff;
+    /* shadcn --input lebih pucat dari ring-accented bawaan Nuxt UI */
+    --ui-border-accented: var(--ui-color-neutral-200);
+}
+
+/* .dark harus setelah :root — keduanya kena elemen html, jadi urutan yang menentukan */
+.dark {
+    --ui-card: var(--ui-color-neutral-900);
+    --ui-bg: var(--ui-color-neutral-950);
+    --ui-border: oklch(1 0 0 / 10%);
+    --ui-border-muted: oklch(1 0 0 / 10%);
+    --ui-border-accented: oklch(1 0 0 / 15%);
+}
+
+body {
+    min-height: 100vh;
+    /* token Nuxt UI: beralih lewat class .dark, bukan prefers-color-scheme */
+    color: var(--ui-text);
+    background: var(--ui-bg);
+    transition:
+        color 0.5s,
+        background-color 0.5s;
+    line-height: 1.6;
+    font-size: 15px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }

@@ -1,8 +1,7 @@
+import type { PrimeSeverity } from '@/types';
 import { usePage } from '@inertiajs/vue3';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-
-const page = usePage();
 
 /**
  * Tailwind merge
@@ -21,7 +20,33 @@ export function cn(...inputs: ClassValue[]) {
  * @returns boolean
  */
 export function can(permission: string): boolean {
-    return page.props.auth.permissions.includes(permission);
+    // usePage() dipanggil di dalam fungsi, bukan di module scope: modul ini diimpor
+    // sebelum app ter-mount (dan di SSR), dan usePage() butuh instance yang aktif.
+    return usePage().props.auth.permissions.includes(permission);
+}
+
+/**
+ * Severity di DB memakai kosakata PrimeVue; Nuxt UI memakai kosakata sendiri.
+ * Hanya tiga nilai yang berbeda, sisanya identik.
+ */
+export function severityColor(
+    severity: PrimeSeverity | null | undefined,
+): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' {
+    switch (severity) {
+        case 'warn':
+            return 'warning';
+        case 'danger':
+            return 'error';
+        case 'contrast':
+            return 'neutral';
+        case 'primary':
+        case 'secondary':
+        case 'success':
+        case 'info':
+            return severity;
+        default:
+            return 'neutral';
+    }
 }
 
 /**

@@ -37,6 +37,7 @@
         "@iconify-json/lucide": "^1.2.123",
         "@inertiajs/vue3": "^3.5.0",
         "@nuxt/ui": "^4.10.0",
+        "@tanstack/vue-table": "8.21.3",
         "@number-flow/vue": "^0.4.7",
         "@types/lodash": "^4.17.17",
         "@videojs-player/vue": "^1.0.0",

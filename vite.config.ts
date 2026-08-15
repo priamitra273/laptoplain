@@ -4,6 +4,7 @@ import laravel from 'laravel-vite-plugin';
 import { resolve } from 'node:path';
 import path from 'path';
 import { defineConfig } from 'vite';
+import uiThing from './resources/js/theme/ui-thing.ts';
 
 export default defineConfig({
     plugins: [
@@ -22,14 +23,19 @@ export default defineConfig({
         }),
         ui({
             router: 'inertia',
+            // Mode warna ditangani composables/useAppearance.ts (localStorage + cookie yang
+            // dibaca HandleAppearance untuk merender `.dark` di blade). Tanpa ini Nuxt UI
+            // memasang useDark() VueUse dan keduanya sama-sama menulis class `.dark`.
+            colorMode: false,
             components: {
                 dirs: ['resources/js/components'],
             },
             ui: {
                 colors: {
-                    primary: 'indigo',
-                    neutral: 'slate',
+                    primary: 'violet',
+                    neutral: 'zinc',
                 },
+                ...uiThing,
             },
         }),
     ],

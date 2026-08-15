@@ -7,6 +7,7 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
+import { initTheme } from './composables/useTheme';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -14,6 +15,10 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
+        // Sebelum .use(ui): plugin colors membaca appConfig saat install, jadi paint
+        // pertama sudah pakai warna tersimpan — tanpa kedip violet default build-time.
+        initTheme();
+
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ui)

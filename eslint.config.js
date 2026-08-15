@@ -7,17 +7,12 @@ export default defineConfigWithVueTs(
     vue.configs['flat/essential'],
     vueTsConfigs.recommended,
     {
-        ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js', 'resources/js/components/ui/*'],
+        ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'resources/js/**/*_v1/**', 'components.d.ts', 'auto-imports.d.ts'],
     },
     {
-        extends: ['plugin:vue/vue3-essential', 'eslint:recommended', '@vue/eslint-config-prettier'],
-        parserOptions: {
-            ecmaVersion: 'latest'
-        },
         rules: {
             'vue/multi-word-component-names': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
-            'vue/no-reserved-component-names': 'off',
             'vue/component-tags-order': [
                 'error',
                 {

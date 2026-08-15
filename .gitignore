@@ -1,4 +1,6 @@
 /.phpunit.cache
+/auto-imports.d.ts
+/components.d.ts
 /bootstrap/ssr
 /node_modules
 /public/build

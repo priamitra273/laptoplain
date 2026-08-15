@@ -43,11 +43,11 @@
 
     @vite(['resources/css/app.css'])
 </head>
-<body class="font-sans antialiased bg-background text-foreground">
+<body class="font-sans antialiased bg-default text-default">
 <div class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <!-- Card Container -->
-        <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="rounded-lg border border-default bg-default text-default shadow-sm">
             <!-- Header -->
             <div class="flex flex-col space-y-1.5 p-6">
                 <div class="flex items-center justify-center mb-4">
@@ -61,7 +61,7 @@
                     Authorize {{ $client->name }}
                 </h3>
 
-                <p class="text-sm text-muted-foreground text-center">
+                <p class="text-sm text-muted text-center">
                     This application will be able to:<br/>Use available MCP functionality.
                 </p>
             </div>
@@ -69,8 +69,8 @@
             <!-- Content -->
             <div class="p-6 pt-0 space-y-4">
                 <!-- User Info -->
-                <div class="rounded-lg border p-4 bg-muted/50">
-                    <p class="text-sm text-muted-foreground mb-2">Logged in as:</p>
+                <div class="rounded-lg border border-default p-4 bg-muted/50">
+                    <p class="text-sm text-muted mb-2">Logged in as:</p>
                     <p class="font-medium">{{ $user->email }}</p>
                 </div>
 
@@ -85,7 +85,7 @@
                                     <div class="rounded-full bg-primary/10 p-1 mt-0.5">
                                         <div class="h-1.5 w-1.5 rounded-full bg-primary"></div>
                                     </div>
-                                    <span class="text-sm text-muted-foreground">
+                                    <span class="text-sm text-muted">
                                         {{ $scope->description }}
                                     </span>
                                 </li>
@@ -104,7 +104,7 @@
                     <input type="hidden" name="state" value="">
                     <input type="hidden" name="client_id" value="{{ $client->id }}">
                     <input type="hidden" name="auth_token" value="{{ $authToken }}">
-                    <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full">
+                    <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-accented bg-default hover:bg-elevated h-10 px-4 py-2 w-full">
                         <svg class="mr-2 h-4 w-4" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -118,7 +118,7 @@
                     <input type="hidden" name="state" value="">
                     <input type="hidden" name="client_id" value="{{ $client->id }}">
                     <input type="hidden" name="auth_token" value="{{ $authToken }}">
-                    <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full" id="authorizeButton">
+                    <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-inverted hover:bg-primary/90 h-10 px-4 py-2 w-full" id="authorizeButton">
                         <span id="authorizeText">Authorize</span>
 
                         <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

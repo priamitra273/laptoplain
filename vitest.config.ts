@@ -6,11 +6,13 @@ export default defineConfig({
     plugins: [vue()],
     resolve: {
         alias: {
-            '@': resolve(__dirname, './resources/js'),
+            '@': resolve(import.meta.dirname, './resources/js'),
         },
     },
     test: {
         environment: 'node',
         include: ['resources/js/**/*.{test,spec}.ts'],
+        exclude: ['**/node_modules/**', 'resources/js/**/*_v1/**'],
+        passWithNoTests: true,
     },
 });

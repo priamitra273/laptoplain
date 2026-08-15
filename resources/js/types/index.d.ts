@@ -484,8 +484,8 @@ export interface BaseOption {
     severity?: PrimeSeverity;
 }
 
-export interface StatusOption extends BaseOption {}
-export interface PriorityOption extends BaseOption {}
+export type StatusOption = BaseOption;
+export type PriorityOption = BaseOption;
 
 export interface ProjectRoleConfig {
     task?: string[];

@@ -1,11 +1,8 @@
-import { PrimeVueResolver } from '@primevue/auto-import-resolver';
+import ui from '@nuxt/ui/vite';
 import vue from '@vitejs/plugin-vue';
-import autoprefixer from 'autoprefixer';
 import laravel from 'laravel-vite-plugin';
 import { resolve } from 'node:path';
 import path from 'path';
-import tailwindcss from 'tailwindcss';
-import Components from 'unplugin-vue-components/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -23,27 +20,30 @@ export default defineConfig({
                 },
             },
         }),
-        Components({
-            resolvers: [PrimeVueResolver()],
+        ui({
+            router: 'inertia',
+            components: {
+                dirs: ['resources/js/components'],
+            },
+            ui: {
+                colors: {
+                    primary: 'indigo',
+                    neutral: 'slate',
+                },
+            },
         }),
     ],
 
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './resources/js'),
-            '@assets': path.resolve(__dirname, './resources'),
-            '@components': path.resolve(__dirname, './resources/js/components'),
-            '@pages': path.resolve(__dirname, './resources/js/pages'),
-            '@layouts': path.resolve(__dirname, './resources/js/layouts'),
-            '@lib': path.resolve(__dirname, './resources/js/lib'),
-            '@composables': path.resolve(__dirname, './resources/js/composables'),
-            'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
-        },
-    },
-
-    css: {
-        postcss: {
-            plugins: [tailwindcss, autoprefixer],
+            '@': path.resolve(import.meta.dirname, './resources/js'),
+            '@assets': path.resolve(import.meta.dirname, './resources'),
+            '@components': path.resolve(import.meta.dirname, './resources/js/components'),
+            '@pages': path.resolve(import.meta.dirname, './resources/js/pages'),
+            '@layouts': path.resolve(import.meta.dirname, './resources/js/layouts'),
+            '@lib': path.resolve(import.meta.dirname, './resources/js/lib'),
+            '@composables': path.resolve(import.meta.dirname, './resources/js/composables'),
+            'ziggy-js': resolve(import.meta.dirname, 'vendor/tightenco/ziggy'),
         },
     },
 });

@@ -13,24 +13,24 @@
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-/* ————— token ui-thing (shadcn, tema violet) ————— */
-
 /* `bg-card`: permukaan terangkat — putih di light, zinc-900 di dark (shadcn --card/--popover) */
+/* `bg-sidebar`: latar di belakang panel inset — shadcn --sidebar */
 @theme inline {
     --color-card: var(--ui-card);
+    --color-sidebar: var(--ui-sidebar);
 }
 
 :root {
-    /* shadcn --radius 0.65rem; Nuxt UI menurunkan rounded-md dari 1.5 × --ui-radius */
     --ui-radius: 0.35rem;
+    --ui-header-height: 3.5rem;
     --ui-card: #fff;
-    /* shadcn --input lebih pucat dari ring-accented bawaan Nuxt UI */
+    --ui-sidebar: var(--ui-color-neutral-50);
     --ui-border-accented: var(--ui-color-neutral-200);
 }
 
-/* .dark harus setelah :root — keduanya kena elemen html, jadi urutan yang menentukan */
 .dark {
     --ui-card: var(--ui-color-neutral-900);
+    --ui-sidebar: var(--ui-color-neutral-900);
     --ui-bg: var(--ui-color-neutral-950);
     --ui-border: oklch(1 0 0 / 10%);
     --ui-border-muted: oklch(1 0 0 / 10%);
@@ -39,7 +39,6 @@
 
 body {
     min-height: 100vh;
-    /* token Nuxt UI: beralih lewat class .dark, bukan prefers-color-scheme */
     color: var(--ui-text);
     background: var(--ui-bg);
     transition:

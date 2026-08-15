@@ -1,47 +1,25 @@
-// Gaya ui-thing (shadcn, tema violet) untuk seluruh komponen Nuxt UI.
-//
-// Warna dan radius sudah ditangani token CSS di src/assets/main.css.
-// Di sini hanya yang tidak bisa dicapai token: tinggi tetap, shadow, dan
-// focus ring 3px. Nuxt UI sudah memakai `outline-3` untuk focus — yang beda
-// hanya opacity (/25 → /50), jadi sebagian besar override cuma satu class.
-//
-// File ini sengaja ada di src/ supaya Tailwind ikut memindainya; class dari
-// template literal (`outline-${color}/50`) tetap perlu @source inline di main.css.
-
-// `neutral` sengaja dikecualikan: Nuxt UI memakai token `inverted`/`elevated`, bukan `bg-neutral`
 const COLORS = ['primary', 'secondary', 'success', 'info', 'warning', 'error'] as const;
 
-// `outline-style` tidak bisa ditransisikan, jadi tanpa `outline-0` ring akan lompat dari
-// none ke solid. Dengan ring terpasang permanen selebar 0, `focus-visible:outline-3`
-// bawaan Nuxt UI tinggal menumbuhkan lebarnya.
-//
-// Daftar transisi ditulis penuh karena tailwind-merge menganggapnya segrup dengan
-// `transition-colors` bawaan — jadi ini mengganti, bukan menambah.
 const ring = 'outline-0 transition-[color,background-color,outline-color,outline-width,box-shadow]';
 
-/** focus ring shadcn (`ring-ring/50`) untuk komponen tanpa slot warna per-slot */
 const focusRing = () => [
     ...COLORS.map((color) => ({ color, class: `${ring} outline-${color}/50` })),
     { color: 'neutral', class: `${ring} outline-inverted/50` },
 ];
 
-/** idem, untuk komponen yang variant `color`-nya berupa object per slot */
 const focusRingOn = (slot: string) =>
     Object.fromEntries([
         ...COLORS.map((color) => [color, { [slot]: `${ring} outline-${color}/50` }]),
         ['neutral', { [slot]: `${ring} outline-inverted/50` }],
     ]);
 
-/** permukaan floating shadcn: rounded-md + border + shadow-md di atas --card */
 const panel = 'bg-card rounded-md shadow-md';
 
-// shadcn-flavored button: fixed heights, subtle shadow, /90 hover, stronger focus ring
 const button = {
     slots: {
         base: `${ring} justify-center whitespace-nowrap disabled:opacity-50 aria-disabled:opacity-50 disabled:pointer-events-none aria-disabled:pointer-events-none active:translate-y-px`,
     },
     variants: {
-        // shadcn menahan text-sm dari sm sampai lg — cuma tinggi dan padding yang berubah
         size: {
             xs: { base: 'h-7 py-0 px-2.5 text-xs gap-1' },
             sm: { base: 'h-8 py-0 px-3 text-sm gap-1.5' },
@@ -81,7 +59,6 @@ const button = {
     ],
 };
 
-// Kontrol form shadcn: tinggi tetap sejajar button, shadow-xs pada varian berbingkai.
 const fieldSizes = {
     xs: { base: 'h-7 py-0 px-2.5 text-xs' },
     sm: { base: 'h-8 py-0 px-3 text-sm' },
@@ -90,7 +67,6 @@ const fieldSizes = {
     xl: { base: 'h-11 py-0 px-4 text-base' },
 };
 
-/** item menu shadcn: `px-2 py-1.5 gap-2`; Nuxt UI defaultnya `p-1.5 gap-1.5` */
 const menuSizes = {
     xs: { item: 'px-1.5 py-1 gap-1.5', label: 'px-1.5 py-1' },
     sm: { item: 'px-2 py-1 gap-2', label: 'px-2 py-1' },
@@ -110,10 +86,8 @@ const field = {
     compoundVariants: fieldCompound,
 };
 
-/** field + panel bebas isi, untuk InputDate/InputTime */
 const fieldWithPanel = { ...field, slots: { content: panel } };
 
-/** field + panel berisi daftar item, untuk Select/SelectMenu/InputMenu */
 const fieldWithMenu = {
     ...field,
     slots: { content: panel },
@@ -122,8 +96,6 @@ const fieldWithMenu = {
 
 export default {
     button,
-
-    // ————— form —————
     input: field,
     inputNumber: field,
     inputTags: field,
@@ -145,7 +117,6 @@ export default {
         },
         compoundVariants: [{ variant: ['outline', 'subtle'], class: 'shadow-xs' }, ...focusRing()],
     },
-    // shadcn textarea tumbuh dari min-h-16, bukan tinggi tetap
     textarea: {
         variants: {
             size: {
@@ -171,7 +142,6 @@ export default {
         variants: { color: focusRingOn('base') },
     },
     switch: {
-        // shadcn thumb datar; Nuxt UI defaultnya shadow-lg
         slots: { base: 'shadow-xs', thumb: 'shadow-sm' },
         variants: { color: focusRingOn('base') },
     },
@@ -203,24 +173,17 @@ export default {
             fullscreen: { false: { content: 'max-w-100 rounded-xl shadow-lg' } },
         },
     },
-    // Sheet: kebalikan Dialog — container cuma gap-4, padding p-4 menempel di tiap bagian.
-    // Semua `sm:*` di sini menetralkan `sm:px-6`/`sm:p-6` bawaan Nuxt UI; ui-thing tetap 4.
     slideover: {
         slots: {
-            // slideover tidak punya variant `overlay` (cuma prop boolean untuk render/tidak),
-            // jadi warnanya harus di slot — kalau ditaruh di variants tidak pernah kepakai
             overlay: 'bg-default/50 backdrop-blur-sm',
             content: 'bg-card divide-y-0 gap-4',
             header: 'flex-col items-stretch min-h-0 gap-1.5 p-4 sm:px-4',
             body: 'px-4 py-0 sm:px-4 sm:py-0',
-            // Sheet menumpuk tombol vertikal penuh; tidak jadi baris di sm seperti Dialog
             footer: 'flex-col items-stretch mt-auto gap-2 p-4 sm:px-4',
             description: 'mt-0',
         },
-        // ui-thing `sm:max-w-sm` (24rem); Nuxt UI defaultnya max-w-md (28rem)
         variants: { side: { left: { content: 'max-w-sm' }, right: { content: 'max-w-sm' } } },
     },
-    // Drawer: seperti Sheet, tapi tanpa gap sama sekali dan overlay lebih tipis
     drawer: {
         slots: {
             content: 'bg-card',
@@ -233,9 +196,7 @@ export default {
     },
     toast: { slots: { root: 'bg-card rounded-lg' } },
 
-    // ————— tampilan —————
     card: {
-        // shadcn card: py-6 di root + gap-6 antar bagian, anaknya cuma px-6
         slots: {
             root: 'rounded-xl shadow-sm flex flex-col gap-6 py-6',
             header: 'px-6 py-0 gap-2',
@@ -253,7 +214,6 @@ export default {
         },
     },
     badge: {
-        // skala size tidak sejajar: Nuxt UI md (text-xs) = ui-thing sm, dan seterusnya
         slots: { base: 'w-fit shrink-0 justify-center whitespace-nowrap' },
         variants: {
             size: {
@@ -267,7 +227,6 @@ export default {
     empty: { slots: { root: 'rounded-lg gap-6 p-6 md:p-12' } },
     accordion: { slots: { trigger: 'py-4', body: 'pb-4' } },
     tabs: {
-        // shadcn TabsList: rounded-md, padding tipis, trigger rounded-sm
         variants: {
             variant: {
                 pill: { list: 'rounded-md p-0.5', indicator: 'rounded-sm', trigger: 'rounded-sm' },
@@ -282,4 +241,49 @@ export default {
         },
     },
     link: { base: 'outline-primary/50' },
+
+    navigationMenu: {
+        slots: {
+            link: 'gap-2 px-2',
+            linkLeadingIcon: 'size-4',
+            linkTrailingIcon: 'size-4',
+            childLinkIcon: 'size-4',
+            label: 'px-2 text-xs font-medium text-muted',
+        },
+        compoundVariants: [
+            { variant: 'pill', active: true, class: { link: 'before:shadow-xs' } },
+            {
+                orientation: 'vertical',
+                collapsed: true,
+                class: {
+                    list: 'flex flex-col gap-1',
+                    // trigger tetap tersorot selama popover-nya terbuka; tanpa ini ia
+                    // kehilangan hover begitu kursor pindah ke panel dan tampak lepas
+                    link: 'justify-center size-9 p-0 mx-auto data-[state=open]:text-highlighted data-[state=open]:before:bg-elevated',
+                    linkLeadingIcon: 'size-5',
+                    content: `${panel} shadow-lg p-1`,
+                    childLabel: `${menuSizes.md.label} font-semibold`,
+                    childLink: `${menuSizes.md.item} items-center rounded-sm`,
+                },
+            },
+        ],
+        defaultVariants: { color: 'neutral' },
+    },
+    // Sidebar inset ala shadcn: tanpa border pemisah, latarnya ikut grup, dan jarak
+    // ke panel utama datang dari padding root ini (padanan `p-2` di Sidebar shadcn).
+    //
+    // Grupnya bernama: `group` polos di root ikut tertangkap `group-hover:` milik ikon
+    // NavigationMenu, sehingga menyorot satu item menyalakan ikon seluruh sidebar.
+    // `border-e-0` harus di varian `side`, bukan di slot dasar — varian menang di tv().
+    dashboardSidebar: {
+        slots: {
+            root: 'group/sidebar p-2',
+            header: 'gap-2 px-2 group-data-[collapsed=true]/sidebar:px-0',
+            body: 'gap-2 px-2 py-2 group-data-[collapsed=true]/sidebar:px-0',
+            footer: 'px-2 py-2 group-data-[collapsed=true]/sidebar:px-0',
+        },
+        variants: {
+            side: { left: { root: 'border-e-0' } },
+        },
+    },
 };

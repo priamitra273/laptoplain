@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAppearance } from '@/composables/useAppearance';
-import { buildNavigationItems, flattenNavigationItems } from '@/lib/menu';
+import { buildNavigationItems, flattenNavigationItems, toNavigationGroups } from '@/lib/menu';
 import { getInitials } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/vue3';
 import type { DropdownMenuItem } from '@nuxt/ui';
@@ -15,7 +15,8 @@ const page = usePage();
 const toast = useToast();
 const { appearance, updateAppearance } = useAppearance();
 
-const items = computed(() => buildNavigationItems(page.props.auth?.menu, (name) => route(name)));
+const items = computed(() => buildNavigationItems(page.props.auth?.menu, (name) => route(name, undefined, false), page.url));
+const navGroups = computed(() => toNavigationGroups(items.value));
 
 const links = computed<DropdownMenuItem[]>(() => [
     { label: 'Pengaturan profil', icon: 'i-lucide-settings', onSelect: () => router.visit(route('profile.edit')) },
@@ -42,7 +43,6 @@ const avatar = computed(() => ({
     text: user.value?.name ? getInitials(user.value.name) : undefined,
 }));
 
-// Menggantikan provider_v1/FlashToastProvider.vue — satu watcher sudah cukup.
 watch(
     () => page.props.flash,
     (flash) => {
@@ -60,43 +60,57 @@ watch(
 
 <template>
     <UApp>
-        <UDashboardGroup storage="local" unit="rem">
+        <UDashboardGroup storage="local" unit="rem" class="bg-sidebar">
             <UDashboardSidebar collapsible resizable :default-size="16" :min-size="12" :max-size="24"
                 :collapsed-size="4" :ui="{
                     root: 'transition-[width] duration-200 ease-out data-[dragging=true]:transition-none motion-reduce:transition-none',
                     header: 'overflow-hidden',
-                    body: 'overflow-x-hidden',
+                    body: 'overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:var(--ui-border-accented)_transparent]',
                     footer: 'overflow-hidden',
                 }">
                 <template #header="{ collapsed }">
-                    <UIcon name="i-lucide-hexagon" class="size-5 shrink-0 text-primary"
-                        :class="{ 'flex-1': collapsed }" />
-                    <span v-if="!collapsed" class="truncate font-semibold">{{ page.props.name }}</span>
+                    <div class="flex h-12 w-full items-start gap-2 rounded-lg" :class="{ 'justify-center': collapsed }">
+                        <img :src="collapsed ? '/storage/t-logo.png' : '/storage/logo.png'" alt="Logo"
+                            class="h-9 w-auto" />
+                    </div>
                 </template>
 
                 <template #default="{ collapsed }">
-                    <UDashboardSearchButton :collapsed="collapsed" />
-                    <UNavigationMenu :items="items" :collapsed="collapsed" orientation="vertical" />
+                    <UDashboardSearchButton :collapsed="collapsed" class="shrink-0" :class="{ 'mx-auto': collapsed }" />
+
+                    <UNavigationMenu :items="collapsed ? items : navGroups" :collapsed="collapsed"
+                        orientation="vertical" :popover="{ content: { sideOffset: 8, alignOffset: -4 } }"
+                        :tooltip="{ content: { sideOffset: 8 } }" :ui="{ childList: 'min-w-44', separator: 'h-px' }" />
                 </template>
 
                 <template #footer="{ collapsed }">
-                    <UDropdownMenu :items="links" :content="{ align: collapsed ? 'center' : 'start' }" class="w-full">
-                        <UButton v-if="collapsed" color="neutral" variant="ghost" square :avatar="avatar" />
-                        <UButton v-else color="neutral" variant="ghost" :avatar="avatar" :label="user?.name"
-                            trailing-icon="i-lucide-chevrons-up-down" class="w-full"
-                            :ui="{ label: 'truncate', trailingIcon: 'ms-auto' }" />
+                    <UDropdownMenu :items="links"
+                        :content="{ align: collapsed ? 'center' : 'end', side: 'right', sideOffset: 8 }"
+                        :class="collapsed ? 'mx-auto' : 'w-full'">
+                        <UButton v-if="collapsed" color="neutral" variant="ghost" square :avatar="avatar"
+                            :ui="{ leadingAvatar: 'rounded-lg' }" />
+                        <UButton v-else color="neutral" variant="ghost" class="h-12 w-full">
+                            <UAvatar v-bind="avatar" :ui="{ root: 'rounded-lg' }" />
+                            <span class="grid min-w-0 flex-1 text-start leading-tight">
+                                <span class="truncate text-sm font-medium">{{ user?.name }}</span>
+                                <span class="truncate text-xs text-muted">{{ user?.email }}</span>
+                            </span>
+                            <UIcon name="i-lucide-chevrons-up-down" class="size-4 shrink-0" />
+                        </UButton>
                     </UDropdownMenu>
                 </template>
             </UDashboardSidebar>
 
             <UDashboardSearch :groups="groups" placeholder="Cari halaman..." />
 
-            <!-- scroll di root, bukan di body: konten harus lewat di belakang navbar agar backdrop-blur terlihat -->
-            <UDashboardPanel id="main" :ui="{ root: 'overflow-y-auto', body: 'overflow-visible' }">
+            <UDashboardPanel id="main" :ui="{
+                root: 'min-h-0 overflow-y-auto bg-default lg:m-2 lg:ms-0 lg:rounded-xl lg:shadow-sm',
+                body: 'overflow-visible',
+            }">
                 <template #header>
                     <UDashboardNavbar :title="title" class="sticky top-0 z-10 bg-default/70 backdrop-blur-md">
                         <template #leading>
-                            <UDashboardSidebarCollapse class="ms-auto" />
+                            <UDashboardSidebarCollapse class="-ms-1" />
                         </template>
 
                         <template #right>

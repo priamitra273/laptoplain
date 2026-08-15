@@ -17,7 +17,7 @@ class TeamController extends Controller
             ->filterByUserRole()
             ->get();
 
-        return Inertia::render('team/Team', [
+        return Inertia::render('settings/team/Team', [
             'teams' => $team,
         ]);
     }

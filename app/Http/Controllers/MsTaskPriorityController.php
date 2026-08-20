@@ -17,7 +17,7 @@ class MsTaskPriorityController extends Controller
 
         $msTaskPriorities = Sqids::rec_encode_ids_in_list($msTaskPriorities);
 
-        return Inertia::render('ms_task_priority/Index', [
+        return Inertia::render('masterdata/ms_task_priority/Index', [
             'task_priorities' => $msTaskPriorities,
         ]);
     }

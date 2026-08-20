@@ -17,7 +17,7 @@ sequenceDiagram
     Admin->>Browser: GET /user
     Browser->>Backend: GET /user (route.permission)
     Backend->>DB: User::with('roles.team')<br/>whereRelation('roles.team', filterByUserRole())<br/>->get()
-    Backend->>Browser: Inertia render('user/User', {users: UserListResource})
+    Backend->>Browser: Inertia render('settings/user/User', {users: UserListResource})
 
     Note over Admin,DB: CREATE
     Admin->>Browser: GET /user/create
@@ -104,6 +104,6 @@ Setiap akses user menggunakan UUID sebagai identifier (bukan integer). Method `g
 
 | File | Purpose |
 |------|---------|
-| `pages/user/User.vue` | Halaman list |
-| `pages/user/UserForm.vue` | Form create/edit: Name, Email, Team (Select filtering), Role (dynamic based on team), Active Toggle, Password + confirmation |
-| `pages/user/partials/UserTable.vue` | DataTable: No, Team, Role, Name, Email, Status, Created Date, Created By, Actions |
+| `pages/settings/user/User.vue` | Halaman list |
+| `pages/settings/user/UserForm.vue` | Form create/edit: Name, Email, Team (Select filtering), Role (dynamic based on team), Active Toggle, Password + confirmation |
+| `pages/settings/user/UserTable.vue` | Table: No, Team, Role, Name, Email, Status, Created Date, Created By, Actions |

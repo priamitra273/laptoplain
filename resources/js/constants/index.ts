@@ -1,4 +1,4 @@
-import { SeverityOption } from '@/types';
+import { PrimeSeverity, SeverityOption } from '@/types';
 
 enum PrimeSeverityEnum {
     Primary = 'primary',
@@ -20,7 +20,7 @@ export const severityOptions: SeverityOption[] = [
     { label: 'Contrast', value: PrimeSeverityEnum.Contrast },
 ];
 
-export const getSeverityLabel = (severity: PrimeSeverityEnum | undefined | null): string => {
+export const getSeverityLabel = (severity: PrimeSeverity | PrimeSeverityEnum | undefined | null): string => {
     const value = severity ?? ''; // ubah undefined → ''
     const found = severityOptions.find((option) => option.value === value);
     return found?.label ?? 'Unknown';

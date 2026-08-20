@@ -26,7 +26,7 @@ class MsTaskTypeController extends Controller
 
         $msTaskTypes = Sqids::rec_encode_ids_in_list($msTaskTypes);
 
-        return Inertia::render('ms_task_type/Index', [
+        return Inertia::render('masterdata/ms_task_type/Index', [
             'task_types' => $msTaskTypes,
         ]);
     }

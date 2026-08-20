@@ -15,8 +15,7 @@ class WorkLoadUserController extends Controller
      */
     public function __construct(
         protected WorkloadService $workloadService
-    ) {
-    }
+    ) {}
 
     /**
      * Display a listing of the workload for all users.
@@ -25,7 +24,7 @@ class WorkLoadUserController extends Controller
     {
         $filters = WorkloadFiltersData::fromRequest($request);
 
-        return Inertia::render('workload/index', [
+        return Inertia::render('favorites/workload/Index', [
             'users' => $this->workloadService->getUsersWorkload($filters),
             'summary' => $this->workloadService->getWorkloadSummary($filters),
             'filters' => $filters,

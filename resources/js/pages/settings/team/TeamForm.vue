@@ -43,8 +43,6 @@ const save = (): void => {
         }
     })
 }
-
-// watching form changes
 for (const key in form.data()) {
     watchDebounced(() => form[key], () => {
         delete form.errors[key]

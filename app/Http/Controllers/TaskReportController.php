@@ -6,6 +6,7 @@ use App\Http\Requests\TaskReport\TaskReportIndexRequest;
 use App\Services\TaskReportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TaskReportController extends Controller
@@ -13,7 +14,7 @@ class TaskReportController extends Controller
     /**
      * Display task report with filters
      */
-    public function index(TaskReportIndexRequest $request, TaskReportService $service): \Inertia\Response
+    public function index(TaskReportIndexRequest $request, TaskReportService $service): Response
     {
         $filters = $request->all();
 
@@ -21,7 +22,7 @@ class TaskReportController extends Controller
 
         $response = $service->getIndexData($filters, $perPage);
 
-        return Inertia::render('project/task/TaskReport', $response);
+        return Inertia::render('favorites/task-report/Index', $response);
     }
 
     /**

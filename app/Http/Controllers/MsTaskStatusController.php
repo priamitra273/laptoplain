@@ -17,7 +17,7 @@ class MsTaskStatusController extends Controller
 
         $msTaskStatuses = Sqids::rec_encode_ids_in_list($msTaskStatuses);
 
-        return Inertia::render('ms_task_status/Index', [
+        return Inertia::render('masterdata/ms_task_status/Index', [
             'task_statuses' => $msTaskStatuses,
         ]);
     }

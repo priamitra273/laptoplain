@@ -25,7 +25,7 @@ class UserController extends Controller
             return $q->filterByUserRole();
         })->get();
 
-        return Inertia::render('user/User', [
+        return Inertia::render('settings/user/User', [
             'users' => UserListResource::collection($users)->resolve(),
         ]);
     }
@@ -36,9 +36,9 @@ class UserController extends Controller
     public function create()
     {
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
-        $roles = Role::whereRelation('team', fn($q) => $q->filterByUserRole())->get();
+        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
 
-        return Inertia::render('user/UserForm', [
+        return Inertia::render('settings/user/UserForm', [
             'teams' => $teams,
             'roles' => RoleResource::collection($roles)->resolve(),
         ]);
@@ -54,12 +54,12 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'is_active' => $request->is_active,
-            'created_by' => Auth::id()
+            'created_by' => Auth::id(),
         ]);
 
         $user->syncRoles($request->role_id);
 
-        return to_route('user.index');
+        return redirect()->route('user.index')->with('success', 'Successfully save data');
     }
 
     /**
@@ -77,9 +77,9 @@ class UserController extends Controller
     {
         $user = $this->getByUuid($id);
         $teams = Team::select('uuid', 'name', 'created_at', 'updated_at')->filterByUserRole()->get();
-        $roles = Role::whereRelation('team', fn($q) => $q->filterByUserRole())->get();
+        $roles = Role::whereRelation('team', fn ($q) => $q->filterByUserRole())->get();
 
-        return Inertia::render('user/UserForm', [
+        return Inertia::render('settings/user/UserForm', [
             'pageTitle' => 'Edit User',
             'user' => (new UserListResource($user))->resolve(),
             'teams' => $teams,
@@ -105,7 +105,7 @@ class UserController extends Controller
         $user->save();
         $user->syncRoles($request->role_id);
 
-        return to_route('user.index');
+        return redirect()->route('user.index')->with('success', 'Successfully save data');
     }
 
     /**

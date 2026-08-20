@@ -18,7 +18,7 @@ class MsProjectRoleController extends Controller
 
         $roles = Sqids::rec_encode_ids_in_list($roles);
 
-        return Inertia::render('ms_project_role/Index', [
+        return Inertia::render('masterdata/ms_project_role/Index', [
             'project_roles' => $roles,
         ]);
     }
@@ -31,14 +31,20 @@ class MsProjectRoleController extends Controller
 
         $taskStatuses = Sqids::rec_encode_ids_in_list($taskStatuses);
 
-        return Inertia::render('ms_project_role/FormPage', [
+        return Inertia::render('masterdata/ms_project_role/FormPage', [
             'task_statuses' => $taskStatuses,
         ]);
     }
 
     public function store(MsProjectRoleRequest $request): RedirectResponse
     {
-        MsProjectRole::create($request->validated());
+        $data = $request->validated();
+
+        if (! empty($data['config']['allow_task_status'])) {
+            $data['config']['allow_task_status'] = array_map(fn ($item) => Sqids::decode($item), $data['config']['allow_task_status']);
+        }
+
+        MsProjectRole::create($data);
 
         return redirect()
             ->route('project-role.index')
@@ -68,7 +74,7 @@ class MsProjectRoleController extends Controller
             $projectRoleData['config']['allow_task_status'] = array_map(fn ($item) => Sqids::encode($item), $projectRoleData['config']['allow_task_status']);
         }
 
-        return Inertia::render('ms_project_role/FormPage', [
+        return Inertia::render('masterdata/ms_project_role/FormPage', [
             'project_role' => $projectRoleData,
             'task_statuses' => $taskStatuses,
         ]);

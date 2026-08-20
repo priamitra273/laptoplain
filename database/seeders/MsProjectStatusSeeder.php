@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MsProjectStatus;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class MsProjectStatusSeeder extends Seeder
 {
-    
     public function run(): void
     {
 
@@ -17,7 +16,7 @@ class MsProjectStatusSeeder extends Seeder
         $statuses = [
             [
                 'name' => 'Not Started',
-                'severity' => 'secondary',
+                'severity' => 'contrast',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,
@@ -27,7 +26,7 @@ class MsProjectStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Progress',
-                'severity' => 'primary',
+                'severity' => 'info',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

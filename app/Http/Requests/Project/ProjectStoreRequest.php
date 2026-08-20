@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Project;
 
 use App\Facades\Sqids;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,14 +20,14 @@ class ProjectStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'title' => 'required|string|max:255',
-            'description' => 'nullable|required|string',
-            'emoji' => 'nullable|required|string|max:100',
+            'description' => 'required|string',
+            'emoji' => 'required|string|max:100',
             'start_date' => 'required|date',
             'due_date' => [
                 'nullable',
@@ -62,7 +63,7 @@ class ProjectStoreRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
-        if (!$this->has('owned_id')) {
+        if (! $this->has('owned_id')) {
             $this->merge([
                 'owned_id' => Auth::id(),
             ]);
@@ -72,11 +73,10 @@ class ProjectStoreRequest extends FormRequest
         $priorityId = $this->priority_id;
 
         $this->merge([
-            'status_id'   => is_string($statusId) ? Sqids::decode($statusId) : $statusId,
+            'status_id' => is_string($statusId) ? Sqids::decode($statusId) : $statusId,
             'priority_id' => is_string($priorityId) ? Sqids::decode($priorityId) : $priorityId,
         ]);
     }
-
 
     /**
      * Get the data that should be validated.

@@ -139,7 +139,7 @@ class ProjectRepository
     {
         $rows = DB::select($this->recursiveTaskTreeSql(), ['projectId' => $projectId]);
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Task> $tasks */
+        /** @var Collection<int, Task> $tasks */
         $tasks = Task::hydrate($rows);
 
         if ($tasks->isEmpty()) {
@@ -365,6 +365,7 @@ class ProjectRepository
                 'type:id,name,severity',
                 'users:id,name,email',
                 'users.media',
+                'tags:id,name,severity',
                 'subTaskRecursive',
             ])
             ->orderBy('sequence_number')
@@ -386,7 +387,7 @@ class ProjectRepository
     {
         $rows = DB::select($this->recursiveTaskTreeSql(), ['projectId' => $projectId]);
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Task> $tasks */
+        /** @var Collection<int, Task> $tasks */
         $tasks = Task::hydrate($rows);
 
         if ($tasks->isEmpty()) {

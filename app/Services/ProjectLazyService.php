@@ -85,6 +85,7 @@ class ProjectLazyService
     public function kanbanData(Project $project): array
     {
         return [
+            'activeSprintId' => $this->activeSprintId($project),
             'taskStatuses' => $this->deferred(fn () => $this->taskStatuses()),
             'taskPriorities' => $this->deferred(fn () => $this->taskPriorities()),
             'taskTypes' => $this->deferred(fn () => $this->taskTypes()),
@@ -94,6 +95,22 @@ class ProjectLazyService
             'assignableUsers' => $this->deferred(fn () => $this->assignableUsers($project)),
             'epics' => $this->deferred(fn () => $this->projectRepository->getEpics($project->id)->toArray()),
         ];
+    }
+
+    /**
+     * The id of the project's currently active sprint, if any. Used so newly
+     * created tasks from the Kanban tab can be attached to it directly.
+     *
+     * Encoded here directly since the "activeSprintId" key doesn't match the
+     * `_id` suffix pattern that `Sqids::rec_encode_ids_in_list()` auto-encodes.
+     */
+    private function activeSprintId(Project $project): ?string
+    {
+        $id = ProjectSprint::where('project_id', $project->id)
+            ->whereHas('status', fn ($q) => $q->where('name', 'Active'))
+            ->value('id');
+
+        return $id ? Sqids::encode((int) $id) : null;
     }
 
     /**

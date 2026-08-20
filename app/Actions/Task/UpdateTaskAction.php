@@ -109,10 +109,11 @@ class UpdateTaskAction
         // Create and attach new tags
         $newTagIds = [];
         foreach ($data['add_tag']['new'] ?? [] as $newTag) {
-            $tag = Tag::create([
-                'name' => $newTag['name'],
-                'severity' => $newTag['severity'],
-            ]);
+            $tag = Tag::whereRaw('LOWER(name) = ?', [mb_strtolower($newTag['name'])])->first()
+                ?? Tag::create([
+                    'name' => $newTag['name'],
+                    'severity' => $newTag['severity'],
+                ]);
             $newTagIds[] = $tag->id;
         }
 
@@ -219,6 +220,16 @@ class UpdateTaskAction
      */
     private function syncMedia(Task $task, array $data): void
     {
+        // 'attachments' key absent means the caller didn't touch attachments at all
+        // (e.g. a form that doesn't have an attachments field yet) — leave them alone.
+        if (! array_key_exists('attachments', $data)) {
+            if (request()->hasFile('attachments')) {
+                $task->addMultipleMediaFromRequest(['attachments'])->each->toMediaCollection('attachments');
+            }
+
+            return;
+        }
+
         if (! empty($data['attachments'])) {
             $existingMediaUuids = array_map(
                 fn ($media) => $media['uuid'],
@@ -231,7 +242,7 @@ class UpdateTaskAction
         }
 
         if (request()->hasFile('attachments')) {
-            $task->addMediaFromRequest('attachments')->toMediaCollection('attachments');
+            $task->addMultipleMediaFromRequest(['attachments'])->each->toMediaCollection('attachments');
         }
     }
 }

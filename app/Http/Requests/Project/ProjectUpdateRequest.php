@@ -19,7 +19,7 @@ class ProjectUpdateRequest extends FormRequest
         return [
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'emoji' => 'sometimes|string|max:10',
+            'emoji' => 'sometimes|nullable|string|max:100',
             'start_date' => 'sometimes|date',
             'due_date' => 'sometimes|date|after_or_equal:start_date',
             'status_id' => 'sometimes|exists:ms_project_statuses,id',

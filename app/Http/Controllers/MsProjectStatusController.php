@@ -17,7 +17,7 @@ class MsProjectStatusController extends Controller
 
         $statuses = Sqids::rec_encode_ids_in_list($statuses);
 
-        return Inertia::render('ms_project_status/Index', [
+        return Inertia::render('masterdata/ms_project_status/Index', [
             'statuses' => $statuses,
         ]);
     }

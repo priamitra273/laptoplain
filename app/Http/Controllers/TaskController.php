@@ -14,9 +14,11 @@ use App\Http\Requests\Task\TaskUpdateRequest;
 use App\Http\Requests\Task\TaskUpdateStatusRequest;
 use App\Models\MsTaskStatus;
 use App\Models\Task;
+use App\Models\User;
 use App\Rules\SqidExists;
 use App\Services\ProjectService;
 use App\Services\TaskService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -48,13 +50,13 @@ class TaskController extends Controller
 
         $data = $this->service->indexProps(Auth::id(), $params);
 
-        return Inertia::render('project/task/Index', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('favorites/project/task/Index', Sqids::rec_encode_ids_in_list($data));
     }
 
     /**
      * Paginate a single board column ("Load more") for the "My Task" board.
      */
-    public function boardColumn(Request $request): \Illuminate\Http\JsonResponse
+    public function boardColumn(Request $request): JsonResponse
     {
         $params = $request->only([
             'status_id', 'page', 'per_page', 'search', 'project_id', 'priority_id', 'type_id',
@@ -92,7 +94,7 @@ class TaskController extends Controller
             $request->user()
         );
 
-        return Inertia::render('project/task/Detail', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('favorites/project/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
     public function update(TaskUpdateRequest $request, string $encoded, string $taskEncoded, UpdateTaskAction $updateTaskAction)
@@ -117,7 +119,7 @@ class TaskController extends Controller
             return back()->with('error', 'Task not found.');
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if ($user->cannot('update', $task)) {
@@ -232,7 +234,7 @@ class TaskController extends Controller
         ]);
     }
 
-    public function move(TaskMoveRequest $request, string $projectEncoded, Task $task): \Illuminate\Http\JsonResponse
+    public function move(TaskMoveRequest $request, string $projectEncoded, Task $task): JsonResponse
     {
         $this->authorize('update', $projectEncoded, $task);
 
@@ -256,11 +258,11 @@ class TaskController extends Controller
             ->with('success', 'Task deleted successfully');
     }
 
-    public function bulkDestroy(TaskBulkDestroyRequest $request, string $projectEncoded): \Illuminate\Http\JsonResponse
+    public function bulkDestroy(TaskBulkDestroyRequest $request, string $projectEncoded): JsonResponse
     {
         $project = $this->projectService->findByEncodedId($projectEncoded);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $deleted = 0;

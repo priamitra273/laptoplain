@@ -23,14 +23,14 @@ class ProjectController extends Controller
     {
         $response = $this->projectService->getIndexData();
 
-        return Inertia::render('project/Index', Sqids::rec_encode_ids_in_list($response));
+        return Inertia::render('favorites/project/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
     public function show(string $encoded): Response
     {
         $data = $this->projectService->getShowData($encoded);
 
-        return Inertia::render('project/Detail', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('favorites/project/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
     public function store(ProjectStoreRequest $request)

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Sqids;
-use App\Models\TaskCategory;
 use App\Http\Requests\TaskCategory\TaskCategoryRequest;
+use App\Models\TaskCategory;
 use Inertia\Inertia;
 
 class TaskCategoryController extends Controller
@@ -21,7 +21,8 @@ class TaskCategoryController extends Controller
             'severity',
             'created_by',
             'updated_by',
-            'deleted_by'
+            'deleted_by',
+            'created_at',
         ])->orderBy('id')->get();
 
         $taskCategories = Sqids::rec_encode_ids_in_list($taskCategories);
@@ -73,7 +74,9 @@ class TaskCategoryController extends Controller
     public function update(TaskCategoryRequest $request, string $encodedId)
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $taskCategory = TaskCategory::findOrFail($id);
         $taskCategory->update($request->validated());
@@ -89,7 +92,9 @@ class TaskCategoryController extends Controller
     public function destroy(string $encodedId)
     {
         $id = Sqids::decode($encodedId);
-        if (empty($id)) abort(404, 'ID tidak valid.');
+        if (empty($id)) {
+            abort(404, 'ID tidak valid.');
+        }
 
         $taskCategory = TaskCategory::findOrFail($id);
         $taskCategory->delete();

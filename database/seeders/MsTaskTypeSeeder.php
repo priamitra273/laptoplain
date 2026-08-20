@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MsTaskType;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class MsTaskTypeSeeder extends Seeder
@@ -56,7 +56,7 @@ class MsTaskTypeSeeder extends Seeder
             ],
             [
                 'name' => 'Documentation',
-                'severity' => 'primary',
+                'severity' => 'contrast',
                 'owned_id' => 1,
                 'created_by' => 1,
                 'updated_by' => null,

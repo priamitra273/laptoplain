@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MsTaskStatus;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class MsTaskStatusSeeder extends Seeder
 {
-    
     public function run(): void
     {
 
@@ -17,7 +16,7 @@ class MsTaskStatusSeeder extends Seeder
         $statuses = [
             [
                 'name' => 'To Do',
-                'severity' => 'secondary',
+                'severity' => 'contrast',
                 'score' => 0,
                 'owned_id' => 1,
                 'created_by' => 1,
@@ -28,7 +27,7 @@ class MsTaskStatusSeeder extends Seeder
             ],
             [
                 'name' => 'In Progress',
-                'severity' => 'primary',
+                'severity' => 'info',
                 'score' => 50,
                 'owned_id' => 1,
                 'created_by' => 1,

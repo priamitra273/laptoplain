@@ -29,49 +29,49 @@ class ProjectTabController extends Controller
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/kanban/Kanban', $project, $this->service->kanbanData($project));
+        return $this->renderTab('favorites/project-lazy/kanban/Kanban', $project, $this->service->kanbanData($project));
     }
 
     public function list(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/task/List', $project, $this->service->listData($project));
+        return $this->renderTab('favorites/project-lazy/task/List', $project, $this->service->listData($project));
     }
 
     public function backlog(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/backlog/Backlog', $project, $this->service->backlogData($project));
+        return $this->renderTab('favorites/project-lazy/backlog/Backlog', $project, $this->service->backlogData($project));
     }
 
     public function detail(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/detail/Detail', $project, $this->service->detailData($project));
+        return $this->renderTab('favorites/project-lazy/detail/Detail', $project, $this->service->detailData($project));
     }
 
     public function team(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/team/Team', $project, $this->service->teamData($project));
+        return $this->renderTab('favorites/project-lazy/team/Team', $project, $this->service->teamData($project));
     }
 
     public function timeline(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/timeline/Timeline', $project, $this->service->timelineData($project));
+        return $this->renderTab('favorites/project-lazy/timeline/Timeline', $project, $this->service->timelineData($project));
     }
 
     public function report(string $encoded): Response
     {
         $project = $this->repository->findShell($encoded);
 
-        return $this->renderTab('project-lazy/report/Report', $project, []);
+        return $this->renderTab('favorites/project-lazy/report/Report', $project, []);
     }
 
     /**

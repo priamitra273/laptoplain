@@ -55,7 +55,8 @@ class TaskReportRepository
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
-            'project:id,title',
+            'project:id,title,status_id',
+            'project.status:id,name,severity',
         ])->whereHas('project');
     }
 
@@ -95,6 +96,15 @@ class TaskReportRepository
                 : explode(',', $filters['types']);
 
             $query->whereIn('type_id', $types);
+        }
+
+        // PROJECT STATUS
+        if (! empty($filters['project_statuses'])) {
+            $projectStatuses = is_array($filters['project_statuses'])
+                ? $filters['project_statuses']
+                : explode(',', $filters['project_statuses']);
+
+            $query->whereHas('project', fn ($q) => $q->whereIn('status_id', $projectStatuses));
         }
 
         // DATE FILTERS

@@ -17,7 +17,7 @@ class MsProjectPriorityController extends Controller
 
         $priorities = Sqids::rec_encode_ids_in_list($priorities);
 
-        return Inertia::render('ms_project_priority/Index', [
+        return Inertia::render('masterdata/ms_project_priority/Index', [
             'project_priorities' => $priorities,
         ]);
     }

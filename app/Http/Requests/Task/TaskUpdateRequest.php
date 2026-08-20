@@ -23,7 +23,6 @@ class TaskUpdateRequest extends FormRequest
         $datesRequired = $this->requiresDates($status?->name);
 
         return [
-            'project_id' => 'sometimes|exists:projects,id',
             'parent_id' => 'sometimes|nullable|exists:tasks,id',
 
             'status_id' => 'required|exists:ms_task_statuses,id',
@@ -112,7 +111,7 @@ class TaskUpdateRequest extends FormRequest
                 ?? DB::table('tasks')->where('id', $taskId)->value('status_id');
 
             if ($statusId) {
-                $status = \App\Models\MsTaskStatus::find($statusId);
+                $status = MsTaskStatus::find($statusId);
 
                 if ($status && $status->name === 'In Progress' && ! $this->filled('due_date')) {
                     $existingDueDate = DB::table('tasks')
@@ -136,7 +135,6 @@ class TaskUpdateRequest extends FormRequest
         $priorityId = $this->priority_id;
         $typeId = $this->type_id;
         $categoryId = $this->task_category_id;
-        $projectId = $this->project_id;
         $ownedId = $this->owned_id;
         $parentId = $this->parent_id;
 
@@ -197,9 +195,6 @@ class TaskUpdateRequest extends FormRequest
         }
         if ($typeId) {
             $merged['type_id'] = Sqids::decode($typeId);
-        }
-        if ($projectId) {
-            $merged['project_id'] = Sqids::decode($projectId);
         }
         if ($ownedId) {
             $merged['owned_id'] = Sqids::decode($ownedId);

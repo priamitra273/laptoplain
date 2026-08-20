@@ -4,6 +4,7 @@ namespace App\Data\Task;
 
 use App\Facades\Sqids;
 use App\Models\Task;
+use Carbon\Carbon;
 use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
@@ -57,9 +58,14 @@ class TaskReportData extends Data
             project: $task->project ? [
                 'id' => Sqids::encode($task->project->id),
                 'title' => $task->project->title,
+                'status' => $task->project->status ? [
+                    'id' => Sqids::encode($task->project->status->id),
+                    'name' => $task->project->status->name,
+                    'severity' => $task->project->status->severity,
+                ] : null,
             ] : null,
-            start_date: $task->start_date instanceof \Carbon\Carbon ? $task->start_date->toDateString() : $task->start_date,
-            due_date: $task->due_date instanceof \Carbon\Carbon ? $task->due_date->toDateString() : $task->due_date,
+            start_date: $task->start_date instanceof Carbon ? $task->start_date->toDateString() : $task->start_date,
+            due_date: $task->due_date instanceof Carbon ? $task->due_date->toDateString() : $task->due_date,
             progress: (float) $task->progress,
             created_at: $task->created_at->toJSON(),
             updated_at: $task->updated_at->toJSON(),

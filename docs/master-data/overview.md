@@ -92,7 +92,7 @@ Project Role memiliki halaman **create** dan **edit** sendiri (tidak menggunakan
 sequenceDiagram
     Admin->>Browser: GET /project-role/create
     Browser->>Backend: Load task statuses (ordered by score)
-    Backend->>Browser: Render ms_project_role/FormPage
+    Backend->>Browser: Render masterdata/ms_project_role/FormPage
 
     Admin->>Browser: Input name + config (task CRUD + sprint CRUD + member CRUD + allow_task_status + allow_update_task_fields)
     Browser->>Backend: POST /project-role
@@ -154,7 +154,7 @@ Direktori halaman mengikuti nama view di controller (bukan route prefix):
 |----------|---------|
 | Project Status | `pages/ms_project_status/Index.vue` |
 | Project Priority | `pages/ms_project_priority/Index.vue` |
-| Project Role | `pages/ms_project_role/Index.vue` + `pages/ms_project_role/FormPage.vue` |
+| Project Role | `pages/masterdata/ms_project_role/Index.vue` + `pages/masterdata/ms_project_role/FormPage.vue` |
 | Task Status | `pages/ms_task_status/Index.vue` |
 | Task Priority | `pages/ms_task_priority/Index.vue` |
 | Task Type | `pages/ms_task_type/Index.vue` |

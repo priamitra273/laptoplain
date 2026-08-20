@@ -21,7 +21,7 @@ sequenceDiagram
     Backend->>DB: Parent menus: whereNull('parent_id')
     Backend->>MenuService: getAvailableRoutes(existingRouteNames)
     Note over MenuService: Scan semua GET route dengan auth middleware<br/>Filter .index atau top-level route<br/>Exclude routes yang sudah dipakai menu
-    Backend->>Browser: Inertia render('menu/Menu', {menu, parent_menu, available_routes})
+    Backend->>Browser: Inertia render('settings/menu/Menu', {menu, parent_menu, available_routes})
 
     Note over Admin,DB: CREATE
     Admin->>Browser: Open drawer -> input label, parent, icon, route, sequence
@@ -110,5 +110,5 @@ Menu yang dibuat via halaman ini ditampilkan di sidebar (`AppMenu.vue` / `AppSid
 
 | File | Purpose |
 |------|---------|
-| `pages/menu/Menu.vue` | DataTable: Label, Parent, Icon (rendered via Icon.vue), Route Name, Sequence, Status (active/nonactive), Actions |
-| `pages/menu/MenuForm.vue` | Drawer form: Label, Parent (Select), Icon (Select), Route (Select from available), Sequence, Active toggle |
+| `pages/settings/menu/Menu.vue` | DataTable: Label, Parent, Icon (rendered via Icon.vue), Route Name, Sequence, Status (active/nonactive), Actions |
+| `pages/settings/menu/MenuForm.vue` | Drawer form: Label, Parent (Select), Icon (Select), Route (Select from available), Sequence, Active toggle |

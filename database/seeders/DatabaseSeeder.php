@@ -35,6 +35,9 @@ class DatabaseSeeder extends Seeder
             MsTaskTypeSeeder::class,
             MsSprintStatusSeeder::class,
             TaskCategorySeeder::class,
+            ProjectSeeder::class,
+            TaskSeeder::class,
+            ProjectSprintSeeder::class,
         ]);
     }
 }

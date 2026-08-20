@@ -1,0 +1,431 @@
+<script setup lang="ts">
+import RichTextEditor from '@/components/RichTextEditor.vue';
+import { useProjectPermissions } from '@/composables/useProjectPermissions';
+import { severityColor } from '@/lib/utils';
+import { ProjectPolicyKey } from '@/types/type';
+import { useHttp, usePage } from '@inertiajs/vue3';
+import { computed, inject, ref } from 'vue';
+import type { KanbanBadge, KanbanStatusOption, KanbanTask, KanbanUser } from './types';
+
+interface Props {
+    task?: KanbanTask | null;
+    projectId: string;
+    sprintId?: string | null;
+    defaultStatusId?: string;
+    statuses?: KanbanStatusOption[];
+    priorities?: KanbanBadge[];
+    types?: KanbanBadge[];
+    assignableUsers?: KanbanUser[];
+    tags?: KanbanBadge[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    task: null,
+    sprintId: null,
+    defaultStatusId: undefined,
+    statuses: () => [],
+    priorities: () => [],
+    types: () => [],
+    assignableUsers: () => [],
+    tags: () => [],
+});
+
+const emits = defineEmits<{ close: [boolean] }>();
+
+const toast = useToast();
+const page = usePage();
+const currentUserId = computed(() => (page.props.auth as { user: { id: string } }).user.id);
+
+const policy = inject(ProjectPolicyKey, null);
+const { canUpdateTaskStatus } = useProjectPermissions(policy);
+
+const isEdit = computed(() => !!props.task);
+const title = computed(() => (isEdit.value ? 'Edit Task' : 'Create Task'));
+
+interface TaskFormData {
+    title: string;
+    description?: string;
+    status_id?: string;
+    priority_id?: string;
+    type_id?: string;
+    parent_id?: string | null;
+    start_date?: string;
+    due_date?: string;
+    assign_users?: string[];
+    unassign_users?: string[];
+    add_tag?: { exists: string[]; new: { name: string; severity: null }[] };
+    remove_tag?: string[];
+    attachments?: (File | { uuid: string })[];
+    project_id?: string;
+    sprint_id?: string;
+    [key: string]: any;
+}
+
+const http = useHttp<TaskFormData>({
+    title: '',
+    description: '',
+    status_id: undefined,
+    priority_id: undefined,
+    type_id: undefined,
+    parent_id: null,
+    start_date: '',
+    due_date: '',
+    assign_users: [],
+    unassign_users: [],
+    add_tag: { exists: [], new: [] },
+    remove_tag: [],
+    attachments: [],
+    project_id: undefined,
+    sprint_id: undefined,
+});
+
+const selectedUserIds = ref<string[]>([]);
+const originalUserIds = ref<string[]>([]);
+
+const tagStubs = ref<KanbanBadge[]>([]);
+const tagItems = computed(() => [...props.tags, ...tagStubs.value]);
+const selectedTagIds = ref<string[]>([]);
+const originalTagIds = ref<string[]>([]);
+const loadingDetail = ref(false);
+
+interface ParentTaskOption {
+    id: string;
+    parent_id: string | null;
+    title: string;
+    category: { id: string; name: string } | null;
+}
+
+const parentOptions = ref<ParentTaskOption[]>([]);
+
+const excludedParentIds = computed(() => {
+    if (!props.task) return new Set<string>();
+
+    const ids = new Set<string>([props.task.id]);
+    const collectDescendants = (node: KanbanTask) => {
+        for (const child of node.sub_task_recursive) {
+            ids.add(child.id);
+            collectDescendants(child);
+        }
+    };
+    collectDescendants(props.task);
+
+    return ids;
+});
+
+const availableParentOptions = computed(() => parentOptions.value.filter((option) => !excludedParentIds.value.has(option.id)));
+
+interface ExistingAttachment {
+    uuid: string;
+    file_name: string;
+    size: number;
+    mime_type: string;
+    url: string;
+}
+
+const existingAttachments = ref<ExistingAttachment[]>([]);
+const newFiles = ref<File[]>([]);
+
+const removeExistingAttachment = (uuid: string) => {
+    existingAttachments.value = existingAttachments.value.filter((attachment) => attachment.uuid !== uuid);
+};
+
+const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const selectedStatusName = computed(() => props.statuses.find((s) => s.id === http.status_id)?.name);
+const datesRequired = computed(() => !!selectedStatusName.value && !['To Do', 'Blocked'].includes(selectedStatusName.value));
+
+const statusOptions = computed(() => props.statuses.filter((status) => canUpdateTaskStatus(status.id) || props.task?.status?.id === status.id));
+
+const onCreateTag = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const id = `new-${tagStubs.value.length}-${trimmed}`;
+    tagStubs.value = [...tagStubs.value, { id, name: trimmed, severity: null }];
+    selectedTagIds.value = [...selectedTagIds.value, id];
+};
+
+const fetchParentOptions = async () => {
+    try {
+        const response = await fetch(route('project.tasks.parent-options', { projectEncoded: props.projectId }), {
+            headers: { Accept: 'application/json' },
+        });
+        const body = await response.json();
+        parentOptions.value = body.data ?? [];
+    } catch {
+        toast.add({ title: 'Failed', description: 'Could not load parent task options.', color: 'error' });
+    }
+};
+
+const initialize = async () => {
+    http.clearErrors();
+    tagStubs.value = [];
+    selectedTagIds.value = [];
+    originalTagIds.value = [];
+    parentOptions.value = [];
+    existingAttachments.value = [];
+    newFiles.value = [];
+
+    if (props.task) {
+        http.title = props.task.title;
+        http.description = props.task.description ?? '';
+        http.status_id = props.task.status?.id;
+        http.priority_id = props.task.priority?.id;
+        http.type_id = props.task.type?.id;
+        http.parent_id = props.task.parent_id;
+        http.start_date = props.task.start_date ?? '';
+        http.due_date = props.task.due_date ?? '';
+        selectedUserIds.value = props.task.users.map((user) => user.id);
+        originalUserIds.value = [...selectedUserIds.value];
+
+        loadingDetail.value = true;
+        try {
+            const [editResponse] = await Promise.all([
+                fetch(route('project.tasks.edit', { projectEncoded: props.projectId, task: props.task.id }), {
+                    headers: { Accept: 'application/json' },
+                }),
+                fetchParentOptions(),
+            ]);
+            const body = await editResponse.json();
+            const taskTags: KanbanBadge[] = body.data?.tags ?? [];
+            selectedTagIds.value = taskTags.map((tag) => tag.id);
+            originalTagIds.value = [...selectedTagIds.value];
+            existingAttachments.value = body.data?.media ?? [];
+        } catch {
+            toast.add({ title: 'Failed', description: 'Could not load task details.', color: 'error' });
+        } finally {
+            loadingDetail.value = false;
+        }
+    } else {
+        http.title = '';
+        http.description = '';
+        http.status_id = props.defaultStatusId;
+        http.priority_id = undefined;
+        http.type_id = undefined;
+        http.parent_id = null;
+        http.start_date = '';
+        http.due_date = '';
+        selectedUserIds.value = currentUserId.value ? [currentUserId.value] : [];
+        originalUserIds.value = [];
+
+        loadingDetail.value = true;
+        await fetchParentOptions();
+        loadingDetail.value = false;
+    }
+};
+
+const submit = () => {
+    http.assign_users = selectedUserIds.value.filter((id) => !originalUserIds.value.includes(id));
+    http.unassign_users = originalUserIds.value.filter((id) => !selectedUserIds.value.includes(id));
+
+    const selectedNewTags = tagStubs.value.filter((tag) => selectedTagIds.value.includes(tag.id));
+    const selectedExistingTagIds = selectedTagIds.value.filter((id) => !id.startsWith('new-'));
+    http.add_tag = {
+        exists: selectedExistingTagIds.filter((id) => !originalTagIds.value.includes(id)),
+        new: selectedNewTags.map((tag) => ({ name: tag.name, severity: null })),
+    };
+    http.remove_tag = originalTagIds.value.filter((id) => !selectedExistingTagIds.includes(id));
+
+    http.attachments = [...existingAttachments.value.map((attachment) => ({ uuid: attachment.uuid })), ...newFiles.value];
+
+    http.start_date = http.start_date || undefined;
+    http.due_date = http.due_date || undefined;
+
+    if (isEdit.value && props.task) {
+        http.put(route('project.tasks.lazy-update', { projectEncoded: props.projectId, taskEncoded: props.task.id }), {
+            onSuccess: () => {
+                toast.add({ title: 'Success', description: 'Task updated successfully', color: 'success' });
+                emits('close', true);
+            },
+            onError: () => {
+                toast.add({ title: 'Failed', description: 'Could not update task.', color: 'error' });
+            },
+        });
+    } else {
+        http.project_id = props.projectId;
+        http.sprint_id = props.sprintId ?? undefined;
+
+        http.post(route('project.tasks.lazy-store', { projectEncoded: props.projectId }), {
+            onSuccess: () => {
+                toast.add({ title: 'Success', description: 'Task created successfully', color: 'success' });
+                emits('close', true);
+            },
+            onError: () => {
+                toast.add({ title: 'Failed', description: 'Could not create task.', color: 'error' });
+            },
+        });
+    }
+};
+</script>
+
+<template>
+    <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="initialize">
+        <template #body>
+            <div class="grid gap-6">
+                <div class="flex flex-col gap-2">
+                    <Label value="Title" required />
+                    <UInput v-model="http.title" placeholder="Task title" class="w-full" />
+                    <InputError v-if="http.errors.title" :message="http.errors.title" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <Label value="Description" />
+                    <RichTextEditor v-model="http.description as string" placeholder="Describe this task..." />
+                    <InputError v-if="http.errors.description" :message="http.errors.description" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <Label value="Parent Task" />
+                    <USelectMenu
+                        :model-value="http.parent_id ?? undefined"
+                        :items="availableParentOptions"
+                        label-key="title"
+                        value-key="id"
+                        placeholder="No parent (top-level task)"
+                        :loading="loadingDetail"
+                        clear
+                        class="w-full"
+                        @update:model-value="(value: string | null | undefined) => (http.parent_id = value ?? null)"
+                        @clear="http.parent_id = null"
+                    >
+                        <template #item-label="{ item }">
+                            <div class="flex items-center gap-2">
+                                <span class="truncate">{{ item.title }}</span>
+                                <UBadge v-if="item.category" color="neutral" variant="subtle" size="sm">{{ item.category.name }}</UBadge>
+                            </div>
+                        </template>
+                    </USelectMenu>
+                    <InputError v-if="http.errors.parent_id" :message="http.errors.parent_id" />
+                </div>
+
+                <div class="grid gap-6 sm:grid-cols-3">
+                    <div class="flex flex-col gap-2">
+                        <Label value="Type" required />
+                        <USelectMenu v-model="http.type_id" :items="types" label-key="name" value-key="id" placeholder="Select type" class="w-full">
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.type_id" :message="http.errors.type_id" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Status" required />
+                        <USelectMenu
+                            v-model="http.status_id"
+                            :items="statusOptions"
+                            label-key="name"
+                            value-key="id"
+                            placeholder="Select status"
+                            class="w-full"
+                        >
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.status_id" :message="http.errors.status_id" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Priority" required />
+                        <USelectMenu
+                            v-model="http.priority_id"
+                            :items="priorities"
+                            label-key="name"
+                            value-key="id"
+                            placeholder="Select priority"
+                            class="w-full"
+                        >
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <Label value="Assignees" />
+                    <USelectMenu
+                        v-model="selectedUserIds"
+                        :items="assignableUsers"
+                        label-key="name"
+                        value-key="id"
+                        multiple
+                        placeholder="Select assignees"
+                        class="w-full"
+                    >
+                        <template #item-leading="{ item }">
+                            <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" size="xs" />
+                        </template>
+                    </USelectMenu>
+                    <InputError v-if="http.errors.assign_users" :message="http.errors.assign_users" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <Label value="Tags" />
+                    <USelectMenu
+                        v-model="selectedTagIds"
+                        :items="tagItems"
+                        label-key="name"
+                        value-key="id"
+                        multiple
+                        create-item
+                        placeholder="Select or create tags"
+                        class="w-full"
+                        :loading="loadingDetail"
+                        @create="onCreateTag"
+                    >
+                        <template #item-label="{ item }">
+                            <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                        </template>
+                    </USelectMenu>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <Label value="Attachments" />
+
+                    <div v-if="existingAttachments.length" class="flex flex-col gap-2">
+                        <div
+                            v-for="attachment in existingAttachments"
+                            :key="attachment.uuid"
+                            class="flex items-center gap-2 rounded-lg border border-default p-2"
+                        >
+                            <UIcon name="i-lucide-file" class="size-4 shrink-0 text-muted" />
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm">{{ attachment.file_name }}</p>
+                                <p class="text-xs text-muted">{{ formatFileSize(attachment.size) }}</p>
+                            </div>
+                            <UButton icon="i-lucide-x" color="neutral" variant="ghost" size="xs" @click="removeExistingAttachment(attachment.uuid)" />
+                        </div>
+                    </div>
+
+                    <UFileUpload v-model="newFiles" multiple label="Drop files here or click to browse" description="Up to 20 MB per file" />
+                    <InputError v-if="http.errors.attachments" :message="http.errors.attachments" />
+                </div>
+
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <div class="flex flex-col gap-2">
+                        <Label value="Start Date" :required="datesRequired" />
+                        <UInput v-model="http.start_date as string" type="date" class="w-full" />
+                        <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Due Date" :required="datesRequired" />
+                        <UInput v-model="http.due_date as string" type="date" :min="http.start_date" class="w-full" />
+                        <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template #footer>
+            <UButton :label="isEdit ? 'Save Changes' : 'Create Task'" :loading="http.processing" :disabled="http.processing" @click="submit" />
+        </template>
+    </USlideover>
+</template>

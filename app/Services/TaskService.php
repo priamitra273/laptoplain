@@ -20,10 +20,12 @@ use App\Models\MsTaskPriority;
 use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\Project;
+use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TaskCategory;
 use App\Models\User;
 use App\Repositories\TaskRepository;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spatie\LaravelData\DataCollection;
 
@@ -134,7 +136,7 @@ class TaskService
      * Build one board column per status: first page of tasks + the true total.
      *
      * @param  array<string, mixed>  $filters  decoded filters
-     * @param  \Illuminate\Support\Collection<int, MsTaskStatus>  $statuses
+     * @param  Collection<int, MsTaskStatus>  $statuses
      * @return array<int, array{status: array<string, mixed>, tasks: array<int, array<string, mixed>>, total: int, has_more: bool}>
      */
     protected function buildBoardColumns(int $userId, array $filters, $statuses): array
@@ -220,7 +222,7 @@ class TaskService
 
     /**
      * @param  array<string, mixed>  $filters  decoded filters
-     * @param  \Illuminate\Support\Collection<int, MsTaskStatus>  $statuses
+     * @param  Collection<int, MsTaskStatus>  $statuses
      * @return array<int, array{id:int, name:string, severity:?string, count:int}>
      */
     protected function buildStatusSummary(int $userId, array $filters, $statuses): array
@@ -397,10 +399,11 @@ class TaskService
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
             'creator' => $creator,
-            'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
+            'statuses' => MsTaskStatus::select('id', 'name', 'severity', 'score')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'categories' => TaskCategory::select('id', 'name', 'icon', 'severity')->get()->toArray(),
+            'tags' => Tag::select('id', 'name', 'severity')->get()->toArray(),
             'isTaskMember' => $isTaskMember,
             'isOwner' => $isOwner,
             'comments' => $comments->toArray(),

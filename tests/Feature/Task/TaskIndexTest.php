@@ -87,7 +87,7 @@ it('board view returns columns of slim tasks with subtask counts and no recursiv
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project/task/Index')
+        ->component('favorites/project/task/Index')
         ->where('view', 'board')
         ->has('board') // one column per status
         ->whereType('board.0.status.id', 'string')

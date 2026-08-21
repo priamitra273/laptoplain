@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RichTextEditor from '@/components/RichTextEditor.vue';
+import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { severityColor } from '@/lib/utils';
 import { ProjectPolicyKey } from '@/types/type';
@@ -12,27 +13,39 @@ interface Props {
     projectId: string;
     sprintId?: string | null;
     defaultStatusId?: string;
+    defaultParentId?: string | null;
     statuses?: KanbanStatusOption[];
     priorities?: KanbanBadge[];
     types?: KanbanBadge[];
+    categories?: KanbanBadge[];
     assignableUsers?: KanbanUser[];
     tags?: KanbanBadge[];
+    /** Category options restricted to "Epic" only — used by Backlog's "Create Epic" action. */
+    onlyEpicCategory?: boolean;
+    /** Category options with "Epic" excluded — used when creating a task under a sprint/parent. */
+    excludeEpicCategory?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     task: null,
     sprintId: null,
     defaultStatusId: undefined,
+    defaultParentId: null,
     statuses: () => [],
     priorities: () => [],
     types: () => [],
+    categories: () => [],
     assignableUsers: () => [],
     tags: () => [],
+    onlyEpicCategory: false,
+    excludeEpicCategory: false,
 });
 
 const emits = defineEmits<{ close: [boolean] }>();
 
 const toast = useToast();
+const overlay = useOverlay();
+const dueDateDialog = overlay.create(TaskDueDateDialog);
 const page = usePage();
 const currentUserId = computed(() => (page.props.auth as { user: { id: string } }).user.id);
 
@@ -48,6 +61,7 @@ interface TaskFormData {
     status_id?: string;
     priority_id?: string;
     type_id?: string;
+    task_category_id?: string | null;
     parent_id?: string | null;
     start_date?: string;
     due_date?: string;
@@ -67,6 +81,7 @@ const http = useHttp<TaskFormData>({
     status_id: undefined,
     priority_id: undefined,
     type_id: undefined,
+    task_category_id: null,
     parent_id: null,
     start_date: '',
     due_date: '',
@@ -140,6 +155,12 @@ const datesRequired = computed(() => !!selectedStatusName.value && !['To Do', 'B
 
 const statusOptions = computed(() => props.statuses.filter((status) => canUpdateTaskStatus(status.id) || props.task?.status?.id === status.id));
 
+const categoryOptions = computed(() => {
+    if (props.onlyEpicCategory) return props.categories.filter((category) => category.name.toLowerCase() === 'epic');
+    if (props.excludeEpicCategory) return props.categories.filter((category) => category.name.toLowerCase() !== 'epic');
+    return props.categories;
+});
+
 const onCreateTag = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -176,6 +197,7 @@ const initialize = async () => {
         http.status_id = props.task.status?.id;
         http.priority_id = props.task.priority?.id;
         http.type_id = props.task.type?.id;
+        http.task_category_id = props.task.category?.id ?? null;
         http.parent_id = props.task.parent_id;
         http.start_date = props.task.start_date ?? '';
         http.due_date = props.task.due_date ?? '';
@@ -191,10 +213,29 @@ const initialize = async () => {
                 fetchParentOptions(),
             ]);
             const body = await editResponse.json();
-            const taskTags: KanbanBadge[] = body.data?.tags ?? [];
+            const data = body.data;
+
+            // The pre-fill above is just an instant flash of content from whatever the
+            // caller had on hand (e.g. the slim List-tab row); this fetch is authoritative
+            // and may carry fields (priority, tags, ...) the caller's copy didn't have.
+            if (data) {
+                http.title = data.title;
+                http.description = data.description ?? '';
+                http.status_id = data.status?.id;
+                http.priority_id = data.priority?.id;
+                http.type_id = data.type?.id;
+                http.task_category_id = data.category?.id ?? null;
+                http.parent_id = data.parent_id ?? null;
+                http.start_date = data.start_date ?? '';
+                http.due_date = data.due_date ?? '';
+                selectedUserIds.value = (data.users ?? []).map((user: KanbanUser) => user.id);
+                originalUserIds.value = [...selectedUserIds.value];
+            }
+
+            const taskTags: KanbanBadge[] = data?.tags ?? [];
             selectedTagIds.value = taskTags.map((tag) => tag.id);
             originalTagIds.value = [...selectedTagIds.value];
-            existingAttachments.value = body.data?.media ?? [];
+            existingAttachments.value = data?.media ?? [];
         } catch {
             toast.add({ title: 'Failed', description: 'Could not load task details.', color: 'error' });
         } finally {
@@ -206,7 +247,12 @@ const initialize = async () => {
         http.status_id = props.defaultStatusId;
         http.priority_id = undefined;
         http.type_id = undefined;
-        http.parent_id = null;
+        http.task_category_id = props.onlyEpicCategory
+            ? (categoryOptions.value.find((category) => category.name.toLowerCase() === 'epic')?.id ?? null)
+            : props.excludeEpicCategory
+              ? (categoryOptions.value.find((category) => category.name.toLowerCase() === 'task')?.id ?? null)
+              : null;
+        http.parent_id = props.onlyEpicCategory ? null : (props.defaultParentId ?? null);
         http.start_date = '';
         http.due_date = '';
         selectedUserIds.value = currentUserId.value ? [currentUserId.value] : [];
@@ -218,7 +264,18 @@ const initialize = async () => {
     }
 };
 
-const submit = () => {
+const submit = async () => {
+    if (props.onlyEpicCategory) http.parent_id = null;
+
+    if (datesRequired.value && !http.due_date) {
+        const dueDate = await dueDateDialog.open({
+            taskTitle: http.title || 'This task',
+            statusName: selectedStatusName.value ?? 'this status',
+        });
+        if (!dueDate) return;
+        http.due_date = dueDate;
+    }
+
     http.assign_users = selectedUserIds.value.filter((id) => !originalUserIds.value.includes(id));
     http.unassign_users = originalUserIds.value.filter((id) => !selectedUserIds.value.includes(id));
 
@@ -302,7 +359,7 @@ const submit = () => {
                     <InputError v-if="http.errors.parent_id" :message="http.errors.parent_id" />
                 </div>
 
-                <div class="grid gap-6 sm:grid-cols-3">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="flex flex-col gap-2">
                         <Label value="Type" required />
                         <USelectMenu v-model="http.type_id" :items="types" label-key="name" value-key="id" placeholder="Select type" class="w-full">
@@ -345,6 +402,27 @@ const submit = () => {
                             </template>
                         </USelectMenu>
                         <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
+                    </div>
+
+                    <div v-if="categoryOptions.length" class="flex flex-col gap-2">
+                        <Label value="Category" />
+                        <USelectMenu
+                            :model-value="http.task_category_id ?? undefined"
+                            :items="categoryOptions"
+                            label-key="name"
+                            value-key="id"
+                            placeholder="Select category"
+                            :disabled="onlyEpicCategory"
+                            clear
+                            class="w-full"
+                            @update:model-value="(value: string | null | undefined) => (http.task_category_id = value ?? null)"
+                            @clear="http.task_category_id = null"
+                        >
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.task_category_id" :message="http.errors.task_category_id" />
                     </div>
                 </div>
 

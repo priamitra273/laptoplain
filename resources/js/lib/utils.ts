@@ -67,3 +67,46 @@ export function getInitials(name: string): string {
 export function randomHexColor(): string {
     return '#' + Math.floor(Math.random() * 16777215).toString(16);
 }
+
+const getCsrfToken = (): string => {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+};
+
+export class FetchJsonError extends Error {
+    constructor(
+        message: string,
+        public status: number,
+        public data: unknown,
+    ) {
+        super(message);
+    }
+}
+
+/**
+ * Plain-JSON request helper for endpoints that branch on `expectsJson()`. Inertia's router
+ * (and `useHttp`) always send `Accept: text/html`, so those endpoints take their redirect
+ * branch instead of returning JSON when called through Inertia — this bypasses Inertia
+ * entirely for that one request, mirroring how axios called the same endpoints pre-migration.
+ */
+export async function fetchJson<T = unknown>(url: string, method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', body?: Record<string, unknown>): Promise<T> {
+    const response = await fetch(url, {
+        method,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        throw new FetchJsonError((data as { message?: string })?.message ?? 'Request failed', response.status, data);
+    }
+
+    return data as T;
+}

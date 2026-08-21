@@ -84,7 +84,7 @@ it('exposes only attachments-collection media on the task detail prop, shaped as
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project/task/Detail')
+        ->component('favorites/project/task/Detail')
         ->has('task.media', 1)
         ->where('task.media.0.file_name', 'spec.pdf')
         ->whereType('task.media.0.uuid', 'string')
@@ -105,7 +105,7 @@ it('returns an empty media array when the task has no attachments', function () 
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->component('project/task/Detail')
+        ->component('favorites/project/task/Detail')
         ->has('task.media', 0)
     );
 });

@@ -3,17 +3,23 @@ import { getInitials, severityColor } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/vue3';
 import moment from 'moment';
 import { computed, ref } from 'vue';
+import type { BacklogEpic } from '../backlog/types';
 import type { KanbanTask, TaskActivity, TaskComment } from './types';
 
 interface Props {
     task: KanbanTask | null;
+    epics?: BacklogEpic[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    epics: () => [],
+});
 
 const emits = defineEmits<{
-    close: [boolean | 'edit'];
+    close: [boolean | 'edit' | 'add-subtask'];
 }>();
+
+const epic = computed(() => props.epics.find((candidate) => String(candidate.id) === String(props.task?.parent_id)) ?? null);
 
 const page = usePage();
 const currentUser = computed(() => (page.props.auth as { user: { id: string; name: string; avatar_url?: string | null } }).user);
@@ -132,6 +138,9 @@ const relativeDueDate = (task: KanbanTask) => {
                     <h2 class="mt-0.5 line-clamp-2 text-xl leading-tight font-bold">{{ task.title }}</h2>
                 </div>
                 <div class="flex shrink-0 items-center gap-0.5">
+                    <ULink :href="route('task.show', task.id)">
+                        <UButton icon="i-lucide-external-link" color="neutral" variant="ghost" aria-label="Open full task page" />
+                    </ULink>
                     <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" aria-label="Edit task" @click="emits('close', 'edit')" />
                     <UButton icon="i-lucide-x" color="neutral" variant="ghost" aria-label="Close" @click="close" />
                 </div>
@@ -174,11 +183,30 @@ const relativeDueDate = (task: KanbanTask) => {
                         </UBadge>
                     </div>
                     <div>
+                        <p class="text-xs text-muted">Start Date</p>
+                        <p class="mt-1 flex items-center gap-1 text-sm">
+                            <UIcon name="i-lucide-calendar" class="size-3.5" />
+                            {{ task.start_date ? moment(task.start_date).format('DD MMM YYYY') : '—' }}
+                        </p>
+                    </div>
+                    <div>
                         <p class="text-xs text-muted">Due Date</p>
                         <p class="mt-1 flex items-center gap-1 text-sm" :class="task.is_overdue ? 'font-medium text-error' : ''">
                             <UIcon name="i-lucide-calendar" class="size-3.5" />
                             {{ relativeDueDate(task) }}
                         </p>
+                    </div>
+                    <div v-if="epic">
+                        <p class="text-xs text-muted">Epic</p>
+                        <p class="mt-1 flex items-center gap-1 text-sm">
+                            <UIcon name="i-lucide-bolt" class="size-3.5 text-purple-500" />
+                            <span class="truncate">{{ epic.title }}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-muted">Progress</p>
+                        <UProgress :model-value="task.progress" size="sm" class="mt-1.5" />
+                        <p class="mt-1 text-xs text-muted">{{ task.progress }}%</p>
                     </div>
                 </div>
 
@@ -217,6 +245,15 @@ const relativeDueDate = (task: KanbanTask) => {
                             </div>
                         </div>
                         <p v-else class="text-sm text-muted">No subtasks</p>
+                        <UButton
+                            label="Add Subtask"
+                            icon="i-lucide-plus"
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            class="mt-1 justify-start"
+                            @click="emits('close', 'add-subtask')"
+                        />
                     </div>
                 </div>
 

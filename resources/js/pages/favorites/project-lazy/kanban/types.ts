@@ -28,6 +28,7 @@ export interface KanbanTask {
     status: KanbanBadge | null;
     priority: KanbanBadge | null;
     type: KanbanBadge | null;
+    category?: KanbanBadge | null;
     users: KanbanUser[];
     tags: KanbanBadge[];
     sub_task_recursive: KanbanTask[];

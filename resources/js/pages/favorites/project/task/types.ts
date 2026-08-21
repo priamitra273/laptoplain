@@ -74,3 +74,85 @@ export interface TaskStatusSummaryEntry {
 export const severityDotStyle = (severity?: PrimeSeverity | null) => ({
     backgroundColor: `var(--ui-color-${severityColor(severity)}-500)`,
 });
+
+export interface TaskDetailUser {
+    id: string;
+    name: string;
+    email?: string;
+    avatar_url?: string | null;
+}
+
+export interface TaskCategoryOption extends TaskBadge {
+    icon: string | null;
+}
+
+export interface TaskDetailMedia {
+    uuid: string;
+    file_name: string;
+    size: number;
+    mime_type: string;
+    url: string;
+}
+
+export interface TaskDetailSubTask {
+    id: string;
+    title: string;
+    progress: number;
+    status: TaskBadge | null;
+    priority: TaskBadge | null;
+    type: TaskBadge | null;
+    category: TaskCategoryOption | null;
+    users: { id: string; name: string }[];
+}
+
+export interface TaskDetailProject {
+    id: string;
+    title: string;
+    emoji: string | null;
+}
+
+export interface TaskDetailTask {
+    id: string;
+    parent_id: string | null;
+    title: string;
+    description: string | null;
+    status_id: string | null;
+    priority_id: string | null;
+    type_id: string | null;
+    task_category_id: string | null;
+    start_date: string | null;
+    due_date: string | null;
+    progress: number;
+    created_at: string;
+    project: TaskDetailProject;
+    status: TaskBadge | null;
+    priority: TaskBadge | null;
+    type: TaskBadge | null;
+    tags: TaskBadge[];
+    sub_task_recursive: TaskDetailSubTask[];
+    media: TaskDetailMedia[];
+}
+
+export interface TaskDetailComment {
+    id: number;
+    body: string;
+    user: TaskDetailUser;
+    replies: TaskDetailComment[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TaskParent {
+    id: string;
+    key: string;
+    title: string;
+    category: TaskCategoryOption | null;
+}
+
+export const severityBoxStyle = (severity?: PrimeSeverity | null) => {
+    const color = severityColor(severity);
+    return {
+        backgroundColor: `color-mix(in srgb, var(--ui-color-${color}-500) 6%, transparent)`,
+        borderColor: `color-mix(in srgb, var(--ui-color-${color}-500) 25%, transparent)`,
+    };
+};

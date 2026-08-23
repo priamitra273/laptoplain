@@ -8,6 +8,12 @@
 @source inline('{hover:,active:}bg-{primary,secondary,success,info,warning,error,inverted}/90');
 @source inline('outline-{primary,secondary,success,info,warning,error,inverted}/50');
 @source inline('{disabled:,aria-disabled:}{opacity-50,pointer-events-none}');
+@source inline('bg-{primary,secondary,success,info,warning,error}-50');
+@source inline('text-{primary,secondary,success,info,warning,error}-700');
+@source inline('dark:bg-{primary,secondary,success,info,warning,error}-400/10');
+@source inline('dark:text-{primary,secondary,success,info,warning,error}-300');
+@source inline('ring-{primary,secondary,success,info,warning,error}-600/15');
+@source inline('dark:ring-{primary,secondary,success,info,warning,error}-400/20');
 
 @theme static {
     --font-sans:

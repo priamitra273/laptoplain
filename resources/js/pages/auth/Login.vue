@@ -61,7 +61,6 @@ const onSubmit = (event: FormSubmitEvent<LoginPayload>) => {
     router.post(route('login'), event.data, {
         onStart: () => (loading.value = true),
         onFinish: () => (loading.value = false),
-        // Error validasi Laravel dipasang balik ke field-nya masing-masing.
         onError: (errors) => authForm.value?.formRef?.setErrors(Object.entries(errors).map(([name, message]) => ({ name, message }))),
     });
 };
@@ -69,24 +68,19 @@ const onSubmit = (event: FormSubmitEvent<LoginPayload>) => {
 
 <template>
     <div class="flex min-h-screen items-center justify-center p-4">
+
         <Head title="Log in" />
 
         <div class="w-full max-w-sm">
             <UAlert v-if="props.status" color="success" variant="subtle" :description="props.status" class="mb-4" />
 
-            <UAuthForm
-                ref="authForm"
-                icon="i-lucide-shield-check"
-                title="Selamat datang kembali"
-                description="Masuk untuk melanjutkan ke dashboard."
-                :fields="fields"
-                :validate="validate"
-                :loading="loading"
-                :submit="{ label: 'Masuk' }"
-                @submit="onSubmit"
-            >
+            <UAuthForm ref="authForm" icon="i-lucide-shield-check" title="Selamat datang kembali"
+                description="Masuk untuk melanjutkan ke dashboard." :fields="fields" :validate="validate"
+                :loading="loading" :submit="{ label: 'Masuk' }" @submit="onSubmit">
                 <template v-if="props.canResetPassword" #password-hint>
-                    <ULink :to="route('password.request')" class="font-medium text-primary">Lupa sandi?</ULink>
+                    <ULink tabindex="-1" :to="route('password.request')" class="font-medium text-primary">
+                        Lupa sandi?
+                    </ULink>
                 </template>
             </UAuthForm>
         </div>

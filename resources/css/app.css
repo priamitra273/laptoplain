@@ -1,5 +1,6 @@
 @import 'tailwindcss' source('../..');
 @import '@nuxt/ui';
+@import '@assets/fonts/roboto/stylesheet.css';
 
 @source not '../js/**/*_v1/**';
 
@@ -10,7 +11,9 @@
 
 @theme static {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        'Geist', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono:
+        'Geist Mono', ui-monospace, monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 /* `bg-card`: permukaan terangkat — putih di light, zinc-900 di dark (shadcn --card/--popover) */

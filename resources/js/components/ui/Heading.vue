@@ -15,12 +15,17 @@ const props = withDefaults(
     <div class="mb-4">
         <div class="flex flex-col flex-wrap justify-between gap-5 md:flex-row md:items-center">
             <div class="flex items-center gap-5">
-                <div class="flex flex-col gap-1 *:leading-none">
+                <div class="flex flex-col gap-1">
                     <slot name="title">
-                        <p v-if="props.title" class="font-semibold" v-html="props.title" />
+                        <h4 v-if="props.title" class="text-foreground text-lg leading-7 font-semibold lg:text-xl">
+                            {{ props.title }}
+                        </h4>
                     </slot>
                     <slot name="description">
-                        <p v-if="props.description" class="text-muted-foreground text-sm" v-html="props.description" />
+                        <!-- <p v-if="props.description" class="text-muted-foreground text-sm" v-html="props.description" /> -->
+                        <p v-if="props.description" class="text-muted-foreground text-sm leading-5">
+                            {{ props.description }}
+                        </p>
                     </slot>
                 </div>
             </div>

@@ -17,7 +17,7 @@ const props = withDefaults(
             <div class="flex items-center gap-5">
                 <div class="flex flex-col gap-1">
                     <slot name="title">
-                        <h4 v-if="props.title" class="text-foreground text-lg leading-7 font-semibold lg:text-xl">
+                        <h4 v-if="props.title" class="text-foreground text-lg leading-7 font-bold lg:text-xl">
                             {{ props.title }}
                         </h4>
                     </slot>

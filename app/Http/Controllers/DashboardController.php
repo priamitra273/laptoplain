@@ -5,133 +5,172 @@ namespace App\Http\Controllers;
 use App\Facades\Sqids;
 use App\Models\Project;
 use App\Models\Task;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index()
+    /**
+     * Jumlah baris yang ditampilkan tiap panel.
+     */
+    private const PANEL_LIMIT = 5;
+
+    public function index(): Response
     {
         $userId = Auth::id();
 
-        // Get recent projects
-        $projects = $this->getRecentProjects($userId);
-
-        // Get recent tasks
-        $tasks = $this->getRecentTasks($userId);
-
-        // Get statistics
-        $stats = $this->getStatistics($userId);
-
-        // Get team members
-        $members = $this->getTeamMembers($userId);
-
         $data = [
-            'projects' => $projects,
-            'tasks' => $tasks,
+            'attention' => $this->getTasksNeedingAttention($userId),
+            'projects' => $this->getRecentProjects($userId),
             'stats' => [
-                'projects' => [
-                    'total' => $stats['totalProjects'],
-                    'progress' => round($stats['avgProjectProgress']),
-                ],
-                'tasks' => [
-                    'total' => $stats['totalTasks'],
-                    'progress' => round($stats['avgTaskProgress']),
-                ],
-                'members' => [
-                    'total' => $members->count(),
-                    'list' => $members->toArray(),
-                ],
+                'tasks' => $this->getTaskStats($userId),
+                'projects' => $this->getProjectStats($userId),
             ],
         ];
 
-        return Inertia::render('Dashboard', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('Dashboard', [
+            ...Sqids::rec_encode_ids_in_list($data),
+            // Query terberat di halaman: memuat seluruh proyek user beserta anggotanya
+            // hanya untuk dedupe. Ditunda supaya sisa dashboard render lebih dulu.
+            'members' => Inertia::defer(fn () => Sqids::rec_encode_ids_in_list($this->getTeamMembers($userId))),
+        ]);
     }
 
     /**
-     * Get user's recent projects
+     * Tugas milik user, baik yang dia buat maupun yang ditugaskan kepadanya.
+     *
+     * whereHas dipakai (bukan join) supaya baris tidak terduplikasi saat satu tugas
+     * punya banyak assignee.
+     *
+     * `created_by` wajib diprefiks tabel: statusBreakdown() menempelkan leftJoin ke
+     * ms_task_statuses yang juga punya kolom created_by, dan Postgres menolak yang ambigu.
+     */
+    private function userTasks(int $userId): Builder
+    {
+        return Task::where(function (Builder $query) use ($userId) {
+            $query->where('tasks.created_by', $userId)
+                ->orWhereHas('users', fn (Builder $assignee) => $assignee->where('users.id', $userId));
+        });
+    }
+
+    private function userProjects(int $userId): Builder
+    {
+        return Project::whereHas('projectMembers', fn (Builder $member) => $member->where('user_id', $userId));
+    }
+
+    /**
+     * Tugas yang benar-benar perlu ditindaklanjuti: belum selesai, belum diarsipkan,
+     * punya tenggat, dan yang paling telat tampil lebih dulu.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getTasksNeedingAttention(int $userId): array
+    {
+        return $this->userTasks($userId)
+            ->with([
+                'project:id,title,emoji',
+                'status:id,name,severity',
+                'priority:id,name,severity',
+            ])
+            ->whereNull('completed_at')
+            ->where('is_archived', false)
+            ->whereNotNull('due_date')
+            ->orderBy('due_date')
+            ->limit(self::PANEL_LIMIT)
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
      */
     private function getRecentProjects(int $userId): array
     {
-        return Project::with([
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'projectMembers.user:id,name,email',
-            'projectMembers.role:id,name'
-        ])
-            ->whereHas('projectMembers', function ($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
+        return $this->userProjects($userId)
+            ->with([
+                'status:id,name,severity',
+                'priority:id,name,severity',
+            ])
             ->latest('id')
-            ->limit(5)
+            ->limit(self::PANEL_LIMIT)
             ->get()
             ->toArray();
     }
 
     /**
-     * Get user's recent tasks
+     * @return array{total: int, progress: int, overdue: int, byStatus: array<int, array{name: string, severity: string|null, count: int}>}
      */
-    private function getRecentTasks(int $userId): array
+    private function getTaskStats(int $userId): array
     {
-        return Task::with([
-            'project:id,title,emoji',
-            'status:id,name,severity',
-            'priority:id,name,severity',
-            'type:id,name,severity',
-            'users:id,name'
-        ])
-            ->where(function ($query) use ($userId) {
-                $query->where('created_by', $userId)
-                    ->orWhereHas('users', function ($q) use ($userId) {
-                        $q->where('users.id', $userId);
-                    });
-            })
-            ->latest('id')
-            ->limit(5)
-            ->get()
-            ->map(function ($task) use ($userId) {
-                $task->is_assigned = $task->users->contains('id', $userId) && $task->created_by != $userId;
-                $task->is_created_by_me = $task->created_by == $userId;
-                return $task;
-            })
-            ->toArray();
-    }
-
-    /**
-     * Get dashboard statistics
-     */
-    private function getStatistics(int $userId): array
-    {
-        // Optimize queries by combining them
-        $projectStats = Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
-            ->selectRaw('COUNT(*) as total, AVG(progress) as avg_progress')
-            ->first();
-
-        $taskStats = Task::where(function ($q) use ($userId) {
-            $q->where('created_by', $userId)
-                ->orWhereHas('users', fn($qq) => $qq->where('users.id', $userId));
-        })
+        $totals = $this->userTasks($userId)
             ->selectRaw('COUNT(*) as total, AVG(progress) as avg_progress')
             ->first();
 
         return [
-            'totalProjects' => $projectStats->total ?? 0,
-            'avgProjectProgress' => $projectStats->avg_progress ?? 0,
-            'totalTasks' => $taskStats->total ?? 0,
-            'avgTaskProgress' => $taskStats->avg_progress ?? 0,
+            'total' => (int) ($totals->total ?? 0),
+            'progress' => (int) round((float) ($totals->avg_progress ?? 0)),
+            'overdue' => $this->userTasks($userId)
+                ->whereNull('completed_at')
+                ->where('is_archived', false)
+                ->where('due_date', '<', today())
+                ->count(),
+            'byStatus' => $this->statusBreakdown($this->userTasks($userId), 'ms_task_statuses', 'tasks.status_id'),
         ];
     }
 
     /**
-     * Get unique team members from user's projects
+     * @return array{total: int, progress: int, byStatus: array<int, array{name: string, severity: string|null, count: int}>}
      */
-    private function getTeamMembers(int $userId)
+    private function getProjectStats(int $userId): array
     {
-        return Project::whereHas('projectMembers', fn($q) => $q->where('user_id', $userId))
+        $totals = $this->userProjects($userId)
+            ->selectRaw('COUNT(*) as total, AVG(progress) as avg_progress')
+            ->first();
+
+        return [
+            'total' => (int) ($totals->total ?? 0),
+            'progress' => (int) round((float) ($totals->avg_progress ?? 0)),
+            'byStatus' => $this->statusBreakdown($this->userProjects($userId), 'ms_project_statuses', 'projects.status_id'),
+        ];
+    }
+
+    /**
+     * Sebaran status untuk SELURUH populasi, bukan hanya baris yang tampil di panel.
+     *
+     * leftJoin dipakai dengan sengaja: kolom status_id nullable, dan inner join akan
+     * membuang baris tanpa status sehingga jumlah sebaran tidak lagi sama dengan total.
+     *
+     * @return array<int, array{name: string, severity: string|null, count: int}>
+     */
+    private function statusBreakdown(Builder $query, string $statusTable, string $foreignKey): array
+    {
+        return $query
+            ->leftJoin($statusTable, "{$statusTable}.id", '=', $foreignKey)
+            ->groupBy("{$statusTable}.name", "{$statusTable}.severity")
+            ->selectRaw("{$statusTable}.name, {$statusTable}.severity, COUNT(*) as count")
+            ->orderByRaw('COUNT(*) DESC')
+            ->get()
+            ->map(fn ($row) => [
+                'name' => $row->name ?? 'Tanpa status',
+                'severity' => $row->severity,
+                'count' => (int) $row->count,
+            ])
+            ->all();
+    }
+
+    /**
+     * Anggota unik dari seluruh proyek yang diikuti user.
+     */
+    private function getTeamMembers(int $userId): Collection
+    {
+        return $this->userProjects($userId)
             ->with('projectMembers.user:id,name,email')
             ->get()
-            ->flatMap(fn($project) => $project->projectMembers->pluck('user'))
+            ->flatMap(fn (Project $project) => $project->projectMembers->pluck('user'))
+            ->filter()
             ->unique('id')
             ->values();
     }

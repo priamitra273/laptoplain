@@ -2,6 +2,7 @@
 import { getInitials, severityColor } from '@/lib/utils';
 import { computed } from 'vue';
 import type { KanbanBadge } from '../kanban/types';
+import TaskEpicPicker from './TaskEpicPicker.vue';
 import type { BacklogEpic, BacklogSprint, BacklogTask } from './types';
 
 interface Props {
@@ -23,9 +24,9 @@ const emit = defineEmits<{
     edit: [task: BacklogTask];
     updatePriority: [task: BacklogTask, priorityId: string];
     moveTo: [task: BacklogTask, fromSprintId: string | null, toSprintId: string | null];
+    assignEpic: [task: BacklogTask, epicId: string | null];
+    createEpic: [];
 }>();
-
-const epic = computed(() => props.epics.find((candidate) => String(candidate.id) === String(props.task.parent_id)) ?? null);
 
 const menuItems = computed(() => {
     const items: { label: string; icon: string; onSelect: () => void }[][] = [
@@ -74,11 +75,13 @@ const menuItems = computed(() => {
             {{ task.story_points }}
         </span>
 
-        <div v-if="epic" class="hidden max-w-36 min-w-0 shrink-0 items-center gap-1 text-xs text-muted sm:flex">
-            <UIcon name="i-lucide-bolt" class="size-3.5 shrink-0 text-purple-500" />
-            <span class="truncate" :title="epic.title">{{ epic.title }}</span>
-        </div>
-        <div v-else class="hidden w-36 shrink-0 sm:block"></div>
+        <TaskEpicPicker
+            :task="task"
+            :epics="epics"
+            :can-act="canAct"
+            @assign="(t, epicId) => emit('assignEpic', t, epicId)"
+            @create-epic="emit('createEpic')"
+        />
 
         <USelectMenu
             v-if="canAct"

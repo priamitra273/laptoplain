@@ -105,62 +105,80 @@ for (const key in form.data()) {
     <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="open">
         <template #body>
             <div class="grid gap-6">
-                <div class="flex flex-col gap-2">
-                    <Label value="Label" required />
-                    <UInput v-model="form.label" placeholder="Menu label" />
-                    <InputError v-if="form.errors.label" :message="form.errors.label" />
+                <div class="grid gap-4">
+                    <p class="text-sm font-medium">Identity</p>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Label" required />
+                        <UInput v-model="form.label" placeholder="Menu label" />
+                        <InputError v-if="form.errors.label" :message="form.errors.label" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Icon" required />
+                        <USelectMenu
+                            v-model="form.icon"
+                            :items="lucideIconItems"
+                            value-key="value"
+                            placeholder="Select an icon"
+                            virtualize
+                            class="w-full"
+                        >
+                            <template #leading="{ modelValue }">
+                                <Icon v-if="modelValue" :name="modelValue" class="size-4" />
+                            </template>
+
+                            <template #item-leading="{ item }">
+                                <Icon :name="item.value" class="size-4" />
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="form.errors.icon" :message="form.errors.icon" />
+                    </div>
                 </div>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Parent" />
-                    <USelectMenu
-                        v-model="form.parent_uuid"
-                        :items="parentMenu"
-                        label-key="label"
-                        value-key="uuid"
-                        placeholder="Select a parent menu"
-                        class="w-full"
-                    />
-                    <InputError v-if="form.errors.parent_uuid" :message="form.errors.parent_uuid" />
-                </div>
+                <div class="grid gap-4 border-t border-default pt-6">
+                    <p class="text-sm font-medium">Placement</p>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Route" :required="!!form.parent_uuid" />
-                    <USelectMenu
-                        v-model="form.route_name"
-                        :items="routes"
-                        label-key="uri"
-                        value-key="name"
-                        :disabled="!form.parent_uuid"
-                        placeholder="Select a route"
-                        class="w-full"
-                    />
-                    <InputError v-if="form.errors.route_name" :message="form.errors.route_name" />
-                </div>
+                    <div class="flex flex-col gap-2">
+                        <Label value="Parent" />
+                        <USelectMenu
+                            v-model="form.parent_uuid"
+                            :items="parentMenu"
+                            label-key="label"
+                            value-key="uuid"
+                            placeholder="Select a parent menu"
+                            class="w-full"
+                        />
+                        <InputError v-if="form.errors.parent_uuid" :message="form.errors.parent_uuid" />
+                    </div>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Icon" required />
-                    <USelectMenu v-model="form.icon" :items="lucideIconItems" value-key="value" placeholder="Select an icon" virtualize class="w-full">
-                        <template #leading="{ modelValue }">
-                            <Icon v-if="modelValue" :name="modelValue" class="size-4" />
-                        </template>
+                    <div class="flex flex-col gap-2">
+                        <Label value="Route" :required="!!form.parent_uuid" />
+                        <USelectMenu
+                            v-model="form.route_name"
+                            :items="routes"
+                            label-key="uri"
+                            value-key="name"
+                            :disabled="!form.parent_uuid"
+                            placeholder="Select a route"
+                            class="w-full"
+                        />
+                        <p v-if="!form.parent_uuid" class="text-xs text-muted">
+                            A menu without a parent is a group. It only holds other menus, so it has no page of its own.
+                        </p>
+                        <InputError v-if="form.errors.route_name" :message="form.errors.route_name" />
+                    </div>
 
-                        <template #item-leading="{ item }">
-                            <Icon :name="item.value" class="size-4" />
-                        </template>
-                    </USelectMenu>
-                    <InputError v-if="form.errors.icon" :message="form.errors.icon" />
-                </div>
+                    <div class="flex flex-col gap-2">
+                        <Label value="Sequence" />
+                        <UInputNumber v-model="form.sequence_number" :min="1" class="w-full" />
+                        <InputError v-if="form.errors.sequence_number" :message="form.errors.sequence_number" />
+                    </div>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Sequence" />
-                    <UInputNumber v-model="form.sequence_number" :min="1" class="w-full" />
-                    <InputError v-if="form.errors.sequence_number" :message="form.errors.sequence_number" />
-                </div>
-
-                <div class="flex items-center justify-between gap-2 py-2">
-                    <Label value="Active" />
-                    <USwitch v-model="form.is_active" />
+                    <div class="flex items-center justify-between gap-2 py-2">
+                        <Label value="Active" />
+                        <USwitch v-model="form.is_active" />
+                    </div>
                 </div>
             </div>
         </template>

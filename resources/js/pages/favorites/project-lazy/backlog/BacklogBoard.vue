@@ -115,6 +115,19 @@ const persistMove = async (taskId: string, fromSprintId: string | null, toSprint
     }
 };
 
+const assignEpic = async (task: BacklogTask, epicId: string | null) => {
+    try {
+        await fetchJson(route('project.tasks.parent.update', { projectEncoded: props.projectId, task: task.id }), 'PUT', {
+            parent_id: epicId,
+        });
+        toast.add({ title: 'Success', description: epicId ? 'Task moved to epic' : 'Task removed from epic', color: 'success' });
+    } catch {
+        toast.add({ title: 'Failed', description: 'Could not update the epic.', color: 'error' });
+    } finally {
+        reload();
+    }
+};
+
 const priorityHttp = useHttp<{ priority_id: string }>({ priority_id: '' });
 const updatePriority = (task: BacklogTask, priorityId: string) => {
     priorityHttp.priority_id = priorityId;
@@ -124,8 +137,6 @@ const updatePriority = (task: BacklogTask, priorityId: string) => {
     });
 };
 
-/** BacklogTask doesn't carry description/dates/progress/tags — TaskFormDrawer re-fetches
- * the full record on open anyway, so these are just harmless placeholders for the pre-fill. */
 const toKanbanTaskShape = (task: BacklogTask): KanbanTask => ({
     id: task.id,
     parent_id: task.parent_id,
@@ -166,6 +177,24 @@ const openEditTask = async (task: BacklogTask) => {
     const saved = await taskForm.open({
         task: toKanbanTaskShape(task),
         projectId: props.projectId,
+        excludeEpicCategory: true,
+        statuses: props.statuses,
+        priorities: props.priorities,
+        types: props.types,
+        categories: props.categories,
+        assignableUsers: props.assignableUsers,
+        tags: props.tags,
+    });
+
+    if (saved) reload();
+};
+
+const openCreateEpic = async () => {
+    if (!canTaskCreate.value) return;
+
+    const saved = await taskForm.open({
+        projectId: props.projectId,
+        onlyEpicCategory: true,
         statuses: props.statuses,
         priorities: props.priorities,
         types: props.types,
@@ -199,6 +228,8 @@ const openEditTask = async (task: BacklogTask) => {
             @edit-task="openEditTask"
             @update-priority="updatePriority"
             @move-task="(task, fromId, toId) => persistMove(task.id, fromId, toId)"
+            @assign-epic="assignEpic"
+            @create-epic="openCreateEpic"
         />
 
         <BacklogSection
@@ -214,6 +245,8 @@ const openEditTask = async (task: BacklogTask) => {
             @edit-task="openEditTask"
             @update-priority="updatePriority"
             @move-task="(task, fromId, toId) => persistMove(task.id, fromId, toId)"
+            @assign-epic="assignEpic"
+            @create-epic="openCreateEpic"
         />
     </div>
 </template>

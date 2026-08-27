@@ -4,6 +4,7 @@ import { can } from '@/lib/utils';
 import type { Menu } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import MenuForm from './MenuForm.vue';
+import MenuSidebarPreview from './MenuSidebarPreview.vue';
 import MenuTable from './MenuTable.vue';
 
 interface AvailableRoute {
@@ -44,6 +45,9 @@ const editMenu = (menu: Menu) => {
             <UButton v-if="can('menu.create')" size="sm" @click="addMenu">Add Menu</UButton>
         </Heading>
 
-        <MenuTable :data="menu" @edit="editMenu" />
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <MenuTable :data="menu" @edit="editMenu" />
+            <MenuSidebarPreview :data="menu" class="lg:sticky lg:top-4" />
+        </div>
     </AppLayout>
 </template>

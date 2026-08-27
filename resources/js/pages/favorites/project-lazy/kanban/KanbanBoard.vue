@@ -300,11 +300,11 @@ const handleDelete = async (task: KanbanTask, projectId: string) => {
             </div>
         </div>
 
-        <div v-if="totalTasks === 0" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <div v-if="statuses.length === 0" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <UIcon name="i-lucide-inbox" class="size-10 text-muted" />
             <div class="space-y-1">
-                <p class="text-base font-medium">No tasks in the active sprint</p>
-                <p class="text-sm text-muted">Tasks assigned to the project's active sprint will appear here.</p>
+                <p class="text-base font-medium">No task statuses configured</p>
+                <p class="text-sm text-muted">Add at least one Task Status in Master Data before tasks can be tracked here.</p>
             </div>
         </div>
 

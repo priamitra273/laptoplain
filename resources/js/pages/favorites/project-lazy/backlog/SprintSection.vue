@@ -29,6 +29,8 @@ const emit = defineEmits<{
     editTask: [task: BacklogTask];
     updatePriority: [task: BacklogTask, priorityId: string];
     moveTask: [task: BacklogTask, fromSprintId: string | null, toSprintId: string | null];
+    assignEpic: [task: BacklogTask, epicId: string | null];
+    createEpic: [];
 }>();
 
 const sprintMenuItems = computed(() => {
@@ -163,6 +165,8 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
                     @edit="emit('editTask', task)"
                     @update-priority="(t, priorityId) => emit('updatePriority', t, priorityId)"
                     @move-to="(t, fromId, toId) => emit('moveTask', t, fromId, toId)"
+                    @assign-epic="(t, epicId) => emit('assignEpic', t, epicId)"
+                    @create-epic="emit('createEpic')"
                 />
             </VueDraggable>
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { getInitials, severityColor } from '@/lib/utils';
-import type { PrimeSeverity, Project } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import type { PrimeSeverity } from '@/types';
+import { Deferred, Head } from '@inertiajs/vue3';
 import type { TableColumn } from '@nuxt/ui';
 import { computed } from 'vue';
 
@@ -13,207 +13,269 @@ interface Member {
     avatar_url?: string | null;
 }
 
+interface Labelled {
+    name: string;
+    severity: PrimeSeverity;
+}
+
+/** Hanya kolom yang dipakai tabel tugas; payload masih membawa proyek dan tenggat. */
 interface TaskRow {
     id: string;
     title: string;
-    project?: { title: string; emoji?: string } | null;
-    status: { name: string; severity: PrimeSeverity };
-    priority: { name: string; severity: PrimeSeverity };
+    status?: Labelled | null;
+    priority?: Labelled | null;
+}
+
+/** Hanya kolom yang dipakai halaman ini; payload sengaja tidak lagi membawa anggota proyek. */
+interface ProjectRow {
+    id: string;
+    title: string;
+    emoji?: string | null;
+    due_date?: string | null;
+    status?: Labelled | null;
+    priority?: Labelled | null;
 }
 
 interface StatusCount {
     name: string;
+    severity: PrimeSeverity | null;
     count: number;
-    severity: PrimeSeverity;
 }
 
 const props = defineProps<{
-    projects: Project[];
-    tasks: TaskRow[];
+    attention: TaskRow[];
+    projects: ProjectRow[];
     stats: {
-        tasks: { total: number; progress: number; byStatus?: StatusCount[] };
-        projects: { total: number; progress: number; byStatus?: StatusCount[] };
-        members: { total: number; list: Member[] };
+        tasks: { total: number; progress: number; overdue: number; byStatus: StatusCount[] };
+        projects: { total: number; progress: number; byStatus: StatusCount[] };
     };
+    members?: Member[];
 }>();
 
-/** Hitung sebaran status dari baris yang ada bila server tidak menyertakan `byStatus`. */
-const breakdown = (rows: Array<{ status: { name: string; severity: PrimeSeverity } }>, provided?: StatusCount[]): StatusCount[] => {
-    if (provided) {
-        return provided;
-    }
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const absolute = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const counts = new Map<string, StatusCount>();
+const dayInMs = 86_400_000;
 
-    for (const row of rows) {
-        const existing = counts.get(row.status.name);
 
-        if (existing) {
-            existing.count++;
-        } else {
-            counts.set(row.status.name, { name: row.status.name, count: 1, severity: row.status.severity });
-        }
-    }
+const startOfLocalDay = (value: string) => {
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
 
-    return [...counts.values()];
+    return new Date(year, month - 1, day).getTime();
 };
 
-const taskBreakdown = computed(() => breakdown(props.tasks, props.stats.tasks.byStatus));
-const projectBreakdown = computed(() => breakdown(props.projects, props.stats.projects.byStatus));
+const startOfToday = () => {
+    const now = new Date();
 
-const members = computed(() => props.stats.members.list.filter(Boolean));
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+};
 
-// Jangan dipotong di sini: UAvatarGroup menghitung badge "+N" dari jumlah anaknya sendiri,
-// jadi memotong lebih dulu membuat sisanya tidak pernah terhitung.
+const dueInfo = (value?: string | null): { label: string; color: 'error' | 'warning' | 'neutral' } => {
+    if (!value) {
+        return { label: 'No due date', color: 'neutral' };
+    }
+
+    const days = Math.round((startOfLocalDay(value) - startOfToday()) / dayInMs);
+
+    if (days < 0) {
+        return { label: absolute.format(new Date(startOfLocalDay(value))), color: 'error' };
+    }
+
+    return { label: relative.format(days, 'day'), color: days === 0 ? 'warning' : 'neutral' };
+};
+
 const memberAvatars = computed(() =>
-    members.value.map((member) => ({
+    (props.members ?? []).map((member) => ({
         id: member.id,
         src: member.avatar_url && !member.avatar_url.includes('default-avatar') ? member.avatar_url : undefined,
         text: getInitials(member.name),
         alt: member.name,
     })),
 );
+const statCardUi = { root: 'flex flex-col', body: 'flex flex-1 flex-col' };
 
-const stats = computed(() => [
-    { key: 'tasks', label: 'Tugas', icon: 'i-lucide-square-check-big', total: props.stats.tasks.total, progress: props.stats.tasks.progress },
-    { key: 'projects', label: 'Proyek', icon: 'i-lucide-briefcase', total: props.stats.projects.total, progress: props.stats.projects.progress },
-]);
-
-const relative = new Intl.RelativeTimeFormat('id', { numeric: 'auto' });
-const absolute = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-
-/** Jatuh tempo di masa depan tampil relatif ("dalam 3 hari"); yang lewat tampil absolut dan merah. */
-const dueDate = (value: string | null | undefined) => {
-    if (!value) {
-        return { label: '—', overdue: false };
-    }
-
-    const due = new Date(value);
-    const days = Math.round((due.getTime() - Date.now()) / 86_400_000);
-
-    return days < 0 ? { label: absolute.format(due), overdue: true } : { label: relative.format(days, 'day'), overdue: false };
-};
-
-// ponytail: emoji disimpan sebagai shortcode emoji-mart (`:rocket:`) dan butuh index 1 MB
-// untuk diterjemahkan. Sampai EmojiPicker dimigrasi, shortcode diganti ikon netral.
-const emojiOf = (value: string | null | undefined) => (value && !value.startsWith(':') ? value : null);
-
-const projectColumns: TableColumn<Project>[] = [
-    { accessorKey: 'title', header: 'Proyek' },
+const projectColumns: TableColumn<ProjectRow>[] = [
+    { accessorKey: 'title', header: 'Project' },
     { accessorKey: 'status', header: 'Status' },
-    { accessorKey: 'priority', header: 'Prioritas' },
-    { accessorKey: 'due_date', header: 'Jatuh tempo' },
+    { accessorKey: 'priority', header: 'Priority' },
+    { accessorKey: 'due_date', header: 'Due date' },
 ];
 
 const taskColumns: TableColumn<TaskRow>[] = [
-    { accessorKey: 'title', header: 'Tugas' },
+    { accessorKey: 'title', header: 'Task' },
     { accessorKey: 'status', header: 'Status' },
-    { accessorKey: 'priority', header: 'Prioritas' },
+    { accessorKey: 'priority', header: 'Priority' },
 ];
 </script>
 
 <template>
     <AppLayout title="Dashboard">
-
         <Head title="Dashboard" />
 
         <div class="flex flex-col gap-6">
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <UCard v-for="stat in stats" :key="stat.key">
+            <div class="grid gap-6 lg:grid-cols-3">
+                <UCard :ui="statCardUi">
                     <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <p class="text-sm text-muted">{{ stat.label }}</p>
-                            <p class="mt-2 text-3xl font-semibold">{{ stat.total }}</p>
-                        </div>
-                        <UIcon :name="stat.icon" class="size-5 shrink-0 text-muted" />
+                        <p class="text-sm text-muted">Tasks</p>
+                        <UIcon name="i-lucide-square-check-big" class="size-5 shrink-0 text-muted" />
+                    </div>
+
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <p class="text-3xl font-semibold tabular-nums">{{ stats.tasks.total }}</p>
+                        <UBadge
+                            v-if="stats.tasks.overdue"
+                            color="error"
+                            variant="subtle"
+                            size="sm"
+                            :label="`${stats.tasks.overdue} overdue`"
+                            class="tabular-nums"
+                        />
                     </div>
 
                     <div class="mt-4 space-y-1.5">
                         <div class="flex justify-between text-sm">
-                            <span class="text-muted">Progres</span>
-                            <span class="font-medium tabular-nums">{{ stat.progress }}%</span>
+                            <span class="text-muted">Progress</span>
+                            <span class="font-medium tabular-nums">{{ stats.tasks.progress }}%</span>
                         </div>
-                        <UProgress :model-value="stat.progress" size="sm" />
+                        <UProgress :model-value="stats.tasks.progress" size="sm" />
                     </div>
 
-                    <div class="mt-4 flex flex-wrap gap-1.5 border-t border-default pt-4">
-                        <UBadge v-for="status in stat.key === 'tasks' ? taskBreakdown : projectBreakdown"
-                            :key="status.name" :color="severityColor(status.severity)" variant="subtle" size="sm"
-                            :label="`${status.name} (${status.count})`" />
-                        <span v-if="!(stat.key === 'tasks' ? taskBreakdown : projectBreakdown).length"
-                            class="text-xs text-muted">Belum ada data</span>
+                    <div class="mt-auto flex flex-wrap gap-1.5 border-t border-default pt-4">
+                        <UBadge
+                            v-for="status in stats.tasks.byStatus"
+                            :key="status.name"
+                            :color="severityColor(status.severity)"
+                            variant="subtle"
+                            size="sm"
+                            :label="`${status.name} (${status.count})`"
+                        />
+                        <span v-if="!stats.tasks.byStatus.length" class="text-xs text-muted">No tasks yet</span>
                     </div>
                 </UCard>
 
-                <UCard>
+                <UCard :ui="statCardUi">
                     <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <p class="text-sm text-muted">Anggota tim</p>
-                            <p class="mt-2 text-3xl font-semibold">{{ members.length }}</p>
+                        <p class="text-sm text-muted">Projects</p>
+                        <UIcon name="i-lucide-briefcase" class="size-5 shrink-0 text-muted" />
+                    </div>
+
+                    <p class="mt-2 text-3xl font-semibold tabular-nums">{{ stats.projects.total }}</p>
+
+                    <div class="mt-4 space-y-1.5">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Progress</span>
+                            <span class="font-medium tabular-nums">{{ stats.projects.progress }}%</span>
                         </div>
+                        <UProgress :model-value="stats.projects.progress" size="sm" />
+                    </div>
+
+                    <div class="mt-auto flex flex-wrap gap-1.5 border-t border-default pt-4">
+                        <UBadge
+                            v-for="status in stats.projects.byStatus"
+                            :key="status.name"
+                            :color="severityColor(status.severity)"
+                            variant="subtle"
+                            size="sm"
+                            :label="`${status.name} (${status.count})`"
+                        />
+                        <span v-if="!stats.projects.byStatus.length" class="text-xs text-muted">No projects yet</span>
+                    </div>
+                </UCard>
+
+                <UCard :ui="statCardUi">
+                    <div class="flex items-start justify-between gap-2">
+                        <p class="text-sm text-muted">Team members</p>
                         <UIcon name="i-lucide-users" class="size-5 shrink-0 text-muted" />
                     </div>
 
-                    <div class="mt-4 border-t border-default pt-4">
-                        <UAvatarGroup v-if="members.length" :max="5" size="md">
-                            <UAvatar v-for="avatar in memberAvatars" :key="avatar.id" :src="avatar.src"
-                                :text="avatar.text" :alt="avatar.alt" />
-                        </UAvatarGroup>
-                        <p v-else class="text-xs text-muted">Belum ada anggota tim</p>
-                    </div>
+                    <Deferred data="members">
+                        <template #fallback>
+                            <USkeleton class="mt-2 h-9 w-14" />
+                            <USkeleton class="mt-auto h-8 w-36" />
+                        </template>
+
+                        <p class="mt-2 text-3xl font-semibold tabular-nums">{{ memberAvatars.length }}</p>
+
+                        <div class="mt-auto pt-4">
+                            <UAvatarGroup v-if="memberAvatars.length" :max="5" size="md">
+                                <UAvatar
+                                    v-for="avatar in memberAvatars"
+                                    :key="avatar.id"
+                                    :src="avatar.src"
+                                    :text="avatar.text"
+                                    :alt="avatar.alt"
+                                    :title="avatar.alt"
+                                />
+                            </UAvatarGroup>
+                            <p v-else class="text-xs text-muted">No team members yet</p>
+                        </div>
+                    </Deferred>
                 </UCard>
             </div>
 
             <div class="grid gap-6 xl:grid-cols-2">
-                <UCard title="Proyek terbaru" description="Lima proyek yang terakhir dibuat.">
+                <UCard title="Latest projects" description="The five most recently created projects.">
                     <template #footer>
-                        <UButton :to="route('project.index')" label="Lihat semua" trailing-icon="i-lucide-arrow-right"
-                            variant="link" size="sm" class="-mx-2" />
+                        <UButton
+                            :to="route('project.index')"
+                            label="All projects"
+                            trailing-icon="i-lucide-arrow-right"
+                            variant="link"
+                            size="sm"
+                            class="-mx-2"
+                        />
                     </template>
 
-                    <UTable :data="props.projects" :columns="projectColumns">
+                    <UTable :data="projects" :columns="projectColumns">
                         <template #title-cell="{ row }">
                             <div class="flex items-center gap-2">
-                                <span v-if="emojiOf(row.original.emoji)" class="text-lg leading-none">{{
-                                    emojiOf(row.original.emoji) }}</span>
+                                <Icon v-if="row.original.emoji" :name="row.original.emoji" class="size-4 shrink-0 text-muted" />
                                 <UIcon v-else name="i-lucide-folder" class="size-4 shrink-0 text-muted" />
-                                <ULink :to="route('project.show', String(row.original.id))"
-                                    class="truncate font-medium">
+                                <ULink :to="route('project.show', String(row.original.id))" class="truncate font-medium">
                                     {{ row.original.title }}
                                 </ULink>
                             </div>
                         </template>
 
                         <template #status-cell="{ row }">
-                            <UBadge :color="severityColor(row.original.status?.severity)" variant="subtle"
-                                :label="row.original.status?.name" />
+                            <UBadge v-if="row.original.status" :color="severityColor(row.original.status.severity)" variant="subtle">
+                                {{ row.original.status.name }}
+                            </UBadge>
+                            <span v-else class="text-muted">—</span>
                         </template>
 
                         <template #priority-cell="{ row }">
-                            <UBadge :color="severityColor(row.original.priority?.severity)" variant="subtle"
-                                :label="row.original.priority?.name" />
+                            <UBadge v-if="row.original.priority" :color="severityColor(row.original.priority.severity)" variant="subtle">
+                                {{ row.original.priority.name }}
+                            </UBadge>
+                            <span v-else class="text-muted">—</span>
                         </template>
 
                         <template #due_date-cell="{ row }">
-                            <span class="tabular-nums"
-                                :class="{ 'text-error': dueDate(row.original.due_date).overdue }">
-                                {{ dueDate(row.original.due_date).label }}
+                            <span class="tabular-nums" :class="{ 'text-error': dueInfo(row.original.due_date).color === 'error' }">
+                                {{ dueInfo(row.original.due_date).label }}
                             </span>
                         </template>
 
                         <template #empty>
-                            <p class="text-center text-sm text-muted">Belum ada proyek</p>
+                            <p class="text-center text-sm text-muted">No projects yet</p>
                         </template>
                     </UTable>
                 </UCard>
 
-                <UCard title="Tugas terbaru" description="Lima tugas yang terakhir dibuat.">
+                <UCard title="Needs attention" description="Unfinished tasks with the nearest due dates.">
                     <template #footer>
-                        <UButton :to="route('task.index')" label="Lihat semua" trailing-icon="i-lucide-arrow-right"
-                            variant="link" size="sm" class="-mx-2" />
+                        <UButton
+                            :to="route('task.index')"
+                            label="All tasks"
+                            trailing-icon="i-lucide-arrow-right"
+                            variant="link"
+                            size="sm"
+                            class="-mx-2"
+                        />
                     </template>
 
-                    <UTable :data="props.tasks" :columns="taskColumns">
+                    <UTable :data="attention" :columns="taskColumns">
                         <template #title-cell="{ row }">
                             <ULink :to="route('task.show', String(row.original.id))" class="truncate font-medium">
                                 {{ row.original.title }}
@@ -221,17 +283,21 @@ const taskColumns: TableColumn<TaskRow>[] = [
                         </template>
 
                         <template #status-cell="{ row }">
-                            <UBadge :color="severityColor(row.original.status?.severity)" variant="subtle"
-                                :label="row.original.status?.name" />
+                            <UBadge v-if="row.original.status" :color="severityColor(row.original.status.severity)" variant="subtle">
+                                {{ row.original.status.name }}
+                            </UBadge>
+                            <span v-else class="text-muted">—</span>
                         </template>
 
                         <template #priority-cell="{ row }">
-                            <UBadge :color="severityColor(row.original.priority?.severity)" variant="subtle"
-                                :label="row.original.priority?.name" />
+                            <UBadge v-if="row.original.priority" :color="severityColor(row.original.priority.severity)" variant="subtle">
+                                {{ row.original.priority.name }}
+                            </UBadge>
+                            <span v-else class="text-muted">—</span>
                         </template>
 
                         <template #empty>
-                            <p class="text-center text-sm text-muted">Belum ada tugas</p>
+                            <p class="text-center text-sm text-muted">Nothing urgent right now</p>
                         </template>
                     </UTable>
                 </UCard>

@@ -23,6 +23,8 @@ const emit = defineEmits<{
     editTask: [task: BacklogTask];
     updatePriority: [task: BacklogTask, priorityId: string];
     moveTask: [task: BacklogTask, fromSprintId: string | null, toSprintId: string | null];
+    assignEpic: [task: BacklogTask, epicId: string | null];
+    createEpic: [];
 }>();
 
 const collapsed = ref(false);
@@ -50,6 +52,15 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
             <UIcon :name="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'" class="size-3.5 shrink-0 text-muted" />
             <span class="flex-1 text-sm font-semibold">Backlog</span>
             <span class="text-xs text-muted">{{ localTasks.length }} issues</span>
+            <UButton
+                v-if="canAct"
+                label="Create Epic"
+                icon="i-lucide-bolt"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                @click.stop="emit('createEpic')"
+            />
             <UButton
                 v-if="canAct"
                 label="Create Sprint"
@@ -92,6 +103,8 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
                     @edit="emit('editTask', task)"
                     @update-priority="(t, priorityId) => emit('updatePriority', t, priorityId)"
                     @move-to="(t, fromId, toId) => emit('moveTask', t, fromId, toId)"
+                    @assign-epic="(t, epicId) => emit('assignEpic', t, epicId)"
+                    @create-epic="emit('createEpic')"
                 />
             </VueDraggable>
 

@@ -165,9 +165,8 @@ class MenuService
     public function update(ValidatedInput $input, Menu $menu): void
     {
         $input->parent_id = $input->parent_uuid ? Menu::findByUuid($input->parent_uuid)->id : null;
-
         Menu::where('sequence_number', '>', $menu->sequence_number)
-            ->where('parent_id', $input->parent_id)
+            ->where('parent_id', $menu->parent_id)
             ->decrement('sequence_number');
 
         Menu::where('sequence_number', '>=', $input->sequence_number)

@@ -20,9 +20,7 @@ interface Props {
     categories?: KanbanBadge[];
     assignableUsers?: KanbanUser[];
     tags?: KanbanBadge[];
-    /** Category options restricted to "Epic" only — used by Backlog's "Create Epic" action. */
     onlyEpicCategory?: boolean;
-    /** Category options with "Epic" excluded — used when creating a task under a sprint/parent. */
     excludeEpicCategory?: boolean;
 }
 
@@ -53,7 +51,15 @@ const policy = inject(ProjectPolicyKey, null);
 const { canUpdateTaskStatus } = useProjectPermissions(policy);
 
 const isEdit = computed(() => !!props.task);
-const title = computed(() => (isEdit.value ? 'Edit Task' : 'Create Task'));
+const title = computed(() => {
+    if (isEdit.value) return 'Edit Task';
+    return props.onlyEpicCategory ? 'Create Epic' : 'Create Task';
+});
+
+const description = computed(() => {
+    if (isEdit.value) return 'Update the details of this task.';
+    return props.onlyEpicCategory ? 'Epics group related tasks. They cannot have a parent or join a sprint.' : 'Add a task to this project.';
+});
 
 interface TaskFormData {
     title: string;
@@ -153,6 +159,8 @@ const formatFileSize = (bytes: number) => {
 const selectedStatusName = computed(() => props.statuses.find((s) => s.id === http.status_id)?.name);
 const datesRequired = computed(() => !!selectedStatusName.value && !['To Do', 'Blocked'].includes(selectedStatusName.value));
 
+const scheduleHint = computed(() => (datesRequired.value ? `A due date is required while the status is "${selectedStatusName.value}".` : undefined));
+
 const statusOptions = computed(() => props.statuses.filter((status) => canUpdateTaskStatus(status.id) || props.task?.status?.id === status.id));
 
 const categoryOptions = computed(() => {
@@ -215,9 +223,6 @@ const initialize = async () => {
             const body = await editResponse.json();
             const data = body.data;
 
-            // The pre-fill above is just an instant flash of content from whatever the
-            // caller had on hand (e.g. the slim List-tab row); this fetch is authoritative
-            // and may carry fields (priority, tags, ...) the caller's copy didn't have.
             if (data) {
                 http.title = data.title;
                 http.description = data.description ?? '';
@@ -320,190 +325,220 @@ const submit = async () => {
 </script>
 
 <template>
-    <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="initialize">
+    <USlideover :title="title" :description="description" :close="{ onClick: () => emits('close', false) }" @enter="initialize">
         <template #body>
-            <div class="grid gap-6">
-                <div class="flex flex-col gap-2">
-                    <Label value="Title" required />
-                    <UInput v-model="http.title" placeholder="Task title" class="w-full" />
-                    <InputError v-if="http.errors.title" :message="http.errors.title" />
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <Label value="Description" />
-                    <RichTextEditor v-model="http.description as string" placeholder="Describe this task..." />
-                    <InputError v-if="http.errors.description" :message="http.errors.description" />
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <Label value="Parent Task" />
-                    <USelectMenu
-                        :model-value="http.parent_id ?? undefined"
-                        :items="availableParentOptions"
-                        label-key="title"
-                        value-key="id"
-                        placeholder="No parent (top-level task)"
-                        :loading="loadingDetail"
-                        clear
-                        class="w-full"
-                        @update:model-value="(value: string | null | undefined) => (http.parent_id = value ?? null)"
-                        @clear="http.parent_id = null"
-                    >
-                        <template #item-label="{ item }">
-                            <div class="flex items-center gap-2">
-                                <span class="truncate">{{ item.title }}</span>
-                                <UBadge v-if="item.category" color="neutral" variant="subtle" size="sm">{{ item.category.name }}</UBadge>
-                            </div>
-                        </template>
-                    </USelectMenu>
-                    <InputError v-if="http.errors.parent_id" :message="http.errors.parent_id" />
-                </div>
-
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="flex flex-col gap-8">
+                <div class="flex flex-col gap-4">
                     <div class="flex flex-col gap-2">
-                        <Label value="Type" required />
-                        <USelectMenu v-model="http.type_id" :items="types" label-key="name" value-key="id" placeholder="Select type" class="w-full">
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.type_id" :message="http.errors.type_id" />
+                        <Label value="Title" required />
+                        <UInput v-model="http.title" placeholder="What needs to be done?" size="lg" class="w-full" />
+                        <InputError v-if="http.errors.title" :message="http.errors.title" />
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <Label value="Status" required />
-                        <USelectMenu
-                            v-model="http.status_id"
-                            :items="statusOptions"
-                            label-key="name"
-                            value-key="id"
-                            placeholder="Select status"
-                            class="w-full"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.status_id" :message="http.errors.status_id" />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label value="Priority" required />
-                        <USelectMenu
-                            v-model="http.priority_id"
-                            :items="priorities"
-                            label-key="name"
-                            value-key="id"
-                            placeholder="Select priority"
-                            class="w-full"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
-                    </div>
-
-                    <div v-if="categoryOptions.length" class="flex flex-col gap-2">
-                        <Label value="Category" />
-                        <USelectMenu
-                            :model-value="http.task_category_id ?? undefined"
-                            :items="categoryOptions"
-                            label-key="name"
-                            value-key="id"
-                            placeholder="Select category"
-                            :disabled="onlyEpicCategory"
-                            clear
-                            class="w-full"
-                            @update:model-value="(value: string | null | undefined) => (http.task_category_id = value ?? null)"
-                            @clear="http.task_category_id = null"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.task_category_id" :message="http.errors.task_category_id" />
+                        <Label value="Description" />
+                        <RichTextEditor v-model="http.description as string" placeholder="Add context, acceptance criteria, or links." />
+                        <InputError v-if="http.errors.description" :message="http.errors.description" />
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Assignees" />
-                    <USelectMenu
-                        v-model="selectedUserIds"
-                        :items="assignableUsers"
-                        label-key="name"
-                        value-key="id"
-                        multiple
-                        placeholder="Select assignees"
-                        class="w-full"
-                    >
-                        <template #item-leading="{ item }">
-                            <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" size="xs" />
-                        </template>
-                    </USelectMenu>
-                    <InputError v-if="http.errors.assign_users" :message="http.errors.assign_users" />
-                </div>
+                <section class="flex flex-col gap-4 border-t border-default pt-6">
+                    <h3 class="text-sm font-medium">Classification</h3>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Tags" />
-                    <USelectMenu
-                        v-model="selectedTagIds"
-                        :items="tagItems"
-                        label-key="name"
-                        value-key="id"
-                        multiple
-                        create-item
-                        placeholder="Select or create tags"
-                        class="w-full"
-                        :loading="loadingDetail"
-                        @create="onCreateTag"
-                    >
-                        <template #item-label="{ item }">
-                            <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                        </template>
-                    </USelectMenu>
-                </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="flex flex-col gap-2">
+                            <Label value="Type" required />
+                            <USelectMenu
+                                v-model="http.type_id"
+                                :items="types"
+                                label-key="name"
+                                value-key="id"
+                                placeholder="Select type"
+                                class="w-full"
+                            >
+                                <template #item-label="{ item }">
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                </template>
+                            </USelectMenu>
+                            <InputError v-if="http.errors.type_id" :message="http.errors.type_id" />
+                        </div>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Attachments" />
+                        <div class="flex flex-col gap-2">
+                            <Label value="Status" required />
+                            <USelectMenu
+                                v-model="http.status_id"
+                                :items="statusOptions"
+                                label-key="name"
+                                value-key="id"
+                                placeholder="Select status"
+                                class="w-full"
+                            >
+                                <template #item-label="{ item }">
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                </template>
+                            </USelectMenu>
+                            <InputError v-if="http.errors.status_id" :message="http.errors.status_id" />
+                        </div>
 
-                    <div v-if="existingAttachments.length" class="flex flex-col gap-2">
-                        <div
-                            v-for="attachment in existingAttachments"
-                            :key="attachment.uuid"
-                            class="flex items-center gap-2 rounded-lg border border-default p-2"
-                        >
-                            <UIcon name="i-lucide-file" class="size-4 shrink-0 text-muted" />
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm">{{ attachment.file_name }}</p>
-                                <p class="text-xs text-muted">{{ formatFileSize(attachment.size) }}</p>
-                            </div>
-                            <UButton icon="i-lucide-x" color="neutral" variant="ghost" size="xs" @click="removeExistingAttachment(attachment.uuid)" />
+                        <div class="flex flex-col gap-2">
+                            <Label value="Priority" required />
+                            <USelectMenu
+                                v-model="http.priority_id"
+                                :items="priorities"
+                                label-key="name"
+                                value-key="id"
+                                placeholder="Select priority"
+                                class="w-full"
+                            >
+                                <template #item-label="{ item }">
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                </template>
+                            </USelectMenu>
+                            <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
+                        </div>
+
+                        <div v-if="categoryOptions.length" class="flex flex-col gap-2">
+                            <Label value="Category" />
+                            <USelectMenu
+                                :model-value="http.task_category_id ?? undefined"
+                                :items="categoryOptions"
+                                label-key="name"
+                                value-key="id"
+                                placeholder="Select category"
+                                :disabled="onlyEpicCategory"
+                                clear
+                                class="w-full"
+                                @update:model-value="(value: string | null | undefined) => (http.task_category_id = value ?? null)"
+                                @clear="http.task_category_id = null"
+                            >
+                                <template #item-label="{ item }">
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                </template>
+                            </USelectMenu>
+                            <InputError v-if="http.errors.task_category_id" :message="http.errors.task_category_id" />
                         </div>
                     </div>
+                </section>
+
+                <section class="flex flex-col gap-4 border-t border-default pt-6">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="text-sm font-medium">Schedule</h3>
+                        <p v-if="scheduleHint" class="text-sm text-warning">{{ scheduleHint }}</p>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="flex flex-col gap-2">
+                            <Label value="Start Date" :required="datesRequired" />
+                            <UInput v-model="http.start_date as string" type="date" class="w-full" />
+                            <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label value="Due Date" :required="datesRequired" />
+                            <UInput v-model="http.due_date as string" type="date" :min="http.start_date" class="w-full" />
+                            <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
+                        </div>
+                    </div>
+                </section>
+
+                <section class="flex flex-col gap-4 border-t border-default pt-6">
+                    <h3 class="text-sm font-medium">People and context</h3>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Assignees" />
+                        <USelectMenu
+                            v-model="selectedUserIds"
+                            :items="assignableUsers"
+                            label-key="name"
+                            value-key="id"
+                            multiple
+                            placeholder="Select assignees"
+                            class="w-full"
+                        >
+                            <template #item-leading="{ item }">
+                                <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" size="xs" />
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.assign_users" :message="http.errors.assign_users" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <Label value="Tags" />
+                        <USelectMenu
+                            v-model="selectedTagIds"
+                            :items="tagItems"
+                            label-key="name"
+                            value-key="id"
+                            multiple
+                            create-item
+                            placeholder="Select or create tags"
+                            class="w-full"
+                            :loading="loadingDetail"
+                            @create="onCreateTag"
+                        >
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                    </div>
+
+                    <div v-if="!onlyEpicCategory" class="flex flex-col gap-2">
+                        <Label value="Parent Task" />
+                        <USelectMenu
+                            :model-value="http.parent_id ?? undefined"
+                            :items="availableParentOptions"
+                            label-key="title"
+                            value-key="id"
+                            placeholder="No parent (top-level task)"
+                            :loading="loadingDetail"
+                            clear
+                            class="w-full"
+                            @update:model-value="(value: string | null | undefined) => (http.parent_id = value ?? null)"
+                            @clear="http.parent_id = null"
+                        >
+                            <template #item-label="{ item }">
+                                <div class="flex items-center gap-2">
+                                    <span class="truncate">{{ item.title }}</span>
+                                    <UBadge v-if="item.category" color="neutral" variant="subtle" size="sm">{{ item.category.name }}</UBadge>
+                                </div>
+                            </template>
+                        </USelectMenu>
+                        <InputError v-if="http.errors.parent_id" :message="http.errors.parent_id" />
+                    </div>
+                </section>
+
+                <section class="flex flex-col gap-4 border-t border-default pt-6">
+                    <h3 class="text-sm font-medium">Attachments</h3>
+
+                    <ul v-if="existingAttachments.length" class="divide-y divide-default rounded-lg border border-default">
+                        <li v-for="attachment in existingAttachments" :key="attachment.uuid" class="flex items-center gap-3 p-3">
+                            <UIcon name="i-lucide-paperclip" class="size-4 shrink-0 text-muted" />
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm">{{ attachment.file_name }}</p>
+                                <p class="text-xs text-muted tabular-nums">{{ formatFileSize(attachment.size) }}</p>
+                            </div>
+                            <UButton
+                                icon="i-lucide-x"
+                                color="neutral"
+                                variant="ghost"
+                                size="xs"
+                                :aria-label="`Remove ${attachment.file_name}`"
+                                @click="removeExistingAttachment(attachment.uuid)"
+                            />
+                        </li>
+                    </ul>
 
                     <UFileUpload v-model="newFiles" multiple label="Drop files here or click to browse" description="Up to 20 MB per file" />
                     <InputError v-if="http.errors.attachments" :message="http.errors.attachments" />
-                </div>
-
-                <div class="grid gap-6 sm:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Start Date" :required="datesRequired" />
-                        <UInput v-model="http.start_date as string" type="date" class="w-full" />
-                        <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label value="Due Date" :required="datesRequired" />
-                        <UInput v-model="http.due_date as string" type="date" :min="http.start_date" class="w-full" />
-                        <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
-                    </div>
-                </div>
+                </section>
             </div>
         </template>
 
         <template #footer>
-            <UButton :label="isEdit ? 'Save Changes' : 'Create Task'" :loading="http.processing" :disabled="http.processing" @click="submit" />
+            <div class="flex w-full items-center justify-end gap-2">
+                <UButton label="Cancel" color="neutral" variant="ghost" :disabled="http.processing" @click="emits('close', false)" />
+                <UButton :label="isEdit ? 'Save Changes' : 'Create Task'" :loading="http.processing" :disabled="http.processing" @click="submit" />
+            </div>
         </template>
     </USlideover>
 </template>

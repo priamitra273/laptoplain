@@ -21,9 +21,9 @@ class WorkloadService
     {
         $query = $this->repository->getWorkloadBaseQuery();
         $this->repository->applyFilters($query, $filters);
+        $this->repository->applySort($query, $filters);
 
         return $query
-            ->orderByDesc('w.remaining_work_percent')
             ->paginate($filters->per_page)
             ->withQueryString()
             ->through(fn ($user) => WorkloadUserData::fromResource($user));

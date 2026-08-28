@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
-import { severityColor } from '@/lib/utils';
+import { getInitials, severityColor } from '@/lib/utils';
 import { ProjectPolicyKey } from '@/types/type';
 import { router } from '@inertiajs/vue3';
 import {
@@ -93,6 +93,9 @@ const filterTree = (tasks: ListTask[]): ListTask[] => {
 
 const visibleTasks = computed(() => filterTree(localTasks.value));
 
+/** Badge di kolom Task menghitung seluruh keturunan, bukan hanya anak langsung. */
+const descendantCount = (task: ListTask): number => task.sub_task_recursive.reduce((total, child) => total + 1 + descendantCount(child), 0);
+
 // ─── Drag & drop (native HTML5, mirrors the old TreeTable's before/after/inside drop zones) ───
 const dragHandleTaskId = ref<string | null>(null);
 
@@ -143,11 +146,13 @@ const table = useVueTable({
         return visibleTasks.value;
     },
     columns: [
-        { id: 'title', accessorKey: 'title', header: 'Title', enableSorting: true },
-        { id: 'status', accessorFn: (row) => row.status?.name, header: 'Status', enableSorting: true },
+        { id: 'title', accessorKey: 'title', header: 'Task', enableSorting: true },
+        { id: 'category', accessorFn: (row) => row.category?.name, header: 'Category', enableSorting: true },
         { id: 'type', accessorFn: (row) => row.type?.name, header: 'Type', enableSorting: true },
-        { id: 'start_date', accessorKey: 'start_date', header: 'Start Date', enableSorting: true },
-        { id: 'due_date', accessorKey: 'due_date', header: 'Due Date', enableSorting: true },
+        { id: 'status', accessorFn: (row) => row.status?.name, header: 'Status', enableSorting: true },
+        { id: 'priority', accessorFn: (row) => row.priority?.name, header: 'Priority', enableSorting: true },
+        { id: 'users', header: 'Assignees', enableSorting: false },
+        { id: 'schedule', accessorKey: 'due_date', header: 'Schedule', enableSorting: true },
         { id: 'completed_at', accessorKey: 'completed_at', header: 'Completed', enableSorting: true },
         { id: 'progress', accessorKey: 'progress', header: 'Progress', enableSorting: true },
         { id: 'actions', header: 'Actions', enableSorting: false },
@@ -202,18 +207,13 @@ const removeTask = async (task: ListTask) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 class="text-lg font-semibold">Tasks</h3>
-            <UButton v-if="canCreate" label="Add Task" icon="i-lucide-plus" @click="emit('add', null)" />
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search by title..." class="w-full" />
+        <div class="flex flex-wrap items-center gap-2">
+            <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search all tasks" class="min-w-48 flex-1" />
 
             <UPopover>
-                <UButton label="Status" icon="i-lucide-list-filter" :color="statusFilter.length ? 'primary' : 'neutral'" variant="outline" block>
+                <UButton label="Status" trailing-icon="i-lucide-chevron-down" :color="statusFilter.length ? 'primary' : 'neutral'" variant="outline">
                     <template v-if="statusFilter.length" #trailing>
-                        <UBadge color="primary" variant="subtle" size="sm">{{ statusFilter.length }}</UBadge>
+                        <UBadge color="primary" variant="subtle" size="sm" class="tabular-nums">{{ statusFilter.length }}</UBadge>
                     </template>
                 </UButton>
                 <template #content>
@@ -225,14 +225,15 @@ const removeTask = async (task: ListTask) => {
                             :label="option.name"
                             @update:model-value="statusFilter = toggleFilterValue(statusFilter, option.id)"
                         />
+                        <p v-if="!taskStatuses.length" class="text-xs text-muted">No statuses configured.</p>
                     </div>
                 </template>
             </UPopover>
 
             <UPopover>
-                <UButton label="Type" icon="i-lucide-list-filter" :color="typeFilter.length ? 'primary' : 'neutral'" variant="outline" block>
+                <UButton label="Type" trailing-icon="i-lucide-chevron-down" :color="typeFilter.length ? 'primary' : 'neutral'" variant="outline">
                     <template v-if="typeFilter.length" #trailing>
-                        <UBadge color="primary" variant="subtle" size="sm">{{ typeFilter.length }}</UBadge>
+                        <UBadge color="primary" variant="subtle" size="sm" class="tabular-nums">{{ typeFilter.length }}</UBadge>
                     </template>
                 </UButton>
                 <template #content>
@@ -244,13 +245,14 @@ const removeTask = async (task: ListTask) => {
                             :label="option.name"
                             @update:model-value="typeFilter = toggleFilterValue(typeFilter, option.id)"
                         />
+                        <p v-if="!taskTypes.length" class="text-xs text-muted">No types configured.</p>
                     </div>
                 </template>
             </UPopover>
-        </div>
 
-        <div v-if="hasActiveFilters" class="flex justify-end">
-            <UButton label="Clear Filters" icon="i-lucide-filter-x" color="neutral" variant="ghost" size="sm" @click="clearFilters" />
+            <UButton v-if="hasActiveFilters" label="Clear" icon="i-lucide-filter-x" color="neutral" variant="ghost" @click="clearFilters" />
+
+            <UButton v-if="canCreate" label="Add task" icon="i-lucide-plus" @click="emit('add', null)" />
         </div>
 
         <UCard :ui="{ root: 'p-0', body: 'p-0 sm:p-0' }">
@@ -262,7 +264,7 @@ const removeTask = async (task: ListTask) => {
                 @dragenter.prevent="onRootDragOver"
                 @drop.stop.prevent="onRootDrop"
             >
-                <table class="w-full min-w-[900px] border-collapse text-sm">
+                <table class="w-full min-w-[1200px] border-collapse text-sm">
                     <thead>
                         <tr class="border-b border-default bg-elevated/50">
                             <th class="w-8 px-2 py-2.5" />
@@ -321,10 +323,43 @@ const removeTask = async (task: ListTask) => {
                                     </button>
                                     <span v-else class="size-4 shrink-0" />
 
+                                    <Icon
+                                        v-if="row.original.category?.icon"
+                                        :name="row.original.category.icon"
+                                        class="size-3.5 shrink-0 text-muted"
+                                    />
+                                    <UIcon v-else name="i-lucide-circle-dot" class="size-3.5 shrink-0 text-muted" />
+
                                     <span :title="row.original.title" class="max-w-[26rem] truncate" :class="isDraggingTask ? 'select-none' : ''">
                                         {{ row.original.title }}
                                     </span>
+
+                                    <UBadge
+                                        v-if="descendantCount(row.original)"
+                                        color="neutral"
+                                        variant="subtle"
+                                        size="sm"
+                                        class="shrink-0 rounded-full tabular-nums"
+                                        :title="`${descendantCount(row.original)} subtasks at every level`"
+                                        :label="String(descendantCount(row.original))"
+                                    />
                                 </div>
+                            </td>
+
+                            <td class="px-3 py-2 align-middle">
+                                <UBadge
+                                    v-if="row.original.category"
+                                    :color="severityColor(row.original.category.severity)"
+                                    variant="subtle"
+                                    size="sm"
+                                    :label="row.original.category.name"
+                                />
+                                <span v-else class="text-muted">—</span>
+                            </td>
+
+                            <td class="px-3 py-2 align-middle">
+                                <UBadge v-if="row.original.type" color="neutral" variant="subtle" size="sm">{{ row.original.type.name }}</UBadge>
+                                <span v-else class="text-muted">—</span>
                             </td>
 
                             <td class="px-3 py-2 align-middle">
@@ -335,19 +370,47 @@ const removeTask = async (task: ListTask) => {
                             </td>
 
                             <td class="px-3 py-2 align-middle">
-                                <UBadge v-if="row.original.type" color="neutral" variant="subtle" size="sm">{{ row.original.type.name }}</UBadge>
+                                <UBadge
+                                    v-if="row.original.priority"
+                                    :color="severityColor(row.original.priority.severity)"
+                                    variant="subtle"
+                                    size="sm"
+                                    :label="row.original.priority.name"
+                                />
                                 <span v-else class="text-muted">—</span>
                             </td>
 
-                            <td class="px-3 py-2 align-middle whitespace-nowrap">{{ formatDate(row.original.start_date) }}</td>
+                            <td class="px-3 py-2 align-middle">
+                                <UAvatarGroup v-if="row.original.users.length" :max="3" size="2xs">
+                                    <UAvatar
+                                        v-for="user in row.original.users"
+                                        :key="user.id"
+                                        :src="user.avatar_url ?? undefined"
+                                        :alt="user.name"
+                                        :title="user.name"
+                                        :text="getInitials(user.name)"
+                                    />
+                                </UAvatarGroup>
+                                <span v-else class="text-muted">—</span>
+                            </td>
 
                             <td class="px-3 py-2 align-middle whitespace-nowrap">
-                                <span v-if="!row.original.due_date" class="text-muted">—</span>
-                                <span v-else-if="row.original.is_overdue" class="inline-flex items-center gap-1 font-medium text-error">
-                                    <UIcon name="i-lucide-alert-circle" class="size-3.5" />
-                                    {{ formatDate(row.original.due_date) }}
-                                </span>
-                                <span v-else>{{ formatDate(row.original.due_date) }}</span>
+                                <div class="flex items-center gap-1.5 text-xs tabular-nums">
+                                    <span class="text-muted" title="Start date">{{ formatDate(row.original.start_date) }}</span>
+
+                                    <UIcon name="i-lucide-arrow-right" class="size-3 shrink-0 text-dimmed" />
+
+                                    <span v-if="!row.original.due_date" class="text-dimmed" title="Due date">Not set</span>
+                                    <span
+                                        v-else-if="row.original.is_overdue"
+                                        class="inline-flex items-center gap-1 font-medium text-error"
+                                        title="Due date — overdue"
+                                    >
+                                        <UIcon name="i-lucide-alert-circle" class="size-3.5 shrink-0" />
+                                        {{ formatDate(row.original.due_date) }}
+                                    </span>
+                                    <span v-else class="font-medium" title="Due date">{{ formatDate(row.original.due_date) }}</span>
+                                </div>
                             </td>
 
                             <td class="px-3 py-2 align-middle whitespace-nowrap">{{ formatDate(row.original.completed_at) }}</td>
@@ -410,12 +473,15 @@ const removeTask = async (task: ListTask) => {
 
                     <tbody v-else>
                         <tr>
-                            <td colspan="9">
+                            <td colspan="11">
                                 <div class="flex flex-col items-center justify-center gap-3 py-10 text-center">
                                     <UIcon name="i-lucide-inbox" class="size-8 text-muted" />
                                     <div class="space-y-1">
-                                        <p class="text-sm font-medium">No tasks yet</p>
-                                        <p class="text-sm text-muted">Create the first task to start tracking progress for this project.</p>
+                                        <p class="text-sm font-medium">This project has no tasks yet</p>
+                                        <p class="mx-auto max-w-md text-sm leading-relaxed text-muted">
+                                            Nothing is filtered out here — this view always holds every task at every level, so an empty list means
+                                            the project really is empty.
+                                        </p>
                                     </div>
                                     <UButton v-if="canCreate" label="Add Task" icon="i-lucide-plus" size="sm" @click="emit('add', null)" />
                                 </div>

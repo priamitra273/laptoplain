@@ -30,6 +30,7 @@ export interface ListTask {
     status: TaskBadge | null;
     type: TaskBadge | null;
     category: TaskCategoryOption | null;
+    priority: TaskBadge | null;
     users: ListUser[];
     sub_task_recursive: ListTask[];
 }

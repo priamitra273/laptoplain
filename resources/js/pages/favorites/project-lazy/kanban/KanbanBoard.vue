@@ -63,7 +63,6 @@ const canDelete = computed(() => canAction('task', 'delete'));
 const searchQuery = ref('');
 const filterPriority = ref<string[]>([]);
 const filterType = ref<string[]>([]);
-const filterAssignee = ref<string[]>([]);
 
 const toggleFilterValue = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
@@ -96,21 +95,12 @@ const matchesFilters = (task: KanbanTask) => {
     if (searchQuery.value && !task.title.toLowerCase().includes(searchQuery.value.toLowerCase())) return false;
     if (filterPriority.value.length && !filterPriority.value.includes(task.priority?.id ?? '')) return false;
     if (filterType.value.length && !filterType.value.includes(task.type?.id ?? '')) return false;
-    if (filterAssignee.value.length && !task.users.some((user) => filterAssignee.value.includes(user.id))) return false;
     return true;
 };
 
 const visibleColumns = computed(() => columns.value.map((column) => ({ ...column, tasks: column.tasks.filter(matchesFilters) })));
 
-const hasActiveFilters = computed(
-    () => !!(searchQuery.value || filterPriority.value.length || filterType.value.length || filterAssignee.value.length),
-);
-
-const totalTasks = computed(() => props.tasks.length);
-const doneTasks = computed(
-    () => props.tasks.filter((task) => task.status?.name?.toLowerCase().includes('complete') || task.status?.name?.toLowerCase() === 'done').length,
-);
-const boardProgress = computed(() => (totalTasks.value === 0 ? 0 : Math.round((doneTasks.value / totalTasks.value) * 100)));
+const hasActiveFilters = computed(() => !!(searchQuery.value || filterPriority.value.length || filterType.value.length));
 
 const onDragStart = () => {
     draggingItem.value = true;
@@ -221,68 +211,53 @@ const handleDelete = async (task: KanbanTask, projectId: string) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <UInput
-                v-model="searchQuery"
-                icon="i-lucide-search"
-                placeholder="Search tasks..."
-                class="w-full sm:max-w-xs"
-                :ui="{ base: 'rounded-full bg-elevated/50' }"
-            />
+        <div class="flex flex-wrap items-center gap-2">
+            <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="Search tasks on this board" class="min-w-48 flex-1" />
 
             <UPopover>
                 <UButton
-                    label="Filter"
-                    icon="i-lucide-list-filter"
-                    :color="filterPriority.length || filterType.length ? 'primary' : 'neutral'"
+                    label="Priority"
+                    trailing-icon="i-lucide-chevron-down"
+                    :color="filterPriority.length ? 'primary' : 'neutral'"
                     variant="outline"
-                    class="rounded-full"
                 >
-                    <template v-if="filterPriority.length || filterType.length" #trailing>
-                        <UBadge color="primary" variant="solid" size="sm" class="rounded-full">
-                            {{ filterPriority.length + filterType.length }}
-                        </UBadge>
+                    <template v-if="filterPriority.length" #trailing>
+                        <UBadge color="primary" variant="subtle" size="sm" class="tabular-nums">{{ filterPriority.length }}</UBadge>
                     </template>
                 </UButton>
                 <template #content>
-                    <div class="flex w-64 flex-col gap-3 p-3">
-                        <div class="flex flex-col gap-2">
-                            <Label value="Priority" />
-                            <UCheckbox
-                                v-for="option in priorities"
-                                :key="option.id"
-                                :model-value="filterPriority.includes(option.id)"
-                                :label="option.name"
-                                @update:model-value="filterPriority = toggleFilterValue(filterPriority, option.id)"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <Label value="Type" />
-                            <UCheckbox
-                                v-for="option in types"
-                                :key="option.id"
-                                :model-value="filterType.includes(option.id)"
-                                :label="option.name"
-                                @update:model-value="filterType = toggleFilterValue(filterType, option.id)"
-                            />
-                        </div>
+                    <div class="flex w-56 flex-col gap-2 p-3">
+                        <UCheckbox
+                            v-for="option in priorities"
+                            :key="option.id"
+                            :model-value="filterPriority.includes(option.id)"
+                            :label="option.name"
+                            @update:model-value="filterPriority = toggleFilterValue(filterPriority, option.id)"
+                        />
+                        <p v-if="!priorities.length" class="text-xs text-muted">No priorities configured.</p>
                     </div>
                 </template>
             </UPopover>
 
-            <div v-if="assignableUsers.length" class="flex items-center -space-x-1.5">
-                <button
-                    v-for="user in assignableUsers"
-                    :key="user.id"
-                    type="button"
-                    class="shrink-0 rounded-full ring-2 transition-opacity"
-                    :class="filterAssignee.includes(user.id) ? 'opacity-100 ring-primary' : 'opacity-50 ring-transparent hover:opacity-100'"
-                    :title="user.name"
-                    @click="filterAssignee = toggleFilterValue(filterAssignee, user.id)"
-                >
-                    <UAvatar :src="user.avatar_url ?? undefined" :alt="user.name" size="xs" />
-                </button>
-            </div>
+            <UPopover>
+                <UButton label="Type" trailing-icon="i-lucide-chevron-down" :color="filterType.length ? 'primary' : 'neutral'" variant="outline">
+                    <template v-if="filterType.length" #trailing>
+                        <UBadge color="primary" variant="subtle" size="sm" class="tabular-nums">{{ filterType.length }}</UBadge>
+                    </template>
+                </UButton>
+                <template #content>
+                    <div class="flex w-56 flex-col gap-2 p-3">
+                        <UCheckbox
+                            v-for="option in types"
+                            :key="option.id"
+                            :model-value="filterType.includes(option.id)"
+                            :label="option.name"
+                            @update:model-value="filterType = toggleFilterValue(filterType, option.id)"
+                        />
+                        <p v-if="!types.length" class="text-xs text-muted">No types configured.</p>
+                    </div>
+                </template>
+            </UPopover>
 
             <UButton
                 v-if="hasActiveFilters"
@@ -291,13 +266,8 @@ const handleDelete = async (task: KanbanTask, projectId: string) => {
                 color="neutral"
                 variant="ghost"
                 size="sm"
-                @click="((searchQuery = ''), (filterPriority = []), (filterType = []), (filterAssignee = []))"
+                @click="((searchQuery = ''), (filterPriority = []), (filterType = []))"
             />
-
-            <div class="flex items-center gap-3 sm:ml-auto">
-                <span class="text-sm text-muted">{{ doneTasks }}/{{ totalTasks }} done</span>
-                <UProgress :model-value="boardProgress" size="sm" class="w-24" />
-            </div>
         </div>
 
         <div v-if="statuses.length === 0" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -305,6 +275,24 @@ const handleDelete = async (task: KanbanTask, projectId: string) => {
             <div class="space-y-1">
                 <p class="text-base font-medium">No task statuses configured</p>
                 <p class="text-sm text-muted">Add at least one Task Status in Master Data before tasks can be tracked here.</p>
+            </div>
+        </div>
+
+        <div
+            v-else-if="tasks.length === 0"
+            class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-default px-6 py-14 text-center"
+        >
+            <UIcon name="i-lucide-calendar-range" class="size-8 text-muted" />
+            <div class="space-y-1.5">
+                <p class="text-base font-semibold text-highlighted">Nothing is on the board yet</p>
+                <p class="mx-auto max-w-lg text-sm leading-relaxed text-muted">
+                    The board only ever shows the batch of work the team is running right now. Tasks that are not in it — in an upcoming batch, or in
+                    no batch at all — are safe and waiting in the Backlog and List tabs.
+                </p>
+            </div>
+            <div class="mt-1 flex flex-wrap justify-center gap-2">
+                <UButton :to="route('project.show.backlog', { encoded: projectId })" label="Open Backlog to start a batch" />
+                <UButton :to="route('project.show.list', { encoded: projectId })" label="See all tasks" color="neutral" variant="outline" />
             </div>
         </div>
 

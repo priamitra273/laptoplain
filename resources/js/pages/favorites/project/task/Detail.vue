@@ -55,6 +55,15 @@ const postingComment = ref(false);
 const parents = ref<TaskParent[]>([]);
 const loadingParents = ref(true);
 
+// Ruas terakhir adalah induk langsung task ini, jadi dibiarkan tanpa `to` — bukan tautan.
+const breadcrumbItems = computed(() => [
+    { label: props.project.title, to: route('project.show.kanban', { encoded: props.project.id }) },
+    ...parents.value.map((parent, index) => ({
+        label: parent.title,
+        to: index < parents.value.length - 1 ? route('task.show', parent.id) : undefined,
+    })),
+]);
+
 const category = computed(() => props.categories.find((option) => option.id === props.task.task_category_id) ?? null);
 
 const subtaskCounts = computed(() => ({
@@ -222,27 +231,10 @@ const deleteComment = (comment: TaskDetailComment) => {
     <Head :title="`Task Detail - ${task.title}`" />
 
     <AppLayout :title="task.title">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6 p-6">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
             <div>
-                <nav class="mb-2 flex items-center gap-1.5 overflow-x-auto text-sm text-muted">
-                    <USkeleton v-if="loadingParents" class="h-4 w-48" />
-                    <template v-else>
-                        <ULink :href="route('project.show.kanban', { encoded: project.id })" class="shrink-0 hover:text-default">
-                            {{ project.title }}
-                        </ULink>
-                        <template v-for="(parent, index) in parents" :key="parent.id">
-                            <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0" />
-                            <ULink
-                                v-if="index < parents.length - 1"
-                                :href="route('task.show', parent.id)"
-                                class="shrink-0 truncate hover:text-default"
-                            >
-                                {{ parent.title }}
-                            </ULink>
-                            <span v-else class="shrink-0 truncate font-medium text-default">{{ parent.title }}</span>
-                        </template>
-                    </template>
-                </nav>
+                <USkeleton v-if="loadingParents" class="mb-2 h-4 w-48" />
+                <UBreadcrumb v-else :items="breadcrumbItems" class="mb-2" :ui="{ root: 'overflow-x-auto' }" />
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
@@ -269,7 +261,7 @@ const deleteComment = (comment: TaskDetailComment) => {
 
             <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
                 <div class="order-last flex min-w-0 flex-col gap-6 lg:order-none lg:col-span-2">
-                    <div class="rounded-xl border border-default p-4">
+                    <div class="rounded-xl p-4 ring ring-default">
                         <button type="button" class="flex w-full items-center justify-between" @click="descriptionOpen = !descriptionOpen">
                             <span class="text-base font-semibold">Description</span>
                             <UIcon :name="descriptionOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-4 text-muted" />
@@ -280,7 +272,7 @@ const deleteComment = (comment: TaskDetailComment) => {
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-default p-4">
+                    <div class="rounded-xl p-4 ring ring-default">
                         <button type="button" class="flex w-full items-center justify-between" @click="subtasksOpen = !subtasksOpen">
                             <span class="flex items-center gap-2 text-base font-semibold">
                                 Subtasks
@@ -312,7 +304,7 @@ const deleteComment = (comment: TaskDetailComment) => {
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-default p-4">
+                    <div class="rounded-xl p-4 ring ring-default">
                         <button type="button" class="flex w-full items-center justify-between" @click="attachmentsOpen = !attachmentsOpen">
                             <span class="flex items-center gap-2 text-base font-semibold">
                                 Attachments
@@ -332,7 +324,9 @@ const deleteComment = (comment: TaskDetailComment) => {
                                 <UIcon name="i-lucide-file" class="size-4 shrink-0 text-muted" />
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm">{{ attachment.file_name }}</p>
-                                    <p class="text-xs text-muted">{{ formatFileSize(attachment.size) }}</p>
+                                    <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">
+                                        {{ formatFileSize(attachment.size) }}
+                                    </p>
                                 </div>
                                 <UIcon name="i-lucide-download" class="size-4 shrink-0 text-muted" />
                             </a>
@@ -340,7 +334,7 @@ const deleteComment = (comment: TaskDetailComment) => {
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-default p-4">
+                    <div class="rounded-xl p-4 ring ring-default">
                         <span class="text-base font-semibold">Comments</span>
 
                         <div class="mt-3 flex flex-col gap-4">
@@ -403,18 +397,11 @@ const deleteComment = (comment: TaskDetailComment) => {
                             </div>
 
                             <div class="flex items-center gap-2 border-t border-default pt-4">
-                                <UInput
-                                    v-model="newCommentBody"
-                                    placeholder="Add a comment..."
-                                    class="w-full"
-                                    :ui="{ base: 'rounded-full' }"
-                                    @keydown.enter="submitComment"
-                                />
+                                <UInput v-model="newCommentBody" placeholder="Add a comment..." class="w-full" @keydown.enter="submitComment" />
                                 <UButton
                                     icon="i-lucide-send"
                                     :loading="postingComment"
                                     :disabled="!newCommentBody.trim() || postingComment"
-                                    class="rounded-full"
                                     @click="submitComment"
                                 />
                             </div>
@@ -422,21 +409,21 @@ const deleteComment = (comment: TaskDetailComment) => {
                     </div>
                 </div>
 
-                <aside class="order-first flex min-w-0 flex-col gap-4 rounded-xl border border-default p-4 lg:sticky lg:top-20 lg:order-none">
+                <aside class="order-first flex min-w-0 flex-col gap-4 rounded-xl p-4 ring ring-default lg:sticky lg:top-20 lg:order-none">
                     <div>
-                        <p class="text-xs text-muted">Status</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Status</p>
                         <UBadge v-if="task.status" :color="severityColor(task.status.severity)" variant="subtle" class="mt-1">
                             {{ task.status.name }}
                         </UBadge>
                     </div>
                     <div>
-                        <p class="text-xs text-muted">Priority</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Priority</p>
                         <UBadge v-if="task.priority" :color="severityColor(task.priority.severity)" variant="subtle" class="mt-1">
                             {{ task.priority.name }}
                         </UBadge>
                     </div>
                     <div v-if="category">
-                        <p class="text-xs text-muted">Category</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Category</p>
                         <UBadge :color="severityColor(category.severity)" variant="subtle" class="mt-1">
                             <UIcon v-if="category.icon" :name="category.icon" class="size-3.5" />
                             {{ category.name }}
@@ -446,7 +433,9 @@ const deleteComment = (comment: TaskDetailComment) => {
                     <USeparator />
 
                     <div>
-                        <p class="text-xs text-muted">Assignee<span v-if="assignedUsers.length > 1">s</span></p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">
+                            Assignee<span v-if="assignedUsers.length > 1">s</span>
+                        </p>
                         <div v-if="assignedUsers.length" class="mt-1.5 flex flex-col gap-1.5">
                             <div v-for="user in assignedUsers" :key="user.id" class="flex items-center gap-1.5">
                                 <UAvatar :src="user.avatar_url ?? undefined" :alt="user.name" :text="getInitials(user.name)" size="xs" />
@@ -459,18 +448,18 @@ const deleteComment = (comment: TaskDetailComment) => {
                     <USeparator />
 
                     <div>
-                        <p class="text-xs text-muted">Start Date</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Start Date</p>
                         <p class="mt-1 text-sm">{{ task.start_date ? moment(task.start_date).format('DD MMM YYYY') : '—' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-muted">Due Date</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Due Date</p>
                         <p class="mt-1 flex items-center gap-1 text-sm" :class="isOverdue ? 'font-medium text-error' : ''">
                             <UIcon name="i-lucide-calendar" class="size-3.5" />
                             {{ relativeDueDate }}
                         </p>
                     </div>
                     <div>
-                        <p class="text-xs text-muted">Progress</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Progress</p>
                         <UProgress :model-value="task.progress" class="mt-1.5" />
                         <p class="mt-1 text-xs text-muted">{{ task.progress }}%</p>
                     </div>
@@ -478,7 +467,7 @@ const deleteComment = (comment: TaskDetailComment) => {
                     <USeparator v-if="creator" />
 
                     <div v-if="creator">
-                        <p class="text-xs text-muted">Created by</p>
+                        <p class="text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase">Created by</p>
                         <div class="mt-1.5 flex items-center gap-1.5">
                             <UAvatar :src="creator.avatar_url ?? undefined" :alt="creator.name" :text="getInitials(creator.name)" size="xs" />
                             <span class="truncate text-sm">{{ creator.name }}</span>

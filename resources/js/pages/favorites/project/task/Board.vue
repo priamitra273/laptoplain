@@ -5,7 +5,7 @@ import moment from 'moment';
 import { ref, watch } from 'vue';
 import { VueDraggable, type DraggableEvent } from 'vue-draggable-plus';
 import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
-import { severityDotStyle, type AssignedTask, type TaskBoardColumn, type TaskStatusOption } from './types';
+import { severityBoxStyle, severityDotStyle, type AssignedTask, type TaskBoardColumn, type TaskStatusOption } from './types';
 
 interface LocalColumn extends TaskBoardColumn {
     page: number;
@@ -31,6 +31,15 @@ const overlay = useOverlay();
 
 const localColumns = ref<LocalColumn[]>([]);
 const draggingItem = ref(false);
+
+const collapsedColumns = ref<Set<string>>(new Set());
+const toggleColumnCollapse = (statusId: string) => {
+    const next = new Set(collapsedColumns.value);
+    if (next.has(statusId)) next.delete(statusId);
+    else next.add(statusId);
+    collapsedColumns.value = next;
+};
+
 let preDragSnapshot: Record<string, AssignedTask[]> | null = null;
 
 const cloneColumns = (source: TaskBoardColumn[]): LocalColumn[] =>
@@ -180,124 +189,153 @@ const subtaskCounts = (task: AssignedTask) => ({
 <template>
     <div class="overflow-x-auto py-2">
         <div class="flex flex-nowrap gap-3 pb-1">
-            <div v-for="column in localColumns" :key="column.status.id" class="flex w-75 shrink-0 flex-col rounded-xl border border-default">
-                <div class="flex items-center gap-2 px-3 py-2.5">
-                    <span class="size-2 shrink-0 rounded-full" :style="severityDotStyle(column.status.severity)" />
-                    <span class="flex-1 truncate text-xs font-semibold tracking-wide text-muted uppercase">{{ column.status.name }}</span>
-                    <UBadge color="neutral" variant="subtle" size="sm">{{ column.total }}</UBadge>
-                </div>
-
-                <VueDraggable
-                    v-model="column.tasks"
-                    class="kanban-col-scroll flex max-h-[70vh] min-h-20 flex-col gap-2 overflow-y-auto px-2 pb-2"
-                    :animation="150"
-                    ghost-class="opacity-40"
-                    group="my-task-board"
-                    :scroll="true"
-                    :scroll-sensitivity="80"
-                    :scroll-speed="14"
-                    :bubble-scroll="true"
-                    @add="(e: DraggableEvent<AssignedTask>) => onCardAdded(e, column)"
-                    @start="onDragStart"
-                    @end="draggingItem = false"
+            <div
+                v-for="column in localColumns"
+                :key="column.status.id"
+                class="flex shrink-0 flex-col rounded-xl border p-2 transition-[width] duration-150"
+                :class="collapsedColumns.has(column.status.id) ? 'w-11' : 'w-75'"
+                :style="severityBoxStyle(column.status.severity)"
+            >
+                <button
+                    v-if="collapsedColumns.has(column.status.id)"
+                    type="button"
+                    class="flex flex-col items-center gap-2 py-2"
+                    :title="`Expand ${column.status.name}`"
+                    @click="toggleColumnCollapse(column.status.id)"
                 >
-                    <div
-                        v-if="column.tasks.length === 0"
-                        class="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-default py-7 text-center"
-                    >
-                        <UIcon name="i-lucide-inbox" class="size-5 text-muted" />
-                        <span class="text-xs text-muted">No tasks</span>
+                    <UIcon name="i-lucide-chevron-right" class="size-3.5 text-muted" />
+                    <span class="size-2.5 shrink-0 rounded-full" :style="severityDotStyle(column.status.severity)" />
+                    <UBadge color="neutral" variant="subtle" size="sm" class="rounded-full">{{ column.total }}</UBadge>
+                    <span class="rotate-180 text-xs font-bold tracking-wide uppercase [writing-mode:vertical-rl]">
+                        {{ column.status.name }}
+                    </span>
+                </button>
+
+                <template v-else>
+                    <div class="flex items-center gap-2 py-1.5">
+                        <UButton
+                            icon="i-lucide-chevron-left"
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            square
+                            title="Collapse column"
+                            @click="toggleColumnCollapse(column.status.id)"
+                        />
+                        <span class="size-2.5 shrink-0 rounded-full" :style="severityDotStyle(column.status.severity)" />
+                        <span class="flex-1 truncate text-xs font-bold tracking-wide uppercase">{{ column.status.name }}</span>
+                        <UBadge color="neutral" variant="subtle" size="sm" class="rounded-full">{{ column.total }}</UBadge>
                     </div>
 
-                    <div
-                        v-for="item in column.tasks"
-                        :key="item.id"
-                        class="group relative cursor-grab rounded-lg border bg-default shadow-sm transition-all duration-150 active:cursor-grabbing"
-                        :class="[
-                            item.is_overdue ? 'border-error/40' : 'border-default',
-                            draggingItem ? '' : 'hover:border-primary/50 hover:shadow-md',
-                        ]"
-                        @click="router.get(route('task.show', item.id))"
+                    <VueDraggable
+                        v-model="column.tasks"
+                        class="kanban-col-scroll flex max-h-[70vh] min-h-20 flex-col gap-2 overflow-y-auto pb-1"
+                        :animation="150"
+                        ghost-class="opacity-40"
+                        group="my-task-board"
+                        :scroll="true"
+                        :scroll-sensitivity="80"
+                        :scroll-speed="14"
+                        :bubble-scroll="true"
+                        @add="(e: DraggableEvent<AssignedTask>) => onCardAdded(e, column)"
+                        @start="onDragStart"
+                        @end="draggingItem = false"
                     >
-                        <div class="p-2.5">
-                            <div class="mb-1.5 flex flex-wrap items-center gap-1">
-                                <UBadge v-if="item.type" color="neutral" variant="subtle" size="sm">{{ item.type.name }}</UBadge>
-                                <UBadge v-if="item.priority" :color="severityColor(item.priority.severity)" variant="subtle" size="sm">
-                                    {{ item.priority.name }}
-                                </UBadge>
-                                <UBadge v-if="item.is_overdue" color="error" variant="subtle" size="sm" class="ml-auto">
-                                    <UIcon name="i-lucide-clock" class="size-3" /> Overdue
-                                </UBadge>
-                            </div>
-
-                            <p class="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{{ item.title }}</p>
-
-                            <ULink
-                                v-if="item.project"
-                                :href="route('project.show.kanban', { encoded: item.project.id })"
-                                class="mb-2 inline-flex items-center gap-1 text-[11px] text-muted"
-                                @click.stop
-                            >
-                                <UIcon name="i-lucide-folder" class="size-3" />
-                                <span class="truncate">{{ item.project.title }}</span>
-                            </ULink>
-
-                            <div v-if="item.due_date" class="mb-2 flex items-center gap-1 text-[11px]" :class="dueDateClasses(item)">
-                                <UIcon name="i-lucide-calendar" class="size-3" />
-                                <span>{{ moment(item.due_date).format('DD MMM') }}</span>
-                                <span class="opacity-70">· {{ moment(item.due_date).fromNow() }}</span>
-                            </div>
-
-                            <div v-if="subtaskCounts(item).total > 0" class="mb-2">
-                                <div class="mb-1 flex items-center justify-between text-[10px] text-muted">
-                                    <span class="flex items-center gap-0.5"><UIcon name="i-lucide-list-tree" class="size-3" /> Subtask</span>
-                                    <span>{{ subtaskCounts(item).done }}/{{ subtaskCounts(item).total }}</span>
-                                </div>
-                                <UProgress
-                                    :model-value="Math.round((subtaskCounts(item).done / subtaskCounts(item).total) * 100)"
-                                    color="success"
-                                    size="sm"
-                                />
-                            </div>
-
-                            <div class="flex items-center justify-between gap-1">
-                                <span v-if="item.sequence_number" class="text-[10px] text-muted">#{{ item.sequence_number }}</span>
-                                <div v-else class="flex-1" />
-                                <UAvatarGroup :max="3" size="3xs">
-                                    <UAvatar
-                                        v-for="u in item.users ?? []"
-                                        :key="u.id"
-                                        :src="u.avatar_url ?? undefined"
-                                        :alt="u.name"
-                                        :text="getInitials(u.name)"
-                                    />
-                                </UAvatarGroup>
-                            </div>
+                        <div
+                            v-if="column.tasks.length === 0"
+                            class="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-default py-7 text-center"
+                        >
+                            <UIcon name="i-lucide-inbox" class="size-5 text-muted" />
+                            <span class="text-xs text-muted">No tasks</span>
                         </div>
 
                         <div
-                            class="hidden items-center justify-end gap-0.5 rounded-b-lg border-t border-default bg-elevated/50 px-2 py-1 group-hover:flex"
+                            v-for="item in column.tasks"
+                            :key="item.id"
+                            class="group relative cursor-grab rounded-xl border-l-2 bg-default shadow-sm transition-all duration-150 active:cursor-grabbing"
+                            :class="[item.is_overdue ? 'border-error' : 'border-transparent', draggingItem ? '' : 'hover:shadow-md']"
+                            @click="router.get(route('task.show', item.id))"
                         >
-                            <ULink :href="route('task.show', item.id)" @click.stop>
-                                <UButton icon="i-lucide-external-link" color="neutral" variant="ghost" size="xs" />
-                            </ULink>
-                        </div>
-                    </div>
-                </VueDraggable>
+                            <div class="p-2.5">
+                                <div class="mb-1.5 flex flex-wrap items-center gap-1">
+                                    <UBadge v-if="item.type" color="neutral" variant="subtle" size="sm">{{ item.type.name }}</UBadge>
+                                    <UBadge v-if="item.priority" :color="severityColor(item.priority.severity)" variant="subtle" size="sm">
+                                        {{ item.priority.name }}
+                                    </UBadge>
+                                    <UBadge v-if="item.is_overdue" color="error" variant="subtle" size="sm" class="ml-auto">
+                                        <UIcon name="i-lucide-clock" class="size-3" /> Overdue
+                                    </UBadge>
+                                </div>
 
-                <button
-                    v-if="column.has_more"
-                    type="button"
-                    :disabled="column.loadingMore"
-                    class="mx-2 mb-2 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-default py-2 text-[11px] font-medium text-muted transition-colors hover:text-highlighted disabled:cursor-not-allowed disabled:opacity-60"
-                    @click="loadMore(column)"
-                >
-                    <UIcon
-                        :name="column.loadingMore ? 'i-lucide-loader-2' : 'i-lucide-plus'"
-                        :class="['size-3', column.loadingMore && 'animate-spin']"
-                    />
-                    {{ column.loadingMore ? 'Loading…' : `Load more (${Math.max(0, column.total - column.tasks.length)})` }}
-                </button>
+                                <p class="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{{ item.title }}</p>
+
+                                <ULink
+                                    v-if="item.project"
+                                    :href="route('project.show.kanban', { encoded: item.project.id })"
+                                    class="mb-2 inline-flex items-center gap-1 text-[11px] text-muted"
+                                    @click.stop
+                                >
+                                    <UIcon name="i-lucide-folder" class="size-3" />
+                                    <span class="truncate">{{ item.project.title }}</span>
+                                </ULink>
+
+                                <div v-if="item.due_date" class="mb-2 flex items-center gap-1 text-[11px]" :class="dueDateClasses(item)">
+                                    <UIcon name="i-lucide-calendar" class="size-3" />
+                                    <span>{{ moment(item.due_date).format('DD MMM') }}</span>
+                                    <span class="opacity-70">· {{ moment(item.due_date).fromNow() }}</span>
+                                </div>
+
+                                <div v-if="subtaskCounts(item).total > 0" class="mb-2">
+                                    <div class="mb-1 flex items-center justify-between text-[10px] text-muted">
+                                        <span class="flex items-center gap-0.5"><UIcon name="i-lucide-list-tree" class="size-3" /> Subtask</span>
+                                        <span>{{ subtaskCounts(item).done }}/{{ subtaskCounts(item).total }}</span>
+                                    </div>
+                                    <UProgress
+                                        :model-value="Math.round((subtaskCounts(item).done / subtaskCounts(item).total) * 100)"
+                                        color="success"
+                                        size="sm"
+                                    />
+                                </div>
+
+                                <div class="flex items-center justify-between gap-1">
+                                    <span v-if="item.sequence_number" class="text-[10px] text-muted">#{{ item.sequence_number }}</span>
+                                    <div v-else class="flex-1" />
+                                    <UAvatarGroup :max="3" size="3xs">
+                                        <UAvatar
+                                            v-for="u in item.users ?? []"
+                                            :key="u.id"
+                                            :src="u.avatar_url ?? undefined"
+                                            :alt="u.name"
+                                            :text="getInitials(u.name)"
+                                        />
+                                    </UAvatarGroup>
+                                </div>
+                            </div>
+
+                            <div
+                                class="hidden items-center justify-end gap-0.5 rounded-b-lg border-t border-default bg-elevated/50 px-2 py-1 group-hover:flex"
+                            >
+                                <ULink :href="route('task.show', item.id)" @click.stop>
+                                    <UButton icon="i-lucide-external-link" color="neutral" variant="ghost" size="xs" />
+                                </ULink>
+                            </div>
+                        </div>
+                    </VueDraggable>
+
+                    <button
+                        v-if="column.has_more"
+                        type="button"
+                        :disabled="column.loadingMore"
+                        class="mx-2 mb-2 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-default py-2 text-[11px] font-medium text-muted transition-colors hover:text-highlighted disabled:cursor-not-allowed disabled:opacity-60"
+                        @click="loadMore(column)"
+                    >
+                        <UIcon
+                            :name="column.loadingMore ? 'i-lucide-loader-2' : 'i-lucide-plus'"
+                            :class="['size-3', column.loadingMore && 'animate-spin']"
+                        />
+                        {{ column.loadingMore ? 'Loading…' : `Load more (${Math.max(0, column.total - column.tasks.length)})` }}
+                    </button>
+                </template>
             </div>
         </div>
     </div>

@@ -21,19 +21,30 @@ export interface WorkloadStatusOption {
     severity: PrimeSeverity;
 }
 
+export interface UserPreview {
+    id: string;
+    name: string;
+}
+
 export interface WorkloadSummary {
     total_users: number;
     free: number;
     light: number;
     moderate: number;
     busy: number;
+    users_preview: UserPreview[];
+    overloaded_preview: UserPreview[];
 }
+
+export type WorkloadSortColumn = 'name' | 'total_tasks' | 'remaining_work_percent';
 
 export interface WorkloadFilters {
     names?: string[] | null;
     workload_statuses?: number[] | null;
     search?: string | null;
     per_page: number;
+    sort: WorkloadSortColumn;
+    direction: 'asc' | 'desc';
 }
 
 export interface WorkloadPaginator {
@@ -44,4 +55,14 @@ export interface WorkloadPaginator {
     total: number;
     from: number | null;
     to: number | null;
+}
+
+/** Satu segmen batang distribusi; urutannya mengikuti tingkat keparahan. */
+export interface DistributionSegment {
+    id: number;
+    label: string;
+    count: number;
+    percent: number;
+    severity: PrimeSeverity;
+    active: boolean;
 }

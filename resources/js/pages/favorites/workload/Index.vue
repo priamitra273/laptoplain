@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { getInitials, severityColor } from '@/lib/utils';
 import { Head, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { computed, reactive, ref } from 'vue';
+import WorkloadDistribution from './Distribution.vue';
+import WorkloadHighlights from './Highlights.vue';
 import WorkloadTable from './Table.vue';
-import type { WorkloadFilters, WorkloadPaginator, WorkloadStatusOption, WorkloadSummary, WorkloadUserOption } from './types';
+import WorkloadToolbar from './Toolbar.vue';
+import type { WorkloadFilters, WorkloadPaginator, WorkloadSortColumn, WorkloadStatusOption, WorkloadSummary, WorkloadUserOption } from './types';
+import { buildSegments } from './workload';
 
-interface Props {
+const props = defineProps<{
     users: WorkloadPaginator;
     filters: WorkloadFilters;
     filterOptions: {
@@ -15,17 +18,9 @@ interface Props {
         workload_statuses: WorkloadStatusOption[];
     };
     summary: WorkloadSummary;
-}
+}>();
 
-const props = defineProps<Props>();
-
-const summaryCards = computed(() => [
-    { key: 'total_users', label: 'Total Users', icon: 'i-lucide-users', value: props.summary.total_users },
-    { key: 'free', label: 'Free', icon: 'i-lucide-circle-check', value: props.summary.free },
-    { key: 'light', label: 'Almost Done', icon: 'i-lucide-chart-no-axes-column', value: props.summary.light },
-    { key: 'moderate', label: 'Ongoing', icon: 'i-lucide-clock', value: props.summary.moderate },
-    { key: 'busy', label: 'Overloaded', icon: 'i-lucide-triangle-alert', value: props.summary.busy },
-]);
+const pageSizes = [10, 25, 50, 100];
 
 const filters = reactive({
     names: [...(props.filters.names ?? [])] as string[],
@@ -33,19 +28,12 @@ const filters = reactive({
     search: props.filters.search ?? '',
 });
 
-const activeFilterCount = computed(() => {
-    let count = 0;
+const sort = ref<WorkloadSortColumn>(props.filters.sort);
+const direction = ref<'asc' | 'desc'>(props.filters.direction);
 
-    if (filters.names.length) count++;
-    if (filters.workload_statuses.length) count++;
-    if (filters.search) count++;
+const hasFilters = computed(() => Boolean(filters.names.length || filters.workload_statuses.length || filters.search));
 
-    return count;
-});
-
-const hasActiveFilters = computed(() => activeFilterCount.value > 0);
-
-const showFilters = ref(hasActiveFilters.value);
+const segments = computed(() => buildSegments(props.summary, props.filterOptions.workload_statuses, filters.workload_statuses));
 
 const navigate = (overrides: { page?: number; per_page?: number } = {}) => {
     router.get(
@@ -54,6 +42,8 @@ const navigate = (overrides: { page?: number; per_page?: number } = {}) => {
             names: filters.names.length ? filters.names : undefined,
             workload_statuses: filters.workload_statuses.length ? filters.workload_statuses : undefined,
             search: filters.search || undefined,
+            sort: sort.value,
+            direction: direction.value,
             page: overrides.page ?? props.users.current_page,
             per_page: overrides.per_page ?? props.users.per_page,
         },
@@ -63,7 +53,29 @@ const navigate = (overrides: { page?: number; per_page?: number } = {}) => {
 
 watchDebounced(filters, () => navigate({ page: 1 }), { deep: true, debounce: 400 });
 
-const pageSizes = [10, 25, 50, 100];
+const toggleStatus = (statusId: number) => {
+    filters.workload_statuses = filters.workload_statuses.includes(statusId)
+        ? filters.workload_statuses.filter((id) => id !== statusId)
+        : [...filters.workload_statuses, statusId];
+};
+
+const clearFilters = () => {
+    filters.names = [];
+    filters.workload_statuses = [];
+    filters.search = '';
+};
+
+// Kolom yang sama berarti membalik arah; kolom baru selalu mulai dari yang terberat.
+const applySort = (column: WorkloadSortColumn) => {
+    if (sort.value === column) {
+        direction.value = direction.value === 'desc' ? 'asc' : 'desc';
+    } else {
+        sort.value = column;
+        direction.value = column === 'name' ? 'asc' : 'desc';
+    }
+
+    navigate({ page: 1 });
+};
 
 const page = computed({
     get: () => props.users.current_page,
@@ -77,87 +89,54 @@ const pageSize = computed({
 </script>
 
 <template>
-    <Head title="Workload" />
-
     <AppLayout title="Workload">
-        <div class="flex flex-col gap-6">
-            <Heading title="Workload" description="Monitor and manage user workload distribution" />
+        <Head title="Workload" />
 
-            <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                <UCard v-for="card in summaryCards" :key="card.key">
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <p class="text-xs text-muted">{{ card.label }}</p>
-                            <p class="text-lg leading-tight font-semibold">{{ card.value }}</p>
-                        </div>
-                        <UIcon :name="card.icon" class="size-4 shrink-0 text-muted" />
-                    </div>
-                </UCard>
+        <Heading title="Workload Users" description="Monitor and manage user workload distribution." />
+
+        <UCard
+            :ui="{
+                root: 'overflow-hidden',
+                body: 'p-0 sm:p-0',
+                footer: 'px-4 py-2.5 sm:px-4 sm:py-2.5',
+            }"
+        >
+            <div class="flex flex-col gap-3 p-4">
+                <WorkloadHighlights :summary="summary" />
+
+                <WorkloadDistribution
+                    :segments="segments"
+                    :total="summary.total_users"
+                    :active-status-count="filters.workload_statuses.length"
+                    @toggle="toggleStatus"
+                />
             </div>
 
-            <div class="flex justify-end">
-                <UButton
-                    :label="showFilters ? 'Hide Filters' : 'Show Filters'"
-                    icon="i-lucide-filter"
-                    color="neutral"
-                    variant="outline"
-                    @click="showFilters = !showFilters"
-                >
-                    <template v-if="activeFilterCount" #trailing>
-                        <UBadge color="primary" variant="subtle" size="sm">{{ activeFilterCount }}</UBadge>
-                    </template>
-                </UButton>
-            </div>
+            <WorkloadToolbar
+                v-model:search="filters.search"
+                v-model:names="filters.names"
+                v-model:statuses="filters.workload_statuses"
+                :user-options="filterOptions.users"
+                :status-options="filterOptions.workload_statuses"
+                @clear="clearFilters"
+            />
 
-            <UCard v-if="showFilters">
-                <div class="grid gap-4 md:grid-cols-3">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Users" />
-                        <USelectMenu
-                            v-model="filters.names"
-                            :items="filterOptions.users"
-                            label-key="name"
-                            value-key="id"
-                            multiple
-                            placeholder="All users"
-                            class="w-full"
-                        >
-                            <template #item-leading="{ item }">
-                                <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" :text="getInitials(item.name)" size="xs" />
-                            </template>
-                        </USelectMenu>
-                    </div>
+            <WorkloadTable
+                :data="users.data"
+                :status-options="filterOptions.workload_statuses"
+                :sort="sort"
+                :direction="direction"
+                :has-filters="hasFilters"
+                @sort="applySort"
+                @clear="clearFilters"
+            />
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Workload Status" />
-                        <USelectMenu
-                            v-model="filters.workload_statuses"
-                            :items="filterOptions.workload_statuses"
-                            label-key="name"
-                            value-key="id"
-                            multiple
-                            placeholder="All statuses"
-                            class="w-full"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label value="Search" />
-                        <UInput v-model="filters.search" icon="i-lucide-search" placeholder="Search by name" @keyup.enter="navigate({ page: 1 })" />
-                    </div>
+            <template #footer>
+                <div class="flex items-center justify-center gap-3">
+                    <USelect v-model="pageSize" :items="pageSizes" color="neutral" variant="outline" class="w-20" />
+                    <UPagination v-model:page="page" :items-per-page="users.per_page" :total="users.total" size="sm" />
                 </div>
-            </UCard>
-
-            <WorkloadTable :data="users.data" :status-options="filterOptions.workload_statuses" />
-
-            <div class="flex items-center justify-center gap-3">
-                <USelect v-model="pageSize" :items="pageSizes" class="w-20" />
-                <UPagination v-model:page="page" :items-per-page="pageSize" :total="users.total" />
-            </div>
-        </div>
+            </template>
+        </UCard>
     </AppLayout>
 </template>

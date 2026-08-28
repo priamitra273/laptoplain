@@ -13,11 +13,15 @@ interface Props {
     currentSprintId: string | null;
     draggable?: boolean;
     canAct?: boolean;
+    selectable?: boolean;
+    selected?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     draggable: false,
     canAct: false,
+    selectable: false,
+    selected: false,
 });
 
 const emit = defineEmits<{
@@ -26,7 +30,28 @@ const emit = defineEmits<{
     moveTo: [task: BacklogTask, fromSprintId: string | null, toSprintId: string | null];
     assignEpic: [task: BacklogTask, epicId: string | null];
     createEpic: [];
+    toggleSelect: [task: BacklogTask, selected: boolean];
 }>();
+
+/**
+ * USelectMenu tidak bisa membawa `null` sebagai value, jadi "tidak di sprint mana pun"
+ * diwakili sentinel ini dan diterjemahkan balik saat dikirim.
+ */
+const BACKLOG_VALUE = '__backlog__';
+
+const sprintOptions = computed(() => [
+    { id: BACKLOG_VALUE, name: 'Backlog' },
+    ...props.sprints.map((sprint) => ({ id: sprint.id, name: sprint.name })),
+]);
+
+const currentSprintValue = computed(() => props.currentSprintId ?? BACKLOG_VALUE);
+
+const onSprintChange = (value: string) => {
+    const target = value === BACKLOG_VALUE ? null : value;
+    if (target === props.currentSprintId) return;
+
+    emit('moveTo', props.task, props.currentSprintId, target);
+};
 
 const menuItems = computed(() => {
     const items: { label: string; icon: string; onSelect: () => void }[][] = [
@@ -57,6 +82,15 @@ const menuItems = computed(() => {
 
 <template>
     <div class="group flex items-center gap-2 border-t border-default px-3 py-2 hover:bg-elevated/50">
+        <UCheckbox
+            v-if="selectable"
+            :model-value="selected"
+            class="shrink-0"
+            :aria-label="`Select ${task.title}`"
+            @update:model-value="(value: boolean | 'indeterminate') => emit('toggleSelect', task, value === true)"
+            @click.stop
+        />
+
         <UIcon
             v-if="draggable"
             name="i-lucide-grip-vertical"
@@ -126,19 +160,32 @@ const menuItems = computed(() => {
         </UBadge>
         <span v-else class="w-24 shrink-0"></span>
 
+        <USelectMenu
+            v-if="canAct"
+            :model-value="currentSprintValue"
+            :items="sprintOptions"
+            label-key="name"
+            value-key="id"
+            class="w-28 shrink-0"
+            :ui="{ base: 'border-0 bg-transparent shadow-none ring-0' }"
+            :aria-label="`Move ${task.title} to another sprint`"
+            @update:model-value="onSprintChange"
+            @click.stop
+        >
+            <template #default>
+                <span class="w-full truncate text-xs" :class="currentSprintId ? 'text-toned' : 'text-muted'">
+                    {{ sprints.find((sprint) => sprint.id === currentSprintId)?.name ?? 'Backlog' }}
+                </span>
+            </template>
+        </USelectMenu>
+        <span v-else class="w-28 shrink-0"></span>
+
         <UAvatarGroup size="xs" :max="3" class="w-20 shrink-0 justify-end">
             <UAvatar v-for="user in task.users" :key="user.id" :src="user.avatar_url ?? undefined" :alt="user.name" :text="getInitials(user.name)" />
         </UAvatarGroup>
 
         <UDropdownMenu :items="menuItems" :content="{ align: 'end' }" @click.stop>
-            <UButton
-                icon="i-lucide-ellipsis-vertical"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                class="shrink-0 opacity-0 group-hover:opacity-100"
-                aria-label="More actions"
-            />
+            <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="xs" class="shrink-0" aria-label="More actions" />
         </UDropdownMenu>
     </div>
 </template>

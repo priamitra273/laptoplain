@@ -115,6 +115,31 @@ const persistMove = async (taskId: string, fromSprintId: string | null, toSprint
     }
 };
 
+/**
+ * Endpoint assign menerima banyak id sekaligus, jadi memindahkan sepuluh task
+ * tetap satu request — bukan sepuluh.
+ */
+const bulkMove = async (taskIds: string[], toSprintId: string) => {
+    if (!taskIds.length) return;
+
+    try {
+        await fetchJson(route('project.sprints.tasks.assign', { projectEncoded: props.projectId, sprintEncoded: toSprintId }), 'POST', {
+            task_ids: taskIds,
+        });
+
+        const sprintName = props.sprints.find((sprint) => sprint.id === toSprintId)?.name ?? 'the sprint';
+        toast.add({
+            title: 'Moved',
+            description: `${taskIds.length} ${taskIds.length === 1 ? 'task' : 'tasks'} moved to ${sprintName}.`,
+            color: 'success',
+        });
+    } catch {
+        toast.add({ title: 'Failed', description: 'Could not move the selected tasks.', color: 'error' });
+    } finally {
+        reload();
+    }
+};
+
 const assignEpic = async (task: BacklogTask, epicId: string | null) => {
     try {
         await fetchJson(route('project.tasks.parent.update', { projectEncoded: props.projectId, task: task.id }), 'PUT', {
@@ -208,7 +233,25 @@ const openCreateEpic = async () => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-3">
+    <div
+        v-if="!sprints.length && !backlogTasks.length"
+        class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-default px-6 py-14 text-center"
+    >
+        <UIcon name="i-lucide-layers" class="size-8 text-muted" />
+        <div class="space-y-1.5">
+            <p class="text-base font-semibold text-highlighted">Nothing to plan yet</p>
+            <p class="mx-auto max-w-lg text-sm leading-relaxed text-muted">
+                There are no upcoming batches and no unscheduled tasks. Create a batch to group what the team does next, or add tasks and leave them
+                unscheduled until you are ready.
+            </p>
+        </div>
+        <div v-if="canAct" class="mt-1 flex flex-wrap justify-center gap-2">
+            <UButton label="Create a batch" :loading="creatingSprint" :disabled="!canSprintCreate" @click="createSprint" />
+            <UButton label="Add a task" color="neutral" variant="outline" :disabled="!canTaskCreate" @click="openCreateTask(null)" />
+        </div>
+    </div>
+
+    <div v-else class="flex flex-col gap-3">
         <SprintSection
             v-for="sprint in sprints"
             :key="sprint.id"
@@ -247,6 +290,7 @@ const openCreateEpic = async () => {
             @move-task="(task, fromId, toId) => persistMove(task.id, fromId, toId)"
             @assign-epic="assignEpic"
             @create-epic="openCreateEpic"
+            @bulk-move="bulkMove"
         />
     </div>
 </template>

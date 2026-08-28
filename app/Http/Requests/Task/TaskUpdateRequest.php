@@ -203,10 +203,6 @@ class TaskUpdateRequest extends FormRequest
             $merged['parent_id'] = Sqids::decode($parentId);
         }
 
-        if ($statusId && (int) Sqids::decode($statusId) === 1) {
-            $merged['due_date'] = null;
-        }
-
         $this->merge($merged);
     }
 

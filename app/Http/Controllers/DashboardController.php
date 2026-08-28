@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Facades\Sqids;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class DashboardController extends Controller
 
         $data = [
             'attention' => $this->getTasksNeedingAttention($userId),
+            'tasks' => $this->getRecentTasks($userId),
             'projects' => $this->getRecentProjects($userId),
             'stats' => [
                 'tasks' => $this->getTaskStats($userId),
@@ -69,19 +71,50 @@ class DashboardController extends Controller
      */
     private function getTasksNeedingAttention(int $userId): array
     {
-        return $this->userTasks($userId)
+        return $this->taskPanel($this->openTasks($userId)->whereNotNull('due_date')->orderBy('due_date'), $userId);
+    }
+
+    /**
+     * Tugas terbaru milik user, apa pun statusnya, sebagai penyeimbang panel triase.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getRecentTasks(int $userId): array
+    {
+        return $this->taskPanel($this->userTasks($userId)->where('is_archived', false)->latest('tasks.id'), $userId);
+    }
+
+    /**
+     * Bentuk baris yang dipakai kedua panel tugas.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function taskPanel(Builder $query, int $userId): array
+    {
+        return $query
             ->with([
                 'project:id,title,emoji',
                 'status:id,name,severity',
                 'priority:id,name,severity',
+                'users:id,name',
             ])
-            ->whereNull('completed_at')
-            ->where('is_archived', false)
-            ->whereNotNull('due_date')
-            ->orderBy('due_date')
             ->limit(self::PANEL_LIMIT)
             ->get()
-            ->toArray();
+            ->map(function (Task $task) use ($userId): array {
+                $row = $task->toArray();
+
+                // Panel memisahkan tugas yang di-assign ke user dari yang dia buat sendiri.
+                // Relasi users hanya dipakai untuk itu dan untuk avatar; pivotnya tidak.
+                $row['assignees'] = $task->users
+                    ->map(fn (User $assignee) => ['id' => $assignee->id, 'name' => $assignee->name])
+                    ->all();
+                $row['is_assigned'] = $task->users->contains('id', $userId);
+                $row['is_created_by_me'] = $task->created_by === $userId;
+                unset($row['users']);
+
+                return $row;
+            })
+            ->all();
     }
 
     /**
@@ -101,7 +134,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @return array{total: int, progress: int, overdue: int, byStatus: array<int, array{name: string, severity: string|null, count: int}>}
+     * @return array{total: int, progress: int, overdue: int, dueSoon: int, byStatus: array<int, array{name: string, severity: string|null, count: int}>}
      */
     private function getTaskStats(int $userId): array
     {
@@ -112,13 +145,25 @@ class DashboardController extends Controller
         return [
             'total' => (int) ($totals->total ?? 0),
             'progress' => (int) round((float) ($totals->avg_progress ?? 0)),
-            'overdue' => $this->userTasks($userId)
-                ->whereNull('completed_at')
-                ->where('is_archived', false)
+            'overdue' => $this->openTasks($userId)
                 ->where('due_date', '<', today())
+                ->count(),
+            // Panel triase merangkum seluruh populasi, bukan hanya lima baris yang tampil.
+            'dueSoon' => $this->openTasks($userId)
+                ->whereBetween('due_date', [today(), today()->addWeek()])
                 ->count(),
             'byStatus' => $this->statusBreakdown($this->userTasks($userId), 'ms_task_statuses', 'tasks.status_id'),
         ];
+    }
+
+    /**
+     * Tugas user yang masih berjalan: belum selesai dan belum diarsipkan.
+     */
+    private function openTasks(int $userId): Builder
+    {
+        return $this->userTasks($userId)
+            ->whereNull('completed_at')
+            ->where('is_archived', false);
     }
 
     /**

@@ -8,6 +8,7 @@ import UButton from '@nuxt/ui/components/Button.vue';
 import { getPaginationRowModel } from '@tanstack/vue-table';
 import type { Column, PaginationState, SortingState, Table } from '@tanstack/vue-table';
 import { computed, h, ref, useTemplateRef } from 'vue';
+import ProjectDateCell from './DateCell.vue';
 import type { Project, ProjectPriorityOption, ProjectStatusOption } from './types';
 
 interface Props {
@@ -501,25 +502,19 @@ const handleDelete = async (row: Project) => {
                     </template>
 
                     <template #start_date-cell="{ row }">
-                        <UInput
-                            :model-value="row.original.start_date ?? ''"
-                            type="date"
-                            variant="none"
-                            size="sm"
+                        <ProjectDateCell
+                            :model-value="row.original.start_date"
                             :disabled="!can('project.update')"
-                            @change="(e: Event) => onDateChange(row.original, 'start_date', (e.target as HTMLInputElement).value)"
+                            @update="(value: string) => onDateChange(row.original, 'start_date', value)"
                         />
                     </template>
 
                     <template #due_date-cell="{ row }">
-                        <UInput
-                            :model-value="row.original.due_date ?? ''"
-                            type="date"
-                            variant="none"
-                            size="sm"
-                            :min="row.original.start_date ?? undefined"
+                        <ProjectDateCell
+                            :model-value="row.original.due_date"
+                            :min="row.original.start_date"
                             :disabled="!can('project.update')"
-                            @change="(e: Event) => onDateChange(row.original, 'due_date', (e.target as HTMLInputElement).value)"
+                            @update="(value: string) => onDateChange(row.original, 'due_date', value)"
                         />
                     </template>
 

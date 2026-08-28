@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { VueDraggable, type DraggableEvent } from 'vue-draggable-plus';
 import type { KanbanBadge } from '../kanban/types';
 import TaskRow from './TaskRow.vue';
@@ -25,18 +25,37 @@ const emit = defineEmits<{
     moveTask: [task: BacklogTask, fromSprintId: string | null, toSprintId: string | null];
     assignEpic: [task: BacklogTask, epicId: string | null];
     createEpic: [];
+    bulkMove: [taskIds: string[], toSprintId: string];
 }>();
 
 const collapsed = ref(false);
 const localTasks = ref<BacklogTask[]>([...props.tasks]);
+const selectedIds = ref<string[]>([]);
 
 watch(
     () => props.tasks,
     (tasks) => {
         localTasks.value = [...tasks];
+        // Seleksi dibuang saat daftar berubah: id yang sudah pindah sprint tidak lagi ada di sini.
+        selectedIds.value = [];
     },
     { deep: true },
 );
+
+const toggleSelect = (task: BacklogTask, selected: boolean) => {
+    selectedIds.value = selected ? [...selectedIds.value, task.id] : selectedIds.value.filter((id) => id !== task.id);
+};
+
+const allSelected = computed(() => localTasks.value.length > 0 && selectedIds.value.length === localTasks.value.length);
+
+const toggleSelectAll = (selected: boolean) => {
+    selectedIds.value = selected ? localTasks.value.map((task) => task.id) : [];
+};
+
+const bulkMoveTo = (sprintId: string) => {
+    emit('bulkMove', [...selectedIds.value], sprintId);
+    selectedIds.value = [];
+};
 
 const onAdd = (event: DraggableEvent<BacklogTask>) => {
     const fromEl = event.from as HTMLElement;
@@ -54,15 +73,6 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
             <span class="text-xs text-muted">{{ localTasks.length }} issues</span>
             <UButton
                 v-if="canAct"
-                label="Create Epic"
-                icon="i-lucide-bolt"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                @click.stop="emit('createEpic')"
-            />
-            <UButton
-                v-if="canAct"
                 label="Create Sprint"
                 icon="i-lucide-plus"
                 color="neutral"
@@ -78,6 +88,44 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
             <div v-if="!localTasks.length" class="flex flex-col items-center justify-center gap-2 py-8 text-muted">
                 <UIcon name="i-lucide-inbox" class="size-6" />
                 <span class="text-sm">Backlog is empty</span>
+            </div>
+
+            <div v-else-if="canAct" class="flex flex-wrap items-center gap-2 border-t border-default px-3 py-2">
+                <UCheckbox
+                    :model-value="allSelected"
+                    :indeterminate="selectedIds.length > 0 && !allSelected"
+                    aria-label="Select every backlog task"
+                    @update:model-value="(value: boolean | 'indeterminate') => toggleSelectAll(value === true)"
+                />
+
+                <span class="text-xs text-muted tabular-nums">
+                    {{ selectedIds.length ? `${selectedIds.length} selected` : 'Select tasks to move them together' }}
+                </span>
+
+                <template v-if="selectedIds.length">
+                    <UDropdownMenu
+                        :items="[
+                            sprints.map((sprint) => ({
+                                label: `Move to ${sprint.name}`,
+                                icon: 'i-lucide-arrow-right',
+                                onSelect: () => bulkMoveTo(sprint.id),
+                            })),
+                        ]"
+                        :content="{ align: 'start' }"
+                    >
+                        <UButton
+                            label="Move to sprint"
+                            trailing-icon="i-lucide-chevron-down"
+                            color="neutral"
+                            variant="outline"
+                            size="xs"
+                            :disabled="!sprints.length"
+                            :title="sprints.length ? undefined : 'Create a sprint first.'"
+                        />
+                    </UDropdownMenu>
+
+                    <UButton label="Clear" color="neutral" variant="ghost" size="xs" @click="toggleSelectAll(false)" />
+                </template>
             </div>
 
             <VueDraggable
@@ -100,11 +148,14 @@ const onAdd = (event: DraggableEvent<BacklogTask>) => {
                     :current-sprint-id="null"
                     :draggable="canAct"
                     :can-act="canAct"
+                    :selectable="canAct"
+                    :selected="selectedIds.includes(task.id)"
                     @edit="emit('editTask', task)"
                     @update-priority="(t, priorityId) => emit('updatePriority', t, priorityId)"
                     @move-to="(t, fromId, toId) => emit('moveTask', t, fromId, toId)"
                     @assign-epic="(t, epicId) => emit('assignEpic', t, epicId)"
                     @create-epic="emit('createEpic')"
+                    @toggle-select="toggleSelect"
                 />
             </VueDraggable>
 

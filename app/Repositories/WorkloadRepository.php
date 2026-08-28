@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\DB;
 
 class WorkloadRepository
 {
+    /**
+     * Banyaknya nama yang dikirim untuk tiap tumpukan avatar di kartu sorotan.
+     */
+    private const PREVIEW_LIMIT = 5;
+
     public function getWorkloadBaseQuery(): Builder
     {
         $workloadSub = DB::table('users as u')
@@ -76,9 +81,30 @@ class WorkloadRepository
         }
     }
 
+    public function applySort(Builder $query, WorkloadFiltersData $filters): void
+    {
+        $column = WorkloadFiltersData::SORTABLE_COLUMNS[$filters->sort];
+
+        // Nama sebagai pemecah seri: tanpa ini, dua user dengan angka sama bisa
+        // bertukar posisi antar halaman dan barisnya terlihat hilang/dobel.
+        $query->orderBy($column, $filters->direction)
+            ->orderBy('users.name');
+    }
+
+    /**
+     * Ringkasan seluruh populasi yang lolos filter, bukan hanya halaman yang tampil.
+     *
+     * Baris diambil sekali lalu diolah di memori; kolom tambahannya menumpang query
+     * yang sama, jadi tidak ada pass baru dibanding versi sebelumnya.
+     */
     public function getSummary(Builder $query): array
     {
-        $allForSummary = (clone $query)->get(['w.workload_status']);
+        $allForSummary = (clone $query)->get([
+            'users.id',
+            'users.name',
+            'w.workload_status',
+            'w.remaining_work_percent',
+        ]);
 
         return [
             'total_users' => $allForSummary->count(),
@@ -86,7 +112,28 @@ class WorkloadRepository
             'light' => $allForSummary->where('workload_status', WorkloadStatus::ALMOST_DONE->value)->count(),
             'moderate' => $allForSummary->where('workload_status', WorkloadStatus::ONGOING->value)->count(),
             'busy' => $allForSummary->where('workload_status', WorkloadStatus::OVERLOADED->value)->count(),
+            'users_preview' => $this->preview($allForSummary),
+            'overloaded_preview' => $this->preview(
+                $allForSummary->where('workload_status', WorkloadStatus::OVERLOADED->value)
+            ),
         ];
+    }
+
+    /**
+     * Beberapa nama untuk tumpukan avatar. Yang bebannya paling berat tampil lebih dulu,
+     * dan avatar_url sengaja tidak diikutkan supaya tidak menarik relasi media.
+     *
+     * @param  Collection<int, User>  $users
+     * @return array<int, array{id: string, name: string}>
+     */
+    private function preview(Collection $users): array
+    {
+        return $users
+            ->sortByDesc('remaining_work_percent')
+            ->take(self::PREVIEW_LIMIT)
+            ->map(fn ($user) => ['id' => Sqids::encode($user->id), 'name' => $user->name])
+            ->values()
+            ->all();
     }
 
     public function getAvailableUsers(): Collection

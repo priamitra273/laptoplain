@@ -5,6 +5,7 @@ import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { severityColor } from '@/lib/utils';
 import { ProjectPolicyKey } from '@/types/type';
 import { useHttp, usePage } from '@inertiajs/vue3';
+import { DateFormatter, getLocalTimeZone, parseDate } from '@internationalized/date';
 import { computed, inject, ref } from 'vue';
 import type { KanbanBadge, KanbanStatusOption, KanbanTask, KanbanUser } from './types';
 
@@ -160,6 +161,59 @@ const selectedStatusName = computed(() => props.statuses.find((s) => s.id === ht
 const datesRequired = computed(() => !!selectedStatusName.value && !['To Do', 'Blocked'].includes(selectedStatusName.value));
 
 const scheduleHint = computed(() => (datesRequired.value ? `A due date is required while the status is "${selectedStatusName.value}".` : undefined));
+
+const dateFormatter = new DateFormatter('en-GB', { dateStyle: 'medium' });
+
+const toCalendarDate = (value?: string | null) => (value ? parseDate(value.slice(0, 10)) : undefined);
+
+/**
+ * Klik pertama pada kalender rentang selalu mengembalikan `{ start, end: undefined }`.
+ * Kalau langsung ditulis ke form, due date yang sudah terisi ikut terhapus — jadi
+ * pilihan setengah jadi ditahan di draf (bentuk string, sama seperti form) dan baru
+ * dipindahkan saat rentangnya lengkap.
+ */
+const scheduleDraft = ref<{ start: string; end: string } | null>(null);
+const schedulePickerOpen = ref(false);
+
+const schedule = computed({
+    get: () => {
+        const source = scheduleDraft.value ?? { start: http.start_date as string, end: http.due_date as string };
+
+        return { start: toCalendarDate(source.start), end: toCalendarDate(source.end) };
+    },
+    set: (range) => {
+        const start = range?.start?.toString() ?? '';
+        const end = range?.end?.toString() ?? '';
+
+        if (start && end) {
+            http.start_date = start;
+            http.due_date = end;
+            scheduleDraft.value = null;
+            schedulePickerOpen.value = false;
+            return;
+        }
+
+        scheduleDraft.value = { start, end };
+    },
+});
+
+// Menutup popover di tengah pemilihan membatalkan draf, bukan menyimpan separuh rentang.
+const onSchedulePickerToggle = (open: boolean) => {
+    schedulePickerOpen.value = open;
+    if (!open) {
+        scheduleDraft.value = null;
+    }
+};
+
+const scheduleLabel = computed(() => {
+    const { start, end } = schedule.value;
+
+    if (!start) return 'Select dates';
+
+    const startLabel = dateFormatter.format(start.toDate(getLocalTimeZone()));
+
+    return end ? `${startLabel} - ${dateFormatter.format(end.toDate(getLocalTimeZone()))}` : startLabel;
+});
 
 const statusOptions = computed(() => props.statuses.filter((status) => canUpdateTaskStatus(status.id) || props.task?.status?.id === status.id));
 
@@ -426,18 +480,26 @@ const submit = async () => {
                         <p v-if="scheduleHint" class="text-sm text-warning">{{ scheduleHint }}</p>
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="flex flex-col gap-2">
-                            <Label value="Start Date" :required="datesRequired" />
-                            <UInput v-model="http.start_date as string" type="date" class="w-full" />
-                            <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
-                        </div>
+                    <div class="flex flex-col gap-2">
+                        <Label value="Start and due date" :required="datesRequired" />
 
-                        <div class="flex flex-col gap-2">
-                            <Label value="Due Date" :required="datesRequired" />
-                            <UInput v-model="http.due_date as string" type="date" :min="http.start_date" class="w-full" />
-                            <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
-                        </div>
+                        <UPopover :open="schedulePickerOpen" @update:open="onSchedulePickerToggle">
+                            <UButton
+                                color="neutral"
+                                variant="subtle"
+                                icon="i-lucide-calendar"
+                                class="w-full justify-start font-normal sm:w-fit"
+                                :class="{ 'text-muted': !http.start_date }"
+                                :label="scheduleLabel"
+                            />
+
+                            <template #content>
+                                <UCalendar v-model="schedule" range :number-of-months="2" class="p-2" />
+                            </template>
+                        </UPopover>
+
+                        <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
+                        <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
                     </div>
                 </section>
 

@@ -398,6 +398,7 @@ class ProjectRepository
             'status:id,name,severity,score',
             'type:id,name,severity',
             'category:id,name,icon,severity',
+            'priority:id,name,severity',
             'users:id,name,email',
             'users.media',
         ]);

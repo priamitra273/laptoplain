@@ -14,22 +14,53 @@ const project = computed(() => shell.value.project);
 
 provide(ProjectPolicyKey, shell.value.policy);
 
-const formatDate = (date: string | null) => (date ? moment(date).format('MMM D, YYYY') : '—');
+/**
+ * Rentang ditulis sebagai satu baris. Tahun pada tanggal awal dibuang saat kedua
+ * tanggal berada di tahun yang sama, supaya barisnya tidak mengulang angka yang sama.
+ */
+const timeline = computed(() => {
+    const start = project.value.start_date ? moment(project.value.start_date) : null;
+    const end = project.value.due_date ? moment(project.value.due_date) : null;
 
-const tabs = [
+    if (!start && !end) {
+        return 'No dates set';
+    }
+
+    if (!start) {
+        return `Due ${end!.format('D MMM YYYY')}`;
+    }
+
+    if (!end) {
+        return `From ${start.format('D MMM YYYY')}`;
+    }
+
+    const startFormat = start.year() === end.year() ? 'D MMM' : 'D MMM YYYY';
+
+    return `${start.format(startFormat)} → ${end.format('D MMM YYYY')}`;
+});
+
+// Keempat kartu ringkasan memakai anatomi yang sama, jadi kelasnya ditulis sekali.
+const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3.5 shadow-sm ring ring-default';
+const statLabelClass = 'text-[11px] font-semibold tracking-[0.06em] text-dimmed uppercase';
+
+/**
+ * `badge` dipakai sebagai pembawa angka, lalu dirender ulang lewat slot #trailing jadi
+ * teks polos — shell hanya punya hitungan anggota, tab lain memuat datanya sendiri.
+ */
+const tabs = computed(() => [
     { value: 'kanban', label: 'Kanban', icon: 'i-lucide-layout-grid' },
     { value: 'list', label: 'List', icon: 'i-lucide-list' },
     { value: 'backlog', label: 'Backlog', icon: 'i-lucide-inbox' },
     { value: 'detail', label: 'Details', icon: 'i-lucide-info' },
-    { value: 'team', label: 'Team', icon: 'i-lucide-users' },
+    { value: 'team', label: 'Team', icon: 'i-lucide-users', badge: shell.value.members.length },
     { value: 'timeline', label: 'Timeline', icon: 'i-lucide-chart-gantt' },
     { value: 'report', label: 'Report', icon: 'i-lucide-chart-line' },
-];
+]);
 
 const activeKey = computed(() => {
     const path = page.url.split('?')[0].replace(/\/$/, '');
     const last = path.split('/').pop() ?? 'kanban';
-    return tabs.some((tab) => tab.value === last) ? last : 'kanban';
+    return tabs.value.some((tab) => tab.value === last) ? last : 'kanban';
 });
 
 const navigate = (key: string | number) => {
@@ -41,81 +72,93 @@ const navigate = (key: string | number) => {
 <template>
     <AppLayout :title="project.title">
         <div class="flex flex-col gap-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-3">
-                    <UButton
-                        icon="i-lucide-arrow-left"
-                        color="neutral"
-                        variant="ghost"
-                        aria-label="Back to projects"
-                        @click="router.visit(route('project.index'))"
-                    />
-                    <div>
-                        <h1 class="text-xl font-bold">{{ project.title }}</h1>
-                        <div class="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted">
-                            <span v-if="project.project_no" class="font-mono">{{ project.project_no }}</span>
-                            <span v-if="shell.isMember" class="flex items-center gap-1 text-success">
-                                <UIcon name="i-lucide-circle-check" class="size-4" />
-                                Member
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <UButton
+                    icon="i-lucide-arrow-left"
+                    color="neutral"
+                    variant="outline"
+                    aria-label="Back to projects"
+                    @click="router.visit(route('project.index'))"
+                />
 
-                <UAvatarGroup v-if="shell.members.length" :max="4" size="md">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-elevated text-muted">
+                    <Icon v-if="project.emoji" :name="project.emoji" class="size-4" />
+                    <UIcon v-else name="i-lucide-folder" class="size-4" />
+                </span>
+
+                <h1 class="min-w-0 truncate text-xl font-bold text-highlighted">{{ project.title }}</h1>
+
+                <UBadge v-if="project.project_no" color="neutral" variant="outline" size="sm" class="font-mono" :label="project.project_no" />
+
+                <UAvatarGroup v-if="shell.members.length" :max="5" size="md" class="ms-auto">
                     <UAvatar
                         v-for="member in shell.members"
                         :key="member.id"
                         :src="member.user.avatar_url ?? undefined"
                         :alt="member.user.name"
+                        :title="member.user.name"
                         :text="getInitials(member.user.name)"
                     />
                 </UAvatarGroup>
             </div>
 
-            <USeparator />
-
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <UCard :ui="{ body: 'p-4' }">
-                    <p class="text-xs font-medium tracking-wide text-muted uppercase">Status</p>
-                    <UBadge v-if="project.status" :color="severityColor(project.status.severity)" variant="subtle" class="mt-2">
-                        {{ project.status.name }}
-                    </UBadge>
-                    <span v-else class="mt-2 block text-sm text-muted">—</span>
-                </UCard>
+                <div :class="statCardClass">
+                    <p :class="statLabelClass">Status</p>
+                    <UBadge
+                        v-if="project.status"
+                        :color="severityColor(project.status.severity)"
+                        variant="subtle"
+                        :label="project.status.name"
+                        class="rounded-full"
+                    />
+                    <span v-else class="text-sm text-muted">—</span>
+                </div>
 
-                <UCard :ui="{ body: 'p-4' }">
-                    <p class="text-xs font-medium tracking-wide text-muted uppercase">Priority</p>
-                    <UBadge v-if="project.priority" :color="severityColor(project.priority.severity)" variant="subtle" class="mt-2">
-                        {{ project.priority.name }}
-                    </UBadge>
-                    <span v-else class="mt-2 block text-sm text-muted">—</span>
-                </UCard>
+                <div :class="statCardClass">
+                    <p :class="statLabelClass">Priority</p>
+                    <UBadge
+                        v-if="project.priority"
+                        :color="severityColor(project.priority.severity)"
+                        variant="subtle"
+                        :label="project.priority.name"
+                        class="rounded-full"
+                    />
+                    <span v-else class="text-sm text-muted">—</span>
+                </div>
 
-                <UCard :ui="{ body: 'p-4' }">
-                    <p class="text-xs font-medium tracking-wide text-muted uppercase">Timeline</p>
-                    <div class="mt-2 space-y-1 text-sm">
-                        <p>Start: {{ formatDate(project.start_date) }}</p>
-                        <p>Due: {{ formatDate(project.due_date) }}</p>
+                <div :class="statCardClass">
+                    <p :class="statLabelClass">Timeline</p>
+                    <p class="flex w-full min-w-0 items-center gap-2 text-[13px]">
+                        <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-muted" />
+                        <span class="truncate tabular-nums">{{ timeline }}</span>
+                    </p>
+                </div>
+
+                <div :class="statCardClass">
+                    <p :class="statLabelClass">Project progress</p>
+                    <div class="flex w-full items-center gap-2.5">
+                        <UProgress :model-value="project.progress" :ui="{ base: 'h-[7px]' }" />
+                        <span class="shrink-0 text-sm leading-none font-semibold tabular-nums">{{ project.progress }}%</span>
                     </div>
-                </UCard>
-
-                <UCard :ui="{ body: 'p-4' }">
-                    <p class="text-xs font-medium tracking-wide text-muted uppercase">Progress</p>
-                    <div class="mt-3 flex items-center gap-2">
-                        <UProgress :model-value="project.progress" size="sm" />
-                        <span class="shrink-0 text-sm tabular-nums">{{ project.progress }}%</span>
-                    </div>
-                </UCard>
+                </div>
             </div>
 
-            <UCard :ui="{ body: 'p-0 sm:p-0' }">
-                <UTabs :items="tabs" :model-value="activeKey" :content="false" class="border-b border-default px-2" @update:model-value="navigate" />
+            <UTabs
+                :items="tabs"
+                :model-value="activeKey"
+                :content="false"
+                variant="link"
+                class="w-full"
+                :ui="{ list: 'overflow-x-auto overflow-y-hidden', indicator: 'bottom-0' }"
+                @update:model-value="navigate"
+            >
+                <template #trailing="{ item }">
+                    <span v-if="item.badge !== undefined" class="text-xs text-dimmed tabular-nums">{{ item.badge }}</span>
+                </template>
+            </UTabs>
 
-                <div class="p-4">
-                    <slot />
-                </div>
-            </UCard>
+            <slot />
         </div>
     </AppLayout>
 </template>

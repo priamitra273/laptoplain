@@ -5,6 +5,7 @@ import { severityColor } from '@/lib/utils';
 import { useForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
+import { formatCalendarDate, toCalendarDate } from './date';
 import type { ProjectPriorityOption, ProjectStatusOption } from './types';
 
 interface Props {
@@ -42,6 +43,62 @@ const form = useForm<ProjectFormData>({
 
 const iconPickerOpen = ref(false);
 const iconSearch = ref('');
+const datePickerOpen = ref(false);
+
+/**
+ * Start dan due adalah satu rentang, jadi dipilih lewat satu kalender; rentang terbalik
+ * jadi mustahil dibuat, tapi rule `after_or_equal` di server tetap ada.
+ *
+ * Klik pertama pada kalender mengembalikan `{ start, end: undefined }`. Menulisnya
+ * langsung ke form akan menghapus due date yang sudah terisi, jadi pilihan setengah jadi
+ * ditahan di draf (dalam bentuk string yang sama dengan form) dan baru dipindahkan
+ * setelah rentangnya lengkap.
+ */
+const dateRangeDraft = ref<{ start: string; end: string } | null>(null);
+
+const dateRange = computed({
+    get: () => {
+        const source = dateRangeDraft.value ?? { start: form.start_date, end: form.due_date };
+
+        return { start: toCalendarDate(source.start) ?? undefined, end: toCalendarDate(source.end) ?? undefined };
+    },
+    set: (value) => {
+        const start = value?.start?.toString() ?? '';
+        const end = value?.end?.toString() ?? '';
+
+        if (start && end) {
+            form.start_date = start;
+            form.due_date = end;
+            dateRangeDraft.value = null;
+            datePickerOpen.value = false;
+            return;
+        }
+
+        dateRangeDraft.value = { start, end };
+    },
+});
+
+// Menutup popover di tengah pemilihan membatalkan draf, bukan menyimpan separuh rentang.
+const onDatePickerToggle = (open: boolean) => {
+    datePickerOpen.value = open;
+    if (!open) {
+        dateRangeDraft.value = null;
+    }
+};
+
+const dateRangeLabel = computed(() => {
+    const start = formatCalendarDate(toCalendarDate(form.start_date));
+    const end = formatCalendarDate(toCalendarDate(form.due_date));
+
+    if (!start) {
+        return 'Select start and due date';
+    }
+
+    return end ? `${start} – ${end}` : `${start} – select due date`;
+});
+
+// Satu kontrol hanya punya satu slot error, jadi pesan start dipakai lebih dulu.
+const dateRangeError = computed(() => form.errors.start_date ?? form.errors.due_date);
 
 const filteredIconItems = computed(() => {
     if (!iconSearch.value) return lucideIconItems;
@@ -113,18 +170,24 @@ for (const key in form.data()) {
                     <InputError v-if="form.errors.emoji" :message="form.errors.emoji" />
                 </div>
 
-                <div class="grid gap-6 sm:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Start Date" required />
-                        <UInput v-model="form.start_date" type="date" class="w-full" />
-                        <InputError v-if="form.errors.start_date" :message="form.errors.start_date" />
-                    </div>
+                <div class="flex flex-col gap-2">
+                    <Label value="Start & Due Date" required />
+                    <UPopover :open="datePickerOpen" @update:open="onDatePickerToggle">
+                        <UButton
+                            icon="i-lucide-calendar"
+                            :label="dateRangeLabel"
+                            color="neutral"
+                            variant="outline"
+                            block
+                            class="justify-start"
+                            :class="form.start_date ? '' : 'text-muted'"
+                        />
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Due Date" />
-                        <UInput v-model="form.due_date" type="date" :min="form.start_date || undefined" class="w-full" />
-                        <InputError v-if="form.errors.due_date" :message="form.errors.due_date" />
-                    </div>
+                        <template #content>
+                            <UCalendar v-model="dateRange" range :number-of-months="2" class="p-2" />
+                        </template>
+                    </UPopover>
+                    <InputError v-if="dateRangeError" :message="dateRangeError" />
                 </div>
 
                 <div class="grid gap-6 sm:grid-cols-2">

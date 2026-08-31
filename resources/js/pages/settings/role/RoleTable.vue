@@ -79,24 +79,23 @@ const handleDelete = async (row: RoleList) => {
     <div class="space-y-3">
         <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Role" class="md:w-md" />
 
-        <UCard :ui="{ root: 'p-1', body: 'p-0 sm:p-1' }">
-            <div>
-                <UTable v-model:global-filter="globalFilter" :data="data" :columns="columns" class="flex-1">
-                    <template #is_active-cell="{ row }">
-                        <UBadge :color="row.original.is_active ? 'success' : 'error'" variant="subtle">
-                            {{ row.original.is_active ? 'Active' : 'Nonactive' }}
-                        </UBadge>
-                    </template>
+        <UTable v-model:global-filter="globalFilter" :data="data" :columns="columns"
+            class="rounded-lg border border-default">
+            <template #is_active-cell="{ row }">
+                <UBadge :color="row.original.is_active ? 'success' : 'error'" variant="subtle">
+                    {{ row.original.is_active ? 'Active' : 'Nonactive' }}
+                </UBadge>
+            </template>
 
-                    <template #actions-cell="{ row }">
-                        <div class="flex justify-end">
-                            <UDropdownMenu :items="getDropdownActions(row.original)" :content="{ align: 'end', side: 'bottom' }">
-                                <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" aria-label="Actions" />
-                            </UDropdownMenu>
-                        </div>
-                    </template>
-                </UTable>
-            </div>
-        </UCard>
+            <template #actions-cell="{ row }">
+                <div class="flex justify-end">
+                    <UDropdownMenu :items="getDropdownActions(row.original)"
+                        :content="{ align: 'end', side: 'bottom' }">
+                        <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost"
+                            aria-label="Actions" />
+                    </UDropdownMenu>
+                </div>
+            </template>
+        </UTable>
     </div>
 </template>

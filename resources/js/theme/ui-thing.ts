@@ -1,3 +1,5 @@
+type Slots = Record<string, string>;
+
 const COLORS = ['primary', 'secondary', 'success', 'info', 'warning', 'error'] as const;
 
 const ring = 'outline-0 transition-[color,background-color,outline-color,outline-width,box-shadow]';
@@ -13,7 +15,12 @@ const focusRingOn = (slot: string) =>
         ['neutral', { [slot]: `${ring} outline-inverted/50` }],
     ]);
 
-const panel = 'bg-card rounded-md shadow-md';
+const panel = 'bg-card rounded-md shadow-lg';
+
+const overlay = 'bg-black/40 backdrop-blur-sm';
+
+const softBadge = (color: string) =>
+    `bg-${color}-50 text-${color}-700 dark:bg-${color}-400/10 dark:text-${color}-300`;
 
 const button = {
     slots: {
@@ -35,8 +42,16 @@ const button = {
                 variant: 'solid',
                 class: `shadow-xs hover:bg-${color}/90 active:bg-${color}/90 outline-${color}/50`,
             },
-            { color, variant: 'outline', class: `shadow-xs outline-${color}/50` },
-            { color, variant: 'subtle', class: `shadow-xs outline-${color}/50` },
+            {
+                color,
+                variant: 'outline',
+                class: `shadow-xs outline-${color}/50`,
+            },
+            {
+                color,
+                variant: 'subtle',
+                class: `shadow-xs outline-${color}/50`,
+            },
             { color, variant: 'soft', class: `outline-${color}/50` },
             { color, variant: 'ghost', class: `outline-${color}/50` },
             { color, variant: 'link', class: `outline-${color}/50` },
@@ -46,8 +61,16 @@ const button = {
             variant: 'solid',
             class: 'shadow-xs hover:bg-inverted/90 active:bg-inverted/90 outline-inverted/50',
         },
-        { color: 'neutral', variant: 'outline', class: 'shadow-xs outline-inverted/50' },
-        { color: 'neutral', variant: 'subtle', class: 'shadow-xs outline-inverted/50' },
+        {
+            color: 'neutral',
+            variant: 'outline',
+            class: 'shadow-xs outline-inverted/50',
+        },
+        {
+            color: 'neutral',
+            variant: 'subtle',
+            class: 'shadow-xs outline-inverted/50',
+        },
         { color: 'neutral', variant: 'soft', class: 'outline-inverted/50' },
         { color: 'neutral', variant: 'ghost', class: 'outline-inverted/50' },
         { color: 'neutral', variant: 'link', class: 'outline-inverted/50' },
@@ -75,22 +98,29 @@ const menuSizes = {
     xl: { item: 'px-3 py-2 gap-2.5', label: 'px-3 py-2' },
 };
 
-type Slots = Record<string, string>;
 const mergeSizes = (a: Record<string, Slots>, b: Record<string, Slots>) =>
     Object.fromEntries(Object.keys(a).map((size) => [size, { ...a[size], ...b[size] }]));
 
-const fieldCompound = [{ variant: ['outline', 'subtle'], class: 'shadow-xs' }, ...focusRing()];
+const fieldCompound = [{ class: 'shadow-xs' }, ...focusRing()];
+
+const placeholderSlots = {
+    base: 'placeholder:text-muted',
+    placeholder: 'text-muted',
+    segment: 'data-placeholder:text-muted',
+    tagsInput: 'placeholder:text-muted',
+};
 
 const field = {
+    slots: placeholderSlots,
     variants: { size: fieldSizes },
     compoundVariants: fieldCompound,
 };
 
-const fieldWithPanel = { ...field, slots: { content: panel } };
+const fieldWithPanel = { ...field, slots: { ...placeholderSlots, content: panel } };
 
 const fieldWithMenu = {
     ...field,
-    slots: { content: panel },
+    slots: { ...placeholderSlots, content: panel },
     variants: { size: mergeSizes(fieldSizes, menuSizes) },
 };
 
@@ -118,6 +148,7 @@ export default {
         compoundVariants: [{ variant: ['outline', 'subtle'], class: 'shadow-xs' }, ...focusRing()],
     },
     textarea: {
+        slots: { base: 'placeholder:text-muted' },
         variants: {
             size: {
                 xs: { base: 'min-h-14 px-2 py-1.5 text-xs' },
@@ -155,34 +186,46 @@ export default {
     popover: { slots: { content: `${panel} p-4` } },
     dropdownMenu: { slots: { content: panel }, variants: { size: menuSizes } },
     contextMenu: { slots: { content: panel }, variants: { size: menuSizes } },
-    commandPalette: { slots: { root: 'bg-card' }, variants: { size: menuSizes } },
+    commandPalette: {
+        slots: { root: 'bg-card' },
+        variants: { size: menuSizes },
+    },
     tooltip: {
-        slots: { content: 'bg-card rounded-md shadow-md h-auto px-3 py-1.5 text-xs' },
+        slots: {
+            content: 'bg-card rounded-md shadow-md h-auto px-3 py-1.5 text-xs',
+        },
     },
     modal: {
         slots: {
-            content: 'bg-card divide-y-0 p-6 gap-4',
+            content: 'bg-card divide-y-0 gap-4',
             header: 'flex-col items-stretch p-0 sm:px-0 min-h-0 gap-2 text-center sm:text-left',
             body: 'p-0 sm:p-0',
             footer: 'flex-col-reverse items-stretch sm:flex-row sm:items-center sm:justify-end p-0 sm:px-0 gap-2',
-            title: 'text-lg leading-none tracking-tight',
+            title: 'text-lg leading-none tracking-tight mb-3',
             description: 'mt-0',
         },
         variants: {
-            overlay: { true: { overlay: 'bg-default/50 backdrop-blur-sm' } },
-            fullscreen: { false: { content: 'max-w-100 rounded-xl shadow-lg' } },
+            overlay: { true: { overlay } },
+            fullscreen: {
+                false: { content: 'max-w-100 rounded-xl p-6 shadow-xl' },
+            },
         },
     },
     slideover: {
         slots: {
-            overlay: 'bg-default/50 backdrop-blur-sm',
+            overlay,
             content: 'bg-card divide-y-0 gap-4',
             header: 'flex-col items-stretch min-h-0 gap-1.5 p-4 sm:px-4',
             body: 'px-4 py-0 sm:px-4 sm:py-0',
             footer: 'flex-col items-stretch mt-auto gap-2 p-4 sm:px-4',
             description: 'mt-0',
         },
-        variants: { side: { left: { content: 'max-w-sm' }, right: { content: 'max-w-sm' } } },
+        variants: {
+            side: {
+                left: { content: 'max-w-sm' },
+                right: { content: 'max-w-sm' },
+            },
+        },
     },
     drawer: {
         slots: {
@@ -191,14 +234,14 @@ export default {
             header: 'min-h-0 gap-1.5 p-4',
             body: 'p-0',
             footer: 'mt-auto gap-2 p-4',
-            overlay: 'bg-default/40 backdrop-blur',
+            overlay,
         },
     },
     toast: { slots: { root: 'bg-card rounded-lg' } },
 
     card: {
         slots: {
-            root: 'rounded-xl shadow-sm flex flex-col gap-6 py-6',
+            root: 'rounded-lg shadow-sm flex flex-col gap-4 py-6',
             header: 'px-6 py-0 gap-2',
             body: 'px-6 py-0',
             footer: 'px-6 py-0',
@@ -217,11 +260,24 @@ export default {
         slots: { base: 'w-fit shrink-0 justify-center whitespace-nowrap' },
         variants: {
             size: {
-                md: { base: 'rounded-md px-2 py-0.5' },
-                lg: { base: 'rounded-md px-2.5 py-[3px]' },
+                md: { base: 'rounded-sm px-2 py-0.5' },
+                lg: { base: 'rounded-sm px-2.5 py-[3px]' },
                 xl: { base: 'rounded-md px-2.5 py-1' },
             },
         },
+        compoundVariants: [
+            ...COLORS.flatMap((color) => [
+                { color, variant: 'soft', class: softBadge(color) },
+                {
+                    color,
+                    variant: 'subtle',
+                    class: `${softBadge(color)} ring ring-inset ring-${color}-600/15 dark:ring-${color}-400/20`,
+                },
+            ]),
+            { color: 'neutral', variant: 'soft', class: 'bg-elevated text-toned' },
+            { color: 'neutral', variant: 'subtle', class: 'bg-elevated text-toned ring ring-inset ring-accented' },
+        ],
+        defaultVariants: { variant: 'soft' },
     },
     alert: { slots: { root: 'gap-3' } },
     empty: { slots: { root: 'rounded-lg gap-6 p-6 md:p-12' } },
@@ -229,15 +285,20 @@ export default {
     tabs: {
         variants: {
             variant: {
-                pill: { list: 'rounded-md p-0.5', indicator: 'rounded-sm', trigger: 'rounded-sm' },
+                pill: {
+                    list: 'rounded-md p-0.5',
+                    indicator: 'rounded-sm',
+                    trigger: 'rounded-sm',
+                },
             },
         },
     },
     table: {
         slots: {
-            th: 'h-12 px-3 py-0 font-medium text-muted',
+            root: 'isolate',
+            th: 'h-10 px-3 py-0 text-xs font-medium text-muted',
             td: 'p-3 text-default',
-            tr: 'hover:bg-elevated/50',
+            tr: 'hover:bg-elevated/50 transition-colors',
         },
     },
     link: { base: 'outline-primary/50' },
@@ -251,7 +312,11 @@ export default {
             label: 'px-2 text-xs font-medium text-muted',
         },
         compoundVariants: [
-            { variant: 'pill', active: true, class: { link: 'before:shadow-xs' } },
+            {
+                variant: 'pill',
+                active: true,
+                class: { link: 'before:shadow-xs before:bg-primary-50 dark:before:bg-primary-950/50' },
+            },
             {
                 orientation: 'vertical',
                 collapsed: true,
@@ -261,7 +326,7 @@ export default {
                     // kehilangan hover begitu kursor pindah ke panel dan tampak lepas
                     link: 'justify-center size-9 p-0 mx-auto data-[state=open]:text-highlighted data-[state=open]:before:bg-elevated',
                     linkLeadingIcon: 'size-5',
-                    content: `${panel} shadow-lg p-1`,
+                    content: `${panel} p-1`,
                     childLabel: `${menuSizes.md.label} font-semibold`,
                     childLink: `${menuSizes.md.item} items-center rounded-sm`,
                 },
@@ -269,12 +334,6 @@ export default {
         ],
         defaultVariants: { color: 'neutral' },
     },
-    // Sidebar inset ala shadcn: tanpa border pemisah, latarnya ikut grup, dan jarak
-    // ke panel utama datang dari padding root ini (padanan `p-2` di Sidebar shadcn).
-    //
-    // Grupnya bernama: `group` polos di root ikut tertangkap `group-hover:` milik ikon
-    // NavigationMenu, sehingga menyorot satu item menyalakan ikon seluruh sidebar.
-    // `border-e-0` harus di varian `side`, bukan di slot dasar — varian menang di tv().
     dashboardSidebar: {
         slots: {
             root: 'group/sidebar p-2',

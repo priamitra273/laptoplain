@@ -21,7 +21,7 @@ withDefaults(defineProps<Props>(), {
     <AppLayout title="Role">
         <Heading title="Role" description="Manage user's roles">
             <Link v-if="can('role.create')" :href="route('role.create')">
-                <UButton size="sm">Add Role</UButton>
+                <UButton>Add Role</UButton>
             </Link>
         </Heading>
 

@@ -130,7 +130,7 @@ const relativeDueDate = (task: KanbanTask) => {
 </script>
 
 <template>
-    <USlideover :close="{ onClick: () => emits('close', false) }" @enter="initialize">
+    <USlideover class="max-w-2xl w-1/2" :close="{ onClick: () => emits('close', false) }" @enter="initialize">
         <template #header="{ close }">
             <div v-if="task" class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -139,9 +139,11 @@ const relativeDueDate = (task: KanbanTask) => {
                 </div>
                 <div class="flex shrink-0 items-center gap-0.5">
                     <ULink :href="route('task.show', task.id)">
-                        <UButton icon="i-lucide-external-link" color="neutral" variant="ghost" aria-label="Open full task page" />
+                        <UButton icon="i-lucide-external-link" color="neutral" variant="ghost"
+                            aria-label="Open full task page" />
                     </ULink>
-                    <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" aria-label="Edit task" @click="emits('close', 'edit')" />
+                    <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" aria-label="Edit task"
+                        @click="emits('close', 'edit')" />
                     <UButton icon="i-lucide-x" color="neutral" variant="ghost" aria-label="Close" @click="close" />
                 </div>
             </div>
@@ -150,7 +152,8 @@ const relativeDueDate = (task: KanbanTask) => {
         <template #body>
             <div v-if="task" class="flex flex-col gap-6">
                 <div v-if="task.tags.length" class="flex flex-wrap gap-1">
-                    <UBadge v-for="tag in task.tags" :key="tag.id" :color="severityColor(tag.severity)" variant="soft" size="sm">
+                    <UBadge v-for="tag in task.tags" :key="tag.id" :color="severityColor(tag.severity)" variant="soft"
+                        size="sm">
                         {{ tag.name }}
                     </UBadge>
                 </div>
@@ -158,27 +161,26 @@ const relativeDueDate = (task: KanbanTask) => {
                 <div class="grid grid-cols-2 gap-x-4 gap-y-4">
                     <div>
                         <p class="text-xs text-muted">Status</p>
-                        <UBadge v-if="task.status" :color="severityColor(task.status.severity)" variant="subtle" class="mt-1">
+                        <UBadge v-if="task.status" :color="severityColor(task.status.severity)" variant="subtle"
+                            class="mt-1">
                             {{ task.status.name }}
                         </UBadge>
                     </div>
                     <div>
                         <p class="text-xs text-muted">Assignee<span v-if="task.users.length > 1">s</span></p>
                         <div v-if="task.users.length" class="mt-1 flex items-center gap-1.5">
-                            <UAvatar
-                                :src="task.users[0].avatar_url ?? undefined"
-                                :alt="task.users[0].name"
-                                :text="getInitials(task.users[0].name)"
-                                size="xs"
-                            />
+                            <UAvatar :src="task.users[0].avatar_url ?? undefined" :alt="task.users[0].name"
+                                :text="getInitials(task.users[0].name)" size="xs" />
                             <span class="truncate text-sm">{{ task.users[0].name }}</span>
-                            <UBadge v-if="task.users.length > 1" color="neutral" variant="subtle" size="sm"> +{{ task.users.length - 1 }} </UBadge>
+                            <UBadge v-if="task.users.length > 1" color="neutral" variant="subtle" size="sm"> +{{
+                                task.users.length - 1 }} </UBadge>
                         </div>
                         <p v-else class="mt-1 text-sm text-muted">Unassigned</p>
                     </div>
                     <div>
                         <p class="text-xs text-muted">Priority</p>
-                        <UBadge v-if="task.priority" :color="severityColor(task.priority.severity)" variant="subtle" class="mt-1">
+                        <UBadge v-if="task.priority" :color="severityColor(task.priority.severity)" variant="subtle"
+                            class="mt-1">
                             {{ task.priority.name }}
                         </UBadge>
                     </div>
@@ -191,7 +193,8 @@ const relativeDueDate = (task: KanbanTask) => {
                     </div>
                     <div>
                         <p class="text-xs text-muted">Due Date</p>
-                        <p class="mt-1 flex items-center gap-1 text-sm" :class="task.is_overdue ? 'font-medium text-error' : ''">
+                        <p class="mt-1 flex items-center gap-1 text-sm"
+                            :class="task.is_overdue ? 'font-medium text-error' : ''">
                             <UIcon name="i-lucide-calendar" class="size-3.5" />
                             {{ relativeDueDate(task) }}
                         </p>
@@ -213,9 +216,11 @@ const relativeDueDate = (task: KanbanTask) => {
                 <USeparator />
 
                 <div>
-                    <button type="button" class="flex w-full items-center justify-between" @click="descriptionOpen = !descriptionOpen">
+                    <button type="button" class="flex w-full items-center justify-between"
+                        @click="descriptionOpen = !descriptionOpen">
                         <span class="text-base font-semibold">Description</span>
-                        <UIcon :name="descriptionOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-4 text-muted" />
+                        <UIcon :name="descriptionOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                            class="size-4 text-muted" />
                     </button>
                     <div v-if="descriptionOpen" class="mt-2">
                         <div v-if="task.description" class="text-sm wrap-break-word" v-html="task.description" />
@@ -224,56 +229,44 @@ const relativeDueDate = (task: KanbanTask) => {
                 </div>
 
                 <div>
-                    <button type="button" class="flex w-full items-center justify-between" @click="subtasksOpen = !subtasksOpen">
+                    <button type="button" class="flex w-full items-center justify-between"
+                        @click="subtasksOpen = !subtasksOpen">
                         <span class="flex items-center gap-2 text-base font-semibold">
                             Subtasks
-                            <UBadge color="neutral" variant="subtle" size="sm">{{ subtaskCounts.done }}/{{ subtaskCounts.total }}</UBadge>
+                            <UBadge color="neutral" variant="subtle" size="sm">{{ subtaskCounts.done }}/{{
+                                subtaskCounts.total }}</UBadge>
                         </span>
-                        <UIcon :name="subtasksOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-4 text-muted" />
+                        <UIcon :name="subtasksOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                            class="size-4 text-muted" />
                     </button>
                     <div v-if="subtasksOpen" class="mt-2 flex flex-col gap-2">
                         <div v-if="task.sub_task_recursive.length" class="flex flex-col gap-2">
-                            <div
-                                v-for="child in task.sub_task_recursive"
-                                :key="child.id"
-                                class="flex items-center justify-between gap-2 rounded-lg border border-default p-2"
-                            >
+                            <div v-for="child in task.sub_task_recursive" :key="child.id"
+                                class="flex items-center justify-between gap-2 rounded-lg border border-default p-2">
                                 <span class="truncate text-sm">{{ child.title }}</span>
-                                <UBadge v-if="child.status" :color="severityColor(child.status.severity)" variant="subtle" size="sm">
+                                <UBadge v-if="child.status" :color="severityColor(child.status.severity)"
+                                    variant="subtle" size="sm">
                                     {{ child.status.name }}
                                 </UBadge>
                             </div>
                         </div>
                         <p v-else class="text-sm text-muted">No subtasks</p>
-                        <UButton
-                            label="Add Subtask"
-                            icon="i-lucide-plus"
-                            color="neutral"
-                            variant="ghost"
-                            size="xs"
-                            class="mt-1 justify-start"
-                            @click="emits('close', 'add-subtask')"
-                        />
+                        <UButton label="Add Subtask" icon="i-lucide-plus" color="neutral" variant="ghost" size="xs"
+                            class="mt-1 justify-start" @click="emits('close', 'add-subtask')" />
                     </div>
                 </div>
 
                 <USeparator />
 
                 <div class="flex items-center gap-4 border-b border-default">
-                    <button
-                        type="button"
-                        class="border-b-2 pb-2 text-sm font-medium transition-colors"
+                    <button type="button" class="border-b-2 pb-2 text-sm font-medium transition-colors"
                         :class="activeTab === 'comments' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-default'"
-                        @click="activeTab = 'comments'"
-                    >
+                        @click="activeTab = 'comments'">
                         Comments
                     </button>
-                    <button
-                        type="button"
-                        class="border-b-2 pb-2 text-sm font-medium transition-colors"
+                    <button type="button" class="border-b-2 pb-2 text-sm font-medium transition-colors"
                         :class="activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-default'"
-                        @click="activeTab = 'activity'"
-                    >
+                        @click="activeTab = 'activity'">
                         Activity
                     </button>
                 </div>
@@ -288,55 +281,41 @@ const relativeDueDate = (task: KanbanTask) => {
                     <div v-else class="flex flex-col gap-4">
                         <div v-for="comment in comments" :key="comment.id" class="flex flex-col gap-2">
                             <div class="flex items-start gap-2">
-                                <UAvatar
-                                    :src="comment.user.avatar_url ?? undefined"
-                                    :alt="comment.user.name"
-                                    :text="getInitials(comment.user.name)"
-                                    size="sm"
-                                />
+                                <UAvatar :src="comment.user.avatar_url ?? undefined" :alt="comment.user.name"
+                                    :text="getInitials(comment.user.name)" size="sm" />
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="text-sm font-semibold">{{ comment.user.name }}</span>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-xs text-muted">{{ moment(comment.created_at).fromNow() }}</span>
-                                            <UButton
-                                                v-if="comment.user.id === currentUserId"
-                                                icon="i-lucide-trash"
-                                                color="error"
-                                                variant="ghost"
-                                                size="xs"
-                                                @click="deleteComment(comment)"
-                                            />
+                                            <span class="text-xs text-muted">{{ moment(comment.created_at).fromNow()
+                                                }}</span>
+                                            <UButton v-if="comment.user.id === currentUserId" icon="i-lucide-trash"
+                                                color="error" variant="ghost" size="xs"
+                                                @click="deleteComment(comment)" />
                                         </div>
                                     </div>
-                                    <div class="mt-1 rounded-lg bg-elevated p-2.5 text-sm wrap-break-word" v-html="comment.body" />
+                                    <div class="mt-1 rounded-lg bg-elevated p-2.5 text-sm wrap-break-word"
+                                        v-html="comment.body" />
                                 </div>
                             </div>
 
                             <div v-if="comment.replies.length" class="ml-8 flex flex-col gap-2">
                                 <div v-for="reply in comment.replies" :key="reply.id" class="flex items-start gap-2">
-                                    <UAvatar
-                                        :src="reply.user.avatar_url ?? undefined"
-                                        :alt="reply.user.name"
-                                        :text="getInitials(reply.user.name)"
-                                        size="xs"
-                                    />
+                                    <UAvatar :src="reply.user.avatar_url ?? undefined" :alt="reply.user.name"
+                                        :text="getInitials(reply.user.name)" size="xs" />
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center justify-between gap-2">
                                             <span class="text-xs font-semibold">{{ reply.user.name }}</span>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-xs text-muted">{{ moment(reply.created_at).fromNow() }}</span>
-                                                <UButton
-                                                    v-if="reply.user.id === currentUserId"
-                                                    icon="i-lucide-trash"
-                                                    color="error"
-                                                    variant="ghost"
-                                                    size="xs"
-                                                    @click="deleteComment(reply)"
-                                                />
+                                                <span class="text-xs text-muted">{{ moment(reply.created_at).fromNow()
+                                                    }}</span>
+                                                <UButton v-if="reply.user.id === currentUserId" icon="i-lucide-trash"
+                                                    color="error" variant="ghost" size="xs"
+                                                    @click="deleteComment(reply)" />
                                             </div>
                                         </div>
-                                        <div class="mt-1 rounded-lg bg-elevated p-2 text-xs wrap-break-word" v-html="reply.body" />
+                                        <div class="mt-1 rounded-lg bg-elevated p-2 text-xs wrap-break-word"
+                                            v-html="reply.body" />
                                     </div>
                                 </div>
                             </div>
@@ -352,7 +331,8 @@ const relativeDueDate = (task: KanbanTask) => {
                     <p v-else-if="!activities.length" class="py-4 text-center text-sm text-muted">No history yet.</p>
 
                     <div v-else class="flex flex-col gap-4">
-                        <div v-for="activity in activities" :key="activity.id" class="flex flex-col gap-1.5 border-l-2 border-default pl-3">
+                        <div v-for="activity in activities" :key="activity.id"
+                            class="flex flex-col gap-1.5 border-l-2 border-default pl-3">
                             <p class="text-sm">
                                 <span class="font-medium">{{ activity.causer?.name ?? 'System' }}</span>
                                 updated this task
@@ -360,10 +340,10 @@ const relativeDueDate = (task: KanbanTask) => {
                             </p>
                             <ul class="flex flex-col gap-1">
                                 <li v-for="(field, index) in activity.changed_fields" :key="index" class="text-xs">
-                                    <span class="font-medium">{{ field.field }}</span
-                                    >:
+                                    <span class="font-medium">{{ field.field }}</span>:
                                     <span class="text-muted line-through">
-                                        <span v-if="field.field === 'Description'" v-html="formatFieldValue(field.old_value)" />
+                                        <span v-if="field.field === 'Description'"
+                                            v-html="formatFieldValue(field.old_value)" />
                                         <span v-else>{{ formatFieldValue(field.old_value) }}</span>
                                     </span>
                                     →
@@ -379,21 +359,12 @@ const relativeDueDate = (task: KanbanTask) => {
 
         <template v-if="activeTab === 'comments'" #footer>
             <div class="flex w-full items-center gap-2">
-                <UAvatar :src="currentUser.avatar_url ?? undefined" :alt="currentUser.name" :text="getInitials(currentUser.name)" size="sm" />
-                <UInput
-                    v-model="newCommentBody"
-                    placeholder="Add a comment..."
-                    class="w-full"
-                    :ui="{ base: 'rounded-full' }"
-                    @keydown.enter="submitComment"
-                />
-                <UButton
-                    icon="i-lucide-send"
-                    :loading="postingComment"
-                    :disabled="!newCommentBody.trim() || postingComment"
-                    class="rounded-full"
-                    @click="submitComment"
-                />
+                <UAvatar :src="currentUser.avatar_url ?? undefined" :alt="currentUser.name"
+                    :text="getInitials(currentUser.name)" size="sm" />
+                <UInput v-model="newCommentBody" placeholder="Add a comment..." class="w-full"
+                    :ui="{ base: 'rounded-full' }" @keydown.enter="submitComment" />
+                <UButton icon="i-lucide-send" :loading="postingComment"
+                    :disabled="!newCommentBody.trim() || postingComment" class="rounded-full" @click="submitComment" />
             </div>
         </template>
     </USlideover>

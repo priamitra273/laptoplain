@@ -309,8 +309,8 @@ const initialize = async () => {
         http.task_category_id = props.onlyEpicCategory
             ? (categoryOptions.value.find((category) => category.name.toLowerCase() === 'epic')?.id ?? null)
             : props.excludeEpicCategory
-              ? (categoryOptions.value.find((category) => category.name.toLowerCase() === 'task')?.id ?? null)
-              : null;
+                ? (categoryOptions.value.find((category) => category.name.toLowerCase() === 'task')?.id ?? null)
+                : null;
         http.parent_id = props.onlyEpicCategory ? null : (props.defaultParentId ?? null);
         http.start_date = '';
         http.due_date = '';
@@ -379,7 +379,8 @@ const submit = async () => {
 </script>
 
 <template>
-    <USlideover :title="title" :description="description" :close="{ onClick: () => emits('close', false) }" @enter="initialize">
+    <USlideover :title="title" :description="description" class="max-w-2xl w-1/2"
+        :close="{ onClick: () => emits('close', false) }" @enter="initialize">
         <template #body>
             <div class="flex flex-col gap-8">
                 <div class="flex flex-col gap-4">
@@ -391,7 +392,8 @@ const submit = async () => {
 
                     <div class="flex flex-col gap-2">
                         <Label value="Description" />
-                        <RichTextEditor v-model="http.description as string" placeholder="Add context, acceptance criteria, or links." />
+                        <RichTextEditor v-model="http.description as string"
+                            placeholder="Add context, acceptance criteria, or links." />
                         <InputError v-if="http.errors.description" :message="http.errors.description" />
                     </div>
                 </div>
@@ -402,16 +404,11 @@ const submit = async () => {
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="flex flex-col gap-2">
                             <Label value="Type" required />
-                            <USelectMenu
-                                v-model="http.type_id"
-                                :items="types"
-                                label-key="name"
-                                value-key="id"
-                                placeholder="Select type"
-                                class="w-full"
-                            >
+                            <USelectMenu v-model="http.type_id" :items="types" label-key="name" value-key="id"
+                                placeholder="Select type" class="w-full">
                                 <template #item-label="{ item }">
-                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{
+                                        item.name }}</UBadge>
                                 </template>
                             </USelectMenu>
                             <InputError v-if="http.errors.type_id" :message="http.errors.type_id" />
@@ -419,16 +416,11 @@ const submit = async () => {
 
                         <div class="flex flex-col gap-2">
                             <Label value="Status" required />
-                            <USelectMenu
-                                v-model="http.status_id"
-                                :items="statusOptions"
-                                label-key="name"
-                                value-key="id"
-                                placeholder="Select status"
-                                class="w-full"
-                            >
+                            <USelectMenu v-model="http.status_id" :items="statusOptions" label-key="name" value-key="id"
+                                placeholder="Select status" class="w-full">
                                 <template #item-label="{ item }">
-                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{
+                                        item.name }}</UBadge>
                                 </template>
                             </USelectMenu>
                             <InputError v-if="http.errors.status_id" :message="http.errors.status_id" />
@@ -436,16 +428,11 @@ const submit = async () => {
 
                         <div class="flex flex-col gap-2">
                             <Label value="Priority" required />
-                            <USelectMenu
-                                v-model="http.priority_id"
-                                :items="priorities"
-                                label-key="name"
-                                value-key="id"
-                                placeholder="Select priority"
-                                class="w-full"
-                            >
+                            <USelectMenu v-model="http.priority_id" :items="priorities" label-key="name" value-key="id"
+                                placeholder="Select priority" class="w-full">
                                 <template #item-label="{ item }">
-                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{
+                                        item.name }}</UBadge>
                                 </template>
                             </USelectMenu>
                             <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
@@ -453,20 +440,14 @@ const submit = async () => {
 
                         <div v-if="categoryOptions.length" class="flex flex-col gap-2">
                             <Label value="Category" />
-                            <USelectMenu
-                                :model-value="http.task_category_id ?? undefined"
-                                :items="categoryOptions"
-                                label-key="name"
-                                value-key="id"
-                                placeholder="Select category"
-                                :disabled="onlyEpicCategory"
-                                clear
-                                class="w-full"
+                            <USelectMenu :model-value="http.task_category_id ?? undefined" :items="categoryOptions"
+                                label-key="name" value-key="id" placeholder="Select category"
+                                :disabled="onlyEpicCategory" clear class="w-full"
                                 @update:model-value="(value: string | null | undefined) => (http.task_category_id = value ?? null)"
-                                @clear="http.task_category_id = null"
-                            >
+                                @clear="http.task_category_id = null">
                                 <template #item-label="{ item }">
-                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{
+                                        item.name }}</UBadge>
                                 </template>
                             </USelectMenu>
                             <InputError v-if="http.errors.task_category_id" :message="http.errors.task_category_id" />
@@ -484,14 +465,9 @@ const submit = async () => {
                         <Label value="Start and due date" :required="datesRequired" />
 
                         <UPopover :open="schedulePickerOpen" @update:open="onSchedulePickerToggle">
-                            <UButton
-                                color="neutral"
-                                variant="subtle"
-                                icon="i-lucide-calendar"
+                            <UButton color="neutral" variant="subtle" icon="i-lucide-calendar"
                                 class="w-full justify-start font-normal sm:w-fit"
-                                :class="{ 'text-muted': !http.start_date }"
-                                :label="scheduleLabel"
-                            />
+                                :class="{ 'text-muted': !http.start_date }" :label="scheduleLabel" />
 
                             <template #content>
                                 <UCalendar v-model="schedule" range :number-of-months="2" class="p-2" />
@@ -508,15 +484,8 @@ const submit = async () => {
 
                     <div class="flex flex-col gap-2">
                         <Label value="Assignees" />
-                        <USelectMenu
-                            v-model="selectedUserIds"
-                            :items="assignableUsers"
-                            label-key="name"
-                            value-key="id"
-                            multiple
-                            placeholder="Select assignees"
-                            class="w-full"
-                        >
+                        <USelectMenu v-model="selectedUserIds" :items="assignableUsers" label-key="name" value-key="id"
+                            multiple placeholder="Select assignees" class="w-full">
                             <template #item-leading="{ item }">
                                 <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" size="xs" />
                             </template>
@@ -526,42 +495,28 @@ const submit = async () => {
 
                     <div class="flex flex-col gap-2">
                         <Label value="Tags" />
-                        <USelectMenu
-                            v-model="selectedTagIds"
-                            :items="tagItems"
-                            label-key="name"
-                            value-key="id"
-                            multiple
-                            create-item
-                            placeholder="Select or create tags"
-                            class="w-full"
-                            :loading="loadingDetail"
-                            @create="onCreateTag"
-                        >
+                        <USelectMenu v-model="selectedTagIds" :items="tagItems" label-key="name" value-key="id" multiple
+                            create-item placeholder="Select or create tags" class="w-full" :loading="loadingDetail"
+                            @create="onCreateTag">
                             <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}
+                                </UBadge>
                             </template>
                         </USelectMenu>
                     </div>
 
                     <div v-if="!onlyEpicCategory" class="flex flex-col gap-2">
                         <Label value="Parent Task" />
-                        <USelectMenu
-                            :model-value="http.parent_id ?? undefined"
-                            :items="availableParentOptions"
-                            label-key="title"
-                            value-key="id"
-                            placeholder="No parent (top-level task)"
-                            :loading="loadingDetail"
-                            clear
-                            class="w-full"
+                        <USelectMenu :model-value="http.parent_id ?? undefined" :items="availableParentOptions"
+                            label-key="title" value-key="id" placeholder="No parent (top-level task)"
+                            :loading="loadingDetail" clear class="w-full"
                             @update:model-value="(value: string | null | undefined) => (http.parent_id = value ?? null)"
-                            @clear="http.parent_id = null"
-                        >
+                            @clear="http.parent_id = null">
                             <template #item-label="{ item }">
                                 <div class="flex items-center gap-2">
                                     <span class="truncate">{{ item.title }}</span>
-                                    <UBadge v-if="item.category" color="neutral" variant="subtle" size="sm">{{ item.category.name }}</UBadge>
+                                    <UBadge v-if="item.category" color="neutral" variant="subtle" size="sm">{{
+                                        item.category.name }}</UBadge>
                                 </div>
                             </template>
                         </USelectMenu>
@@ -572,25 +527,23 @@ const submit = async () => {
                 <section class="flex flex-col gap-4 border-t border-default pt-6">
                     <h3 class="text-sm font-medium">Attachments</h3>
 
-                    <ul v-if="existingAttachments.length" class="divide-y divide-default rounded-lg border border-default">
-                        <li v-for="attachment in existingAttachments" :key="attachment.uuid" class="flex items-center gap-3 p-3">
+                    <ul v-if="existingAttachments.length"
+                        class="divide-y divide-default rounded-lg border border-default">
+                        <li v-for="attachment in existingAttachments" :key="attachment.uuid"
+                            class="flex items-center gap-3 p-3">
                             <UIcon name="i-lucide-paperclip" class="size-4 shrink-0 text-muted" />
                             <div class="min-w-0 flex-1">
                                 <p class="truncate text-sm">{{ attachment.file_name }}</p>
                                 <p class="text-xs text-muted tabular-nums">{{ formatFileSize(attachment.size) }}</p>
                             </div>
-                            <UButton
-                                icon="i-lucide-x"
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
+                            <UButton icon="i-lucide-x" color="neutral" variant="ghost" size="xs"
                                 :aria-label="`Remove ${attachment.file_name}`"
-                                @click="removeExistingAttachment(attachment.uuid)"
-                            />
+                                @click="removeExistingAttachment(attachment.uuid)" />
                         </li>
                     </ul>
 
-                    <UFileUpload v-model="newFiles" multiple label="Drop files here or click to browse" description="Up to 20 MB per file" />
+                    <UFileUpload v-model="newFiles" multiple label="Drop files here or click to browse"
+                        description="Up to 20 MB per file" />
                     <InputError v-if="http.errors.attachments" :message="http.errors.attachments" />
                 </section>
             </div>
@@ -598,8 +551,10 @@ const submit = async () => {
 
         <template #footer>
             <div class="flex w-full items-center justify-end gap-2">
-                <UButton label="Cancel" color="neutral" variant="ghost" :disabled="http.processing" @click="emits('close', false)" />
-                <UButton :label="isEdit ? 'Save Changes' : 'Create Task'" :loading="http.processing" :disabled="http.processing" @click="submit" />
+                <UButton label="Cancel" color="neutral" variant="ghost" :disabled="http.processing"
+                    @click="emits('close', false)" />
+                <UButton :label="isEdit ? 'Save Changes' : 'Create Task'" :loading="http.processing"
+                    :disabled="http.processing" @click="submit" />
             </div>
         </template>
     </USlideover>

@@ -1,5 +1,6 @@
 @import 'tailwindcss' source('../..');
 @import '@nuxt/ui';
+@import 'tw-animate-css';
 @import '@assets/fonts/roboto/stylesheet.css';
 
 @source not '../js/**/*_v1/**';
@@ -27,6 +28,24 @@
 @theme inline {
     --color-card: var(--ui-card);
     --color-sidebar: var(--ui-sidebar);
+    --color-background: var(--ui-bg);
+    --color-foreground: var(--ui-text);
+    --color-card-foreground: var(--ui-text);
+    --color-popover: var(--ui-card);
+    --color-popover-foreground: var(--ui-text);
+    --color-primary: var(--ui-primary);
+    --color-secondary: var(--ui-bg-elevated);
+    --color-primary-foreground: var(--ui-text-inverted);
+    --color-secondary-foreground: var(--ui-text);
+    --color-muted-foreground: var(--ui-text-muted);
+    --color-accent: var(--ui-bg-elevated);
+    --color-accent-foreground: var(--ui-text-highlighted);
+    --color-destructive: var(--ui-error);
+    --color-destructive-foreground: var(--ui-text-inverted);
+    --color-border: var(--ui-border);
+    --color-input: var(--ui-border);
+    --color-ring: var(--ui-primary);
+    --radius: var(--ui-radius);
 }
 
 :root {
@@ -44,6 +63,16 @@
     --ui-border: oklch(1 0 0 / 10%);
     --ui-border-muted: oklch(1 0 0 / 10%);
     --ui-border-accented: oklch(1 0 0 / 15%);
+}
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-border);
+    }
 }
 
 body {

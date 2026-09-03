@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { getInitials, severityColor } from '@/lib/utils';
+import StatusBadge from '@/components/StatusBadge.vue';
+import { getInitials } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';
 import { Deferred, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -82,33 +83,32 @@ const timeAgo = (iso: string): string => {
             </template>
 
             <ul class="flex flex-col">
-                <li v-for="item in list" :key="item.id" class="flex gap-3 border-t border-default px-4 py-3">
-                    <span
-                        class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
-                        :class="toneOf(item.id)"
+                                <li v-for="item in list" :key="item.id" class="border-t border-default">
+                    <Link
+                        :href="route('project.show', item.id)"
+                        class="flex gap-3 px-4 py-3 transition-colors hover:bg-elevated"
                     >
-                        {{ getInitials(item.title) }}
-                    </span>
+                        <span
+                            class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
+                            :class="toneOf(item.id)"
+                        >
+                            {{ getInitials(item.title) }}
+                        </span>
 
-                    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <div class="flex items-baseline justify-between gap-3">
-                            <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
-                            <span class="shrink-0 text-xs text-dimmed">{{ timeAgo(item.created_at) }}</span>
+                        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <div class="flex items-baseline justify-between gap-3">
+                                <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
+                                <span class="shrink-0 text-xs text-dimmed">{{ timeAgo(item.created_at) }}</span>
+                            </div>
+
+                            <p v-if="item.description" class="line-clamp-2 text-xs text-muted">{{ item.description }}</p>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <StatusBadge :label="item.status_name" :severity="item.status_severity" />
+                                <span class="text-xs text-muted">{{ item.members_count }} members</span>
+                            </div>
                         </div>
-
-                        <p v-if="item.description" class="line-clamp-2 text-xs text-muted">{{ item.description }}</p>
-
-                        <div class="flex flex-wrap items-center gap-2">
-                            <UBadge
-                                v-if="item.status_name"
-                                :label="item.status_name"
-                                :color="severityColor(item.status_severity)"
-                                variant="subtle"
-                                size="sm"
-                            />
-                            <span class="text-xs text-muted">{{ item.members_count }} members</span>
-                        </div>
-                    </div>
+                    </Link>
                 </li>
 
                 <li v-if="list.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">

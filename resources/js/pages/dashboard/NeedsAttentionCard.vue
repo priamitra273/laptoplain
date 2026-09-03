@@ -55,29 +55,30 @@ const badgeLabel = (days: number): string => {
         </div>
 
         <ul class="flex flex-col">
-            <li
-                v-for="item in items"
-                :key="item.id"
-                class="flex items-center gap-3 border-t border-default px-4 py-3"
-            >
-                <span class="h-9 w-1 shrink-0 rounded-full" :class="accentClass(item.days_remaining)" />
+                            <li v-for="item in items" :key="item.id" class="border-t border-default">
+                    <Link
+                        :href="route('task.show', item.id)"
+                        class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated"
+                    >
+                        <span class="h-9 w-1 shrink-0 rounded-full" :class="accentClass(item.days_remaining)" />
 
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
-                    <p class="truncate text-xs text-muted">
-                        {{ item.open_subtasks }} open subtasks
-                        <template v-if="item.owner_name"> · {{ item.owner_name }}</template>
-                    </p>
-                </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
+                            <p class="truncate text-xs text-muted">
+                                {{ item.open_subtasks }} open subtasks
+                                <template v-if="item.owner_name"> · {{ item.owner_name }}</template>
+                            </p>
+                        </div>
 
-                <UBadge
-                    :label="badgeLabel(item.days_remaining)"
-                    :color="badgeColor(item.days_remaining)"
-                    variant="subtle"
-                    size="sm"
-                    class="shrink-0 font-mono"
-                />
-            </li>
+                        <UBadge
+                            :label="badgeLabel(item.days_remaining)"
+                            :color="badgeColor(item.days_remaining)"
+                            variant="subtle"
+                            size="sm"
+                            class="shrink-0 font-mono"
+                        />
+                    </Link>
+                </li>
 
             <li v-if="items.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
                 Tidak ada task yang mendesak. Bagus.

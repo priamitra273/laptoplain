@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { getInitials, severityColor } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Deferred, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 
 interface LatestProject {
@@ -14,9 +15,12 @@ interface LatestProject {
     status_severity: PrimeSeverity | null;
 }
 
-defineProps<{
-    items: LatestProject[];
+const props = defineProps<{
+    // Opsional karena di-defer: daftarnya tiba setelah render pertama.
+    items?: LatestProject[];
 }>();
+
+const list = computed(() => props.items ?? []);
 
 // Warna dipilih dari id project, bukan acak, supaya avatar yang sama tidak berganti
 // warna setiap halaman dimuat ulang.
@@ -64,39 +68,53 @@ const timeAgo = (iso: string): string => {
             <ULink :as="Link" :href="route('project.index')" class="text-sm font-medium">View all</ULink>
         </div>
 
-        <ul class="flex flex-col">
-            <li v-for="item in items" :key="item.id" class="flex gap-3 border-t border-default px-4 py-3">
-                <span
-                    class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
-                    :class="toneOf(item.id)"
-                >
-                    {{ getInitials(item.title) }}
-                </span>
+        <Deferred data="latestProjects">
+            <template #fallback>
+                <div v-for="n in 4" :key="n" class="flex gap-3 border-t border-default px-4 py-3">
+                    <USkeleton class="size-9 shrink-0 rounded-lg" />
 
-                <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <div class="flex items-baseline justify-between gap-3">
-                        <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
-                        <span class="shrink-0 text-xs text-dimmed">{{ timeAgo(item.created_at) }}</span>
-                    </div>
-
-                    <p v-if="item.description" class="line-clamp-2 text-xs text-muted">{{ item.description }}</p>
-
-                    <div class="flex flex-wrap items-center gap-2">
-                        <UBadge
-                            v-if="item.status_name"
-                            :label="item.status_name"
-                            :color="severityColor(item.status_severity)"
-                            variant="subtle"
-                            size="sm"
-                        />
-                        <span class="text-xs text-muted">{{ item.members_count }} members</span>
+                    <div class="flex flex-1 flex-col gap-2">
+                        <USkeleton class="h-4 w-2/3" />
+                        <USkeleton class="h-3 w-full" />
+                        <USkeleton class="h-4 w-24" />
                     </div>
                 </div>
-            </li>
+            </template>
 
-            <li v-if="items.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
-                Belum ada project.
-            </li>
-        </ul>
+            <ul class="flex flex-col">
+                <li v-for="item in list" :key="item.id" class="flex gap-3 border-t border-default px-4 py-3">
+                    <span
+                        class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
+                        :class="toneOf(item.id)"
+                    >
+                        {{ getInitials(item.title) }}
+                    </span>
+
+                    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
+                            <span class="shrink-0 text-xs text-dimmed">{{ timeAgo(item.created_at) }}</span>
+                        </div>
+
+                        <p v-if="item.description" class="line-clamp-2 text-xs text-muted">{{ item.description }}</p>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <UBadge
+                                v-if="item.status_name"
+                                :label="item.status_name"
+                                :color="severityColor(item.status_severity)"
+                                variant="subtle"
+                                size="sm"
+                            />
+                            <span class="text-xs text-muted">{{ item.members_count }} members</span>
+                        </div>
+                    </div>
+                </li>
+
+                <li v-if="list.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
+                    Belum ada project.
+                </li>
+            </ul>
+        </Deferred>
     </UCard>
 </template>

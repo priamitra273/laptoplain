@@ -7,8 +7,10 @@ import ProjectProgressCard from './dashboard/ProjectProgressCard.vue';
 import LatestProjectsCard from './dashboard/LatestProjectsCard.vue';
 import type { PrimeSeverity } from '@/types';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Deferred, Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { TASK_CHART_COLORS } from './dashboard/chartColor';
+
 
 
 const props = defineProps<{
@@ -28,7 +30,8 @@ const props = defineProps<{
         active: number;
         progress_percent: number;
     };
-    activity: {
+    // Tiga prop di bawah di-defer di controller, jadi belum ada saat render pertama.
+    activity?: {
         values: { date: string; count: number }[];
         total_events: number;
         weeks: number;
@@ -49,7 +52,7 @@ const props = defineProps<{
         }[];
     };
     projectsTab: string;
-    projectProgress: {
+    projectProgress?: {
         id: string;
         title: string;
         emoji: string | null;
@@ -60,7 +63,7 @@ const props = defineProps<{
         status_name: string | null;
         status_severity: string | null;
     }[];
-    latestProjects: {
+    latestProjects?: {
         id: string;
         title: string;
         description: string | null;
@@ -94,13 +97,13 @@ const greeting = computed(() => {
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const legend = computed(() => [
-    { label: 'Done', value: props.stats.done, class: 'bg-[#22c55e]' },
-    { label: 'Active', value: props.stats.active, class: 'bg-[#6366f1]' },
-    { label: 'Overdue', value: props.stats.overdue, class: 'bg-[#ef4444]' },
+    { label: 'Done', value: props.stats.done, color: TASK_CHART_COLORS.done },
+    { label: 'Active', value: props.stats.active, color: TASK_CHART_COLORS.active },
+    { label: 'Overdue', value: props.stats.overdue, color: TASK_CHART_COLORS.overdue },
 ]);
 
 const busiestDay = computed(() => {
-    if (!props.activity.busiest_date) {
+    if (!props.activity?.busiest_date) {
         return '—';
     }
 
@@ -177,7 +180,7 @@ const busiestDay = computed(() => {
 
                         <ul class="grid grid-cols-2 gap-x-3 gap-y-1">
                             <li v-for="item in legend" :key="item.label" class="flex items-center gap-1.5 text-xs text-muted">
-                                <span class="size-2 shrink-0 rounded-full" :class="item.class" />
+                                <span class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: item.color }" />
                                 {{ item.label }}
                             </li>
                         </ul>
@@ -189,31 +192,47 @@ const busiestDay = computed(() => {
                 <UCard class="xl:col-span-3" :ui="{ root: 'gap-0 py-0', body: 'flex flex-col gap-4 p-4 sm:p-4' }">
                     <div class="flex flex-wrap items-baseline gap-2">
                         <h2 class="text-base font-semibold text-highlighted">Activity graph</h2>
-                        <p class="text-sm text-muted">
+                        <p v-if="activity" class="text-sm text-muted">
                             {{ plural(activity.total_events, 'task event') }} · last {{ activity.weeks }} weeks
                         </p>
                     </div>
 
-                    <ActivityHeatmap :values="activity.values" />
+                    <Deferred data="activity">
+                        <template #fallback>
+                            <div class="flex flex-col gap-4">
+                                <USkeleton class="h-28 w-full" />
 
-                    <USeparator />
+                                <USeparator />
 
-                    <dl class="flex flex-wrap gap-x-10 gap-y-3">
-                        <div class="flex flex-col gap-1">
-                            <dt class="text-xs text-muted">Busiest day</dt>
-                            <dd class="text-lg font-semibold text-highlighted">{{ busiestDay }}</dd>
+                                <div class="flex flex-wrap gap-x-10 gap-y-3">
+                                    <USkeleton v-for="n in 3" :key="n" class="h-10 w-32" />
+                                </div>
+                            </div>
+                        </template>
+
+                        <div v-if="activity" class="flex flex-col gap-4">
+                            <ActivityHeatmap :values="activity.values" />
+
+                            <USeparator />
+
+                            <dl class="flex flex-wrap gap-x-10 gap-y-3">
+                                <div class="flex flex-col gap-1">
+                                    <dt class="text-xs text-muted">Busiest day</dt>
+                                    <dd class="text-sm font-semibold text-highlighted">{{ busiestDay }}</dd>
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <dt class="text-xs text-muted">Current streak</dt>
+                                    <dd class="text-sm font-semibold text-highlighted">{{ plural(activity.current_streak, 'day') }}</dd>
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <dt class="text-xs text-muted">Weekly average</dt>
+                                    <dd class="text-sm font-semibold text-highlighted">{{ plural(activity.weekly_average, 'event') }}</dd>
+                                </div>
+                            </dl>
                         </div>
-
-                        <div class="flex flex-col gap-1">
-                            <dt class="text-xs text-muted">Current streak</dt>
-                            <dd class="text-lg font-semibold text-highlighted">{{ plural(activity.current_streak, 'day') }}</dd>
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                            <dt class="text-xs text-muted">Weekly average</dt>
-                            <dd class="text-lg font-semibold text-highlighted">{{ plural(activity.weekly_average, 'event') }}</dd>
-                        </div>
-                    </dl>
+                    </Deferred>
                 </UCard>
                 <NeedsAttentionCard class="xl:col-span-2" :total="attention.total" :items="attention.items" />
             </div>
@@ -226,4 +245,3 @@ const busiestDay = computed(() => {
         </div>
     </AppLayout>
 </template>
-

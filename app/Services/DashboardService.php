@@ -2,19 +2,19 @@
 
 namespace App\Services;
 
-use App\Data\Dashboard\DashboardSummaryData;
-use App\Data\Dashboard\TaskStatsData;
 use App\Data\Dashboard\ActivityGraphData;
 use App\Data\Dashboard\AttentionTaskData;
+use App\Data\Dashboard\DashboardSummaryData;
 use App\Data\Dashboard\LatestProjectData;
 use App\Data\Dashboard\NeedsAttentionData;
 use App\Data\Dashboard\ProjectProgressData;
-use App\Models\Project;
-use Illuminate\Support\Str;
+use App\Data\Dashboard\TaskStatsData;
 use App\Facades\Sqids;
+use App\Models\Project;
 use App\Models\Task;
-use Carbon\Carbon;
 use App\Repositories\DashboardRepository;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class DashboardService
 {
@@ -32,10 +32,23 @@ class DashboardService
         protected DashboardRepository $repository
     ) {}
 
+    /**
+     * Hasil runningProjectIds() dipakai summary() dan taskStats() dalam satu request.
+     *
+     * @var array<int, int>|null
+     */
+    private ?array $cachedRunningProjectIds = null;
+
+    /** @return array<int, int> */
+    private function runningProjectIds(int $userId): array
+    {
+        return $this->cachedRunningProjectIds ??= $this->repository->runningProjectIds($userId);
+    }
+
     public function summary(int $userId): DashboardSummaryData
     {
         return new DashboardSummaryData(
-            running_projects: count($this->repository->runningProjectIds($userId)),
+            running_projects: count($this->runningProjectIds($userId)),
             tasks_due_this_week: $this->repository->countTasksDueWithin($userId, self::DUE_WINDOW_DAYS),
             attention_items: $this->repository->countTasksNeedingAttention($userId),
         );
@@ -47,7 +60,7 @@ class DashboardService
     public function taskStats(int $userId): TaskStatsData
     {
         $row = $this->repository->taskStats(
-            $this->repository->runningProjectIds($userId),
+            $this->runningProjectIds($userId),
             $userId,
             self::DUE_WINDOW_DAYS,
             self::COMPLETED_WINDOW_DAYS,
@@ -68,7 +81,7 @@ class DashboardService
         );
     }
 
-        /**
+    /**
      * Panjang rentang activity graph dalam minggu. Jumlah harinya diturunkan dari sini
      * supaya label "last N weeks" di frontend dan query-nya tidak pernah berselisih.
      */
@@ -130,7 +143,7 @@ class DashboardService
         return $streak;
     }
 
-        /**
+    /**
      * Seberapa jauh ke depan tenggat masih dianggap butuh perhatian.
      */
     private const ATTENTION_WINDOW_DAYS = 14;
@@ -140,7 +153,7 @@ class DashboardService
      */
     private const ATTENTION_LIMIT = 4;
 
-        public function needsAttention(int $userId): NeedsAttentionData
+    public function needsAttention(int $userId): NeedsAttentionData
     {
         $tasks = $this->repository->attentionTasks($userId, self::ATTENTION_WINDOW_DAYS, self::ATTENTION_LIMIT);
 
@@ -167,7 +180,7 @@ class DashboardService
         );
     }
 
-        /**
+    /**
      * Tab yang boleh dipakai. Whitelist, bukan validasi: nilai dari request tidak
      * pernah diteruskan mentah ke repository.
      *
@@ -223,5 +236,4 @@ class DashboardService
                 status_severity: $project->status?->severity,
             ))->all();
     }
-
 }

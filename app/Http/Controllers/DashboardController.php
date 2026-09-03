@@ -22,11 +22,14 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'summary' => $this->service->summary($userId),
             'stats' => $this->service->taskStats($userId),
-            'activity' => $this->service->activityGraph($userId),
             'attention' => $this->service->needsAttention($userId),
             'projectsTab' => $projectsTab,
-            'projectProgress' => $this->service->projectProgress($userId, $projectsTab),
-            'latestProjects' => $this->service->latestProjects($userId),
+            'activity' => Inertia::defer(fn () => $this->service->activityGraph($userId)),
+            'projectProgress' => Inertia::defer(
+                fn () => $this->service->projectProgress($userId, $projectsTab),
+                'projects',
+            ),
+            'latestProjects' => Inertia::defer(fn () => $this->service->latestProjects($userId), 'projects'),
         ]);
     }
 }

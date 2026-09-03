@@ -3,6 +3,7 @@ import Highcharts from 'highcharts';
 import A11yInit from 'highcharts/modules/accessibility';
 import { Chart } from 'highcharts-vue';
 import { computed } from 'vue';
+import { TASK_CHART_COLORS } from './chartColor';
 
 A11yInit(Highcharts);
 
@@ -16,10 +17,6 @@ const props = withDefaults(
     { size: 76 },
 );
 
-// Warna ditulis literal, bukan token CSS: Highcharts menggambar ke SVG-nya sendiri
-// dan tidak ikut membaca variabel tema. Ketiganya dipilih agar tetap terbaca di
-// latar terang maupun gelap.
-const COLORS = { done: '#22c55e', active: '#6366f1', overdue: '#ef4444' } as const;
 
 const options = computed<Highcharts.Options>(() => ({
     chart: {
@@ -47,9 +44,9 @@ const options = computed<Highcharts.Options>(() => ({
             type: 'pie',
             name: 'Tasks',
             data: [
-                { name: 'Done', y: props.done, color: COLORS.done },
-                { name: 'Active', y: props.active, color: COLORS.active },
-                { name: 'Overdue', y: props.overdue, color: COLORS.overdue },
+                { name: 'Done', y: props.done, color: TASK_CHART_COLORS.done },
+                { name: 'Active', y: props.active, color: TASK_CHART_COLORS.active },
+                { name: 'Overdue', y: props.overdue, color: TASK_CHART_COLORS.overdue },
             ],
         },
     ],

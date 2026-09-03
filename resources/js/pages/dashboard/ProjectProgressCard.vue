@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { Deferred, router } from '@inertiajs/vue3';
 import type { TableColumn } from '@nuxt/ui';
 
 interface ProjectRow {
@@ -15,7 +15,7 @@ interface ProjectRow {
 }
 
 const props = defineProps<{
-    rows: ProjectRow[];
+    rows?: ProjectRow[];
     tab: string;
 }>();
 
@@ -32,8 +32,6 @@ const columns: TableColumn<ProjectRow>[] = [
     { accessorKey: 'due_date', header: 'Deadline' },
 ];
 
-// Penyaringan dilakukan server supaya "5 teratas" tetap benar berapa pun jumlah
-// project. Hanya dua prop yang diminta ulang, sisa halaman tidak ikut dimuat.
 const changeTab = (value: string | number) => {
     if (String(value) === props.tab) {
         return;
@@ -65,32 +63,48 @@ const deadline = (value: string | null): string =>
             />
         </div>
 
-        <UTable :data="rows" :columns="columns">
-            <template #title-cell="{ row }">
-                <div class="flex min-w-0 items-center gap-2">
-                    <span v-if="row.original.emoji" class="shrink-0">{{ row.original.emoji }}</span>
-                    <span class="truncate font-medium text-highlighted">{{ row.original.title }}</span>
+        <Deferred data="projectProgress">
+            <template #fallback>
+                <div class="flex flex-col gap-2">
+                    <USkeleton class="h-8 w-full" />
+                    <USkeleton v-for="n in 5" :key="n" class="h-10 w-full" />
                 </div>
             </template>
 
-            <template #tasks-cell="{ row }">
-                <span class="tabular-nums">{{ row.original.done_tasks }}/{{ row.original.total_tasks }}</span>
-            </template>
+            <template #default="{ reloading }">
+                <UTable
+                    :data="rows ?? []"
+                    :columns="columns"
+                    class="transition-opacity"
+                    :class="{ 'opacity-50': reloading }"
+                >
+                    <template #title-cell="{ row }">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span v-if="row.original.emoji" class="shrink-0">{{ row.original.emoji }}</span>
+                            <span class="truncate font-medium text-highlighted">{{ row.original.title }}</span>
+                        </div>
+                    </template>
 
-            <template #progress-cell="{ row }">
-                <div class="flex items-center gap-2">
-                    <UProgress :model-value="row.original.progress_percent" size="sm" class="min-w-24 flex-1" />
-                    <span class="w-9 text-right text-xs tabular-nums text-muted">{{ row.original.progress_percent }}%</span>
-                </div>
-            </template>
+                    <template #tasks-cell="{ row }">
+                        <span class="tabular-nums">{{ row.original.done_tasks }}/{{ row.original.total_tasks }}</span>
+                    </template>
 
-            <template #due_date-cell="{ row }">
-                <span class="text-sm text-muted">{{ deadline(row.original.due_date) }}</span>
-            </template>
+                    <template #progress-cell="{ row }">
+                        <div class="flex items-center gap-2">
+                            <UProgress :model-value="row.original.progress_percent" size="sm" class="min-w-24 flex-1" />
+                            <span class="w-9 text-right text-xs tabular-nums text-muted">{{ row.original.progress_percent }}%</span>
+                        </div>
+                    </template>
 
-            <template #empty>
-                <p class="py-6 text-center text-sm text-muted">Tidak ada project di kategori ini.</p>
+                    <template #due_date-cell="{ row }">
+                        <span class="text-sm text-muted">{{ deadline(row.original.due_date) }}</span>
+                    </template>
+
+                    <template #empty>
+                        <p class="py-6 text-center text-sm text-muted">Tidak ada project di kategori ini.</p>
+                    </template>
+                </UTable>
             </template>
-        </UTable>
+        </Deferred>
     </UCard>
 </template>

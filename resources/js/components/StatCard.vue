@@ -12,8 +12,6 @@ const props = withDefaults(
     { tone: 'neutral' },
 );
 
-// Satu prop `tone` menyetel ikon, angka, dan keterangan sekaligus, supaya tiap kartu
-// tidak perlu mengatur tiga warna terpisah.
 const iconClass = computed(
     () => ({ neutral: 'text-muted', success: 'text-success', danger: 'text-error' })[props.tone],
 );
@@ -24,7 +22,7 @@ const hintClass = computed(() => (props.tone === 'success' ? 'text-success' : 't
 </script>
 
 <template>
-    <UCard :ui="{ root: 'gap-0 py-0', body: 'flex flex-col gap-2 p-4 sm:p-4' }">
+        <UCard :ui="{ body: 'flex flex-col gap-2' }">
         <div class="flex items-center gap-2">
             <UIcon :name="icon" class="size-4 shrink-0" :class="iconClass" />
             <span class="truncate text-sm text-toned">{{ label }}</span>

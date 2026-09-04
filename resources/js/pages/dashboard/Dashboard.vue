@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import StatCard from '@/components/StatCard.vue';
-import ActivityHeatmap from './dashboard/ActivityHeatmap.vue';
-import NeedsAttentionCard from './dashboard/NeedsAttentionCard.vue';
-import TaskDonutChart from './dashboard/TaskDonutChart.vue';
-import ProjectProgressCard from './dashboard/ProjectProgressCard.vue';
-import LatestProjectsCard from './dashboard/LatestProjectsCard.vue';
+import ActivityHeatmap from './ActivityHeatmap.vue';
+import NeedsAttentionCard from './NeedsAttentionCard.vue';
+import TaskDonutChart from './TaskDonutChart.vue';
+import ProjectProgressCard from './ProjectProgressCard.vue';
+import LatestProjectsCard from './LatestProjectsCard.vue';
 import type { PrimeSeverity } from '@/types';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Deferred, Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { TASK_CHART_COLORS } from './dashboard/chartColor';
-
+import { TASK_CHART_COLORS } from './chartColor';
 
 
 const props = defineProps<{
@@ -30,7 +29,6 @@ const props = defineProps<{
         active: number;
         progress_percent: number;
     };
-    // Tiga prop di bawah di-defer di controller, jadi belum ada saat render pertama.
     activity?: {
         values: { date: string; count: number }[];
         total_events: number;
@@ -78,8 +76,6 @@ const page = usePage();
 
 const name = computed(() => page.props.auth?.user?.name ?? '');
 
-// Salam mengikuti jam di perangkat pengguna, bukan jam server: keduanya bisa berbeda
-// zona waktu, dan yang dirasakan pengguna adalah jam di layarnya sendiri.
 const greeting = computed(() => {
     const hour = new Date().getHours();
 
@@ -117,58 +113,39 @@ const busiestDay = computed(() => {
 
 <template>
     <AppLayout title="Dashboard">
+
         <Head title="Dashboard" />
 
         <div class="flex flex-col gap-5">
-            <header class="flex flex-col gap-1">
-                <h1 class="text-xl font-semibold text-highlighted">{{ greeting }}, {{ name }}</h1>
+            <Heading :title="`${greeting}, ${name}`">
+                <template #description>
+                    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                        <span>{{ plural(summary.running_projects, 'project') }} running</span>
+                        <span aria-hidden="true" class="text-dimmed">·</span>
+                        <span>{{ plural(summary.tasks_due_this_week, 'task') }} due this week</span>
+                        <span aria-hidden="true" class="text-dimmed">·</span>
+                        <span>
+                            {{ plural(summary.attention_items, 'item') }}
+                            {{ summary.attention_items === 1 ? 'needs' : 'need' }} attention today
+                        </span>
+                    </p>
+                </template>
+            </Heading>
 
-                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                    <span>{{ plural(summary.running_projects, 'project') }} running</span>
-                    <span aria-hidden="true" class="text-dimmed">·</span>
-                    <span>{{ plural(summary.tasks_due_this_week, 'task') }} due this week</span>
-                    <span aria-hidden="true" class="text-dimmed">·</span>
-                    <span>
-                        {{ plural(summary.attention_items, 'item') }}
-                        {{ summary.attention_items === 1 ? 'needs' : 'need' }} attention today
-                    </span>
-                </p>
-            </header>
+           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                <StatCard label="Total tasks" icon="i-lucide-clipboard-list" :value="stats.total"
+                    :hint="`across ${plural(summary.running_projects, 'project')}`" />
 
-            <!-- Enam kolom, bukan lima: kartu donut mengambil dua supaya angka dan
-                 legendanya punya ruang di samping grafik. -->
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-                <StatCard
-                    label="Total tasks"
-                    icon="i-lucide-clipboard-list"
-                    :value="stats.total"
-                    :hint="`across ${plural(summary.running_projects, 'project')}`"
-                />
+                <StatCard label="Completed" icon="i-lucide-circle-check" tone="success" :value="stats.done"
+                    :hint="`+${stats.done_recently} this week`" />
 
-                <StatCard
-                    label="Completed"
-                    icon="i-lucide-circle-check"
-                    tone="success"
-                    :value="stats.done"
-                    :hint="`+${stats.done_recently} this week`"
-                />
+                <StatCard label="In progress" icon="i-lucide-clock" :value="stats.in_progress"
+                    :hint="`${stats.in_progress_assigned_to_me} assigned to you`" />
 
-                <StatCard
-                    label="In progress"
-                    icon="i-lucide-clock"
-                    :value="stats.in_progress"
-                    :hint="`${stats.in_progress_assigned_to_me} assigned to you`"
-                />
+                <StatCard label="Overdue" icon="i-lucide-triangle-alert" tone="danger" :value="stats.overdue"
+                    :hint="`+ ${stats.due_soon} due in 7 days`" />
 
-                <StatCard
-                    label="Overdue"
-                    icon="i-lucide-triangle-alert"
-                    tone="danger"
-                    :value="stats.overdue"
-                    :hint="`+ ${stats.due_soon} due in 7 days`"
-                />
-
-                <UCard class="sm:col-span-2" :ui="{ root: 'gap-0 py-0', body: 'flex items-center gap-4 p-4 sm:p-4' }">
+               <UCard class="sm:col-span-2" :ui="{ body: 'flex items-center gap-4' }">
                     <TaskDonutChart :done="stats.done" :active="stats.active" :overdue="stats.overdue" />
 
                     <div class="flex min-w-0 flex-col gap-2">
@@ -179,7 +156,8 @@ const busiestDay = computed(() => {
                         </span>
 
                         <ul class="grid grid-cols-2 gap-x-3 gap-y-1">
-                            <li v-for="item in legend" :key="item.label" class="flex items-center gap-1.5 text-xs text-muted">
+                            <li v-for="item in legend" :key="item.label"
+                                class="flex items-center gap-1.5 text-xs text-muted">
                                 <span class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: item.color }" />
                                 {{ item.label }}
                             </li>
@@ -188,14 +166,13 @@ const busiestDay = computed(() => {
                 </UCard>
             </div>
 
-             <div class="grid gap-3 xl:grid-cols-5">
-                <UCard class="xl:col-span-3" :ui="{ root: 'gap-0 py-0', body: 'flex flex-col gap-4 p-4 sm:p-4' }">
-                    <div class="flex flex-wrap items-baseline gap-2">
-                        <h2 class="text-base font-semibold text-highlighted">Activity graph</h2>
+            <div class="grid gap-3 xl:grid-cols-5">
+               <PanelCard title="Activity graph" class="xl:col-span-3">
+                    <template #meta>
                         <p v-if="activity" class="text-sm text-muted">
                             {{ plural(activity.total_events, 'task event') }} · last {{ activity.weeks }} weeks
                         </p>
-                    </div>
+                    </template>
 
                     <Deferred data="activity">
                         <template #fallback>
@@ -223,17 +200,22 @@ const busiestDay = computed(() => {
 
                                 <div class="flex flex-col gap-1">
                                     <dt class="text-xs text-muted">Current streak</dt>
-                                    <dd class="text-sm font-semibold text-highlighted">{{ plural(activity.current_streak, 'day') }}</dd>
+                                    <dd class="text-sm font-semibold text-highlighted">{{
+                                        plural(activity.current_streak, 'day') }}
+                                    </dd>
                                 </div>
 
                                 <div class="flex flex-col gap-1">
                                     <dt class="text-xs text-muted">Weekly average</dt>
-                                    <dd class="text-sm font-semibold text-highlighted">{{ plural(activity.weekly_average, 'event') }}</dd>
+                                    <dd class="text-sm font-semibold text-highlighted">{{
+                                        plural(activity.weekly_average, 'event')
+                                        }}</dd>
                                 </div>
                             </dl>
                         </div>
                     </Deferred>
-                </UCard>
+                </PanelCard>
+
                 <NeedsAttentionCard class="xl:col-span-2" :total="attention.total" :items="attention.items" />
             </div>
 
@@ -245,3 +227,4 @@ const busiestDay = computed(() => {
         </div>
     </AppLayout>
 </template>
+

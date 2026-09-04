@@ -77,6 +77,8 @@ const deadline = (value: string | null): string =>
                     :columns="columns"
                     class="transition-opacity"
                     :class="{ 'opacity-50': reloading }"
+                    :ui="{ tr: 'cursor-pointer hover:bg-elevated' }"
+                    :on-select="(_e, row) => router.visit(route('project.show', row.original.id))"
                 >
                     <template #title-cell="{ row }">
                         <div class="flex min-w-0 items-center gap-2">

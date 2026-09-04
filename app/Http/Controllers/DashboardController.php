@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $userId = Auth::id();
         $projectsTab = $this->service->normalizeProjectTab($request->query('projects_tab'));
 
-        return Inertia::render('Dashboard', [
+        return Inertia::render('dashboard/Dashboard', [
             'summary' => $this->service->summary($userId),
             'stats' => $this->service->taskStats($userId),
             'attention' => $this->service->needsAttention($userId),

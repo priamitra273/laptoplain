@@ -44,45 +44,45 @@ const badgeLabel = (days: number): string => {
 </script>
 
 <template>
-    <UCard :ui="{ root: 'gap-0 py-0', body: 'flex flex-col p-0 sm:p-0' }">
-        <div class="flex items-center justify-between gap-3 px-4 py-3">
-            <div class="flex items-center gap-2">
-                <h2 class="text-base font-semibold text-highlighted">Needs attention</h2>
-                <UBadge :label="String(total)" color="error" variant="subtle" size="sm" />
-            </div>
+    <PanelCard title="Needs attention" flush>
+        <template #meta>
+            <UBadge :label="String(total)" color="error" variant="subtle" size="sm" />
+        </template>
 
+        <template #action>
             <ULink :as="Link" :href="route('task.index')" class="text-sm font-medium">View all</ULink>
-        </div>
+        </template>
 
         <ul class="flex flex-col">
-                            <li v-for="item in items" :key="item.id" class="border-t border-default">
-                    <Link
-                        :href="route('task.show', item.id)"
-                        class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated"
-                    >
-                        <span class="h-9 w-1 shrink-0 rounded-full" :class="accentClass(item.days_remaining)" />
+            <li v-for="item in items" :key="item.id" class="border-t border-default">
+                <Link
+                    :href="route('task.show', item.id)"
+                    class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated"
+                >
+                    <span class="h-9 w-1 shrink-0 rounded-full" :class="accentClass(item.days_remaining)" />
 
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
-                            <p class="truncate text-xs text-muted">
-                                {{ item.open_subtasks }} open subtasks
-                                <template v-if="item.owner_name"> · {{ item.owner_name }}</template>
-                            </p>
-                        </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold text-highlighted">{{ item.title }}</p>
+                        <p class="truncate text-xs text-muted">
+                            {{ item.open_subtasks }} open subtasks
+                            <template v-if="item.owner_name"> · {{ item.owner_name }}</template>
+                        </p>
+                    </div>
 
-                        <UBadge
-                            :label="badgeLabel(item.days_remaining)"
-                            :color="badgeColor(item.days_remaining)"
-                            variant="subtle"
-                            size="sm"
-                            class="shrink-0 font-mono"
-                        />
-                    </Link>
-                </li>
+                    <UBadge
+                        :label="badgeLabel(item.days_remaining)"
+                        :color="badgeColor(item.days_remaining)"
+                        variant="subtle"
+                        size="sm"
+                        class="shrink-0 font-mono"
+                    />
+                </Link>
+            </li>
 
             <li v-if="items.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
                 Tidak ada task yang mendesak. Bagus.
             </li>
         </ul>
-    </UCard>
+    </PanelCard>
 </template>
+

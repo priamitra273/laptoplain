@@ -19,12 +19,14 @@ class ProjectController extends Controller
     /**
      * Show the resources
      */
-    public function index(): Response
+    public function index(\Illuminate\Http\Request $request): Response
     {
-        $response = $this->projectService->getIndexData();
+        $filters = \App\Data\Project\ProjectFiltersData::fromRequest($request);
+        $response = $this->projectService->getIndexData($filters);
 
         return Inertia::render('favorites/project/Index', Sqids::rec_encode_ids_in_list($response));
     }
+
 
     public function show(string $encoded): Response
     {

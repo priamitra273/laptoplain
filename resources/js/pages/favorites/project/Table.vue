@@ -1,561 +1,389 @@
 <script setup lang="ts">
+import EmojiPicker from '@/components/EmojiPicker.vue';
+import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
-import { lucideIconItems } from '@/lib/lucide-icons';
-import { can, severityColor } from '@/lib/utils';
-import { router } from '@inertiajs/vue3';
+import { severityColor, severityDotClass } from '@/lib/utils';
+import type { PrimeSeverity } from '@/types';
 import type { TableColumn } from '@nuxt/ui';
+import { parseDate } from '@internationalized/date';
+import { router } from '@inertiajs/vue3';
 import UButton from '@nuxt/ui/components/Button.vue';
-import { getPaginationRowModel } from '@tanstack/vue-table';
-import type { Column, PaginationState, SortingState, Table } from '@tanstack/vue-table';
-import { computed, h, ref, useTemplateRef } from 'vue';
-import ProjectDateCell from './DateCell.vue';
-import type { Project, ProjectPriorityOption, ProjectStatusOption } from './types';
+import { useOverlay, useToast } from '@nuxt/ui/composables';
+import { computed, h, ref } from 'vue';
 
-interface Props {
-    data?: Project[];
-    statuses?: ProjectStatusOption[];
-    priorities?: ProjectPriorityOption[];
+
+const toast = useToast();
+const overlay = useOverlay();
+const dueDateDialog = overlay.create(TaskDueDateDialog);
+const confirm = useConfirmDialog();
+
+
+const STATUSES_REQUIRING_DUE_DATE = ['Not Started', 'In Progress'];
+const PRIORITY_ICONS: Record<string, string> = {
+    Low: 'i-lucide-signal-low',
+    Medium: 'i-lucide-signal-medium',
+    High: 'i-lucide-signal-high',
+    Critical: 'i-lucide-signal',
+};
+
+interface Project {
+    id: string;
+    project_no: string | null;
+    title: string | null;
+    emoji: string | null;
+    start_date: string | null;
+    due_date: string | null;
+    progress: number;
+    status: { id: string; name: string; severity: PrimeSeverity | null } | null;
+    priority: { id: string; name: string; severity: PrimeSeverity | null } | null;
+    owner: { name: string } | null;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    data: () => [],
-    statuses: () => [],
-    priorities: () => [],
-});
+interface StatusOption {
+    id: string;
+    name: string;
+    severity: PrimeSeverity | null;
+}
 
-const confirm = useConfirmDialog();
-const toast = useToast();
+interface PriorityOption {
+    id: string;
+    name: string;
+    severity: PrimeSeverity | null;
+}
 
-const pageSizes = [10, 25, 50];
+const props = defineProps<{
+    projects: Project[];
+    statuses: StatusOption[];
+    priorities: PriorityOption[];
+    total: number;
+    sort: string;
+    direction: 'asc' | 'desc';
+}>();
 
-const sortIcon = (direction: false | 'asc' | 'desc') => {
-    if (direction === 'asc') return 'i-lucide-arrow-up';
-    if (direction === 'desc') return 'i-lucide-arrow-down';
-    return 'i-lucide-arrow-up-down';
+const emit = defineEmits<{
+    sort: [column: string];
+}>();
+
+const page = defineModel<number>('page', { required: true });
+const perPage = defineModel<number>('perPage', { required: true });
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+const formatDate = (iso: string | null): string => (iso ? dateFormatter.format(new Date(iso)) : '—');
+
+const dueNote = (project: Project): { text: string; class: string } | null => {
+    if (!project.due_date) {
+        return null;
+    }
+
+    if (project.status?.name === 'Completed') {
+        return { text: 'delivered', class: 'text-muted' };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((new Date(project.due_date).getTime() - today.getTime()) / 86400000);
+
+    if (diffDays < 0) {
+        return { text: `${Math.abs(diffDays)}d overdue`, class: 'text-error' };
+    }
+
+    if (diffDays <= 7) {
+        return { text: diffDays === 0 ? 'due today' : `due in ${diffDays}d`, class: 'text-warning' };
+    }
+
+    return null;
 };
 
-const withSortHeader = (column: TableColumn<Project>): TableColumn<Project> => {
-    if (column.enableSorting === false || typeof column.header !== 'string') return column;
-
-    const label = column.header;
-
-    return {
-        ...column,
-        header: ({ column: col }: { column: Column<Project, unknown> }) =>
-            h(UButton, {
-                label,
-                trailingIcon: sortIcon(col.getIsSorted()),
-                variant: 'ghost',
-                color: 'neutral',
-                size: 'sm',
-                class: '-mx-2.5 font-medium',
-                onClick: () => col.toggleSorting(col.getIsSorted() === 'asc'),
-            }),
-    } as TableColumn<Project>;
-};
-
-const baseColumns: TableColumn<Project>[] = [
-    { header: 'No', enableSorting: false, cell: ({ row }) => row.index + 1, meta: { class: { td: 'w-10' } } },
-    { accessorKey: 'project_no', header: 'Project No', meta: { class: { td: 'w-28' } } },
-    { accessorKey: 'title', header: 'Title', meta: { class: { td: 'min-w-64' } } },
-    { accessorKey: 'status_id', header: 'Status' },
-    { accessorKey: 'priority_id', header: 'Priority' },
-    { accessorKey: 'start_date', header: 'Start' },
-    { accessorKey: 'due_date', header: 'Due' },
-    { accessorKey: 'progress', header: 'Progress', meta: { class: { td: 'min-w-40' } } },
-    { id: 'actions', header: 'Action', enableSorting: false, meta: { class: { th: 'text-center' } } },
-];
-
-const columns = baseColumns.map(withSortHeader);
-
-const globalFilter = ref('');
-const sorting = ref<SortingState>([]);
-const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: pageSizes[0] });
-
-const titleFilter = ref('');
-const statusFilter = ref<string[]>([]);
-const priorityFilter = ref<string[]>([]);
-const startDateFilter = ref('');
-const dueDateFilter = ref('');
-const progressFilter = ref<[number, number]>([0, 100]);
-
-const toggleFilterValue = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
-
-const isProgressFilterActive = computed(() => progressFilter.value[0] > 0 || progressFilter.value[1] < 100);
-
-const iconSearch = ref('');
-
-const filteredIconItems = computed(() => {
-    if (!iconSearch.value) return lucideIconItems;
-    const query = iconSearch.value.toLowerCase();
-    return lucideIconItems.filter((item) => item.label.toLowerCase().includes(query));
-});
-
-const filteredData = computed(() =>
-    props.data.filter((project) => {
-        if (titleFilter.value && !project.title.toLowerCase().includes(titleFilter.value.toLowerCase())) return false;
-        if (statusFilter.value.length && !statusFilter.value.includes(project.status_id ?? '')) return false;
-        if (priorityFilter.value.length && !priorityFilter.value.includes(project.priority_id ?? '')) return false;
-        if (startDateFilter.value && project.start_date !== startDateFilter.value) return false;
-        if (dueDateFilter.value && project.due_date !== dueDateFilter.value) return false;
-        if (project.progress < progressFilter.value[0] || project.progress > progressFilter.value[1]) return false;
-        return true;
-    }),
+const rows = computed(() =>
+    props.projects.map((project) => ({
+        id: project.id,
+        project_no: project.project_no ?? '—',
+        title: project.title ?? 'Untitled project',
+        emoji: project.emoji,
+        owner_name: project.owner?.name ?? '—',
+        status: { id: project.status?.id ?? '', name: project.status?.name ?? '—', severity: project.status?.severity ?? null },
+        priority: { id: project.priority?.id ?? '', name: project.priority?.name ?? '—', severity: project.priority?.severity ?? null },
+        start_date: formatDate(project.start_date),
+        start_date_iso: project.start_date,
+        due_date: formatDate(project.due_date),
+        due_date_iso: project.due_date,
+        due_note: dueNote(project),
+        progress: project.progress,
+    })),
 );
 
-const table = useTemplateRef<{ tableApi: Table<Project> }>('table');
-const paginationRowModel = getPaginationRowModel<Project>();
+type ProjectRow = (typeof rows.value)[number];
 
-const total = computed(() => table.value?.tableApi?.getFilteredRowModel().rows.length ?? 0);
 
-const page = computed({
-    get: () => pagination.value.pageIndex + 1,
-    set: (value: number) => (pagination.value = { ...pagination.value, pageIndex: value - 1 }),
-});
+const priorityIcon = (name: string): string => PRIORITY_ICONS[name] ?? 'i-lucide-signal-low';
 
-const pageSize = computed({
-    get: () => pagination.value.pageSize,
-    set: (value: number) => (pagination.value = { pageIndex: 0, pageSize: value }),
-});
-
-type EditablePatch = Partial<Pick<Project, 'title' | 'start_date' | 'due_date' | 'status_id' | 'priority_id' | 'emoji'>>;
-
-const submitUpdate = (project: Project, patch: EditablePatch) => {
-    router.put(
-        route('project.update', project.id),
-        {
-            title: project.title,
-            start_date: project.start_date,
-            due_date: project.due_date,
-            status_id: project.status_id,
-            priority_id: project.priority_id,
-            emoji: project.emoji,
-            ...patch,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            onError: (errors) => {
-                const message = Object.values(errors)[0];
-                toast.add({ title: 'Failed', description: message ? String(message) : 'Could not update project.', color: 'error' });
-            },
-        },
-    );
+const updateProject = (id: string, payload: Record<string, string>) => {
+    router.put(route('project.update', id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onError: () => toast.add({ title: 'Failed to update project', color: 'error', icon: 'i-lucide-circle-alert' }),
+    });
 };
 
-const onTitleBlur = (project: Project, value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === project.title) return;
-    submitUpdate(project, { title: trimmed });
-};
-
-const onDateChange = (project: Project, field: 'start_date' | 'due_date', value: string) => {
-    if (!value || value === project[field]) return;
-    submitUpdate(project, { [field]: value });
-};
-
-const selectIcon = (project: Project, value: string) => {
-    iconSearch.value = '';
-    submitUpdate(project, { emoji: value });
-};
-
-const viewProject = (row: Project) => {
-    router.visit(route('project.show.kanban', { encoded: row.id }));
-};
-
-const handleDelete = async (row: Project) => {
+const deleteProject = async (row: ProjectRow) => {
     const confirmed = await confirm({
         title: 'Delete Project',
-        description: `Are you sure want to delete "${row.title}" project?`,
+        description: `Are you sure you want to delete "${row.title}"? This will also delete all of its tasks.`,
     });
 
-    if (confirmed) {
-        router.delete(route('project.destroy', row.id));
+    if (!confirmed) {
+        return;
+    }
+
+    router.delete(route('project.destroy', row.id), {
+        preserveScroll: true,
+        onError: () => toast.add({ title: 'Failed to delete project', color: 'error', icon: 'i-lucide-circle-alert' }),
+    });
+};
+
+const changeStatus = async (row: ProjectRow, newStatusId: string) => {
+    const newStatus = props.statuses.find((option) => option.id === newStatusId);
+    const needsDueDate = newStatus && STATUSES_REQUIRING_DUE_DATE.includes(newStatus.name) && !row.due_date_iso;
+
+    if (needsDueDate) {
+        const dueDate = await dueDateDialog.open({
+            taskTitle: row.title,
+            statusName: newStatus.name,
+        });
+
+        if (!dueDate) {
+            return;
+        }
+
+        updateProject(row.id, { status_id: newStatusId, due_date: dueDate });
+        return;
+    }
+
+    updateProject(row.id, { status_id: newStatusId });
+};
+
+const editingTitleId = ref<string | null>(null);
+const titleDraft = ref('');
+
+const startEditingTitle = (row: ProjectRow) => {
+    editingTitleId.value = row.id;
+    titleDraft.value = row.title;
+};
+
+const saveTitle = (row: ProjectRow) => {
+    editingTitleId.value = null;
+
+    if (titleDraft.value.trim() && titleDraft.value !== row.title) {
+        updateProject(row.id, { title: titleDraft.value.trim() });
     }
 };
+
+const pageSizes = [
+    { label: '10 / page', value: 10 },
+    { label: '25 / page', value: 25 },
+    { label: '50 / page', value: 50 },
+];
+
+const rangeStart = computed(() => (props.total === 0 ? 0 : (page.value - 1) * perPage.value + 1));
+const rangeEnd = computed(() => Math.min(page.value * perPage.value, props.total));
+
+// Header berupa teks doang (tanpa ikon panah) — kolom yang lagi aktif dibedakan
+// lewat warna teks (primary + tebal), sama pola kayak workload/Table.vue.
+const withSortHeader = (column: string, label: string): TableColumn<ProjectRow>['header'] => () => {
+    const isSorted = props.sort === column;
+
+    return h(UButton, {
+        label,
+        variant: 'ghost',
+        color: isSorted ? 'primary' : 'neutral',
+        size: 'sm',
+        class: ['-mx-2.5', isSorted ? 'font-semibold' : 'font-medium'],
+        onClick: () => emit('sort', column),
+    });
+};
+
+const columns: TableColumn<ProjectRow>[] = [
+    { id: 'no', header: 'No' },
+    { accessorKey: 'project_no', header: withSortHeader('project_no', 'Project No') },
+    { accessorKey: 'title', header: withSortHeader('title', 'Title') },
+    { accessorKey: 'status', header: withSortHeader('status_id', 'Status') },
+    { accessorKey: 'priority', header: withSortHeader('priority_id', 'Priority') },
+    { accessorKey: 'start_date', header: withSortHeader('start_date', 'Start') },
+    { accessorKey: 'due_date', header: withSortHeader('due_date', 'Due') },
+    { accessorKey: 'progress', header: withSortHeader('progress', 'Progress') },
+    {
+        id: 'actions',
+        header: 'Action',
+        meta: {
+            class: {
+                th: 'sticky right-0 bg-default border-s border-default',
+                td: 'sticky right-0 bg-default border-s border-default',
+            },
+        },
+    },
+];
 </script>
 
 <template>
-    <div class="space-y-3">
-        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Project" class="md:w-md" />
+    <div class="overflow-hidden rounded-md ring ring-default">
+        <UTable :data="rows" :columns="columns">
+            <template #no-cell="{ row }">
+                <span class="text-sm text-muted">{{ (page - 1) * perPage + row.index + 1 }}</span>
+            </template>
 
-        <UCard :ui="{ root: 'p-1', body: 'p-0 sm:p-1' }">
-            <div>
-                <UTable
-                    ref="table"
-                    v-model:global-filter="globalFilter"
-                    v-model:sorting="sorting"
-                    v-model:pagination="pagination"
-                    :data="filteredData"
-                    :columns="columns"
-                    :pagination-options="{ getPaginationRowModel: paginationRowModel }"
-                    class="flex-1"
-                >
-                    <template #status_id-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Status"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton
-                                    icon="i-lucide-list-filter"
-                                    :color="statusFilter.length ? 'primary' : 'neutral'"
-                                    variant="ghost"
-                                    size="xs"
-                                    square
-                                />
-                                <template #content>
-                                    <div class="flex w-56 flex-col gap-2 p-3">
-                                        <UCheckbox
-                                            v-for="option in statuses"
-                                            :key="option.id"
-                                            :model-value="statusFilter.includes(option.id)"
-                                            :label="option.name"
-                                            @update:model-value="statusFilter = toggleFilterValue(statusFilter, option.id)"
-                                        />
-                                        <UButton
-                                            v-if="statusFilter.length"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="statusFilter = []"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
+            <template #title-cell="{ row }">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <UPopover :content="{ side: 'right', align: 'start' }">
+                        <button type="button" class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-xl hover:bg-elevated">
+                            {{ row.original.emoji }}
+                        </button>
 
-                    <template #priority_id-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Priority"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton
-                                    icon="i-lucide-list-filter"
-                                    :color="priorityFilter.length ? 'primary' : 'neutral'"
-                                    variant="ghost"
-                                    size="xs"
-                                    square
-                                />
-                                <template #content>
-                                    <div class="flex w-56 flex-col gap-2 p-3">
-                                        <UCheckbox
-                                            v-for="option in priorities"
-                                            :key="option.id"
-                                            :model-value="priorityFilter.includes(option.id)"
-                                            :label="option.name"
-                                            @update:model-value="priorityFilter = toggleFilterValue(priorityFilter, option.id)"
-                                        />
-                                        <UButton
-                                            v-if="priorityFilter.length"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="priorityFilter = []"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
+                        <template #content>
+                            <EmojiPicker :model-value="row.original.emoji" @update:model-value="(value) => updateProject(row.original.id, { emoji: value })" />
+                        </template>
+                    </UPopover>
 
-                    <template #start_date-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Start"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton
-                                    icon="i-lucide-list-filter"
-                                    :color="startDateFilter ? 'primary' : 'neutral'"
-                                    variant="ghost"
-                                    size="xs"
-                                    square
-                                />
-                                <template #content>
-                                    <div class="flex flex-col gap-2 p-3">
-                                        <UInput v-model="startDateFilter" type="date" size="sm" />
-                                        <UButton
-                                            v-if="startDateFilter"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="startDateFilter = ''"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
-
-                    <template #due_date-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Due"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton
-                                    icon="i-lucide-list-filter"
-                                    :color="dueDateFilter ? 'primary' : 'neutral'"
-                                    variant="ghost"
-                                    size="xs"
-                                    square
-                                />
-                                <template #content>
-                                    <div class="flex flex-col gap-2 p-3">
-                                        <UInput v-model="dueDateFilter" type="date" size="sm" />
-                                        <UButton
-                                            v-if="dueDateFilter"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="dueDateFilter = ''"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
-
-                    <template #title-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Title"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton icon="i-lucide-list-filter" :color="titleFilter ? 'primary' : 'neutral'" variant="ghost" size="xs" square />
-                                <template #content>
-                                    <div class="flex flex-col gap-2 p-3">
-                                        <UInput v-model="titleFilter" icon="i-lucide-search" placeholder="Filter title" size="sm" />
-                                        <UButton
-                                            v-if="titleFilter"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="titleFilter = ''"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
-
-                    <template #progress-header="{ column }">
-                        <div class="flex items-center gap-0.5">
-                            <UButton
-                                label="Progress"
-                                :trailing-icon="sortIcon(column.getIsSorted())"
-                                variant="ghost"
-                                color="neutral"
-                                size="sm"
-                                class="-mx-2.5 font-medium"
-                                @click="column.toggleSorting(column.getIsSorted() === 'asc')"
-                            />
-                            <UPopover>
-                                <UButton
-                                    icon="i-lucide-list-filter"
-                                    :color="isProgressFilterActive ? 'primary' : 'neutral'"
-                                    variant="ghost"
-                                    size="xs"
-                                    square
-                                />
-                                <template #content>
-                                    <div class="flex w-56 flex-col gap-3 p-3">
-                                        <USlider v-model="progressFilter" :min="0" :max="100" />
-                                        <div class="flex items-center justify-between text-sm text-muted">
-                                            <span>{{ progressFilter[0] }}%</span>
-                                            <span>{{ progressFilter[1] }}%</span>
-                                        </div>
-                                        <UButton
-                                            v-if="isProgressFilterActive"
-                                            label="Clear"
-                                            size="xs"
-                                            variant="ghost"
-                                            color="neutral"
-                                            class="self-start"
-                                            @click="progressFilter = [0, 100]"
-                                        />
-                                    </div>
-                                </template>
-                            </UPopover>
-                        </div>
-                    </template>
-
-                    <template #title-cell="{ row }">
+                    <div class="flex min-w-0 flex-col">
                         <UInput
-                            :model-value="row.original.title"
-                            variant="none"
+                            v-if="editingTitleId === row.original.id"
+                            v-model="titleDraft"
                             size="sm"
-                            class="w-full"
-                            :disabled="!can('project.update')"
-                            @blur="(e: FocusEvent) => onTitleBlur(row.original, (e.target as HTMLInputElement).value)"
-                            @keyup.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
+                            autofocus
+                            @blur="saveTitle(row.original)"
+                            @keyup.enter="saveTitle(row.original)"
+                            @keyup.esc="editingTitleId = null"
+                        />
+                        <button
+                            v-else
+                            type="button"
+                            class="-mx-1.5 -my-0.5 truncate rounded-md px-1.5 py-0.5 text-start text-sm font-semibold text-highlighted cursor-text hover:bg-elevated"
+                            @click="startEditingTitle(row.original)"
                         >
+                            {{ row.original.title }}
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+
+            <template #status-cell="{ row }">
+                <USelectMenu
+                    :model-value="row.original.status.id"
+                    :items="statuses"
+                    label-key="name"
+                    value-key="id"
+                    class="w-auto"
+                    :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
+                    @update:model-value="(value) => changeStatus(row.original, value as string)"
+                >
+                    <template #default>
+                        <UBadge color="neutral" variant="subtle" size="sm">
                             <template #leading>
-                                <UPopover>
-                                    <button
-                                        type="button"
-                                        :disabled="!can('project.update')"
-                                        class="flex size-5 items-center justify-center rounded text-muted hover:text-highlighted disabled:cursor-not-allowed"
-                                    >
-                                        <Icon v-if="row.original.emoji" :name="row.original.emoji" class="size-4" />
-                                        <UIcon v-else name="i-lucide-smile-plus" class="size-4" />
-                                    </button>
-
-                                    <template #content>
-                                        <div class="flex w-64 flex-col gap-2 p-2">
-                                            <UInput v-model="iconSearch" icon="i-lucide-search" placeholder="Search icon..." size="sm" autofocus />
-                                            <div class="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto">
-                                                <button
-                                                    v-for="item in filteredIconItems"
-                                                    :key="item.value"
-                                                    type="button"
-                                                    :title="item.label"
-                                                    class="flex size-8 items-center justify-center rounded hover:bg-elevated"
-                                                    :class="row.original.emoji === item.value ? 'bg-elevated ring-1 ring-primary' : ''"
-                                                    @click="selectIcon(row.original, item.value)"
-                                                >
-                                                    <Icon :name="item.value" class="size-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </UPopover>
+                                <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(row.original.status.severity)" />
                             </template>
-                        </UInput>
+
+                            {{ row.original.status.name }}
+                        </UBadge>
                     </template>
 
-                    <template #status_id-cell="{ row }">
-                        <USelectMenu
-                            :model-value="row.original.status_id ?? undefined"
-                            :items="statuses"
-                            label-key="name"
-                            value-key="id"
-                            size="sm"
-                            class="w-32"
-                            :disabled="!can('project.update')"
-                            @update:model-value="(value: string) => submitUpdate(row.original, { status_id: value })"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
+                    <template #item-leading="{ item }">
+                        <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(item.severity)" />
                     </template>
+                </USelectMenu>
+            </template>
 
-                    <template #priority_id-cell="{ row }">
-                        <USelectMenu
-                            :model-value="row.original.priority_id ?? undefined"
-                            :items="priorities"
-                            label-key="name"
-                            value-key="id"
-                            size="sm"
-                            class="w-32"
-                            :disabled="!can('project.update')"
-                            @update:model-value="(value: string) => submitUpdate(row.original, { priority_id: value })"
-                        >
-                            <template #item-label="{ item }">
-                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                            </template>
-                        </USelectMenu>
-                    </template>
-
-                    <template #start_date-cell="{ row }">
-                        <ProjectDateCell
-                            :model-value="row.original.start_date"
-                            :disabled="!can('project.update')"
-                            @update="(value: string) => onDateChange(row.original, 'start_date', value)"
-                        />
-                    </template>
-
-                    <template #due_date-cell="{ row }">
-                        <ProjectDateCell
-                            :model-value="row.original.due_date"
-                            :min="row.original.start_date"
-                            :disabled="!can('project.update')"
-                            @update="(value: string) => onDateChange(row.original, 'due_date', value)"
-                        />
-                    </template>
-
-                    <template #progress-cell="{ row }">
-                        <div class="flex items-center gap-3">
-                            <UProgress :model-value="row.original.progress" size="sm" class="w-24 shrink-0" />
-                            <span class="w-14 shrink-0 text-muted tabular-nums">{{ row.original.progress }}%</span>
+            <template #priority-cell="{ row }">
+                <USelectMenu
+                    :model-value="row.original.priority.id"
+                    :items="priorities"
+                    label-key="name"
+                    value-key="id"
+                    class="w-auto"
+                    :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
+                    @update:model-value="(value) => updateProject(row.original.id, { priority_id: value as string })"
+                >
+                    <template #default>
+                        <div class="flex items-center gap-1.5" :class="`text-${severityColor(row.original.priority.severity)}`">
+                            <UIcon :name="priorityIcon(row.original.priority.name)" class="size-4" />
+                            <span class="text-sm font-medium">{{ row.original.priority.name }}</span>
                         </div>
                     </template>
 
-                    <template #actions-cell="{ row }">
-                        <div class="flex justify-center gap-2">
-                            <UButton
-                                v-if="can('project.read')"
-                                icon="i-lucide-eye"
-                                color="neutral"
-                                variant="subtle"
-                                aria-label="View Details"
-                                @click="viewProject(row.original)"
-                            />
-                            <UButton
-                                v-if="can('project.delete')"
-                                icon="i-lucide-trash"
-                                color="error"
-                                variant="subtle"
-                                aria-label="Delete"
-                                @click="handleDelete(row.original)"
-                            />
-                        </div>
+                    <template #item-leading="{ item }">
+                        <UIcon :name="priorityIcon(item.name)" class="size-4" :class="`text-${severityColor(item.severity)}`" />
                     </template>
 
-                    <template #empty>
-                        <p class="text-center text-sm text-muted">No projects found.</p>
+                    <template #item-label="{ item }">
+                        <span :class="`text-${severityColor(item.severity)}`">{{ item.name }}</span>
                     </template>
-                </UTable>
+                </USelectMenu>
+            </template>
+
+            <template #start_date-cell="{ row }">
+                <UPopover>
+                    <button type="button" class="cursor-pointer rounded-md px-1.5 py-0.5 text-sm hover:bg-elevated">
+                        {{ row.original.start_date }}
+                    </button>
+
+                    <template #content>
+                        <UCalendar
+                            :model-value="row.original.start_date_iso ? parseDate(row.original.start_date_iso) : undefined"
+                            class="p-2"
+                            @update:model-value="(value) => value && updateProject(row.original.id, { start_date: value.toString() })"
+                        />
+                    </template>
+                </UPopover>
+            </template>
+
+            <template #due_date-cell="{ row }">
+                <UPopover>
+                    <button type="button" class="cursor-pointer rounded-md px-1.5 py-0.5 text-start text-sm hover:bg-elevated">
+                        {{ row.original.due_date }}
+                    </button>
+
+                    <template #content>
+                        <UCalendar
+                            :model-value="row.original.due_date_iso ? parseDate(row.original.due_date_iso) : undefined"
+                            class="p-2"
+                            @update:model-value="(value) => value && updateProject(row.original.id, { due_date: value.toString() })"
+                        />
+                    </template>
+                </UPopover>
+            </template>
+
+            <template #progress-cell="{ row }">
+                <div class="flex min-w-32 items-center gap-2.5">
+                    <div class="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-accented">
+                        <div class="h-1.5 rounded-full bg-primary" :style="{ width: `${row.original.progress}%` }" />
+                    </div>
+                    <span class="w-12 shrink-0 text-end text-xs font-medium tabular-nums">{{ row.original.progress }}%</span>
+                </div>
+            </template>
+
+            <template #actions-cell="{ row }">
+                <div class="flex items-center gap-2">
+                    <UButton
+                        icon="i-lucide-eye"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                        :to="route('project.show', row.original.id)"
+                        aria-label="View detail"
+                    />
+
+                    <UButton icon="i-lucide-trash-2" color="error" variant="solid" size="sm" aria-label="Delete" @click="deleteProject(row.original)" />
+                </div>
+            </template>
+        </UTable>
+
+        <div class="flex items-center justify-between gap-3 border-t border-default px-4 py-2.5">
+            <p class="text-sm text-muted">Showing {{ rangeStart }}-{{ rangeEnd }} of {{ total }} projects</p>
+
+            <div class="flex items-center gap-3">
+                <USelect v-model="perPage" :items="pageSizes" label-key="label" value-key="value" color="neutral" variant="outline" class="w-28" />
+                <UPagination v-model:page="page" :items-per-page="perPage" :total="total" size="sm" />
             </div>
-        </UCard>
-
-        <div class="flex items-center justify-center gap-3">
-            <USelect v-model="pageSize" :items="pageSizes" class="w-20" />
-            <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" />
         </div>
     </div>
 </template>

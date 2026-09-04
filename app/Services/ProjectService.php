@@ -90,15 +90,32 @@ class ProjectService
         return $this->projectRepository->findById($id);
     }
 
-    public function getIndexData(): array
+    public function getIndexData(\App\Data\Project\ProjectFiltersData $filters): array
     {
         $user = Auth::user();
 
+        $query = $this->projectRepository->getVisibleForUserQuery($user);
+        $this->projectRepository->applyFilters($query, $filters);
+
+        // Dihitung dari query yang sama (sudah kena filter) tapi sebelum paginate,
+        // supaya angka di chip status tetap akurat lintas halaman.
+        $statusCounts = (clone $query)
+            ->without(['status', 'priority', 'owner'])
+            ->selectRaw('status_id, count(*) as aggregate')
+            ->groupBy('status_id')
+            ->pluck('aggregate', 'status_id')
+            ->mapWithKeys(fn ($count, $statusId) => [Sqids::encode((int) $statusId) => (int) $count])
+            ->toArray();
+
+        $this->projectRepository->applySort($query, $filters->sort, $filters->direction);
+
+        $projects = $query->paginate($filters->per_page, ['*'], 'page', $filters->page)
+            ->withQueryString()
+            ->through(fn ($project) => Sqids::rec_encode_ids_in_list(ProjectData::fromModel($project)->toArray()));
+
         return [
-            'projects' => ProjectData::collect(
-                $this->projectRepository->getAllVisibleForUser($user),
-                DataCollection::class
-            )->toArray(),
+            'projects' => $projects,
+            'statusCounts' => $statusCounts,
 
             'statuses' => ProjectStatusData::collect(
                 $this->projectRepository->getProjectStatuses(),
@@ -109,6 +126,8 @@ class ProjectService
                 $this->projectRepository->getProjectPriorities(),
                 DataCollection::class
             )->toArray(),
+
+            'filters' => $filters,
         ];
     }
 

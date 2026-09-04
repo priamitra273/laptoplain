@@ -19,7 +19,7 @@ class ProjectUpdateRequest extends FormRequest
         return [
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'emoji' => 'sometimes|nullable|string|max:100',
+            'emoji' => 'sometimes|string|max:10',
             'start_date' => 'sometimes|date',
             'due_date' => 'sometimes|date|after_or_equal:start_date',
             'status_id' => 'sometimes|exists:ms_project_statuses,id',
@@ -31,12 +31,10 @@ class ProjectUpdateRequest extends FormRequest
     {
         $validator->after(function ($validator) {
 
-            // kalau due_date dikirim, biarin rule biasa jalan
             if ($this->has('due_date')) {
                 return;
             }
 
-            // Ambil project id dari route (resource route mengirim encoded id)
             $projectRouteParam = $this->route('project');
             $projectId = is_string($projectRouteParam) ? Sqids::decode($projectRouteParam) : $projectRouteParam;
 
@@ -44,11 +42,15 @@ class ProjectUpdateRequest extends FormRequest
                 return;
             }
 
-            // ambil status dari request atau dari DB
-            $statusId = $this->status_id
-                ?? DB::table('projects')->where('id', $projectId)->value('status_id');
+            $project = DB::table('projects')->where('id', $projectId)->first();
 
-            if (in_array((int) $statusId, [1, 2])) {
+            if (! $project) {
+                return;
+            }
+
+            $statusId = $this->status_id ?? $project->status_id;
+
+            if (in_array((int) $statusId, [1, 2]) && ! $project->due_date) {
                 $validator->errors()->add(
                     'due_date',
                     'Due date is required when status is set to "Status"'

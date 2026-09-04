@@ -35,6 +35,12 @@ class ProjectRepository
     private const SHELL_CACHE_TAG = 'project-shell';
 
     /**
+     * Kolom yang boleh dipakai buat sort — nama kolom nggak bisa di-bind lewat
+     * parameter, jadi whitelist di sini yang jaga dari SQL injection.
+     */
+    private const SORTABLE_COLUMNS = ['id', 'project_no', 'title', 'status_id', 'priority_id', 'start_date', 'due_date', 'progress'];
+
+    /**
      * Find a project by its integer ID.
      */
     public function findById(int $id): Project
@@ -71,15 +77,64 @@ class ProjectRepository
     /**
      * Get all projects visible to the given user, with status and priority.
      */
-    public function getAllVisibleForUser(User $user): Collection
+    public function getVisibleForUserQuery(User $user): \Illuminate\Database\Eloquent\Builder
     {
         return Project::with([
             'status:id,name,severity',
             'priority:id,name,severity',
+            'owner:id,name,email',
+            'owner.media',
         ])
-            ->visibleFor($user)
-            ->orderByDesc('id')
-            ->get();
+            ->visibleFor($user);
+    }
+
+        public function applySort(\Illuminate\Database\Eloquent\Builder $query, string $column, string $direction): void
+    {
+        if (! in_array($column, self::SORTABLE_COLUMNS, true)) {
+            $column = 'id';
+        }
+
+        $query->orderBy($column, $direction === 'asc' ? 'asc' : 'desc');
+    }
+
+    public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, \App\Data\Project\ProjectFiltersData $filters): void
+    {
+        if (! empty($filters->search)) {
+            $term = "%{$filters->search}%";
+
+            $query->where(function ($q) use ($term) {
+                $q->where('title', 'ILIKE', $term)
+                    ->orWhere('project_no', 'ILIKE', $term)
+                    ->orWhereHas('owner', fn ($ownerQuery) => $ownerQuery->where('name', 'ILIKE', $term));
+            });
+        }
+
+        if (! empty($filters->status_id)) {
+            $query->where('status_id', Sqids::decode($filters->status_id));
+        }
+
+        if (! empty($filters->priority_ids)) {
+            $priorityIds = collect($filters->priority_ids)
+                ->map(fn ($encoded) => Sqids::decode($encoded))
+                ->filter()
+                ->toArray();
+
+            if (! empty($priorityIds)) {
+                $query->whereIn('priority_id', $priorityIds);
+            }
+        }
+
+        if (! empty($filters->start_date)) {
+            $query->whereDate('start_date', '>=', $filters->start_date);
+        }
+
+        if (! empty($filters->due_date)) {
+            $query->whereDate('due_date', '<=', $filters->due_date);
+        }
+
+        if ($filters->progress_min > 0 || $filters->progress_max < 100) {
+            $query->whereBetween('progress', [$filters->progress_min, $filters->progress_max]);
+        }
     }
 
     /**
@@ -365,7 +420,6 @@ class ProjectRepository
                 'type:id,name,severity',
                 'users:id,name,email',
                 'users.media',
-                'tags:id,name,severity',
                 'subTaskRecursive',
             ])
             ->orderBy('sequence_number')
@@ -398,7 +452,6 @@ class ProjectRepository
             'status:id,name,severity,score',
             'type:id,name,severity',
             'category:id,name,icon,severity',
-            'priority:id,name,severity',
             'users:id,name,email',
             'users.media',
         ]);

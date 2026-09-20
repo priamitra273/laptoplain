@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import DatePicker from '@/components/DatePicker.vue';
 import EmojiPicker from '@/components/EmojiPicker.vue';
-import { severityColor, severityDotClass } from '@/lib/utils';
+import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
+import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
 import type { PrimeSeverity } from '@/types';
 import { useForm } from '@inertiajs/vue3';
-import { DateFormatter, getLocalTimeZone, parseDate } from '@internationalized/date';
+import { formatDate } from '@/lib/date';
+import { parseDate } from '@internationalized/date';
 import { useToast } from '@nuxt/ui/composables';
 import { computed } from 'vue';
 
@@ -18,16 +21,6 @@ interface PriorityOption {
     name: string;
     severity: PrimeSeverity | null;
 }
-
-const PRIORITY_ICONS: Record<string, string> = {
-    Low: 'i-lucide-signal-low',
-    Medium: 'i-lucide-signal-medium',
-    High: 'i-lucide-signal-high',
-    Critical: 'i-lucide-signal',
-};
-
-const priorityIcon = (name: string): string => PRIORITY_ICONS[name] ?? 'i-lucide-signal-low';
-
 
 defineProps<{
     statuses: StatusOption[];
@@ -59,8 +52,6 @@ const http = useForm<ProjectFormData>({
     priority_id: undefined,
 });
 
-const df = new DateFormatter('en-US', { dateStyle: 'medium' });
-
 const startCalendarDate = computed({
     get: () => (http.start_date ? parseDate(http.start_date) : undefined),
     set: (value) => (http.start_date = value ? value.toString() : ''),
@@ -83,8 +74,7 @@ const submit = () => {
     <USlideover title="Create New Project" :close="{ onClick: () => emits('close', false) }">
         <template #body>
             <div class="flex flex-col gap-4">
-                <div class="flex flex-col gap-2">
-                    <Label value="Project Title" required />
+                <UFormField name="title" label="Project Title" required :error="http.errors.title || http.errors.emoji">
                     <UInput v-model="http.title" placeholder="Enter Project Title" size="lg" class="w-full">
                         <template #leading>
                             <UPopover>
@@ -98,121 +88,41 @@ const submit = () => {
                             </UPopover>
                         </template>
                     </UInput>
-                    <InputError v-if="http.errors.title" :message="http.errors.title" />
-                    <InputError v-if="http.errors.emoji" :message="http.errors.emoji" />
+                </UFormField>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <UFormField name="start_date" label="Start Date" required :error="http.errors.start_date">
+                        <DatePicker
+                            v-model="startCalendarDate"
+                            :label="startCalendarDate ? formatDate(startCalendarDate.toString()) : 'Select date'"
+                            trigger-aria-label="Select start date"
+                            trigger-class="w-full justify-center"
+                        />
+                    </UFormField>
+
+                    <UFormField name="due_date" label="Due Date" :error="http.errors.due_date">
+                        <DatePicker
+                            v-model="dueCalendarDate"
+                            :label="dueCalendarDate ? formatDate(dueCalendarDate.toString()) : 'Select date'"
+                            trigger-aria-label="Select due date"
+                            trigger-class="w-full justify-center"
+                        />
+                    </UFormField>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Start Date" required />
-                        <UPopover>
-                            <UButton
-                                :label="startCalendarDate ? df.format(startCalendarDate.toDate(getLocalTimeZone())) : 'Select date'"
-                                icon="i-lucide-calendar"
-                                color="neutral"
-                                variant="outline"
-                                block
-                            />
+                    <UFormField name="status_id" label="Status" required :error="http.errors.status_id">
+                        <SeverityBadgeSelect v-model="http.status_id" :items="statuses" placeholder="Select Status" class="w-full" />
+                    </UFormField>
 
-                            <template #content>
-                                <UCalendar v-model="startCalendarDate" class="p-2" />
-                            </template>
-                        </UPopover>
-                        <InputError v-if="http.errors.start_date" :message="http.errors.start_date" />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label value="Due Date" />
-                        <UPopover>
-                            <UButton
-                                :label="dueCalendarDate ? df.format(dueCalendarDate.toDate(getLocalTimeZone())) : 'Select date'"
-                                icon="i-lucide-calendar"
-                                color="neutral"
-                                variant="outline"
-                                block
-                            />
-
-                            <template #content>
-                                <UCalendar v-model="dueCalendarDate" class="p-2" />
-                            </template>
-                        </UPopover>
-                        <InputError v-if="http.errors.due_date" :message="http.errors.due_date" />
-                    </div>
+                    <UFormField name="priority_id" label="Priority" required :error="http.errors.priority_id">
+                        <PriorityBadgeSelect v-model="http.priority_id" :items="priorities" placeholder="Select Priority" class="w-full" />
+                    </UFormField>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Status" required />
-                        <USelectMenu
-                            v-model="http.status_id"
-                            :items="statuses"
-                            label-key="name"
-                            value-key="id"
-                            placeholder="Select Status"
-                            class="w-full"
-                        >
-                            <template #default="{ modelValue }">
-                                <span v-if="!modelValue" class="text-dimmed">Select Status</span>
-                                <UBadge v-else color="neutral" variant="subtle" size="sm">
-                                    <template #leading>
-                                        <span
-                                            class="size-1.5 shrink-0 rounded-full"
-                                            :class="severityDotClass(statuses.find((s) => s.id === modelValue)?.severity ?? null)"
-                                        />
-                                    </template>
-
-                                    {{ statuses.find((s) => s.id === modelValue)?.name }}
-                                </UBadge>
-                            </template>
-
-                            <template #item-label="{ item }">
-                                <UBadge color="neutral" variant="subtle" size="sm">
-                                    <template #leading>
-                                        <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(item.severity)" />
-                                    </template>
-
-                                    {{ item.name }}
-                                </UBadge>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.status_id" :message="http.errors.status_id" />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label value="Priority" required />
-                        <USelectMenu
-                            v-model="http.priority_id"
-                            :items="priorities"
-                            label-key="name"
-                            value-key="id"
-                            placeholder="Select Priority"
-                            class="w-full"
-                        >
-                            <template #default="{ modelValue }">
-                                <span v-if="!modelValue" class="text-dimmed">Select Priority</span>
-                                <div v-else class="flex items-center gap-1.5" :class="`text-${severityColor(priorities.find((p) => p.id === modelValue)?.severity ?? null)}`">
-                                    <UIcon :name="priorityIcon(priorities.find((p) => p.id === modelValue)?.name ?? '')" class="size-4" />
-                                    {{ priorities.find((p) => p.id === modelValue)?.name }}
-                                </div>
-                            </template>
-
-                            <template #item-leading="{ item }">
-                                <UIcon :name="priorityIcon(item.name)" class="size-4" :class="`text-${severityColor(item.severity)}`" />
-                            </template>
-
-                            <template #item-label="{ item }">
-                                <span :class="`text-${severityColor(item.severity)}`">{{ item.name }}</span>
-                            </template>
-                        </USelectMenu>
-                        <InputError v-if="http.errors.priority_id" :message="http.errors.priority_id" />
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <Label value="Description" required />
+                <UFormField name="description" label="Description" required :error="http.errors.description">
                     <RichTextEditor v-model="http.description" placeholder="What is this project about?" />
-                    <InputError v-if="http.errors.description" :message="http.errors.description" />
-                </div>
+                </UFormField>
             </div>
         </template>
 

@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Data\Project\Lazy\TaskCardData;
 use App\Data\Project\Lazy\TaskListItemData;
+use App\Data\Project\ProjectFiltersData;
 use App\Data\Task\ProjectTaskData;
 use App\Facades\Sqids;
 use App\Models\MsProjectPriority;
@@ -19,6 +20,7 @@ use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TaskCategory;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
@@ -77,7 +79,7 @@ class ProjectRepository
     /**
      * Get all projects visible to the given user, with status and priority.
      */
-    public function getVisibleForUserQuery(User $user): \Illuminate\Database\Eloquent\Builder
+    public function getVisibleForUserQuery(User $user): Builder
     {
         return Project::with([
             'status:id,name,severity',
@@ -88,7 +90,7 @@ class ProjectRepository
             ->visibleFor($user);
     }
 
-        public function applySort(\Illuminate\Database\Eloquent\Builder $query, string $column, string $direction): void
+    public function applySort(Builder $query, string $column, string $direction): void
     {
         if (! in_array($column, self::SORTABLE_COLUMNS, true)) {
             $column = 'id';
@@ -97,7 +99,7 @@ class ProjectRepository
         $query->orderBy($column, $direction === 'asc' ? 'asc' : 'desc');
     }
 
-    public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, \App\Data\Project\ProjectFiltersData $filters): void
+    public function applyFilters(Builder $query, ProjectFiltersData $filters): void
     {
         if (! empty($filters->search)) {
             $term = "%{$filters->search}%";
@@ -290,6 +292,7 @@ class ProjectRepository
                 $q->whereNull('parent_id')
                     ->orWhereHas('parent.category', fn ($q) => $q->where('name', 'Epic'));
             })
+            ->whereDoesntHave('category', fn ($q) => $q->where('name', 'Epic'))
             ->doesntHave('sprints')
             ->orderBy('id')
             ->get();
@@ -409,11 +412,18 @@ class ProjectRepository
 
         $tasks = Task::query()
             ->where('project_id', $projectId)
-            ->whereHas('sprints', fn ($q) => $q->where('sprint_status_id', $activeStatusId))
-            ->where(function ($q) {
-                $q->whereNull('parent_id')
-                    ->orWhereHas('parent.category', fn ($q) => $q->where('name', 'Epic'));
+            ->whereHas(
+                'sprints',
+                fn ($query) => $query->where('sprint_status_id', $activeStatusId)
+            )
+            ->where(function ($query) {
+                $query->whereNull('parent_id')
+                    ->orWhereHas(
+                        'parent.category',
+                        fn ($category) => $category->where('name', 'Epic')
+                    );
             })
+            ->withCount('comments')
             ->with([
                 'status:id,name,severity,score',
                 'priority:id,name,severity',

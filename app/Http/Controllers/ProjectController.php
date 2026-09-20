@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Project\ProjectFiltersData;
 use App\Enums\TaskNotificationType;
 use App\Facades\Sqids;
 use App\Facades\TaskNotification;
@@ -9,6 +10,8 @@ use App\Http\Requests\Project\ProjectStoreRequest;
 use App\Http\Requests\Project\ProjectUpdateRequest;
 use App\Models\Project;
 use App\Services\ProjectService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,20 +22,17 @@ class ProjectController extends Controller
     /**
      * Show the resources
      */
-    public function index(\Illuminate\Http\Request $request): Response
+    public function index(Request $request): Response
     {
-        $filters = \App\Data\Project\ProjectFiltersData::fromRequest($request);
+        $filters = ProjectFiltersData::fromRequest($request);
         $response = $this->projectService->getIndexData($filters);
 
         return Inertia::render('favorites/project/Index', Sqids::rec_encode_ids_in_list($response));
     }
 
-
-    public function show(string $encoded): Response
+    public function show(string $encoded): RedirectResponse
     {
-        $data = $this->projectService->getShowData($encoded);
-
-        return Inertia::render('favorites/project/Detail', Sqids::rec_encode_ids_in_list($data));
+        return to_route('project.show.kanban', ['encoded' => $encoded]);
     }
 
     public function store(ProjectStoreRequest $request)
@@ -57,7 +57,7 @@ class ProjectController extends Controller
         $isFromDetail = $referer && str_contains($referer, '/project/'.$encoded);
 
         if ($isFromDetail) {
-            return to_route('project.show', ['encoded' => $encoded]);
+            return back();
         }
 
         return to_route('project.index');

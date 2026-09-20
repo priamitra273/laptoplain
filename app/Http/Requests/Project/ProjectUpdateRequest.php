@@ -4,6 +4,7 @@ namespace App\Http\Requests\Project;
 
 use App\Facades\Sqids;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -30,21 +31,15 @@ class ProjectUpdateRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-
-            if ($this->has('due_date')) {
-                return;
-            }
-
-            $projectRouteParam = $this->route('project');
-            $projectId = is_string($projectRouteParam) ? Sqids::decode($projectRouteParam) : $projectRouteParam;
-
-            if (! $projectId) {
-                return;
-            }
-
-            $project = DB::table('projects')->where('id', $projectId)->first();
+            $project = $this->currentProject();
 
             if (! $project) {
+                return;
+            }
+
+            $this->validateDateOrder($validator, $project);
+
+            if ($this->has('due_date')) {
                 return;
             }
 
@@ -57,6 +52,41 @@ class ProjectUpdateRequest extends FormRequest
                 );
             }
         });
+    }
+
+    private function validateDateOrder($validator, object $project): void
+    {
+        if ($this->has('start_date') && $this->has('due_date')) {
+            return;
+        }
+
+        if ($validator->errors()->hasAny(['start_date', 'due_date'])) {
+            return;
+        }
+
+        $startDate = $this->date('start_date') ?: ($project->start_date ? Carbon::parse($project->start_date) : null);
+        $dueDate = $this->date('due_date') ?: ($project->due_date ? Carbon::parse($project->due_date) : null);
+
+        if (! $startDate || ! $dueDate || $dueDate->startOfDay() >= $startDate->startOfDay()) {
+            return;
+        }
+
+        $validator->errors()->add(
+            $this->has('start_date') ? 'start_date' : 'due_date',
+            'Due date must be on or after the start date.'
+        );
+    }
+
+    private function currentProject(): ?object
+    {
+        $projectRouteParam = $this->route('project');
+        $projectId = is_string($projectRouteParam) ? Sqids::decode($projectRouteParam) : $projectRouteParam;
+
+        if (! $projectId) {
+            return null;
+        }
+
+        return DB::table('projects')->where('id', $projectId)->first();
     }
 
     protected function prepareForValidation()

@@ -5,10 +5,10 @@ import ProjectToolbar from './Toolbar.vue';
 import ProjectTable from './Table.vue';
 import ProjectFormDrawer from './ProjectFormDrawer.vue';
 import type { PrimeSeverity } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { useOverlay } from '@nuxt/ui/composables';
-import { computed, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 
 interface ProjectStatus {
     id: string;
@@ -72,7 +72,7 @@ const openCreateProject = async () => {
     const saved = await projectForm.open({ statuses: props.statuses, priorities: props.priorities });
 
     if (saved) {
-        router.reload({ only: ['projects', 'statusCounts'] });
+        navigate();
     }
 };
 
@@ -83,8 +83,20 @@ const startDate = ref<string | null>(props.filters.start_date ?? null);
 const dueDate = ref<string | null>(props.filters.due_date ?? null);
 const progressRange = ref<[number, number]>([props.filters.progress_min ?? 0, props.filters.progress_max ?? 100]);
 
+const clearFilters = () => {
+    search.value = '';
+    statusFilter.value = null;
+    priorityIds.value = [];
+    startDate.value = null;
+    dueDate.value = null;
+    progressRange.value = [0, 100];
+};
+
 const sort = ref(props.filters.sort ?? 'id');
 const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc');
+
+/** Data lama tetap tampil selama request berjalan (preserveState); ini cuma penanda kecil untuk itu. */
+const navigating = ref(false);
 
 const navigate = (overrides: { page?: number; per_page?: number } = {}) => {
     router.get(
@@ -102,11 +114,31 @@ const navigate = (overrides: { page?: number; per_page?: number } = {}) => {
             page: overrides.page ?? props.projects.current_page,
             per_page: overrides.per_page ?? props.projects.per_page,
         },
-        { preserveState: true, preserveScroll: true, replace: true },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            preserveUrl: true,
+            replace: true,
+            onStart: () => {
+                navigating.value = true;
+            },
+            onFinish: () => {
+                navigating.value = false;
+            },
+        },
     );
+
+    // Berbarengan dengan visit di atas, bukan menunggunya selesai — lihat docblock `refreshCounts`.
+    refreshCounts();
 };
 
-watchDebounced([search, statusFilter, priorityIds, startDate, dueDate, progressRange], () => navigate({ page: 1 }), { deep: true, debounce: 400 });
+/**
+ * Klik status harus langsung memuat, bukan ikut menunggu 400ms seperti mengetik pencarian —
+ * makanya dipisah dari watcher debounced di bawah, bukan digabung dalam satu array.
+ */
+watch(statusFilter, () => navigate({ page: 1 }));
+
+watchDebounced([search, priorityIds, startDate, dueDate, progressRange], () => navigate({ page: 1 }), { deep: true, debounce: 400 });
 
 const applySort = (column: string) => {
     if (sort.value === column) {
@@ -129,15 +161,95 @@ const perPage = computed({
     set: (value: number) => navigate({ page: 1, per_page: value }),
 });
 
-const VISIBLE_STATUS_NAMES = ['In Progress', 'Not Started', 'Completed'];
+const inertiaPage = usePage();
+
+/** Terisi langsung dari props kalau tidak ada filter status — tidak perlu menunggu fetch apa pun. */
+const badgeCounts = ref<Record<string, number> | null>(statusFilter.value ? null : props.statusCounts);
+const badgeTotal = computed(() => (badgeCounts.value ? Object.values(badgeCounts.value).reduce((sum, count) => sum + count, 0) : null));
+const countsFailed = ref(false);
+let countsController: AbortController | null = null;
+let countsGeneration = 0;
+
+/**
+ * Dibaca dari ref reaktif yang sedang dikirim `navigate()`, bukan `props.filters` (hasil
+ * visit sebelumnya) — supaya panggilan ini bisa jalan berbarengan dengan visit utama, bukan
+ * menunggunya selesai dulu. Menunggu tidak perlu: nilainya sudah diketahui saat ini juga, dan
+ * itu persis nilai yang baru saja dikirim `navigate()`.
+ */
+const refreshCounts = async () => {
+    const generation = ++countsGeneration;
+    countsController?.abort();
+    countsFailed.value = false;
+    if (!statusFilter.value) {
+        badgeCounts.value = props.statusCounts;
+        return;
+    }
+    const controller = new AbortController();
+    countsController = controller;
+    const query = new URLSearchParams();
+    if (search.value) query.set('search', search.value);
+    if (startDate.value) query.set('start_date', startDate.value);
+    if (dueDate.value) query.set('due_date', dueDate.value);
+    if (progressRange.value[0] !== 0) query.set('progress_min', String(progressRange.value[0]));
+    if (progressRange.value[1] !== 100) query.set('progress_max', String(progressRange.value[1]));
+    priorityIds.value.forEach((id) => query.append('priority_ids[]', id));
+    try {
+        const response = await fetch(route('project.index') + '?' + query.toString(), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-Inertia': 'true',
+                'X-Inertia-Version': inertiaPage.version ?? '',
+                'X-Inertia-Partial-Component': inertiaPage.component,
+                'X-Inertia-Partial-Data': 'statusCounts',
+            },
+            signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('Could not load project counts');
+        const body = await response.json();
+        const counts = body.props?.statusCounts;
+        if (
+            body.component !== inertiaPage.component ||
+            !counts ||
+            typeof counts !== 'object' ||
+            (Array.isArray(counts) && counts.length > 0) ||
+            !Object.values(counts).every((value) => typeof value === 'number' && Number.isFinite(value) && value >= 0)
+        ) {
+            throw new Error('Invalid project counts');
+        }
+        if (generation === countsGeneration) badgeCounts.value = Array.isArray(counts) ? {} : counts;
+    } catch {
+        if (generation === countsGeneration && !controller.signal.aborted) {
+            badgeCounts.value = null;
+            countsFailed.value = true;
+        }
+    }
+};
+/** Menyinkronkan hitungan tanpa filter setiap kali visit utama membawa nilai baru dari server. */
+watch(
+    () => props.statusCounts,
+    (counts) => {
+        if (!statusFilter.value) {
+            badgeCounts.value = counts;
+        }
+    },
+);
+
+/** Filter status aktif sejak muat awal (misalnya dari URL) belum tercakup default di atas. */
+if (statusFilter.value) {
+    refreshCounts();
+}
+
+onScopeDispose(() => {
+    countsGeneration++;
+    countsController?.abort();
+});
 
 const statusOptions = computed(() =>
-    VISIBLE_STATUS_NAMES.map((name) => props.statuses.find((option) => option.name === name))
-        .filter((option): option is ProjectStatus => option !== undefined)
-        .map((option) => ({
-            ...option,
-            count: props.statusCounts[option.id] ?? 0,
-        })),
+    props.statuses.map((option) => ({
+        ...option,
+        count: badgeCounts.value ? (badgeCounts.value[option.id] ?? 0) : null,
+    })),
 );
 </script>
 
@@ -146,9 +258,7 @@ const statusOptions = computed(() =>
         <Head title="Projects" />
 
         <div class="flex flex-col gap-5">
-            <Heading title="Project" description="Manage and track all your projects">
-                <UButton label="Add Project" icon="i-lucide-plus" @click="openCreateProject" />
-            </Heading>
+            <Heading title="Project" description="Manage and track all your projects" />
 
             <ProjectToolbar
                 v-model:search="search"
@@ -159,8 +269,16 @@ const statusOptions = computed(() =>
                 v-model:progress-range="progressRange"
                 :statuses="statusOptions"
                 :priorities="priorities"
-                :total="projects.total"
+                :total="badgeTotal"
+                :loading="navigating"
+                @clear="clearFilters"
+                @create="openCreateProject"
             />
+
+            <div v-if="countsFailed" class="flex items-center gap-2 text-xs text-muted" role="status">
+                Could not load status counts.
+                <UButton label="Retry" variant="link" size="xs" @click="refreshCounts" />
+            </div>
 
             <ProjectTable
                 :projects="projects.data"
@@ -170,7 +288,7 @@ const statusOptions = computed(() =>
                 v-model:per-page="perPage"
                 :total="projects.total"
                 :sort="sort"
-                :direction="direction"
+                :loading="navigating"
                 @sort="applySort"
             />
         </div>

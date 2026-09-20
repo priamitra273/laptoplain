@@ -1,30 +1,28 @@
 <script setup lang="ts">
+import DatePicker from '@/components/DatePicker.vue';
 import EmojiPicker from '@/components/EmojiPicker.vue';
+import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
+import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
+import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
 import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
+import ServerDataTable from '@/components/ui/ServerDataTable.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
-import { severityColor, severityDotClass } from '@/lib/utils';
+import InlineTextEdit from '@/components/InlineTextEdit.vue';
+import { daysUntil, dueDateTone, formatDate, formatRelativeDay, type DueDateTone } from '@/lib/date';
 import type { PrimeSeverity } from '@/types';
 import type { TableColumn } from '@nuxt/ui';
-import { parseDate } from '@internationalized/date';
+import { parseDate, type CalendarDate } from '@internationalized/date';
 import { router } from '@inertiajs/vue3';
 import UButton from '@nuxt/ui/components/Button.vue';
 import { useOverlay, useToast } from '@nuxt/ui/composables';
-import { computed, h, ref } from 'vue';
-
+import { computed } from 'vue';
 
 const toast = useToast();
 const overlay = useOverlay();
 const dueDateDialog = overlay.create(TaskDueDateDialog);
 const confirm = useConfirmDialog();
 
-
 const STATUSES_REQUIRING_DUE_DATE = ['Not Started', 'In Progress'];
-const PRIORITY_ICONS: Record<string, string> = {
-    Low: 'i-lucide-signal-low',
-    Medium: 'i-lucide-signal-medium',
-    High: 'i-lucide-signal-high',
-    Critical: 'i-lucide-signal',
-};
 
 interface Project {
     id: string;
@@ -57,7 +55,7 @@ const props = defineProps<{
     priorities: PriorityOption[];
     total: number;
     sort: string;
-    direction: 'asc' | 'desc';
+    loading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -67,32 +65,24 @@ const emit = defineEmits<{
 const page = defineModel<number>('page', { required: true });
 const perPage = defineModel<number>('perPage', { required: true });
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+/**
+ * `dueDateTone` di lib sengaja tidak tahu status, jadi penyaringannya di sini: project yang sudah
+ * Completed tidak punya urgensi — due date-nya tinggal catatan, bukan tenggat. Flag overdue-nya
+ * dihitung sendiri karena project belum punya field seperti `is_overdue` di task.
+ */
+const INACTIVE_STATUSES = ['Completed', 'Cancelled'];
 
-const formatDate = (iso: string | null): string => (iso ? dateFormatter.format(new Date(iso)) : '—');
-
-const dueNote = (project: Project): { text: string; class: string } | null => {
+const projectDueTone = (project: Project): DueDateTone => {
     if (!project.due_date) {
-        return null;
+        return 'none';
     }
 
-    if (project.status?.name === 'Completed') {
-        return { text: 'delivered', class: 'text-muted' };
+    /** Project yang sudah tidak berjalan tidak punya urgensi, jadi catatannya tidak perlu tampil. */
+    if (INACTIVE_STATUSES.includes(project.status?.name ?? '')) {
+        return 'none';
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffDays = Math.round((new Date(project.due_date).getTime() - today.getTime()) / 86400000);
-
-    if (diffDays < 0) {
-        return { text: `${Math.abs(diffDays)}d overdue`, class: 'text-error' };
-    }
-
-    if (diffDays <= 7) {
-        return { text: diffDays === 0 ? 'due today' : `due in ${diffDays}d`, class: 'text-warning' };
-    }
-
-    return null;
+    return dueDateTone(project.due_date, (daysUntil(project.due_date) ?? 0) < 0);
 };
 
 const rows = computed(() =>
@@ -108,15 +98,17 @@ const rows = computed(() =>
         start_date_iso: project.start_date,
         due_date: formatDate(project.due_date),
         due_date_iso: project.due_date,
-        due_note: dueNote(project),
+        due_tone: projectDueTone(project),
+        due_relative: formatRelativeDay(project.due_date),
         progress: project.progress,
     })),
 );
 
 type ProjectRow = (typeof rows.value)[number];
 
-
-const priorityIcon = (name: string): string => PRIORITY_ICONS[name] ?? 'i-lucide-signal-low';
+/** Nada yang sama dengan tabel My Task, supaya due date terbaca serupa di kedua halaman. */
+const dueDateClass = (row: ProjectRow) =>
+    ({ overdue: 'text-error font-medium', soon: 'text-warning', normal: 'text-muted', none: 'text-dimmed' })[row.due_tone];
 
 const updateProject = (id: string, payload: Record<string, string>) => {
     router.put(route('project.update', id), payload, {
@@ -124,6 +116,15 @@ const updateProject = (id: string, payload: Record<string, string>) => {
         preserveState: true,
         onError: () => toast.add({ title: 'Failed to update project', color: 'error', icon: 'i-lucide-circle-alert' }),
     });
+};
+
+const updateProjectDate = (id: string, field: 'start_date' | 'due_date', currentIso: string | null, value: CalendarDate | undefined) => {
+    const iso = value?.toString();
+    if (!iso || iso === currentIso) {
+        return;
+    }
+
+    updateProject(id, { [field]: iso });
 };
 
 const deleteProject = async (row: ProjectRow) => {
@@ -163,58 +164,20 @@ const changeStatus = async (row: ProjectRow, newStatusId: string) => {
     updateProject(row.id, { status_id: newStatusId });
 };
 
-const editingTitleId = ref<string | null>(null);
-const titleDraft = ref('');
-
-const startEditingTitle = (row: ProjectRow) => {
-    editingTitleId.value = row.id;
-    titleDraft.value = row.title;
-};
-
-const saveTitle = (row: ProjectRow) => {
-    editingTitleId.value = null;
-
-    if (titleDraft.value.trim() && titleDraft.value !== row.title) {
-        updateProject(row.id, { title: titleDraft.value.trim() });
-    }
-};
-
-const pageSizes = [
-    { label: '10 / page', value: 10 },
-    { label: '25 / page', value: 25 },
-    { label: '50 / page', value: 50 },
-];
-
-const rangeStart = computed(() => (props.total === 0 ? 0 : (page.value - 1) * perPage.value + 1));
-const rangeEnd = computed(() => Math.min(page.value * perPage.value, props.total));
-
-// Header berupa teks doang (tanpa ikon panah) — kolom yang lagi aktif dibedakan
-// lewat warna teks (primary + tebal), sama pola kayak workload/Table.vue.
-const withSortHeader = (column: string, label: string): TableColumn<ProjectRow>['header'] => () => {
-    const isSorted = props.sort === column;
-
-    return h(UButton, {
-        label,
-        variant: 'ghost',
-        color: isSorted ? 'primary' : 'neutral',
-        size: 'sm',
-        class: ['-mx-2.5', isSorted ? 'font-semibold' : 'font-medium'],
-        onClick: () => emit('sort', column),
-    });
-};
-
+/** `id` dipakai sebagai kolom sort ke server; kolom tanpa `enableSorting: false` otomatis dapat header tombol. */
 const columns: TableColumn<ProjectRow>[] = [
-    { id: 'no', header: 'No' },
-    { accessorKey: 'project_no', header: withSortHeader('project_no', 'Project No') },
-    { accessorKey: 'title', header: withSortHeader('title', 'Title') },
-    { accessorKey: 'status', header: withSortHeader('status_id', 'Status') },
-    { accessorKey: 'priority', header: withSortHeader('priority_id', 'Priority') },
-    { accessorKey: 'start_date', header: withSortHeader('start_date', 'Start') },
-    { accessorKey: 'due_date', header: withSortHeader('due_date', 'Due') },
-    { accessorKey: 'progress', header: withSortHeader('progress', 'Progress') },
+    { id: 'no', header: 'No', enableSorting: false },
+    { accessorKey: 'project_no', header: 'Project No' },
+    { accessorKey: 'title', header: 'Title' },
+    { accessorKey: 'status', id: 'status_id', header: 'Status' },
+    { accessorKey: 'priority', id: 'priority_id', header: 'Priority' },
+    { accessorKey: 'start_date', header: 'Start' },
+    { accessorKey: 'due_date', header: 'Due' },
+    { accessorKey: 'progress', header: 'Progress' },
     {
         id: 'actions',
         header: 'Action',
+        enableSorting: false,
         meta: {
             class: {
                 th: 'sticky right-0 bg-default border-s border-default',
@@ -226,164 +189,123 @@ const columns: TableColumn<ProjectRow>[] = [
 </script>
 
 <template>
-    <div class="overflow-hidden rounded-md ring ring-default">
-        <UTable :data="rows" :columns="columns">
-            <template #no-cell="{ row }">
-                <span class="text-sm text-muted">{{ (page - 1) * perPage + row.index + 1 }}</span>
-            </template>
+    <ServerDataTable
+        v-model:page="page"
+        v-model:per-page="perPage"
+        :data="rows"
+        :columns="columns"
+        :sort="sort"
+        :total="total"
+        :loading="loading"
+        empty="No projects found."
+        result-label="projects"
+        table-base-class="min-w-full"
+        @sort="emit('sort', $event)"
+    >
+        <template #no-cell="{ row }">
+            <span class="text-sm text-muted">{{ (page - 1) * perPage + row.index + 1 }}</span>
+        </template>
 
-            <template #title-cell="{ row }">
-                <div class="flex min-w-0 items-center gap-2.5">
-                    <UPopover :content="{ side: 'right', align: 'start' }">
-                        <button type="button" class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-xl hover:bg-elevated">
-                            {{ row.original.emoji }}
-                        </button>
+        <template #title-cell="{ row }">
+            <div class="flex min-w-0 items-center gap-2.5">
+                <UPopover :content="{ side: 'right', align: 'start' }">
+                    <button
+                        type="button"
+                        class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-xl hover:bg-elevated"
+                    >
+                        {{ row.original.emoji }}
+                    </button>
 
-                        <template #content>
-                            <EmojiPicker :model-value="row.original.emoji" @update:model-value="(value) => updateProject(row.original.id, { emoji: value })" />
+                    <template #content>
+                        <EmojiPicker
+                            :model-value="row.original.emoji"
+                            @update:model-value="(value) => updateProject(row.original.id, { emoji: value })"
+                        />
+                    </template>
+                </UPopover>
+
+                <div class="flex min-w-0 flex-col">
+                    <InlineTextEdit :value="row.original.title" @save="(value) => updateProject(row.original.id, { title: value })">
+                        <template #default="{ startEditing }">
+                            <button
+                                type="button"
+                                class="-mx-1.5 -my-0.5 cursor-text truncate rounded-md px-1.5 py-0.5 text-start text-sm font-semibold text-highlighted hover:bg-elevated"
+                                @click="startEditing"
+                            >
+                                {{ row.original.title }}
+                            </button>
                         </template>
-                    </UPopover>
-
-                    <div class="flex min-w-0 flex-col">
-                        <UInput
-                            v-if="editingTitleId === row.original.id"
-                            v-model="titleDraft"
-                            size="sm"
-                            autofocus
-                            @blur="saveTitle(row.original)"
-                            @keyup.enter="saveTitle(row.original)"
-                            @keyup.esc="editingTitleId = null"
-                        />
-                        <button
-                            v-else
-                            type="button"
-                            class="-mx-1.5 -my-0.5 truncate rounded-md px-1.5 py-0.5 text-start text-sm font-semibold text-highlighted cursor-text hover:bg-elevated"
-                            @click="startEditingTitle(row.original)"
-                        >
-                            {{ row.original.title }}
-                        </button>
-                    </div>
+                    </InlineTextEdit>
                 </div>
-            </template>
-
-
-            <template #status-cell="{ row }">
-                <USelectMenu
-                    :model-value="row.original.status.id"
-                    :items="statuses"
-                    label-key="name"
-                    value-key="id"
-                    class="w-auto"
-                    :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
-                    @update:model-value="(value) => changeStatus(row.original, value as string)"
-                >
-                    <template #default>
-                        <UBadge color="neutral" variant="subtle" size="sm">
-                            <template #leading>
-                                <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(row.original.status.severity)" />
-                            </template>
-
-                            {{ row.original.status.name }}
-                        </UBadge>
-                    </template>
-
-                    <template #item-leading="{ item }">
-                        <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(item.severity)" />
-                    </template>
-                </USelectMenu>
-            </template>
-
-            <template #priority-cell="{ row }">
-                <USelectMenu
-                    :model-value="row.original.priority.id"
-                    :items="priorities"
-                    label-key="name"
-                    value-key="id"
-                    class="w-auto"
-                    :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
-                    @update:model-value="(value) => updateProject(row.original.id, { priority_id: value as string })"
-                >
-                    <template #default>
-                        <div class="flex items-center gap-1.5" :class="`text-${severityColor(row.original.priority.severity)}`">
-                            <UIcon :name="priorityIcon(row.original.priority.name)" class="size-4" />
-                            <span class="text-sm font-medium">{{ row.original.priority.name }}</span>
-                        </div>
-                    </template>
-
-                    <template #item-leading="{ item }">
-                        <UIcon :name="priorityIcon(item.name)" class="size-4" :class="`text-${severityColor(item.severity)}`" />
-                    </template>
-
-                    <template #item-label="{ item }">
-                        <span :class="`text-${severityColor(item.severity)}`">{{ item.name }}</span>
-                    </template>
-                </USelectMenu>
-            </template>
-
-            <template #start_date-cell="{ row }">
-                <UPopover>
-                    <button type="button" class="cursor-pointer rounded-md px-1.5 py-0.5 text-sm hover:bg-elevated">
-                        {{ row.original.start_date }}
-                    </button>
-
-                    <template #content>
-                        <UCalendar
-                            :model-value="row.original.start_date_iso ? parseDate(row.original.start_date_iso) : undefined"
-                            class="p-2"
-                            @update:model-value="(value) => value && updateProject(row.original.id, { start_date: value.toString() })"
-                        />
-                    </template>
-                </UPopover>
-            </template>
-
-            <template #due_date-cell="{ row }">
-                <UPopover>
-                    <button type="button" class="cursor-pointer rounded-md px-1.5 py-0.5 text-start text-sm hover:bg-elevated">
-                        {{ row.original.due_date }}
-                    </button>
-
-                    <template #content>
-                        <UCalendar
-                            :model-value="row.original.due_date_iso ? parseDate(row.original.due_date_iso) : undefined"
-                            class="p-2"
-                            @update:model-value="(value) => value && updateProject(row.original.id, { due_date: value.toString() })"
-                        />
-                    </template>
-                </UPopover>
-            </template>
-
-            <template #progress-cell="{ row }">
-                <div class="flex min-w-32 items-center gap-2.5">
-                    <div class="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-accented">
-                        <div class="h-1.5 rounded-full bg-primary" :style="{ width: `${row.original.progress}%` }" />
-                    </div>
-                    <span class="w-12 shrink-0 text-end text-xs font-medium tabular-nums">{{ row.original.progress }}%</span>
-                </div>
-            </template>
-
-            <template #actions-cell="{ row }">
-                <div class="flex items-center gap-2">
-                    <UButton
-                        icon="i-lucide-eye"
-                        color="neutral"
-                        variant="outline"
-                        size="sm"
-                        :to="route('project.show', row.original.id)"
-                        aria-label="View detail"
-                    />
-
-                    <UButton icon="i-lucide-trash-2" color="error" variant="solid" size="sm" aria-label="Delete" @click="deleteProject(row.original)" />
-                </div>
-            </template>
-        </UTable>
-
-        <div class="flex items-center justify-between gap-3 border-t border-default px-4 py-2.5">
-            <p class="text-sm text-muted">Showing {{ rangeStart }}-{{ rangeEnd }} of {{ total }} projects</p>
-
-            <div class="flex items-center gap-3">
-                <USelect v-model="perPage" :items="pageSizes" label-key="label" value-key="value" color="neutral" variant="outline" class="w-28" />
-                <UPagination v-model:page="page" :items-per-page="perPage" :total="total" size="sm" />
             </div>
-        </div>
-    </div>
+        </template>
+
+        <template #status_id-cell="{ row }">
+            <SeverityBadgeSelect
+                :model-value="row.original.status.id"
+                :items="statuses"
+                class="w-auto"
+                :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
+                @update:model-value="(value) => changeStatus(row.original, value)"
+            />
+        </template>
+
+        <template #priority_id-cell="{ row }">
+            <PriorityBadgeSelect
+                :model-value="row.original.priority.id"
+                :items="priorities"
+                class="w-auto"
+                :ui="{ base: 'border-0 bg-transparent shadow-none ring-0 p-0', trailingIcon: 'hidden', content: 'w-48' }"
+                @update:model-value="(value) => updateProject(row.original.id, { priority_id: value })"
+            />
+        </template>
+
+        <template #start_date-cell="{ row }">
+            <DatePicker
+                :model-value="row.original.start_date_iso ? parseDate(row.original.start_date_iso) : undefined"
+                :label="row.original.start_date"
+                trigger-aria-label="Change start date"
+                appearance="inline"
+                :max-value="row.original.due_date_iso ? parseDate(row.original.due_date_iso) : undefined"
+                trigger-class="rounded-md px-1.5 py-0.5 text-sm"
+                @update:model-value="(value) => updateProjectDate(row.original.id, 'start_date', row.original.start_date_iso, value)"
+            />
+        </template>
+
+        <template #due_date-cell="{ row }">
+            <div class="flex flex-col items-start">
+                <DatePicker
+                    :model-value="row.original.due_date_iso ? parseDate(row.original.due_date_iso) : undefined"
+                    :label="row.original.due_date"
+                    trigger-aria-label="Change due date"
+                    appearance="inline"
+                    :min-value="row.original.start_date_iso ? parseDate(row.original.start_date_iso) : undefined"
+                    trigger-class="rounded-md px-1.5 py-0.5 text-start text-sm"
+                    @update:model-value="(value) => updateProjectDate(row.original.id, 'due_date', row.original.due_date_iso, value)"
+                />
+
+                <span v-if="row.original.due_tone !== 'none'" class="px-1.5 text-xs" :class="dueDateClass(row.original)">
+                    {{ row.original.due_relative }}
+                </span>
+            </div>
+        </template>
+        <template #progress-cell="{ row }">
+            <ProgressWithLabel :value="row.original.progress" bar-aria-label="Project progress" class="min-w-36" />
+        </template>
+
+        <template #actions-cell="{ row }">
+            <div class="flex items-center gap-2">
+                <UButton
+                    icon="i-lucide-eye"
+                    color="neutral"
+                    variant="outline"
+                    size="sm"
+                    :to="route('project.show.kanban', row.original.id)"
+                    aria-label="View detail"
+                />
+
+                <UButton icon="i-lucide-trash-2" color="error" variant="solid" size="sm" aria-label="Delete" @click="deleteProject(row.original)" />
+            </div>
+        </template>
+    </ServerDataTable>
 </template>

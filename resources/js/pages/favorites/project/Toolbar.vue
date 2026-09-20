@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { severityColor, severityDotClass } from '@/lib/utils';
+import DatePicker from '@/components/DatePicker.vue';
+import FilterResetButton from '@/components/FilterResetButton.vue';
+import StatusFilterPills, { type StatusPillOption } from '@/components/StatusFilterPills.vue';
+import { priorityIcon, severityColor } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';
-import { DateFormatter, getLocalTimeZone, parseDate } from '@internationalized/date';
+import { formatDate } from '@/lib/date';
+import { parseDate } from '@internationalized/date';
 import { computed, ref } from 'vue';
-
-interface StatusFilterOption {
-    id: string;
-    name: string;
-    severity: PrimeSeverity | null;
-    count: number;
-}
 
 interface PriorityOption {
     id: string;
@@ -17,13 +14,16 @@ interface PriorityOption {
     severity: PrimeSeverity | null;
 }
 
-defineProps<{
-    statuses: StatusFilterOption[];
-    priorities: PriorityOption[];
-    total: number;
-}>();
+withDefaults(
+    defineProps<{
+        statuses: StatusPillOption[];
+        priorities: PriorityOption[];
+        total: number | null;
+        loading?: boolean;
+    }>(),
+    { loading: false },
+);
 
-const df = new DateFormatter('en-US', { dateStyle: 'medium' });
 const search = defineModel<string>('search', { required: true });
 const status = defineModel<string | null>('status', { required: true });
 const priorityIds = defineModel<string[]>('priorityIds', { required: true });
@@ -43,47 +43,33 @@ const dueCalendarDate = computed({
 const progressRange = defineModel<[number, number]>('progressRange', { required: true });
 const expanded = ref(false);
 
-const PRIORITY_ICONS: Record<string, string> = {
-    Low: 'i-lucide-signal-low',
-    Medium: 'i-lucide-signal-medium',
-    High: 'i-lucide-signal-high',
-    Critical: 'i-lucide-signal',
-};
+const emit = defineEmits<{ create: []; clear: [] }>();
 
-const priorityIcon = (name: string): string => PRIORITY_ICONS[name] ?? 'i-lucide-signal-low';
+const hasAdvancedFilters = computed(
+    () => priorityIds.value.length > 0 || !!startDate.value || !!dueDate.value || progressRange.value[0] !== 0 || progressRange.value[1] !== 100,
+);
+const hasAnyFilter = computed(() => !!search.value.trim() || !!status.value || hasAdvancedFilters.value);
 
 </script>
 
 <template>
     <div class="flex flex-col gap-2 py-2.5">
         <div class="flex flex-wrap items-center gap-2">
-            <UInput v-model="search" icon="i-lucide-search" placeholder="Search project, or title"
+            <UInput v-model="search" icon="i-lucide-search" placeholder="Search project, or title" :loading="loading"
                 class="w-full sm:w-72" />
 
-            <UButton label="All" :variant="status === null ? 'solid' : 'outline'" color="neutral" size="sm"
-                class="rounded-full" @click="status = null">
-                <template #trailing>
-                    <span class="text-xs opacity-70">{{ total }}</span>
-                </template>
-            </UButton>
+            <div class="ms-auto flex flex-wrap items-center gap-2">
+                <UButton icon="i-lucide-filter" :label="expanded ? 'Hide' : 'Filters'"
+                    :variant="expanded || hasAdvancedFilters ? 'solid' : 'outline'" color="neutral" class="rounded-full"
+                    :aria-expanded="expanded" @click="expanded = !expanded" />
 
-            <UButton v-for="option in statuses" :key="option.id" :variant="status === option.id ? 'solid' : 'outline'"
-                color="neutral" size="sm" class="rounded-full" @click="status = option.id">
-                <template #leading>
-                    <span class="size-1.5 shrink-0 rounded-full" :class="severityDotClass(option.severity)" />
-                </template>
+                <FilterResetButton v-if="hasAnyFilter" :disabled="loading" @click="emit('clear')" />
 
-                {{ option.name }}
-
-                <template #trailing>
-                    <span class="text-xs opacity-70">{{ option.count }}</span>
-                </template>
-            </UButton>
-
-            <UButton icon="i-lucide-filter" :label="expanded ? 'Hide' : 'Filters'"
-                :variant="expanded ? 'solid' : 'outline'" color="neutral" size="sm" class="ms-auto rounded-full"
-                :aria-expanded="expanded" @click="expanded = !expanded" />
+                <UButton label="Add Project" icon="i-lucide-plus" @click="emit('create')" />
+            </div>
         </div>
+
+        <StatusFilterPills v-model="status" :options="statuses" :total="total" />
 
         <div v-if="expanded" class="flex flex-wrap items-center gap-4 border-t border-default pt-3">
             <USelectMenu v-model="priorityIds" :items="priorities" label-key="name" value-key="id" multiple
@@ -108,24 +94,21 @@ const priorityIcon = (name: string): string => PRIORITY_ICONS[name] ?? 'i-lucide
                 </template>
             </USelectMenu>
 
-            <UPopover>
-                <UButton
-                    :label="startCalendarDate ? df.format(startCalendarDate.toDate(getLocalTimeZone())) : 'Start Date'"
-                    icon="i-lucide-calendar" color="neutral" variant="outline" class="w-40 rounded-full" />
+            <DatePicker
+                v-model="startCalendarDate"
+                clearable
+                :label="startCalendarDate ? formatDate(startCalendarDate.toString()) : 'Start Date'"
+                trigger-aria-label="Filter by start date"
+                trigger-class="w-40 rounded-full"
+            />
 
-                <template #content>
-                    <UCalendar v-model="startCalendarDate" class="p-2" />
-                </template>
-            </UPopover>
-
-            <UPopover>
-                <UButton :label="dueCalendarDate ? df.format(dueCalendarDate.toDate(getLocalTimeZone())) : 'Due Date'"
-                    icon="i-lucide-calendar" color="neutral" variant="outline" class="w-40 rounded-full" />
-
-                <template #content>
-                    <UCalendar v-model="dueCalendarDate" class="p-2" />
-                </template>
-            </UPopover>
+            <DatePicker
+                v-model="dueCalendarDate"
+                clearable
+                :label="dueCalendarDate ? formatDate(dueCalendarDate.toString()) : 'Due Date'"
+                trigger-aria-label="Filter by due date"
+                trigger-class="w-40 rounded-full"
+            />
 
             <UPopover>
                 <UButton

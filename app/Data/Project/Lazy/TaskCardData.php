@@ -3,7 +3,6 @@
 namespace App\Data\Project\Lazy;
 
 use App\Data\Task\Concerns\DerivesTaskCompletion;
-use App\Data\Task\TagData;
 use App\Data\Task\TaskPriorityData;
 use App\Data\Task\TaskStatusData;
 use App\Data\Task\TaskTypeData;
@@ -15,7 +14,6 @@ use Spatie\LaravelData\DataCollection;
 /**
  * Slim task shape for the Kanban board card + detail slide-over.
  *
- * Carries only what a card/detail-panel renders (no media, creator, *_id keys).
  * sub_task_recursive is kept (recursively) so the board can compute subtask totals
  * and done-counts client-side. IDs are integers, encoded downstream by Sqids.
  */
@@ -25,6 +23,8 @@ class TaskCardData extends Data
 
     public function __construct(
         public int $id,
+        public string $code,
+        public int $comments_count,
         public ?int $parent_id,
         public string $title,
         public ?string $description,
@@ -38,9 +38,6 @@ class TaskCardData extends Data
 
         /** @var DataCollection<int, UserData> */
         public DataCollection $users,
-
-        /** @var DataCollection<int, TagData> */
-        public DataCollection $tags,
 
         /** @var DataCollection<int, TaskCardData> */
         public DataCollection $sub_task_recursive,
@@ -56,6 +53,8 @@ class TaskCardData extends Data
 
         return new self(
             id: (int) $task->id,
+            code: 'T-'.$task->id,
+            comments_count: (int) ($task->comments_count ?? 0),
             parent_id: $task->parent_id !== null ? (int) $task->parent_id : null,
             title: (string) $task->title,
             description: $task->description,
@@ -68,9 +67,6 @@ class TaskCardData extends Data
             type: $task->relationLoaded('type') && $task->type ? TaskTypeData::from($task->type) : null,
             users: $task->relationLoaded('users')
                 ? UserData::collect($task->users, DataCollection::class)
-                : [],
-            tags: $task->relationLoaded('tags')
-                ? TagData::collect($task->tags, DataCollection::class)
                 : [],
             sub_task_recursive: $children,
         );

@@ -1,0 +1,187 @@
+<script lang="ts" setup>
+import Icon from '@/components/Icon.vue';
+import Label from '@/components/Label.vue';
+import { formatFileSize } from '@/lib/utils';
+import { UploadedFile } from '@/types';
+import { onBeforeUnmount, ref } from 'vue';
+
+const modelValue = defineModel<(File | UploadedFile)[] | null>('modelValue');
+
+withDefaults(defineProps<{ label?: string | null }>(), { label: 'Attachment' });
+
+const isDragging = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const isUploadedFile = (file: File | UploadedFile): file is UploadedFile => 'uuid' in file;
+
+const getFileName = (file: File | UploadedFile) => (isUploadedFile(file) ? file.file_name : file.name);
+const getFileSize = (file: File | UploadedFile) => file.size;
+const getMimeType = (file: File | UploadedFile) => (isUploadedFile(file) ? file.mime_type : file.type);
+
+
+
+const getFileIcon = (mimeType: string): string => {
+    if (mimeType.startsWith('image/')) return 'Image';
+    if (mimeType.startsWith('video/')) return 'Video';
+    if (mimeType.startsWith('audio/')) return 'Music';
+    if (mimeType === 'application/pdf') return 'FileText';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'FileText';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Sheet';
+    if (mimeType.includes('zip') || mimeType.includes('archive') || mimeType.includes('compressed')) return 'Archive';
+    return 'File';
+};
+
+/** Satu object URL per File, supaya render ulang tidak terus membuat URL baru yang tidak pernah dilepas. */
+const objectUrls = new Map<File, string>();
+
+const getFileUrl = (file: File | UploadedFile) => {
+    if (file instanceof File) {
+        let url = objectUrls.get(file);
+
+        if (!url) {
+            url = URL.createObjectURL(file);
+            objectUrls.set(file, url);
+        }
+
+        return url;
+    }
+
+    // `||`, bukan `??`: `url` bisa datang sebagai string kosong atau spasi, dan `??`
+    // hanya jatuh ke fallback untuk null/undefined sehingga menghasilkan tautan mati.
+    return file.url?.trim() || file.original_url;
+};
+
+onBeforeUnmount(() => {
+    objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    objectUrls.clear();
+});
+
+/** Disamakan dengan aturan `FileOrMedia` di `TaskStoreRequest`/`TaskUpdateRequest`. */
+const ALLOWED_EXTENSIONS = [
+    'jpg', 'jpeg', 'png', 'gif', 'svg',
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt',
+    'mp4', 'webm', 'ogg', 'm4v', 'mov', 'avi', 'wmv', 'flv', '3gp',
+    'm4a', 'wav', 'flac', 'aac', 'mp3',
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2',
+];
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
+const acceptAttribute = ALLOWED_EXTENSIONS.map((extension) => `.${extension}`).join(',');
+const rejectedFiles = ref<string[]>([]);
+
+const addFiles = (fileList: FileList) => {
+    const accepted: File[] = [];
+    const rejected: string[] = [];
+
+    for (const file of Array.from(fileList)) {
+        const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+
+        if (!ALLOWED_EXTENSIONS.includes(extension)) {
+            rejected.push(`${file.name} (unsupported type)`);
+        } else if (file.size > MAX_FILE_SIZE) {
+            rejected.push(`${file.name} (${formatFileSize(file.size)}, over 20 MB)`);
+        } else {
+            accepted.push(file);
+        }
+    }
+
+    rejectedFiles.value = rejected;
+
+    if (accepted.length) {
+        modelValue.value = [...(modelValue.value ?? []), ...accepted];
+    }
+};
+
+const removeFile = (index: number) => {
+    const next = [...(modelValue.value ?? [])];
+    const [removed] = next.splice(index, 1);
+    const url = removed instanceof File ? objectUrls.get(removed) : undefined;
+
+    if (url) {
+        URL.revokeObjectURL(url);
+        objectUrls.delete(removed as File);
+    }
+
+    modelValue.value = next.length > 0 ? next : null;
+};
+
+const onDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    isDragging.value = true;
+};
+
+const onDragLeave = () => {
+    isDragging.value = false;
+};
+
+const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    isDragging.value = false;
+    if (e.dataTransfer?.files.length) {
+        addFiles(e.dataTransfer.files);
+    }
+};
+
+const onFileInputChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.length) {
+        addFiles(input.files);
+        input.value = '';
+    }
+};
+</script>
+
+<template>
+    <div class="flex flex-col gap-4">
+        <Label v-if="label" :value="label" icon="Paperclip" />
+
+        <input
+            ref="fileInputRef"
+            type="file"
+            multiple
+            class="hidden"
+            :accept="acceptAttribute"
+            @change="onFileInputChange"
+        />
+
+        <button
+            type="button"
+            class="focus-visible:ring-primary flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-8 text-center text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            :class="isDragging ? 'border-primary bg-primary/5' : 'border-default hover:border-primary hover:bg-elevated'"
+            @click="fileInputRef?.click()"
+            @dragover="onDragOver"
+            @dragleave="onDragLeave"
+            @drop="onDrop"
+        >
+            <Icon name="Upload" class="text-muted mb-1 size-5" />
+            <span class="text-highlighted font-semibold">Drop files here or click to browse</span>
+            <span class="text-dimmed text-xs">PDF, images, videos, and docs · up to 20 MB per file</span>
+        </button>
+
+        <ul v-if="rejectedFiles.length" class="text-error flex flex-col gap-0.5 text-xs">
+            <li v-for="name in rejectedFiles" :key="name">Skipped {{ name }}</li>
+        </ul>
+
+        <div v-if="modelValue?.length" class="flex flex-col gap-2">
+            <div v-for="(file, index) in modelValue" :key="index" class="border-default bg-elevated/50 flex items-center gap-4 rounded-lg border px-3 py-2">
+                <Icon :name="getFileIcon(getMimeType(file))" class="text-muted size-4 shrink-0" />
+
+                <div class="min-w-0 flex-1">
+                    <a :href="getFileUrl(file)" target="_blank" class="text-highlighted truncate text-sm font-medium hover:underline">
+                        {{ getFileName(file) }}
+                    </a>
+                    <p class="text-dimmed text-xs">{{ formatFileSize(getFileSize(file)) }}</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="text-dimmed hover:bg-elevated hover:text-error shrink-0 rounded p-1 transition-colors"
+                    :aria-label="`Hapus ${getFileName(file)}`"
+                    @click.stop="removeFile(index)"
+                >
+                    <Icon name="X" class="size-3.5" />
+                </button>
+            </div>
+        </div>
+    </div>
+</template>

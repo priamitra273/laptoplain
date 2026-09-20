@@ -4,7 +4,6 @@ namespace App\Data\Project\Lazy;
 
 use App\Data\Task\Concerns\DerivesTaskCompletion;
 use App\Data\Task\TaskCategoryData;
-use App\Data\Task\TaskPriorityData;
 use App\Data\Task\TaskStatusData;
 use App\Data\Task\TaskTypeData;
 use App\Data\UserData;
@@ -17,7 +16,6 @@ use Spatie\LaravelData\DataCollection;
  * Slim task shape for the List (TreeTable) tab.
  *
  * Only carries the columns the table renders + tree/sort helpers — intentionally
- * omits description, tags, media, creator, story_points and all *_id keys.
  * IDs are emitted as integers and encoded downstream by Sqids::rec_encode_ids_in_list().
  */
 class TaskListItemData extends Data
@@ -39,7 +37,6 @@ class TaskListItemData extends Data
         public ?TaskStatusData $status,
         public ?TaskTypeData $type,
         public ?TaskCategoryData $category,
-        public ?TaskPriorityData $priority,
 
         /** @var DataCollection<int, UserData> */
         public DataCollection $users,
@@ -70,7 +67,6 @@ class TaskListItemData extends Data
             status: $task->relationLoaded('status') && $task->status ? TaskStatusData::from($task->status) : null,
             type: $task->relationLoaded('type') && $task->type ? TaskTypeData::from($task->type) : null,
             category: $task->relationLoaded('category') && $task->category ? TaskCategoryData::from($task->category) : null,
-            priority: $task->relationLoaded('priority') && $task->priority ? TaskPriorityData::from($task->priority) : null,
             users: $task->relationLoaded('users')
                 ? UserData::collect($task->users, DataCollection::class)
                 : UserData::collect([], DataCollection::class),

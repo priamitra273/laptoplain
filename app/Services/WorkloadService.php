@@ -21,7 +21,8 @@ class WorkloadService
     {
         $query = $this->repository->getWorkloadBaseQuery();
         $this->repository->applyFilters($query, $filters);
-        $this->repository->applySort($query, $filters);
+
+        $this->repository->applySort($query, $filters->sort, $filters->direction);
 
         return $query
             ->paginate($filters->per_page)
@@ -29,12 +30,9 @@ class WorkloadService
             ->through(fn ($user) => WorkloadUserData::fromResource($user));
     }
 
-    public function getWorkloadSummary(WorkloadFiltersData $filters): WorkloadSummaryData
+    public function getWorkloadSummary(): WorkloadSummaryData
     {
-        $query = $this->repository->getWorkloadBaseQuery();
-        $this->repository->applyFilters($query, $filters);
-
-        $summary = $this->repository->getSummary($query);
+        $summary = $this->repository->getSummary($this->repository->getWorkloadBaseQuery());
 
         return new WorkloadSummaryData(...$summary);
     }

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { getInitials, severityColor } from '@/lib/utils';
-import { computed, ref } from 'vue';
-import type { WorkloadStatusOption, WorkloadUserOption } from './types';
-import { toneOf } from './workload';
+import FilterResetButton from '@/components/FilterResetButton.vue';
+import { computed } from 'vue';
+import type { WorkloadSortColumn } from './types';
+import WorkloadStatusTabs from './WorkloadStatusTabs.vue';
 
-const props = defineProps<{
-    userOptions: WorkloadUserOption[];
-    statusOptions: WorkloadStatusOption[];
+defineProps<{
+    hasFilters: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -14,105 +13,49 @@ const emit = defineEmits<{
 }>();
 
 const search = defineModel<string>('search', { required: true });
-const names = defineModel<string[]>('names', { required: true });
 const statuses = defineModel<number[]>('statuses', { required: true });
+const sort = defineModel<WorkloadSortColumn>('sort', { required: true });
+const direction = defineModel<'asc' | 'desc'>('direction', { required: true });
 
-const activeChips = computed(() => [
-    ...props.statusOptions
-        .filter((option) => statuses.value.includes(option.id))
-        .map((option) => ({
-            key: `status-${option.id}`,
-            label: option.name,
-            tone: toneOf(option.severity),
-            remove: () => (statuses.value = statuses.value.filter((id) => id !== option.id)),
-        })),
-    ...props.userOptions
-        .filter((option) => names.value.includes(option.id))
-        .map((option) => ({
-            key: `user-${option.id}`,
-            label: option.name,
-            tone: toneOf(null),
-            remove: () => (names.value = names.value.filter((id) => id !== option.id)),
-        })),
-    ...(search.value ? [{ key: 'search', label: `Name: “${search.value}”`, tone: toneOf(null), remove: () => (search.value = '') }] : []),
-]);
+const sortOptions: { label: string; icon: string; column: WorkloadSortColumn; direction: 'asc' | 'desc' }[] = [
+    { label: 'Most tasks', icon: 'i-lucide-arrow-down-wide-narrow', column: 'total_tasks', direction: 'desc' },
+    { label: 'Least tasks', icon: 'i-lucide-arrow-up-narrow-wide', column: 'total_tasks', direction: 'asc' },
+    { label: 'Highest remaining', icon: 'i-lucide-gauge', column: 'remaining_work_percent', direction: 'desc' },
+    { label: 'Lowest remaining', icon: 'i-lucide-gauge', column: 'remaining_work_percent', direction: 'asc' },
+    { label: 'Name A-Z', icon: 'i-lucide-arrow-down-a-z', column: 'name', direction: 'asc' },
+    { label: 'Name Z-A', icon: 'i-lucide-arrow-up-z-a', column: 'name', direction: 'desc' },
+];
 
-// Panel dibuka sendiri kalau halaman dimuat dengan filter aktif, supaya kontrolnya
-// tidak tersembunyi di balik tombol saat hasilnya sudah tersaring.
-const expanded = ref(activeChips.value.length > 0);
+const activeSort = computed(
+    () => sortOptions.find((option) => option.column === sort.value && option.direction === direction.value) ?? sortOptions[0],
+);
+
+const sortItems = computed(() =>
+    sortOptions.map((option) => ({
+        label: option.label,
+        icon: option.icon,
+        type: 'checkbox' as const,
+        checked: option === activeSort.value,
+        onSelect: () => {
+            sort.value = option.column;
+            direction.value = option.direction;
+        },
+    })),
+);
 </script>
 
 <template>
-    <div class="flex flex-col gap-2 border-y border-default bg-elevated/30 px-4 py-2.5">
-        <div class="flex flex-wrap items-center gap-2">
-            <UInput v-if="expanded" v-model="search" icon="i-lucide-search" placeholder="Search name" class="w-full sm:w-60" />
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <WorkloadStatusTabs v-model="statuses" class="shrink-0" />
 
-            <USelectMenu
-                v-if="expanded"
-                v-model="names"
-                :items="userOptions"
-                label-key="name"
-                value-key="id"
-                multiple
-                placeholder="Users"
-                color="neutral"
-                variant="outline"
-                class="w-full sm:w-44"
-            >
-                <template #item-leading="{ item }">
-                    <UAvatar :src="item.avatar_url ?? undefined" :alt="item.name" :text="getInitials(item.name)" size="2xs" />
-                </template>
-            </USelectMenu>
+        <UInput v-model="search" icon="i-lucide-search" placeholder="Filter by name" class="w-full sm:w-72 lg:ms-2" />
 
-            <USelectMenu
-                v-if="expanded"
-                v-model="statuses"
-                :items="statusOptions"
-                label-key="name"
-                value-key="id"
-                multiple
-                placeholder="Status"
-                color="neutral"
-                variant="outline"
-                class="w-full sm:w-44"
-            >
-                <template #item-label="{ item }">
-                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                </template>
-            </USelectMenu>
+        <div class="flex items-center gap-2 lg:ms-auto">
+            <FilterResetButton v-if="hasFilters" @click="emit('clear')" />
 
-            <UButton
-                icon="i-lucide-filter"
-                :label="expanded ? 'Hide' : 'Filters'"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                class="ms-auto"
-                :aria-expanded="expanded"
-                @click="expanded = !expanded"
-            >
-                <template v-if="activeChips.length" #trailing>
-                    <UBadge color="primary" variant="subtle" size="sm" class="tabular-nums">{{ activeChips.length }}</UBadge>
-                </template>
-            </UButton>
-        </div>
-
-        <div v-if="activeChips.length" class="flex flex-wrap items-center gap-1.5">
-            <span class="me-0.5 text-xs tracking-wide text-muted uppercase">Active</span>
-
-            <button
-                v-for="chip in activeChips"
-                :key="chip.key"
-                type="button"
-                class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ring"
-                :class="[chip.tone.soft, chip.tone.ring, chip.tone.text]"
-                @click="chip.remove()"
-            >
-                <span class="max-w-40 truncate">{{ chip.label }}</span>
-                <UIcon name="i-lucide-x" class="size-3 shrink-0" />
-            </button>
-
-            <UButton label="Clear all filters" variant="link" color="neutral" size="xs" class="-my-1" @click="emit('clear')" />
+            <UDropdownMenu :items="sortItems" :content="{ align: 'end' }">
+                <UButton :icon="activeSort.icon" :label="activeSort.label" color="neutral" variant="outline" size="sm" class="rounded-lg" />
+            </UDropdownMenu>
         </div>
     </div>
 </template>

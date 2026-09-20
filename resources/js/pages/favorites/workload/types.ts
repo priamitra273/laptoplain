@@ -21,19 +21,12 @@ export interface WorkloadStatusOption {
     severity: PrimeSeverity;
 }
 
-export interface UserPreview {
-    id: string;
-    name: string;
-}
-
 export interface WorkloadSummary {
     total_users: number;
     free: number;
     light: number;
     moderate: number;
     busy: number;
-    users_preview: UserPreview[];
-    overloaded_preview: UserPreview[];
 }
 
 export type WorkloadSortColumn = 'name' | 'total_tasks' | 'remaining_work_percent';

@@ -1,67 +1,62 @@
 <script setup lang="ts">
-import { getInitials } from '@/lib/utils';
+import DonutChart from '@/components/charts/DonutChart.vue';
+import StatCard from '@/components/StatCard.vue';
 import { computed } from 'vue';
-import type { UserPreview, WorkloadSummary } from './types';
+import type { WorkloadStatusOption, WorkloadSummary } from './types';
+import { buildSegments, workloadDonutSegments, workloadUtilization } from './workload';
 
 const props = defineProps<{
     summary: WorkloadSummary;
+    statusOptions: WorkloadStatusOption[];
+    activeStatusIds: number[];
 }>();
 
-const hasOverloaded = computed(() => props.summary.busy > 0);
+const iconByStatusId: Record<number, string> = {
+    1: 'i-lucide-circle-check',
+    2: 'i-lucide-bar-chart-2',
+    3: 'i-lucide-clock',
+};
 
-const toAvatars = (users: UserPreview[]) => users.map((user) => ({ id: user.id, text: getInitials(user.name), alt: user.name }));
+const cards = computed<{ key: string; label: string; count: number; icon: string; tone: 'neutral' | 'success' | 'danger'; active: boolean }[]>(() => [
+    { key: 'total', label: 'Total users', count: props.summary.total_users, icon: 'i-lucide-users', tone: 'neutral', active: false },
+    ...buildSegments(props.summary, props.statusOptions, [])
+        .filter((segment) => segment.id !== 4)
+        .map((segment) => ({
+            key: String(segment.id),
+            label: segment.label,
+            count: segment.count,
+            icon: iconByStatusId[segment.id] ?? 'i-lucide-gauge',
+            tone: segment.id === 1 ? ('success' as const) : ('neutral' as const),
+            active: props.activeStatusIds.includes(segment.id),
+        })),
+]);
 
-const overloadedAvatars = computed(() => toAvatars(props.summary.overloaded_preview));
-
-const userAvatars = computed(() => toAvatars(props.summary.users_preview));
+const utilization = computed(() => workloadUtilization(props.summary));
+const utilizationSegments = computed(() => workloadDonutSegments(props.summary));
 </script>
 
 <template>
-    <div class="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
-        <div
-            class="flex items-center justify-between gap-4 rounded-lg p-4 ring"
-            :class="hasOverloaded ? 'bg-error/5 ring-error/20' : 'bg-success/5 ring-success/20'"
-        >
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <StatCard
+            v-for="card in cards"
+            :key="card.key"
+            :label="card.label"
+            :value="card.count"
+            :icon="card.icon"
+    :tone="card.tone"
+    :class="card.active ? 'ring-2 ring-primary' : undefined"
+/>
+
+        <UCard class="sm:col-span-2" :ui="{ body: 'flex items-center gap-4' }">
+            <DonutChart :segments="utilizationSegments" series-name="Members" />
+
             <div class="flex min-w-0 flex-col gap-2">
-                <span
-                    class="flex size-7 shrink-0 items-center justify-center rounded-md bg-default ring"
-                    :class="hasOverloaded ? 'ring-error/25' : 'ring-success/25'"
-                >
-                    <UIcon
-                        :name="hasOverloaded ? 'i-lucide-triangle-alert' : 'i-lucide-circle-check'"
-                        class="size-3.5"
-                        :class="hasOverloaded ? 'text-error' : 'text-success'"
-                    />
+                <span class="text-sm text-toned">Team utilisation</span>
+                <span class="text-3xl leading-none font-semibold tabular-nums text-highlighted">{{ utilization }}%</span>
+                <span class="text-xs text-error">
+                    {{ summary.busy }} {{ summary.busy === 1 ? 'member' : 'members' }} overloaded
                 </span>
-
-                <p class="flex items-baseline gap-1.5">
-                    <span class="text-3xl leading-none font-semibold tabular-nums" :class="hasOverloaded ? 'text-error' : 'text-success'">
-                        {{ summary.busy }}
-                    </span>
-                    <span class="truncate text-sm text-toned">of {{ summary.total_users }} users Overloaded</span>
-                </p>
             </div>
-
-            <UAvatarGroup v-if="overloadedAvatars.length" :max="5" size="md" class="shrink-0">
-                <UAvatar v-for="avatar in overloadedAvatars" :key="avatar.id" :text="avatar.text" :alt="avatar.alt" :title="avatar.alt" />
-            </UAvatarGroup>
-        </div>
-
-        <div class="flex items-center justify-between gap-4 rounded-lg p-4 ring ring-default">
-            <div class="flex min-w-0 flex-col gap-2">
-                <span class="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <UIcon name="i-lucide-users" class="size-3.5" />
-                </span>
-
-                <p class="flex items-baseline gap-1.5">
-                    <span class="text-3xl leading-none font-semibold tabular-nums">{{ summary.total_users }}</span>
-                    <span class="truncate text-sm text-toned">users</span>
-                </p>
-            </div>
-
-            <UAvatarGroup v-if="userAvatars.length" :max="5" size="md" class="shrink-0">
-                <UAvatar v-for="avatar in userAvatars" :key="avatar.id" :text="avatar.text" :alt="avatar.alt" :title="avatar.alt" />
-            </UAvatarGroup>
-        </div>
+        </UCard>
     </div>
 </template>

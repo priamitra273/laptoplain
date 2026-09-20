@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\DB;
 
 class WorkloadRepository
 {
-    /**
-     * Banyaknya nama yang dikirim untuk tiap tumpukan avatar di kartu sorotan.
-     */
-    private const PREVIEW_LIMIT = 5;
+    private const SORTABLE_COLUMNS = [
+        'name' => 'users.name',
+        'total_tasks' => 'w.total_tasks',
+        'remaining_work_percent' => 'w.remaining_work_percent',
+    ];
 
     public function getWorkloadBaseQuery(): Builder
     {
@@ -81,30 +82,17 @@ class WorkloadRepository
         }
     }
 
-    public function applySort(Builder $query, WorkloadFiltersData $filters): void
+    public function applySort(Builder $query, string $column, string $direction): void
     {
-        $column = WorkloadFiltersData::SORTABLE_COLUMNS[$filters->sort];
+        $sortColumn = self::SORTABLE_COLUMNS[$column] ?? self::SORTABLE_COLUMNS['remaining_work_percent'];
 
-        // Nama sebagai pemecah seri: tanpa ini, dua user dengan angka sama bisa
-        // bertukar posisi antar halaman dan barisnya terlihat hilang/dobel.
-        $query->orderBy($column, $filters->direction)
-            ->orderBy('users.name');
+        $query->orderBy($sortColumn, $direction === 'asc' ? 'asc' : 'desc')
+            ->orderBy('users.id');
     }
 
-    /**
-     * Ringkasan seluruh populasi yang lolos filter, bukan hanya halaman yang tampil.
-     *
-     * Baris diambil sekali lalu diolah di memori; kolom tambahannya menumpang query
-     * yang sama, jadi tidak ada pass baru dibanding versi sebelumnya.
-     */
     public function getSummary(Builder $query): array
     {
-        $allForSummary = (clone $query)->get([
-            'users.id',
-            'users.name',
-            'w.workload_status',
-            'w.remaining_work_percent',
-        ]);
+        $allForSummary = (clone $query)->get(['w.workload_status']);
 
         return [
             'total_users' => $allForSummary->count(),
@@ -112,28 +100,7 @@ class WorkloadRepository
             'light' => $allForSummary->where('workload_status', WorkloadStatus::ALMOST_DONE->value)->count(),
             'moderate' => $allForSummary->where('workload_status', WorkloadStatus::ONGOING->value)->count(),
             'busy' => $allForSummary->where('workload_status', WorkloadStatus::OVERLOADED->value)->count(),
-            'users_preview' => $this->preview($allForSummary),
-            'overloaded_preview' => $this->preview(
-                $allForSummary->where('workload_status', WorkloadStatus::OVERLOADED->value)
-            ),
         ];
-    }
-
-    /**
-     * Beberapa nama untuk tumpukan avatar. Yang bebannya paling berat tampil lebih dulu,
-     * dan avatar_url sengaja tidak diikutkan supaya tidak menarik relasi media.
-     *
-     * @param  Collection<int, User>  $users
-     * @return array<int, array{id: string, name: string}>
-     */
-    private function preview(Collection $users): array
-    {
-        return $users
-            ->sortByDesc('remaining_work_percent')
-            ->take(self::PREVIEW_LIMIT)
-            ->map(fn ($user) => ['id' => Sqids::encode($user->id), 'name' => $user->name])
-            ->values()
-            ->all();
     }
 
     public function getAvailableUsers(): Collection

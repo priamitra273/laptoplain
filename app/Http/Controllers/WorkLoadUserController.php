@@ -25,10 +25,10 @@ class WorkLoadUserController extends Controller
         $filters = WorkloadFiltersData::fromRequest($request);
 
         return Inertia::render('favorites/workload/Index', [
-            'users' => $this->workloadService->getUsersWorkload($filters),
-            'summary' => $this->workloadService->getWorkloadSummary($filters),
+            'users' => fn () => $this->workloadService->getUsersWorkload($filters),
+            'summary' => fn () => $this->workloadService->getWorkloadSummary(),
             'filters' => $filters,
-            'filterOptions' => $this->workloadService->getFilterOptions(),
+            'filterOptions' => fn () => $this->workloadService->getFilterOptions(),
         ]);
     }
 }

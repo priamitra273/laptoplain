@@ -1,6 +1,6 @@
 import { severityColor } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';
-import type { DistributionSegment, WorkloadStatusOption, WorkloadSummary } from './types';
+import type { DistributionSegment, WorkloadSortColumn, WorkloadStatusOption, WorkloadSummary, WorkloadUser } from './types';
 
 /**
  * Id status di enum WorkloadStatus dipetakan ke kunci hitungannya di summary.
@@ -30,6 +30,61 @@ const toneClasses: Record<ToneName, { text: string; fill: string; soft: string; 
 };
 
 export const toneOf = (severity: PrimeSeverity | null | undefined) => toneClasses[severityColor(severity)];
+
+/** Persentase anggota yang saat ini berada pada bucket Overloaded. */
+export function workloadUtilization(summary: WorkloadSummary): number {
+    if (summary.total_users === 0) {
+        return 0;
+    }
+
+    return Math.round((summary.busy / summary.total_users) * 100);
+}
+
+export type WorkloadStatusTab = 'all' | 'free' | 'ongoing' | 'overloaded';
+
+const statusIdsByTab: Record<WorkloadStatusTab, number[]> = {
+    all: [],
+    free: [1],
+    ongoing: [2, 3],
+    overloaded: [4],
+};
+
+export function statusIdsForWorkloadTab(tab: WorkloadStatusTab): number[] {
+    return [...statusIdsByTab[tab]];
+}
+
+export function workloadTabForStatusIds(statusIds: number[]): WorkloadStatusTab | undefined {
+    if (statusIds.length === 0) {
+        return 'all';
+    }
+
+    return (Object.entries(statusIdsByTab) as [WorkloadStatusTab, number[]][]).find(
+        ([, ids]) => ids.length === statusIds.length && ids.every((id) => statusIds.includes(id)),
+    )?.[0];
+}
+
+export function workloadDonutSegments(summary: WorkloadSummary) {
+    return [
+        { label: 'Overloaded', value: summary.busy, color: '#ef4444' },
+        { label: 'Other members', value: Math.max(summary.total_users - summary.busy, 0), color: 'rgba(113, 113, 122, 0.2)' },
+    ];
+}
+
+export function sortWorkloadUsers(users: WorkloadUser[], column: WorkloadSortColumn, direction: 'asc' | 'desc'): WorkloadUser[] {
+    const directionMultiplier = direction === 'asc' ? 1 : -1;
+
+    return [...users].sort((firstUser, secondUser) => {
+        if (column === 'name') {
+            return firstUser.name.localeCompare(secondUser.name) * directionMultiplier;
+        }
+
+        const firstValue = column === 'total_tasks' ? firstUser.total_tasks : firstUser.remaining_work_percent;
+        const secondValue = column === 'total_tasks' ? secondUser.total_tasks : secondUser.remaining_work_percent;
+        const difference = firstValue - secondValue;
+
+        return difference === 0 ? firstUser.name.localeCompare(secondUser.name) : difference * directionMultiplier;
+    });
+}
 
 /**
  * Segmen batang distribusi. Persentase dihitung terhadap populasi yang lolos filter,

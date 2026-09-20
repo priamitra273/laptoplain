@@ -73,7 +73,7 @@ class Task extends Model implements HasMedia
      *
      * @param  mixed  $value
      * @param  string|null  $field
-     * @return \Illuminate\Database\Eloquent\Model|null
+     * @return Model|null
      */
     public function resolveRouteBinding($value, $field = null)
     {
@@ -177,7 +177,7 @@ class Task extends Model implements HasMedia
     // ← FIX: tambah eager load category dan relasi lainnya
     public function subTaskRecursive()
     {
-        return $this->children()->with([
+        return $this->children()->withCount('comments')->with([
             'subTaskRecursive',
             'status:id,name,severity',
             'priority:id,name,severity',

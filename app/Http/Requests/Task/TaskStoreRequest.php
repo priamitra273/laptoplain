@@ -5,6 +5,7 @@ namespace App\Http\Requests\Task;
 use App\Enums\TaskStatusEnum;
 use App\Facades\Sqids;
 use App\Models\MsTaskStatus;
+use App\Models\TaskCategory;
 use App\Rules\FileOrMedia;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -41,7 +42,7 @@ class TaskStoreRequest extends FormRequest
             'description' => 'nullable|string',
 
             'start_date' => [
-                Rule::requiredIf($datesRequired),
+                Rule::requiredIf($isCreate || $datesRequired),
                 'nullable',
                 'date',
             ],
@@ -88,7 +89,7 @@ class TaskStoreRequest extends FormRequest
         $validator->after(function ($validator) {
             // due_date required hanya jika status "In Progress"
             if ($this->status_id) {
-                $status = \App\Models\MsTaskStatus::find($this->status_id);
+                $status = MsTaskStatus::find($this->status_id);
                 if ($status && strtolower($status->name) === 'in progress' && ! $this->filled('due_date')) {
                     $validator->errors()->add('due_date', 'Due date is required when status is In Progress.');
                 }
@@ -97,7 +98,7 @@ class TaskStoreRequest extends FormRequest
             // Epic tidak boleh masuk sprint (cek di SprintController, bukan di sini)
             // tapi validasi hierarki: Epic tidak boleh punya parent
             if ($this->task_category_id && $this->parent_id) {
-                $category = \App\Models\TaskCategory::find($this->task_category_id);
+                $category = TaskCategory::find($this->task_category_id);
                 if ($category && strtolower($category->name) === 'epic') {
                     $validator->errors()->add('parent_id', 'Epic tidak boleh memiliki parent task.');
                 }
@@ -109,6 +110,7 @@ class TaskStoreRequest extends FormRequest
     {
         return [
             'title.required' => 'The title field is required.',
+            'start_date.required' => 'The start date field is required.',
             'emoji.max' => 'The emoji may not be greater than 100 characters.',
             'status_id.exists' => 'The selected status is invalid.',
             'priority_id.exists' => 'The selected priority is invalid.',

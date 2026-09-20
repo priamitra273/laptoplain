@@ -392,6 +392,7 @@ class TaskService
         $taskData['media'] = $task->relationLoaded('media')
             ? MediaData::collect($task->media, DataCollection::class)->toArray()
             : [];
+        $taskData['code'] = 'T-'.$task->id;
 
         return [
             'task' => $taskData,
@@ -399,7 +400,7 @@ class TaskService
             'assignedUsers' => $assignedUsers,
             'assignableUsers' => $assignableUsers,
             'creator' => $creator,
-            'statuses' => MsTaskStatus::select('id', 'name', 'severity', 'score')->get()->toArray(),
+            'statuses' => MsTaskStatus::select('id', 'name', 'severity')->get()->toArray(),
             'priorities' => MsTaskPriority::select('id', 'name', 'severity')->get()->toArray(),
             'types' => MsTaskType::select('id', 'name', 'severity')->get()->toArray(),
             'categories' => TaskCategory::select('id', 'name', 'icon', 'severity')->get()->toArray(),

@@ -27,7 +27,8 @@ class CreateTaskAction
             $this->syncRelationships($task, $project, $assignUserIds, $tagIds, $data['sprint_id'] ?? null);
 
             if (request()->hasFile('attachments')) {
-                $task->addMultipleMediaFromRequest(['attachments'])->each->toMediaCollection('attachments');
+                $task->addMultipleMediaFromRequest(['attachments'])
+                    ->each->toMediaCollection('attachments');
             }
 
             event(new TaskCreated($task, $assignUserIds));
@@ -56,11 +57,10 @@ class CreateTaskAction
         $tagIds = $tagData['exists'] ?? [];
 
         foreach ($tagData['new'] ?? [] as $newTag) {
-            $tag = Tag::whereRaw('LOWER(name) = ?', [mb_strtolower($newTag['name'])])->first()
-                ?? Tag::create([
-                    'name' => $newTag['name'],
-                    'severity' => $newTag['severity'],
-                ]);
+            $tag = Tag::create([
+                'name' => $newTag['name'],
+                'severity' => $newTag['severity'],
+            ]);
 
             $tagIds[] = $tag->id;
         }

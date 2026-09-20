@@ -106,14 +106,12 @@ class UpdateTaskAction
             $task->tags()->syncWithoutDetaching($data['add_tag']['exists']);
         }
 
-        // Create and attach new tags
         $newTagIds = [];
         foreach ($data['add_tag']['new'] ?? [] as $newTag) {
-            $tag = Tag::whereRaw('LOWER(name) = ?', [mb_strtolower($newTag['name'])])->first()
-                ?? Tag::create([
-                    'name' => $newTag['name'],
-                    'severity' => $newTag['severity'],
-                ]);
+            $tag = Tag::create([
+                'name' => $newTag['name'],
+                'severity' => $newTag['severity'],
+            ]);
             $newTagIds[] = $tag->id;
         }
 
@@ -220,29 +218,25 @@ class UpdateTaskAction
      */
     private function syncMedia(Task $task, array $data): void
     {
-        // 'attachments' key absent means the caller didn't touch attachments at all
-        // (e.g. a form that doesn't have an attachments field yet) — leave them alone.
-        if (! array_key_exists('attachments', $data)) {
-            if (request()->hasFile('attachments')) {
-                $task->addMultipleMediaFromRequest(['attachments'])->each->toMediaCollection('attachments');
-            }
-
-            return;
-        }
-
         if (! empty($data['attachments'])) {
             $existingMediaUuids = array_map(
                 fn ($media) => $media['uuid'],
                 array_filter($data['attachments'], fn ($attachment) => is_array($attachment))
             );
 
-            $task->media()->whereNotIn('uuid', $existingMediaUuids)->get()->each->delete();
+            $task->media()
+                ->where('collection_name', 'attachments')
+                ->whereNotIn('uuid', $existingMediaUuids)
+                ->get()
+                ->each
+                ->delete();
         } else {
             $task->clearMediaCollection('attachments');
         }
 
         if (request()->hasFile('attachments')) {
-            $task->addMultipleMediaFromRequest(['attachments'])->each->toMediaCollection('attachments');
+            $task->addMultipleMediaFromRequest(['attachments'])
+                ->each->toMediaCollection('attachments');
         }
     }
 }

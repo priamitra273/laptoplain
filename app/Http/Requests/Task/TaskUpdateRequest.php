@@ -23,8 +23,8 @@ class TaskUpdateRequest extends FormRequest
         $datesRequired = $this->requiresDates($status?->name);
 
         return [
+            'project_id' => 'sometimes|exists:projects,id',
             'parent_id' => 'sometimes|nullable|exists:tasks,id',
-
             'status_id' => 'required|exists:ms_task_statuses,id',
             'priority_id' => 'sometimes|nullable|exists:ms_task_priorities,id',
             'type_id' => 'sometimes|nullable|exists:ms_task_types,id',
@@ -135,9 +135,9 @@ class TaskUpdateRequest extends FormRequest
         $priorityId = $this->priority_id;
         $typeId = $this->type_id;
         $categoryId = $this->task_category_id;
+        $projectId = $this->project_id;
         $ownedId = $this->owned_id;
         $parentId = $this->parent_id;
-
         $assignUsersEncoded = $this->input('assign_users', []);
         $unassignUsersEncoded = $this->input('unassign_users', []);
         $addTagEncoded = $this->input('add_tag.exists', []);
@@ -196,13 +196,15 @@ class TaskUpdateRequest extends FormRequest
         if ($typeId) {
             $merged['type_id'] = Sqids::decode($typeId);
         }
+        if ($projectId) {
+            $merged['project_id'] = Sqids::decode($projectId);
+        }
         if ($ownedId) {
             $merged['owned_id'] = Sqids::decode($ownedId);
         }
         if ($parentId) {
             $merged['parent_id'] = Sqids::decode($parentId);
         }
-
         $this->merge($merged);
     }
 

@@ -50,7 +50,7 @@ class TaskController extends Controller
 
         $data = $this->service->indexProps(Auth::id(), $params);
 
-        return Inertia::render('favorites/project/task/Index', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('favorites/my-task/Index', Sqids::rec_encode_ids_in_list($data));
     }
 
     /**
@@ -94,7 +94,7 @@ class TaskController extends Controller
             $request->user()
         );
 
-        return Inertia::render('favorites/project/task/Detail', Sqids::rec_encode_ids_in_list($data));
+        return Inertia::render('favorites/project/detail/task/Detail', Sqids::rec_encode_ids_in_list($data));
     }
 
     public function update(TaskUpdateRequest $request, string $encoded, string $taskEncoded, UpdateTaskAction $updateTaskAction)

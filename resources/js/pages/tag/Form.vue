@@ -4,13 +4,13 @@ import { severityColor } from '@/lib/utils';
 import { useForm, type InertiaForm } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { computed } from 'vue';
-import type { MasterDataItem } from '../types';
+import type { TagItem } from './Index.vue';
 
 interface Props {
-    value?: MasterDataItem;
+    value?: TagItem;
 }
 
-interface TaskTypeFormData {
+interface TagFormData {
     _method: string;
     name: string;
     severity: string;
@@ -20,9 +20,9 @@ interface TaskTypeFormData {
 const props = defineProps<Props>();
 const emits = defineEmits<{ close: [boolean] }>();
 
-const title = computed(() => (props.value?.id ? 'Edit Task Type' : 'Add Task Type'));
+const title = computed(() => (props.value?.id ? 'Edit Tag' : 'Add Tag'));
 
-const form: InertiaForm<TaskTypeFormData> = useForm({
+const form: InertiaForm<TagFormData> = useForm({
     _method: 'POST',
     name: '',
     severity: '',
@@ -34,7 +34,7 @@ const open = () => {
 };
 
 const save = (): void => {
-    const url = props.value?.id ? route('task-type.update', props.value.id) : route('task-type.store');
+    const url = props.value?.id ? route('tag.update', props.value.id) : route('tag.store');
 
     form._method = props.value?.id ? 'PUT' : 'POST';
 
@@ -46,6 +46,7 @@ const save = (): void => {
     });
 };
 
+// watching form changes
 for (const key in form.data()) {
     watchDebounced(
         () => form[key],
@@ -66,7 +67,7 @@ for (const key in form.data()) {
             <div class="grid gap-6">
                 <div class="flex flex-col gap-2">
                     <Label value="Name" required />
-                    <UInput v-model="form.name" placeholder="Enter type name" />
+                    <UInput v-model="form.name" placeholder="Enter tag name" />
                     <InputError v-if="form.errors.name" :message="form.errors.name" />
                 </div>
 

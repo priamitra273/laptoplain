@@ -9,10 +9,10 @@ import { getPaginationRowModel } from '@tanstack/vue-table';
 import type { Column, PaginationState, SortingState, Table } from '@tanstack/vue-table';
 import moment from 'moment';
 import { computed, h, ref, useTemplateRef } from 'vue';
-import type { MasterDataItem } from '../types';
+import type { TagItem } from './Index.vue';
 
 interface Props {
-    data?: MasterDataItem[];
+    data?: TagItem[];
 }
 
 withDefaults(defineProps<Props>(), {
@@ -20,7 +20,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 const emits = defineEmits<{
-    (event: 'edit', value: MasterDataItem): void;
+    (event: 'edit', value: TagItem): void;
 }>();
 
 const confirm = useConfirmDialog();
@@ -29,14 +29,14 @@ const pageSizes = [10, 20, 50];
 
 // Sort indicator is text-only (no arrow icon): the active column's label turns
 // primary + semibold instead of showing a direction glyph.
-const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<MasterDataItem> => {
+const withSortHeader = (column: TableColumn<TagItem>): TableColumn<TagItem> => {
     if (column.enableSorting === false || typeof column.header !== 'string') return column;
 
     const label = column.header;
 
     return {
         ...column,
-        header: ({ column: col }: { column: Column<MasterDataItem, unknown> }) => {
+        header: ({ column: col }: { column: Column<TagItem, unknown> }) => {
             const isSorted = col.getIsSorted();
 
             return h(UButton, {
@@ -48,10 +48,10 @@ const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<Master
                 onClick: () => col.toggleSorting(isSorted === 'asc'),
             });
         },
-    } as TableColumn<MasterDataItem>;
+    } as TableColumn<TagItem>;
 };
 
-const baseColumns: TableColumn<MasterDataItem>[] = [
+const baseColumns: TableColumn<TagItem>[] = [
     { header: 'No', enableSorting: false, cell: ({ row }) => row.index + 1 },
     { accessorKey: 'name', header: 'Name' },
     { accessorKey: 'severity', header: 'Severity' },
@@ -69,8 +69,8 @@ const globalFilter = ref('');
 const sorting = ref<SortingState>([]);
 const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: pageSizes[0] });
 
-const table = useTemplateRef<{ tableApi: Table<MasterDataItem> }>('table');
-const paginationRowModel = getPaginationRowModel<MasterDataItem>();
+const table = useTemplateRef<{ tableApi: Table<TagItem> }>('table');
+const paginationRowModel = getPaginationRowModel<TagItem>();
 
 const total = computed(() => table.value?.tableApi?.getFilteredRowModel().rows.length ?? 0);
 
@@ -84,10 +84,10 @@ const pageSize = computed({
     set: (value: number) => (pagination.value = { pageIndex: 0, pageSize: value }),
 });
 
-const getDropdownActions = (row: MasterDataItem) => {
+const getDropdownActions = (row: TagItem) => {
     const items: DropdownMenuItem[] = [];
 
-    if (can('task-type.update')) {
+    if (can('tag.update')) {
         items.push({
             label: 'Edit',
             icon: 'i-lucide-pencil',
@@ -97,7 +97,7 @@ const getDropdownActions = (row: MasterDataItem) => {
         });
     }
 
-    if (can('task-type.delete')) {
+    if (can('tag.delete')) {
         items.push({
             label: 'Delete',
             icon: 'i-lucide-trash',
@@ -110,21 +110,21 @@ const getDropdownActions = (row: MasterDataItem) => {
     return items;
 };
 
-const handleDelete = async (row: MasterDataItem) => {
+const handleDelete = async (row: TagItem) => {
     const confirmed = await confirm({
-        title: 'Delete Task Type',
-        description: `Are you sure want to delete ${row.name} type?`,
+        title: 'Delete Tag',
+        description: `Are you sure want to delete ${row.name} tag?`,
     });
 
     if (confirmed) {
-        router.delete(route('task-type.destroy', row.id));
+        router.delete(route('tag.destroy', row.id));
     }
 };
 </script>
 
 <template>
     <div class="space-y-3">
-        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Task Type" class="md:w-md" />
+        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Tag" class="md:w-md" />
 
         <UCard :ui="{ root: 'p-1', body: 'p-0 sm:p-1' }">
             <div>

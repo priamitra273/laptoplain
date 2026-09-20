@@ -27,12 +27,8 @@ const confirm = useConfirmDialog();
 
 const pageSizes = [10, 20, 50];
 
-const sortIcon = (direction: false | 'asc' | 'desc') => {
-    if (direction === 'asc') return 'i-lucide-arrow-up';
-    if (direction === 'desc') return 'i-lucide-arrow-down';
-    return 'i-lucide-arrow-up-down';
-};
-
+// Sort indicator is text-only (no arrow icon): the active column's label turns
+// primary + semibold instead of showing a direction glyph.
 const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<MasterDataItem> => {
     if (column.enableSorting === false || typeof column.header !== 'string') return column;
 
@@ -40,16 +36,18 @@ const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<Master
 
     return {
         ...column,
-        header: ({ column: col }: { column: Column<MasterDataItem, unknown> }) =>
-            h(UButton, {
+        header: ({ column: col }: { column: Column<MasterDataItem, unknown> }) => {
+            const isSorted = col.getIsSorted();
+
+            return h(UButton, {
                 label,
-                trailingIcon: sortIcon(col.getIsSorted()),
                 variant: 'ghost',
-                color: 'neutral',
+                color: isSorted ? 'primary' : 'neutral',
                 size: 'sm',
-                class: '-mx-2.5 font-medium',
-                onClick: () => col.toggleSorting(col.getIsSorted() === 'asc'),
-            }),
+                class: ['-mx-2.5', isSorted ? 'font-semibold' : 'font-medium'],
+                onClick: () => col.toggleSorting(isSorted === 'asc'),
+            });
+        },
     } as TableColumn<MasterDataItem>;
 };
 

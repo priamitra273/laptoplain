@@ -9,10 +9,10 @@ import { getPaginationRowModel } from '@tanstack/vue-table';
 import type { Column, PaginationState, SortingState, Table } from '@tanstack/vue-table';
 import moment from 'moment';
 import { computed, h, ref, useTemplateRef } from 'vue';
-import type { MasterDataItem } from '../types';
+import type { TaskCategoryItem } from './Index.vue';
 
 interface Props {
-    data?: MasterDataItem[];
+    data?: TaskCategoryItem[];
 }
 
 withDefaults(defineProps<Props>(), {
@@ -20,7 +20,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 const emits = defineEmits<{
-    (event: 'edit', value: MasterDataItem): void;
+    (event: 'edit', value: TaskCategoryItem): void;
 }>();
 
 const confirm = useConfirmDialog();
@@ -29,14 +29,14 @@ const pageSizes = [10, 20, 50];
 
 // Sort indicator is text-only (no arrow icon): the active column's label turns
 // primary + semibold instead of showing a direction glyph.
-const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<MasterDataItem> => {
+const withSortHeader = (column: TableColumn<TaskCategoryItem>): TableColumn<TaskCategoryItem> => {
     if (column.enableSorting === false || typeof column.header !== 'string') return column;
 
     const label = column.header;
 
     return {
         ...column,
-        header: ({ column: col }: { column: Column<MasterDataItem, unknown> }) => {
+        header: ({ column: col }: { column: Column<TaskCategoryItem, unknown> }) => {
             const isSorted = col.getIsSorted();
 
             return h(UButton, {
@@ -48,11 +48,12 @@ const withSortHeader = (column: TableColumn<MasterDataItem>): TableColumn<Master
                 onClick: () => col.toggleSorting(isSorted === 'asc'),
             });
         },
-    } as TableColumn<MasterDataItem>;
+    } as TableColumn<TaskCategoryItem>;
 };
 
-const baseColumns: TableColumn<MasterDataItem>[] = [
+const baseColumns: TableColumn<TaskCategoryItem>[] = [
     { header: 'No', enableSorting: false, cell: ({ row }) => row.index + 1 },
+    { accessorKey: 'icon', header: 'Icon', enableSorting: false },
     { accessorKey: 'name', header: 'Name' },
     { accessorKey: 'severity', header: 'Severity' },
     {
@@ -65,12 +66,15 @@ const baseColumns: TableColumn<MasterDataItem>[] = [
 
 const columns = baseColumns.map(withSortHeader);
 
+/** Ikon warisan masih berformat PrimeVue (`pi pi-bolt`) dan tidak bisa dirender lucide. */
+const isRenderableIcon = (icon: string | null) => !!icon && !icon.startsWith('pi ');
+
 const globalFilter = ref('');
 const sorting = ref<SortingState>([]);
 const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: pageSizes[0] });
 
-const table = useTemplateRef<{ tableApi: Table<MasterDataItem> }>('table');
-const paginationRowModel = getPaginationRowModel<MasterDataItem>();
+const table = useTemplateRef<{ tableApi: Table<TaskCategoryItem> }>('table');
+const paginationRowModel = getPaginationRowModel<TaskCategoryItem>();
 
 const total = computed(() => table.value?.tableApi?.getFilteredRowModel().rows.length ?? 0);
 
@@ -84,10 +88,10 @@ const pageSize = computed({
     set: (value: number) => (pagination.value = { pageIndex: 0, pageSize: value }),
 });
 
-const getDropdownActions = (row: MasterDataItem) => {
+const getDropdownActions = (row: TaskCategoryItem) => {
     const items: DropdownMenuItem[] = [];
 
-    if (can('task-type.update')) {
+    if (can('task-category.update')) {
         items.push({
             label: 'Edit',
             icon: 'i-lucide-pencil',
@@ -97,7 +101,7 @@ const getDropdownActions = (row: MasterDataItem) => {
         });
     }
 
-    if (can('task-type.delete')) {
+    if (can('task-category.delete')) {
         items.push({
             label: 'Delete',
             icon: 'i-lucide-trash',
@@ -110,21 +114,21 @@ const getDropdownActions = (row: MasterDataItem) => {
     return items;
 };
 
-const handleDelete = async (row: MasterDataItem) => {
+const handleDelete = async (row: TaskCategoryItem) => {
     const confirmed = await confirm({
-        title: 'Delete Task Type',
-        description: `Are you sure want to delete ${row.name} type?`,
+        title: 'Delete Task Category',
+        description: `Are you sure want to delete ${row.name} category?`,
     });
 
     if (confirmed) {
-        router.delete(route('task-type.destroy', row.id));
+        router.delete(route('task-category.destroy', row.id));
     }
 };
 </script>
 
 <template>
     <div class="space-y-3">
-        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Task Type" class="md:w-md" />
+        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Task Category" class="md:w-md" />
 
         <UCard :ui="{ root: 'p-1', body: 'p-0 sm:p-1' }">
             <div>
@@ -138,6 +142,18 @@ const handleDelete = async (row: MasterDataItem) => {
                     :pagination-options="{ getPaginationRowModel: paginationRowModel }"
                     class="flex-1"
                 >
+                    <template #icon-cell="{ row }">
+                        <UBadge
+                            v-if="isRenderableIcon(row.original.icon)"
+                            :color="severityColor(row.original.severity)"
+                            variant="subtle"
+                            class="size-8 justify-center"
+                        >
+                            <Icon :name="row.original.icon!" class="size-4" />
+                        </UBadge>
+                        <span v-else class="text-xs text-dimmed">—</span>
+                    </template>
+
                     <template #severity-cell="{ row }">
                         <UBadge :color="severityColor(row.original.severity)" variant="subtle">
                             {{ getSeverityLabel(row.original.severity) }}

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import StatCard from '@/components/StatCard.vue';
-import ActivityHeatmap from './ActivityHeatmap.vue';
+import ActivityGraphCard from './ActivityGraphCard.vue';
 import NeedsAttentionCard from './NeedsAttentionCard.vue';
 import TaskDonutChart from './TaskDonutChart.vue';
 import ProjectProgressCard from './ProjectProgressCard.vue';
 import LatestProjectsCard from './LatestProjectsCard.vue';
-import type { PrimeSeverity } from '@/types';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Deferred, Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
+import { plural } from '@/lib/utils';
 import { computed } from 'vue';
 import { TASK_CHART_COLORS } from './chartColor';
+import type { DashboardActivity, DashboardAttentionItem, DashboardLatestProject, DashboardProjectProgress } from './types';
 
 
 const props = defineProps<{
@@ -29,47 +30,14 @@ const props = defineProps<{
         active: number;
         progress_percent: number;
     };
-    activity?: {
-        values: { date: string; count: number }[];
-        total_events: number;
-        weeks: number;
-        busiest_date: string | null;
-        busiest_count: number;
-        current_streak: number;
-        weekly_average: number;
-    };
+    activity?: DashboardActivity;
     attention: {
         total: number;
-        items: {
-            id: string;
-            title: string;
-            due_date: string;
-            days_remaining: number;
-            open_subtasks: number;
-            owner_name: string | null;
-        }[];
+        items: DashboardAttentionItem[];
     };
     projectsTab: string;
-    projectProgress?: {
-        id: string;
-        title: string;
-        emoji: string | null;
-        total_tasks: number;
-        done_tasks: number;
-        progress_percent: number;
-        due_date: string | null;
-        status_name: string | null;
-        status_severity: string | null;
-    }[];
-    latestProjects?: {
-        id: string;
-        title: string;
-        description: string | null;
-        created_at: string;
-        members_count: number;
-        status_name: string | null;
-        status_severity: PrimeSeverity | null;
-    }[];
+    projectProgress?: DashboardProjectProgress[];
+    latestProjects?: DashboardLatestProject[];
 }>();
 
 const page = usePage();
@@ -90,7 +58,6 @@ const greeting = computed(() => {
     return 'Good evening';
 });
 
-const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const legend = computed(() => [
     { label: 'Done', value: props.stats.done, color: TASK_CHART_COLORS.done },
@@ -98,16 +65,6 @@ const legend = computed(() => [
     { label: 'Overdue', value: props.stats.overdue, color: TASK_CHART_COLORS.overdue },
 ]);
 
-const busiestDay = computed(() => {
-    if (!props.activity?.busiest_date) {
-        return '—';
-    }
-
-    const date = new Date(props.activity.busiest_date);
-    const formatted = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-
-    return `${formatted} · ${plural(props.activity.busiest_count, 'event')}`;
-});
 
 </script>
 
@@ -167,54 +124,7 @@ const busiestDay = computed(() => {
             </div>
 
             <div class="grid gap-3 xl:grid-cols-5">
-               <PanelCard title="Activity graph" class="xl:col-span-3">
-                    <template #meta>
-                        <p v-if="activity" class="text-sm text-muted">
-                            {{ plural(activity.total_events, 'task event') }} · last {{ activity.weeks }} weeks
-                        </p>
-                    </template>
-
-                    <Deferred data="activity">
-                        <template #fallback>
-                            <div class="flex flex-col gap-4">
-                                <USkeleton class="h-28 w-full" />
-
-                                <USeparator />
-
-                                <div class="flex flex-wrap gap-x-10 gap-y-3">
-                                    <USkeleton v-for="n in 3" :key="n" class="h-10 w-32" />
-                                </div>
-                            </div>
-                        </template>
-
-                        <div v-if="activity" class="flex flex-col gap-4">
-                            <ActivityHeatmap :values="activity.values" />
-
-                            <USeparator />
-
-                            <dl class="flex flex-wrap gap-x-10 gap-y-3">
-                                <div class="flex flex-col gap-1">
-                                    <dt class="text-xs text-muted">Busiest day</dt>
-                                    <dd class="text-sm font-semibold text-highlighted">{{ busiestDay }}</dd>
-                                </div>
-
-                                <div class="flex flex-col gap-1">
-                                    <dt class="text-xs text-muted">Current streak</dt>
-                                    <dd class="text-sm font-semibold text-highlighted">{{
-                                        plural(activity.current_streak, 'day') }}
-                                    </dd>
-                                </div>
-
-                                <div class="flex flex-col gap-1">
-                                    <dt class="text-xs text-muted">Weekly average</dt>
-                                    <dd class="text-sm font-semibold text-highlighted">{{
-                                        plural(activity.weekly_average, 'event')
-                                        }}</dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </Deferred>
-                </PanelCard>
+                <ActivityGraphCard class="xl:col-span-3" :activity="activity" />
 
                 <NeedsAttentionCard class="xl:col-span-2" :total="attention.total" :items="attention.items" />
             </div>

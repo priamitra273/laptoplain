@@ -1,24 +1,15 @@
 <script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
+import PanelCard from '@/components/ui/PanelCard.vue';
 import { getInitials } from '@/lib/utils';
-import type { PrimeSeverity } from '@/types';
 import { Deferred, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-
-
-interface LatestProject {
-    id: string;
-    title: string;
-    description: string | null;
-    created_at: string;
-    members_count: number;
-    status_name: string | null;
-    status_severity: PrimeSeverity | null;
-}
+import type { DashboardLatestProject } from './types';
 
 const props = defineProps<{
     // Opsional karena di-defer: daftarnya tiba setelah render pertama.
-    items?: LatestProject[];
+    items?: DashboardLatestProject[];
 }>();
 
 const list = computed(() => props.items ?? []);
@@ -62,12 +53,10 @@ const timeAgo = (iso: string): string => {
 </script>
 
 <template>
-    <UCard :ui="{ root: 'gap-0 py-0', body: 'flex flex-col p-0 sm:p-0' }">
-        <div class="flex items-center justify-between gap-3 px-4 py-3">
-            <h2 class="text-base font-semibold text-highlighted">Latest projects</h2>
-
+    <PanelCard title="Latest projects" flush>
+        <template #action>
             <ULink :as="Link" :href="route('project.index')" class="text-sm font-medium">View all</ULink>
-        </div>
+        </template>
 
         <Deferred data="latestProjects">
             <template #fallback>
@@ -83,15 +72,9 @@ const timeAgo = (iso: string): string => {
             </template>
 
             <ul class="flex flex-col">
-                                <li v-for="item in list" :key="item.id" class="border-t border-default">
-                    <Link
-                        :href="route('project.show', item.id)"
-                        class="flex gap-3 px-4 py-3 transition-colors hover:bg-elevated"
-                    >
-                        <span
-                            class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
-                            :class="toneOf(item.id)"
-                        >
+                <li v-for="item in list" :key="item.id" class="border-t border-default">
+                    <Link :href="route('project.show.kanban', item.id)" class="flex gap-3 px-4 py-3 transition-colors hover:bg-elevated">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold" :class="toneOf(item.id)">
                             {{ getInitials(item.title) }}
                         </span>
 
@@ -111,10 +94,10 @@ const timeAgo = (iso: string): string => {
                     </Link>
                 </li>
 
-                <li v-if="list.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
-                    Belum ada project.
+                <li v-if="list.length === 0" class="border-t border-default px-4">
+                    <EmptyState title="No projects yet" size="compact" />
                 </li>
             </ul>
         </Deferred>
-    </UCard>
+    </PanelCard>
 </template>

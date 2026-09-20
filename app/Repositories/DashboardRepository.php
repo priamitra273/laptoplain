@@ -92,19 +92,7 @@ class DashboardRepository
             ->count();
     }
 
-    /**
-     * Seluruh angka kartu statistik dalam satu kali sapu tabel.
-     *
-     * COUNT(*) FILTER milik Postgres dipakai supaya tujuh angka tidak menjadi tujuh
-     * query terpisah. task_users di-LEFT JOIN hanya untuk satu user, sehingga
-     * pasangannya paling banyak satu baris dan totalnya tidak berlipat.
-     *
-     * Query builder mem-bind sendiri setiap `?`, jadi tidak ada nilai yang menyatu
-     * ke dalam teks SQL.
-     *
-     * @param  array<int, int>  $projectIds
-     */
-    public function taskStats(array $projectIds, int $userId, int $dueWindowDays, int $completedWindowDays): object
+    public function taskStats(int $userId, int $dueWindowDays, int $completedWindowDays): object
     {
         $today = today();
 
@@ -114,7 +102,10 @@ class DashboardRepository
                     ->where('assignee.user_id', $userId);
             })
             ->leftJoin('ms_task_statuses as task_status', 'task_status.id', '=', 'tasks.status_id')
-            ->whereIn('tasks.project_id', $projectIds)
+            ->where(function (\Illuminate\Database\Query\Builder $query) use ($userId) {
+                $query->where('tasks.created_by', $userId)
+                    ->orWhereNotNull('assignee.user_id');
+            })
             ->whereNull('tasks.deleted_at')
             ->where('tasks.is_archived', false)
             ->selectRaw('COUNT(*) AS total')
@@ -132,17 +123,6 @@ class DashboardRepository
             ->first();
     }
 
-        /**
-     * Jumlah jejak aktivitas task per hari untuk satu user.
-     *
-     * Hanya hari yang ada isinya yang dikembalikan. Hari kosong tidak perlu dikirim
-     * karena komponen heatmap sudah menggambar seluruh rentang sendiri dari endDate.
-     *
-     * causer_type ikut disaring karena kolom itu polimorfik: causer_id sendirian bisa
-     * menyambar baris milik model lain, dan indeksnya pun gabungan (causer_type, causer_id).
-     *
-     * @return array<int, object>
-     */
     public function taskActivityByDay(int $userId, int $days): array
     {
         return DB::table('activity_log')
@@ -157,11 +137,6 @@ class DashboardRepository
             ->all();
     }
 
-        /**
-     * Task milik user yang tenggatnya sudah lewat atau tinggal beberapa hari.
-     *
-     * @return Collection<int, Task>
-     */
     public function attentionTasks(int $userId, int $windowDays, int $limit): Collection
     {
         return $this->attentionQuery($userId, $windowDays)
@@ -200,14 +175,6 @@ class DashboardRepository
             ->where('due_date', '<=', today()->addDays($windowDays));
     }
 
-            /**
-     * Project yang diikuti user beserta hitungan task dan progresnya.
-     *
-     * Hitungan task memakai subquery, bukan withCount, karena relasi Project::tasks()
-     * menyaring whereNull('parent_id') — lewat relasi itu subtask tidak akan terhitung.
-     *
-     * @return Collection<int, Project>
-     */
     public function projectProgress(int $userId, string $tab, int $limit): Collection
     {
         $query = $this->userProjects($userId)
@@ -239,7 +206,6 @@ class DashboardRepository
             ->limit($limit)
             ->get();
     }
-
 
     /**
      * @return Collection<int, Project>
@@ -283,5 +249,4 @@ class DashboardRepository
             ->where('tasks.due_date', '<', today())
             ->selectRaw('1');
     }
-
 }

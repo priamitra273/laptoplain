@@ -54,13 +54,9 @@ class DashboardService
         );
     }
 
-    /**
-     * Statistik seluruh task di project yang sedang berjalan.
-     */
     public function taskStats(int $userId): TaskStatsData
     {
         $row = $this->repository->taskStats(
-            $this->runningProjectIds($userId),
             $userId,
             self::DUE_WINDOW_DAYS,
             self::COMPLETED_WINDOW_DAYS,

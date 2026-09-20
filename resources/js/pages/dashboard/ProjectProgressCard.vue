@@ -1,21 +1,14 @@
 <script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
+import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
+import PanelCard from '@/components/ui/PanelCard.vue';
+import { formatDate } from '@/lib/date';
 import { Deferred, router } from '@inertiajs/vue3';
 import type { TableColumn } from '@nuxt/ui';
-
-interface ProjectRow {
-    id: string;
-    title: string;
-    emoji: string | null;
-    total_tasks: number;
-    done_tasks: number;
-    progress_percent: number;
-    due_date: string | null;
-    status_name: string | null;
-    status_severity: string | null;
-}
+import type { DashboardProjectProgress } from './types';
 
 const props = defineProps<{
-    rows?: ProjectRow[];
+    rows?: DashboardProjectProgress[];
     tab: string;
 }>();
 
@@ -25,7 +18,7 @@ const tabs = [
     { value: 'at-risk', label: 'At risk' },
 ];
 
-const columns: TableColumn<ProjectRow>[] = [
+const columns: TableColumn<DashboardProjectProgress>[] = [
     { accessorKey: 'title', header: 'Project' },
     { accessorKey: 'tasks', header: 'Tasks' },
     { accessorKey: 'progress', header: 'Progress' },
@@ -43,25 +36,13 @@ const changeTab = (value: string | number) => {
         { only: ['projectProgress', 'projectsTab'], preserveScroll: true, preserveState: true, replace: true },
     );
 };
-
-const deadline = (value: string | null): string =>
-    value ? new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 </script>
 
 <template>
-    <UCard :ui="{ root: 'gap-0 py-0', body: 'flex flex-col gap-4 p-4 sm:p-4' }">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-highlighted">Project progress</h2>
-
-            <UTabs
-                :items="tabs"
-                :model-value="tab"
-                :content="false"
-                size="sm"
-                class="w-fit"
-                @update:model-value="changeTab"
-            />
-        </div>
+    <PanelCard title="Project progress">
+        <template #action>
+            <UTabs :items="tabs" :model-value="tab" :content="false" size="sm" class="w-fit" @update:model-value="changeTab" />
+        </template>
 
         <Deferred data="projectProgress">
             <template #fallback>
@@ -78,7 +59,7 @@ const deadline = (value: string | null): string =>
                     class="transition-opacity"
                     :class="{ 'opacity-50': reloading }"
                     :ui="{ tr: 'cursor-pointer hover:bg-elevated' }"
-                    :on-select="(_e, row) => router.visit(route('project.show', row.original.id))"
+                    :on-select="(_e, row) => router.visit(route('project.show.kanban', row.original.id))"
                 >
                     <template #title-cell="{ row }">
                         <div class="flex min-w-0 items-center gap-2">
@@ -92,21 +73,18 @@ const deadline = (value: string | null): string =>
                     </template>
 
                     <template #progress-cell="{ row }">
-                        <div class="flex items-center gap-2">
-                            <UProgress :model-value="row.original.progress_percent" size="sm" class="min-w-24 flex-1" />
-                            <span class="w-9 text-right text-xs tabular-nums text-muted">{{ row.original.progress_percent }}%</span>
-                        </div>
+                        <ProgressWithLabel :value="row.original.progress_percent" bar-aria-label="Project progress" class="min-w-44" />
                     </template>
 
                     <template #due_date-cell="{ row }">
-                        <span class="text-sm text-muted">{{ deadline(row.original.due_date) }}</span>
+                        <span class="text-sm text-muted">{{ formatDate(row.original.due_date) }}</span>
                     </template>
 
                     <template #empty>
-                        <p class="py-6 text-center text-sm text-muted">Tidak ada project di kategori ini.</p>
+                        <EmptyState title="No projects in this category" size="compact" />
                     </template>
                 </UTable>
             </template>
         </Deferred>
-    </UCard>
+    </PanelCard>
 </template>

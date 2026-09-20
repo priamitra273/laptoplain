@@ -1,18 +1,11 @@
 <script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
 import { Link } from '@inertiajs/vue3';
-
-interface AttentionTask {
-    id: string;
-    title: string;
-    due_date: string;
-    days_remaining: number;
-    open_subtasks: number;
-    owner_name: string | null;
-}
+import type { DashboardAttentionItem } from './types';
 
 defineProps<{
     total: number;
-    items: AttentionTask[];
+    items: DashboardAttentionItem[];
 }>();
 
 /** Ambang kuning, murni urusan tampilan — tidak sama dengan jendela 14 hari di backend. */
@@ -55,10 +48,7 @@ const badgeLabel = (days: number): string => {
 
         <ul class="flex flex-col">
             <li v-for="item in items" :key="item.id" class="border-t border-default">
-                <Link
-                    :href="route('task.show', item.id)"
-                    class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated"
-                >
+                <Link :href="route('task.show', item.id)" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated">
                     <span class="h-9 w-1 shrink-0 rounded-full" :class="accentClass(item.days_remaining)" />
 
                     <div class="min-w-0 flex-1">
@@ -79,10 +69,9 @@ const badgeLabel = (days: number): string => {
                 </Link>
             </li>
 
-            <li v-if="items.length === 0" class="border-t border-default px-4 py-6 text-center text-sm text-muted">
-                Tidak ada task yang mendesak. Bagus.
+            <li v-if="items.length === 0" class="border-t border-default px-4">
+                <EmptyState title="No urgent tasks. Nice." size="compact" />
             </li>
         </ul>
     </PanelCard>
 </template>
-

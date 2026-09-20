@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('{sprintEncoded}/complete', [SprintController::class, 'complete'])->name('complete');
 
             Route::post('{sprintEncoded}/tasks', [SprintController::class, 'assignTask'])->name('tasks.assign');
+            Route::delete('{sprintEncoded}/tasks', [SprintController::class, 'removeTasks'])->name('tasks.bulk-remove');
             Route::delete('{sprintEncoded}/tasks/{taskEncoded}', [SprintController::class, 'removeTask'])->name('tasks.remove');
         });
     });

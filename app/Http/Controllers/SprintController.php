@@ -7,12 +7,14 @@ use App\Http\Requests\Sprint\SprintCompleteRequest;
 use App\Http\Requests\Sprint\SprintStartRequest;
 use App\Http\Requests\Sprint\SprintStoreRequest;
 use App\Http\Requests\Sprint\SprintTaskAssignRequest;
+use App\Http\Requests\Sprint\SprintTaskBulkRemoveRequest;
 use App\Http\Requests\Sprint\SprintUpdateRequest;
 use App\Services\SprintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SprintController extends Controller
 {
@@ -67,7 +69,7 @@ class SprintController extends Controller
 
         try {
             $this->service->destroy($sprint);
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
             }
@@ -119,7 +121,7 @@ class SprintController extends Controller
 
         try {
             $this->service->assignTasks($sprint, $request->validated('task_ids'), $projectId);
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
             }
@@ -140,6 +142,21 @@ class SprintController extends Controller
     {
         $sprint = $this->service->findByProject(Sqids::decode($sprintEncoded), Sqids::decode($projectEncoded));
         $this->service->removeTask($sprint, Sqids::decode($taskEncoded));
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Task dipindahkan ke backlog.']);
+        }
+
+        return to_route('project.show', ['encoded' => $projectEncoded])
+            ->with('success', 'Task dipindahkan ke backlog.');
+    }
+
+    public function removeTasks(SprintTaskBulkRemoveRequest $request, string $projectEncoded, string $sprintEncoded): JsonResponse|RedirectResponse
+    {
+        $projectId = Sqids::decode($projectEncoded);
+        $sprint = $this->service->findByProject(Sqids::decode($sprintEncoded), $projectId);
+
+        $this->service->removeTasks($sprint, $request->validated('task_ids'), $projectId);
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => 'Task dipindahkan ke backlog.']);

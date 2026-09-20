@@ -127,6 +127,19 @@ class SprintService
         $sprint->tasks()->detach($taskId);
     }
 
+    /**
+     * @param  array<int, int>  $taskIds
+     */
+    public function removeTasks(ProjectSprint $sprint, array $taskIds, int $projectId): void
+    {
+        $validTaskIds = Task::whereIn('id', $taskIds)
+            ->where('project_id', $projectId)
+            ->pluck('id')
+            ->toArray();
+
+        $sprint->tasks()->detach($validTaskIds);
+    }
+
     private function moveIncompleteToExistingSprint(ProjectSprint $sprint, int $targetSprintId): void
     {
         $incompleteTasks = $this->repository->getIncompleteTaskIds($sprint);

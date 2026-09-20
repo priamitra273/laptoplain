@@ -30,13 +30,31 @@ const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: pageSizes[0] }
 const table = useTemplateRef<{ tableApi: Table<UserList> }>('table');
 const paginationRowModel = getPaginationRowModel<UserList>();
 
-const sortIcon = (direction: false | 'asc' | 'desc') => {
-    if (direction === 'asc') return 'i-lucide-arrow-up';
-    if (direction === 'desc') return 'i-lucide-arrow-down';
-    return 'i-lucide-arrow-up-down';
+// Sort indicator is text-only (no arrow icon): the active column's label turns
+// primary + semibold instead of showing a direction glyph.
+const withSortHeader = (column: TableColumn<UserList>): TableColumn<UserList> => {
+    if (column.enableSorting === false || typeof column.header !== 'string') return column;
+
+    const label = column.header;
+
+    return {
+        ...column,
+        header: ({ column: col }: { column: Column<UserList, unknown> }) => {
+            const isSorted = col.getIsSorted();
+
+            return h(UButton, {
+                label,
+                variant: 'ghost',
+                color: isSorted ? 'primary' : 'neutral',
+                size: 'sm',
+                class: ['-mx-2.5', isSorted ? 'font-semibold' : 'font-medium'],
+                onClick: () => col.toggleSorting(isSorted === 'asc'),
+            });
+        },
+    } as TableColumn<UserList>;
 };
 
-const columns: TableColumn<UserList>[] = [
+const baseColumns: TableColumn<UserList>[] = [
     { header: 'No', enableSorting: false, cell: ({ row }) => row.index + 1 },
     { accessorKey: 'team_name', header: 'Team', enableSorting: false },
     { accessorKey: 'role_label', header: 'Role', enableSorting: false },
@@ -45,21 +63,14 @@ const columns: TableColumn<UserList>[] = [
     { accessorKey: 'is_active', header: 'Status', enableSorting: false },
     {
         accessorKey: 'created_at',
-        header: ({ column }: { column: Column<UserList, unknown> }) =>
-            h(UButton, {
-                label: 'Created Date',
-                trailingIcon: sortIcon(column.getIsSorted()),
-                variant: 'ghost',
-                color: 'neutral',
-                size: 'sm',
-                class: '-mx-2.5 font-medium',
-                onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-            }),
+        header: 'Created Date',
         cell: ({ row }) => moment(row.getValue('created_at')).format('DD MMM YYYY, HH:mm'),
     },
     { accessorKey: 'created_by', header: 'Created By', enableSorting: false },
     { id: 'actions' },
 ];
+
+const columns = baseColumns.map(withSortHeader);
 
 const total = computed(() => table.value?.tableApi?.getFilteredRowModel().rows.length ?? 0);
 

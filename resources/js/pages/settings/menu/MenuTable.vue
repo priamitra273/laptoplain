@@ -4,14 +4,17 @@ import { can } from '@/lib/utils';
 import type { Menu } from '@/types';
 import { router } from '@inertiajs/vue3';
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
-import { computed, ref } from 'vue';
-import { buildMenuTree, filterMenuTree, type MenuRow } from './menuTree';
+import UButton from '@nuxt/ui/components/Button.vue';
+import { getPaginationRowModel } from '@tanstack/vue-table';
+import type { Column, PaginationState, SortingState, Table } from '@tanstack/vue-table';
+import moment from 'moment';
+import { computed, h, ref, useTemplateRef } from 'vue';
 
 interface Props {
     data?: Menu[];
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
     data: () => [],
 });
 
@@ -22,65 +25,69 @@ const emits = defineEmits<{
 const confirm = useConfirmDialog();
 const toast = useToast();
 
-const columns: TableColumn<MenuRow>[] = [
-    { accessorKey: 'label', header: 'Menu' },
-    { accessorKey: 'route', header: 'Route' },
+const pageSizes = [10, 20, 50];
+
+// Sort indicator is text-only (no arrow icon): the active column's label turns
+// primary + semibold instead of showing a direction glyph.
+const withSortHeader = (column: TableColumn<Menu>): TableColumn<Menu> => {
+    if (column.enableSorting === false || typeof column.header !== 'string') return column;
+
+    const label = column.header;
+
+    return {
+        ...column,
+        header: ({ column: col }: { column: Column<Menu, unknown> }) => {
+            const isSorted = col.getIsSorted();
+
+            return h(UButton, {
+                label,
+                variant: 'ghost',
+                color: isSorted ? 'primary' : 'neutral',
+                size: 'sm',
+                class: ['-mx-2.5', isSorted ? 'font-semibold' : 'font-medium'],
+                onClick: () => col.toggleSorting(isSorted === 'asc'),
+            });
+        },
+    } as TableColumn<Menu>;
+};
+
+const baseColumns: TableColumn<Menu>[] = [
+    { accessorKey: 'label', header: 'Label' },
+    { accessorKey: 'parent', header: 'Parent' },
+    { accessorKey: 'icon', header: 'Icon', enableSorting: false },
+    { accessorKey: 'route', header: 'Route Name' },
+    { accessorKey: 'sequence_number', header: 'Sequence' },
     { accessorKey: 'is_active', header: 'Status' },
-    { id: 'actions' },
+    {
+        accessorKey: 'created_at',
+        header: 'Created',
+        cell: ({ row }) => moment(row.getValue('created_at')).format('DD MMM YYYY, HH:mm'),
+    },
+    { id: 'actions', enableSorting: false },
 ];
 
+const columns = baseColumns.map(withSortHeader);
+
 const globalFilter = ref('');
-const pendingUuid = ref<string | null>(null);
+const sorting = ref<SortingState>([]);
+const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: pageSizes[0] });
 
-const isFiltering = computed(() => globalFilter.value.trim().length > 0);
+const table = useTemplateRef<{ tableApi: Table<Menu> }>('table');
+const paginationRowModel = getPaginationRowModel<Menu>();
 
-const rows = computed<MenuRow[]>(() => filterMenuTree(buildMenuTree(props.data), globalFilter.value));
+const total = computed(() => table.value?.tableApi?.getFilteredRowModel().rows.length ?? 0);
 
-const uriFor = (routeName?: string): string | undefined => {
-    if (!routeName) {
-        return undefined;
-    }
+const page = computed({
+    get: () => pagination.value.pageIndex + 1,
+    set: (value: number) => (pagination.value = { ...pagination.value, pageIndex: value - 1 }),
+});
 
-    try {
-        return route(routeName, undefined, false) as string;
-    } catch {
-        return undefined;
-    }
-};
+const pageSize = computed({
+    get: () => pagination.value.pageSize,
+    set: (value: number) => (pagination.value = { pageIndex: 0, pageSize: value }),
+});
 
-const submit = (row: MenuRow, changes: { sequence_number?: number; is_active?: boolean }, failureMessage: string) => {
-    pendingUuid.value = row.uuid;
-
-    router.post(
-        route('menu.update', row.uuid),
-        {
-            _method: 'PUT',
-            label: row.label,
-            parent_uuid: row.parent_uuid ?? null,
-            icon: row.icon,
-            route_name: row.route ?? null,
-            sequence_number: row.sequence_number,
-            is_active: row.is_active,
-            ...changes,
-        },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onError: () => toast.add({ title: 'Failed', description: failureMessage, color: 'error' }),
-            onFinish: () => (pendingUuid.value = null),
-        },
-    );
-};
-
-const move = (row: MenuRow, targetSequence: number) => {
-    submit(row, { sequence_number: targetSequence }, 'Could not save the new order');
-};
-
-const toggleActive = (row: MenuRow, value: boolean) => {
-    submit(row, { is_active: value }, `Could not change status of ${row.label}`);
-};
-
-const getDropdownActions = (row: MenuRow) => {
+const getDropdownActions = (row: Menu) => {
     const items: DropdownMenuItem[] = [];
 
     if (can('menu.update')) {
@@ -106,7 +113,7 @@ const getDropdownActions = (row: MenuRow) => {
     return items;
 };
 
-const handleDelete = async (row: MenuRow) => {
+const handleDelete = async (row: Menu) => {
     const confirmed = await confirm({
         title: 'Delete Menu',
         description: `Are you sure want to delete ${row.label} menu?`,
@@ -127,85 +134,41 @@ const handleDelete = async (row: MenuRow) => {
         <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search Menu" class="md:w-md" />
 
         <UCard :ui="{ root: 'p-1', body: 'p-0 sm:p-1' }">
-            <UTable :data="rows" :columns="columns" :ui="{ tr: 'group/row' }">
-                <template #label-cell="{ row }">
-                    <div class="flex items-center gap-2.5">
-                        <span
-                            v-if="row.original.depth > 0"
-                            aria-hidden="true"
-                            class="ms-2 h-4 w-3 shrink-0 rounded-bl border-b border-l border-default"
-                        />
-                        <Icon :name="row.original.icon" class="size-4 shrink-0 text-muted" />
-                        <span :class="row.original.depth === 0 ? 'font-medium' : ''">{{ row.original.label }}</span>
-                    </div>
-                </template>
+            <div>
+                <UTable
+                    ref="table"
+                    v-model:global-filter="globalFilter"
+                    v-model:sorting="sorting"
+                    v-model:pagination="pagination"
+                    :data="data"
+                    :columns="columns"
+                    :pagination-options="{ getPaginationRowModel: paginationRowModel }"
+                    class="flex-1"
+                >
+                    <template #icon-cell="{ row }">
+                        <Icon v-if="row.original.icon" :name="row.original.icon" class="size-4" />
+                    </template>
 
-                <template #route-cell="{ row }">
-                    <div v-if="row.original.route" class="leading-tight">
-                        <span v-if="uriFor(row.original.route)" class="font-mono text-xs">{{ uriFor(row.original.route) }}</span>
-                        <span v-else class="text-xs text-error">Route is not registered</span>
-                        <span class="block text-xs text-muted">{{ row.original.route }}</span>
-                    </div>
-                    <span v-else class="text-xs text-muted">Group, no page</span>
-                </template>
+                    <template #is_active-cell="{ row }">
+                        <UBadge :color="row.original.is_active ? 'success' : 'error'" variant="subtle">
+                            {{ row.original.is_active ? 'Active' : 'Nonactive' }}
+                        </UBadge>
+                    </template>
 
-                <template #is_active-cell="{ row }">
-                    <USwitch
-                        :model-value="row.original.is_active"
-                        :disabled="pendingUuid === row.original.uuid || !can('menu.update')"
-                        :aria-label="`Status of ${row.original.label}`"
-                        @update:model-value="toggleActive(row.original, $event)"
-                    />
-                </template>
-
-                <template #actions-cell="{ row }">
-                    <div class="flex items-center justify-end gap-0.5">
-                        <div
-                            v-if="can('menu.update')"
-                            class="flex items-center opacity-100 transition-opacity md:opacity-0 md:group-focus-within/row:opacity-100 md:group-hover/row:opacity-100"
-                        >
-                            <UButton
-                                icon="i-lucide-chevron-up"
-                                color="neutral"
-                                variant="ghost"
-                                size="sm"
-                                :disabled="isFiltering || row.original.previousSequence === undefined || pendingUuid === row.original.uuid"
-                                :aria-label="`Move ${row.original.label} up`"
-                                @click="move(row.original, row.original.previousSequence!)"
-                            />
-                            <UButton
-                                icon="i-lucide-chevron-down"
-                                color="neutral"
-                                variant="ghost"
-                                size="sm"
-                                :disabled="isFiltering || row.original.nextSequence === undefined || pendingUuid === row.original.uuid"
-                                :aria-label="`Move ${row.original.label} down`"
-                                @click="move(row.original, row.original.nextSequence!)"
-                            />
+                    <template #actions-cell="{ row }">
+                        <div class="flex justify-end">
+                            <UDropdownMenu :items="getDropdownActions(row.original)" :content="{ align: 'end', side: 'bottom' }">
+                                <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" aria-label="Actions" />
+                            </UDropdownMenu>
                         </div>
-
-                        <UDropdownMenu :items="getDropdownActions(row.original)" :content="{ align: 'end', side: 'bottom' }">
-                            <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="sm" aria-label="Actions" />
-                        </UDropdownMenu>
-                    </div>
-                </template>
-
-                <template #empty>
-                    <div class="flex flex-col items-center gap-3 py-10 text-center">
-                        <template v-if="isFiltering">
-                            <p class="text-sm font-medium">No menu matches "{{ globalFilter }}"</p>
-                            <UButton size="sm" color="neutral" variant="subtle" @click="globalFilter = ''">Clear search</UButton>
-                        </template>
-                        <template v-else>
-                            <Icon name="List" class="size-6 text-muted" />
-                            <p class="text-sm font-medium">No menu yet</p>
-                            <p class="max-w-xs text-sm text-muted">Add a menu to start building the sidebar navigation.</p>
-                        </template>
-                    </div>
-                </template>
-            </UTable>
+                    </template>
+                </UTable>
+            </div>
         </UCard>
 
-        <p v-if="rows.length" class="text-xs text-muted">{{ rows.length }} menu shown</p>
+        <div class="flex items-center justify-center gap-3">
+            <USelect v-model="pageSize" :items="pageSizes" class="w-20" />
+            <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" />
+        </div>
     </div>
 </template>

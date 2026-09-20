@@ -17,12 +17,16 @@ const props = withDefaults(
         indent?: number;
         loading?: boolean;
         empty?: string;
+        expandLabel?: string;
+        collapseLabel?: string;
         getRowId?: (row: T, index: number, parent?: Row<T>) => string;
     }>(),
     {
         getSubRows: (row: T) => row.children as T[] | undefined,
         indent: 1.25,
         empty: 'Tidak ada data.',
+        expandLabel: 'Buka',
+        collapseLabel: 'Tutup',
     },
 );
 
@@ -72,7 +76,7 @@ const forwardedSlots = computed(() => Object.keys(slots).filter((name) => name !
                     variant="ghost"
                     size="xs"
                     square
-                    :aria-label="ctx.row.getIsExpanded() ? 'Tutup' : 'Buka'"
+                    :aria-label="ctx.row.getIsExpanded() ? collapseLabel : expandLabel"
                     @click="ctx.row.toggleExpanded()"
                 />
                 <span v-else class="size-6 shrink-0" />

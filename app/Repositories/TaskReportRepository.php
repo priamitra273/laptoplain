@@ -68,7 +68,16 @@ class TaskReportRepository
                 ? $filters['names']
                 : explode(',', $filters['names']);
 
-            $query->whereRelation('users', fn ($query) => $query->whereIn('users.id', $names));
+            $query->whereIn('created_by', $names);
+        }
+
+        // PROJECT STATUS
+        if (! empty($filters['project_statuses'])) {
+            $projectStatuses = is_array($filters['project_statuses'])
+                ? $filters['project_statuses']
+                : explode(',', $filters['project_statuses']);
+
+            $query->whereRelation('project', fn ($query) => $query->whereIn('status_id', $projectStatuses));
         }
 
         // STATUS
@@ -96,15 +105,6 @@ class TaskReportRepository
                 : explode(',', $filters['types']);
 
             $query->whereIn('type_id', $types);
-        }
-
-        // PROJECT STATUS
-        if (! empty($filters['project_statuses'])) {
-            $projectStatuses = is_array($filters['project_statuses'])
-                ? $filters['project_statuses']
-                : explode(',', $filters['project_statuses']);
-
-            $query->whereHas('project', fn ($q) => $q->whereIn('status_id', $projectStatuses));
         }
 
         // DATE FILTERS

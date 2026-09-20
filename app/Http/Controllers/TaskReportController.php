@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TaskReport\TaskReportIndexRequest;
 use App\Services\TaskReportService;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -28,11 +27,12 @@ class TaskReportController extends Controller
     /**
      * Export task report as CSV
      */
-    public function export(Request $request, TaskReportService $service): StreamedResponse
+    public function export(TaskReportIndexRequest $request, TaskReportService $service): StreamedResponse
     {
         $filters = $request->only([
             'names',
             'statuses',
+            'project_statuses',
             'priorities',
             'types',
             'start_date_from',

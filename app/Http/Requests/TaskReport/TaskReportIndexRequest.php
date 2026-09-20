@@ -9,6 +9,7 @@ use App\Models\MsTaskStatus;
 use App\Models\MsTaskType;
 use App\Models\User;
 use App\Rules\SqidExists;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TaskReportIndexRequest extends FormRequest
@@ -24,7 +25,7 @@ class TaskReportIndexRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -39,10 +40,10 @@ class TaskReportIndexRequest extends FormRequest
             'priorities.*' => ['sometimes', 'string', new SqidExists(MsTaskPriority::class)],
             'types' => 'sometimes|array',
             'types.*' => ['sometimes', 'string', new SqidExists(MsTaskType::class)],
-            'start_date_from' => 'sometimes|date',
-            'start_date_to' => 'sometimes|date',
-            'due_date_from' => 'sometimes|date',
-            'due_date_to' => 'sometimes|date',
+            'start_date_from' => ['sometimes', 'date'],
+            'start_date_to' => ['sometimes', 'date', 'after_or_equal:start_date_from'],
+            'due_date_from' => ['sometimes', 'date'],
+            'due_date_to' => ['sometimes', 'date', 'after_or_equal:due_date_from'],
             'search' => 'sometimes|string',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ];

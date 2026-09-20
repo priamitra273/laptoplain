@@ -12,6 +12,7 @@ export interface SidebarMenuItem {
 export interface Auth {
     user: User;
     role: string;
+    roles: string[];
     menu: SidebarMenuItem[];
     permissions: string[];
 }
@@ -511,4 +512,40 @@ export interface UploadedFile {
     original_url: string;
     created_at: string;
     updated_at: string;
+}
+
+/** Satu opsi master (status, priority, type, category, tag) untuk form task. */
+export interface TaskOption {
+    id: string;
+    name: string;
+    severity: PrimeSeverity | null;
+    icon?: string | null;
+}
+
+/** Satu opsi anggota project untuk field assignee. */
+export interface TaskOptionUser {
+    id: string;
+    name: string;
+}
+
+/** Tag yang diketik user dan belum ada di database. Warnanya ditentukan di sisi klien. */
+export interface TaskFormNewTag {
+    name: string;
+    severity: PrimeSeverity;
+}
+
+export interface TaskFormModel {
+    title: string;
+    description: string;
+    parent_id?: string;
+    task_category_id?: string;
+    type_id?: string;
+    status_id?: string;
+    priority_id?: string;
+    start_date: string;
+    due_date: string;
+    assign_users: string[];
+    tags: string[];
+    newTags: TaskFormNewTag[];
+    attachments: (File | UploadedFile)[];
 }

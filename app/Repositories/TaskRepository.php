@@ -4,7 +4,9 @@ namespace App\Repositories;
 
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Spatie\Activitylog\Models\Activity;
 
 class TaskRepository
 {
@@ -97,13 +99,15 @@ class TaskRepository
     public function findByIdForDetail(int $taskId, int $userId): Task
     {
         return Task::with([
-            'project:id,title,emoji',
+            'project:id,title,emoji,project_no',
             'status:id,name,severity',
             'priority:id,name,severity',
             'type:id,name,severity',
             'users:id,name',
             'users.media',
             'tags:id,name,severity',
+            'category:id,name,icon,severity',
+            'parent:id,title',
             'subTaskRecursive',
             'subTaskRecursive.status:id,name,severity',
             'subTaskRecursive.priority:id,name,severity',
@@ -135,8 +139,6 @@ class TaskRepository
 
     /**
      * Get comments for a task
-     *
-     * @return \Illuminate\Database\Eloquent\Collection<int, App\Models\Comment>
      */
     public function getComments(Task $task)
     {
@@ -191,11 +193,11 @@ class TaskRepository
     /**
      * Get activity logs for a task
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function getActivities(int $taskId, ?string $event = null)
     {
-        $query = \Spatie\Activitylog\Models\Activity::query()
+        $query = Activity::query()
             ->with('causer:id,name,email')
             ->where('subject_type', Task::class)
             ->where('subject_id', $taskId)

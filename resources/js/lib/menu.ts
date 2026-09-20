@@ -43,7 +43,9 @@ export function isNavItemActive(href: string | undefined, currentUrl: string | u
  *
  * `active` dihitung di sini, bukan diserahkan ke `ULink`: pencocokan bawaannya
  * memakai `page.url.startsWith(href)` yang membuat `/task-status` ikut menyalakan
- * `/task`. Tanpa `currentUrl` kunci `active` tidak ditulis sama sekali.
+ * `/task`. Kunci `active` karena itu selalu ditulis — termasuk saat bernilai
+ * `false` — sebab `ULink` hanya melewati pencocokan bawaannya ketika prop `active`
+ * benar-benar terkirim. Tanpa `currentUrl` kunci itu tidak ditulis sama sekali.
  *
  * @param items pohon `{ label, icon, to, items }` dari MenuService::getSidebarMenu()
  * @param resolveHref penerjemah route name → URL
@@ -65,7 +67,7 @@ export function buildNavigationItems(
             icon: toLucideIcon(item.icon),
             ...(to ? { to } : {}),
             ...(children.length ? { children, defaultOpen: true } : {}),
-            ...(active ? { active: true } : {}),
+            ...(currentUrl === undefined ? {} : { active }),
         } satisfies NavigationMenuItem;
     });
 }

@@ -241,10 +241,10 @@ export default {
 
     card: {
         slots: {
-            root: 'rounded-lg shadow-sm flex flex-col gap-4 py-6',
-            header: 'px-6 py-0 gap-2',
-            body: 'px-6 py-0',
-            footer: 'px-6 py-0',
+            root: 'rounded-lg shadow-sm flex flex-col gap-0 py-0',
+            header: 'px-4 py-3 gap-2',
+            body: 'p-4',
+            footer: 'px-4 py-3',
             title: 'leading-none font-semibold',
             description: 'text-sm text-muted',
         },

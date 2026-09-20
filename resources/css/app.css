@@ -1,7 +1,7 @@
 @import 'tailwindcss' source('../..');
 @import '@nuxt/ui';
 @import 'tw-animate-css';
-@import '@assets/fonts/roboto/stylesheet.css';
+@import '../fonts/roboto/stylesheet.css';
 
 @source not '../js/**/*_v1/**';
 

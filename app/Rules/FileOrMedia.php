@@ -22,31 +22,39 @@ class FileOrMedia implements ValidationRule
         } elseif (is_array($value)) {
             $this->validateMediaArray($attribute, $value, $fail);
         } else {
-            $fail("The :attribute must be a file or a media reference.");
+            $fail('The :attribute must be a file or a media reference.');
         }
     }
 
     protected function validateFile(string $_attribute, UploadedFile $file, Closure $fail): void
     {
+        if (! $file->isValid()) {
+            $fail('The :attribute failed to upload. It may be larger than the server allows.');
+
+            return;
+        }
+
         if ($this->extensions !== null) {
             $allowed = array_map(
-                fn($ext) => ltrim(strtolower(trim($ext)), '.'),
+                fn ($ext) => ltrim(strtolower(trim($ext)), '.'),
                 explode(',', $this->extensions)
             );
             $ext = strtolower($file->getClientOriginalExtension());
 
             if (! in_array($ext, $allowed)) {
                 $fail("The :attribute must be a file of type: {$this->extensions}.");
+
                 return;
             }
         }
 
         if ($this->mimeTypes !== null) {
-            $patterns = array_map(fn($m) => trim($m), explode(',', $this->mimeTypes));
+            $patterns = array_map(fn ($m) => trim($m), explode(',', $this->mimeTypes));
             $fileMime = strtolower($file->getMimeType() ?? '');
 
             if (! $this->matchesMimeType($fileMime, $patterns)) {
                 $fail("The :attribute must be a file of mime type: {$this->mimeTypes}.");
+
                 return;
             }
         }
@@ -61,14 +69,15 @@ class FileOrMedia implements ValidationRule
         $uuid = $value['uuid'] ?? null;
 
         if (empty($uuid)) {
-            $fail("The :attribute must contain a valid uuid.");
+            $fail('The :attribute must contain a valid uuid.');
+
             return;
         }
 
         $exists = DB::table('media')->where('uuid', $uuid)->exists();
 
         if (! $exists) {
-            $fail("The :attribute references a media that does not exist.");
+            $fail('The :attribute references a media that does not exist.');
         }
     }
 

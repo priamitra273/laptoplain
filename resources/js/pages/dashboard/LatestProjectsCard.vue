@@ -55,7 +55,7 @@ const timeAgo = (iso: string): string => {
 <template>
     <PanelCard title="Latest projects" flush>
         <template #action>
-            <ULink :as="Link" :href="route('project.index')" class="text-sm font-medium">View all</ULink>
+            <Link :href="route('project.index')" class="text-sm font-medium text-primary hover:underline"> View all </Link>
         </template>
 
         <Deferred data="latestProjects">

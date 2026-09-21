@@ -43,7 +43,7 @@ const badgeLabel = (days: number): string => {
         </template>
 
         <template #action>
-            <ULink :as="Link" :href="route('task.index')" class="text-sm font-medium">View all</ULink>
+            <Link :href="route('task.index')" class="text-sm font-medium text-primary hover:underline"> View all </Link>
         </template>
 
         <ul class="flex flex-col">

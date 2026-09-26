@@ -72,27 +72,35 @@ watch(canDrag, (enabled) => {
 const UButton = resolveComponent('UButton');
 const sortable =
     (label: string): TableColumn<ListTask>['header'] =>
-        ({ column }) =>
-            h(UButton, {
-                label,
-                color: 'neutral',
-                variant: 'ghost',
-                size: 'xs',
-                class: '-ms-2 text-[11px] font-medium uppercase tracking-wide text-dimmed',
-                onClick: () => (column.getIsSorted() === 'desc' ? column.clearSorting() : column.toggleSorting(column.getIsSorted() === 'asc')),
-            });
+    ({ column }) =>
+        h(UButton, {
+            label,
+            color: 'neutral',
+            variant: 'ghost',
+            size: 'xs',
+            class: '-ms-2 text-[11px] font-medium uppercase tracking-wide text-dimmed',
+            onClick: () => (column.getIsSorted() === 'desc' ? column.clearSorting() : column.toggleSorting(column.getIsSorted() === 'asc')),
+        });
 const columns = computed<TableColumn<ListTask>[]>(() => [
     {
         id: 'grip',
         header: '',
         size: 36,
-        meta: { class: { td: 'w-9 px-2 lg:sticky lg:start-0 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]', th: 'w-9 px-2 lg:sticky lg:start-0 lg:z-20' } },
+        meta: {
+            class: {
+                td: 'w-9 px-2 lg:sticky lg:start-0 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]',
+                th: 'w-9 px-2 lg:sticky lg:start-0 lg:z-20',
+            },
+        },
     },
     {
         accessorKey: 'title',
         header: sortable('Title'),
         meta: {
-            class: { td: 'min-w-64 max-w-80 lg:sticky lg:start-9 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]', th: 'min-w-64 lg:sticky lg:start-9 lg:z-20' },
+            class: {
+                td: 'min-w-64 max-w-80 lg:sticky lg:start-9 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]',
+                th: 'min-w-64 lg:sticky lg:start-9 lg:z-20',
+            },
         },
     },
     { accessorKey: 'status.name', id: 'status', header: sortable('Status') },
@@ -104,7 +112,12 @@ const columns = computed<TableColumn<ListTask>[]>(() => [
     {
         id: 'actions',
         header: 'Actions',
-        meta: { class: { td: 'text-end lg:sticky lg:end-0 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]', th: 'text-end lg:sticky lg:end-0 lg:z-20' } },
+        meta: {
+            class: {
+                td: 'text-end lg:sticky lg:end-0 lg:z-10 lg:bg-default lg:group-hover:bg-[color-mix(in_oklab,var(--ui-bg-muted)_40%,var(--ui-bg))]',
+                th: 'text-end lg:sticky lg:end-0 lg:z-20',
+            },
+        },
     },
 ]);
 const rowMeta = computed(() => ({
@@ -125,103 +138,164 @@ const actions = (task: ListTask) => [
         ? [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, disabled: props.busy, onSelect: () => emit('delete', task) }]
         : []),
 ];
-
 </script>
 
 <template>
     <div class="flex min-w-0 flex-col gap-4">
-        <TaskTableToolbar v-model="filters" :statuses="statusOptions" :total="totals.total" :can-create="canCreate"
-            :busy="busy" :all-expanded="allExpanded" :has-branches="hasBranches" :filtering="filtering"
-            @create="emit('create', null)" @toggle-all="toggleAll" @clear="filters = defaults()" />
-        <div v-if="busy" role="status" class="text-muted flex items-center gap-2 text-xs">
+        <TaskTableToolbar
+            v-model="filters"
+            :statuses="statusOptions"
+            :total="totals.total"
+            :can-create="canCreate"
+            :busy="busy"
+            :all-expanded="allExpanded"
+            :has-branches="hasBranches"
+            :filtering="filtering"
+            @create="emit('create', null)"
+            @toggle-all="toggleAll"
+            @clear="filters = defaults()"
+        />
+        <div v-if="busy" role="status" class="flex items-center gap-2 text-xs text-muted">
             <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />Updating tasks…
         </div>
-        <div class="border-default min-w-0 overflow-hidden rounded-xl border" @dragstart="start" @dragover="over"
-            @dragenter="over" @drop="drop" @dragend="reset" @dragleave="leave">
-            <TreeTable v-model:expanded="expanded" v-model:sorting="sorting" :data="filtered.tree" :columns="columns"
-                :get-sub-rows="(task: ListTask) => task.sub_task_recursive" :get-row-id="(task: ListTask) => task.id"
-                expand-column="title" expand-label="Expand subtasks" collapse-label="Collapse subtasks"
-                :meta="rowMeta" sticky class="max-h-[65vh] min-h-48" :ui="{
+        <div
+            class="min-w-0 overflow-hidden rounded-xl border border-default"
+            @dragstart="start"
+            @dragover="over"
+            @dragenter="over"
+            @drop="drop"
+            @dragend="reset"
+            @dragleave="leave"
+        >
+            <TreeTable
+                v-model:expanded="expanded"
+                v-model:sorting="sorting"
+                :data="filtered.tree"
+                :columns="columns"
+                :get-sub-rows="(task: ListTask) => task.sub_task_recursive"
+                :get-row-id="(task: ListTask) => task.id"
+                expand-column="title"
+                expand-label="Expand subtasks"
+                collapse-label="Collapse subtasks"
+                :meta="rowMeta"
+                sticky
+                class="max-h-[65vh] min-h-48"
+                :ui="{
                     th: 'bg-[color-mix(in_oklab,var(--ui-bg-muted)_50%,var(--ui-bg))] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-dimmed',
                     td: 'px-4 py-3 text-xs whitespace-normal',
                     tr: 'group transition-colors hover:bg-muted/40 has-[>td:only-child:empty]:hidden',
-                }">
+                }"
+            >
                 <template #grip-cell="{ row }">
-                    <span :data-task-id="row.original.id" :draggable="canDrag"
+                    <span
+                        :data-task-id="row.original.id"
+                        :draggable="canDrag"
                         class="inline-flex size-6 items-center justify-center"
-                        :class="canDrag ? 'text-dimmed hover:text-default cursor-grab active:cursor-grabbing' : 'text-dimmed/40'"
-                        :title="canDrag ? 'Drag to reorder or nest' : undefined" aria-hidden="true">
+                        :class="canDrag ? 'cursor-grab text-dimmed hover:text-default active:cursor-grabbing' : 'text-dimmed/40'"
+                        :title="canDrag ? 'Drag to reorder or nest' : undefined"
+                        aria-hidden="true"
+                    >
                         <UIcon v-if="canEdit" name="i-lucide-grip-vertical" class="size-4" />
                     </span>
                 </template>
                 <template #title-cell="{ row }">
-                    <TaskCategoryBadge v-if="row.original.category" :category="row.original.category"
-                        :show-label="false" />
-                    <button type="button"
-                        class="text-highlighted hover:text-primary min-w-0 text-start text-[13px] leading-5 font-medium wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary"
+                    <TaskCategoryBadge v-if="row.original.category" :category="row.original.category" :show-label="false" />
+                    <UButton
+                        type="button"
+                        color="neutral"
+                        variant="link"
+                        class="min-w-0 justify-start text-start text-[13px] leading-5 font-medium wrap-anywhere"
                         :class="filtering && !filtered.matchedIds.has(row.id) ? 'text-muted' : ''"
-                        @click="emit('view', row.original)">
+                        @click="emit('view', row.original)"
+                    >
                         {{ row.original.title }}
-                    </button>
+                    </UButton>
                 </template>
                 <template #status-cell="{ row }">
-                    <StatusBadge v-if="row.original.status" :label="row.original.status.name"
-                        :severity="row.original.status.severity" /><span v-else class="text-dimmed">—</span>
+                    <StatusBadge v-if="row.original.status" :label="row.original.status.name" :severity="row.original.status.severity" /><span
+                        v-else
+                        class="text-dimmed"
+                        >—</span
+                    >
                 </template>
                 <template #type-cell="{ row }">
                     <TaskTypeBadge v-if="row.original.type" :label="row.original.type.name" :severity="row.original.type.severity" />
                     <span v-else class="text-dimmed">—</span>
                 </template>
-                <template #start_date-cell="{ row }"><span class="text-muted whitespace-nowrap">{{
-                    formatDate(row.original.start_date) }}</span></template>
-                <template #due_date-cell="{ row }"><span class="inline-flex items-center gap-1 whitespace-nowrap"
-                        :class="row.original.is_overdue ? 'text-error' : 'text-muted'">
-                        <UIcon v-if="row.original.is_overdue" name="i-lucide-circle-alert" class="size-3.5" />{{
-                            formatDate(row.original.due_date)
+                <template #start_date-cell="{ row }"
+                    ><span class="whitespace-nowrap text-muted">{{ formatDate(row.original.start_date) }}</span></template
+                >
+                <template #due_date-cell="{ row }"
+                    ><span class="inline-flex items-center gap-1 whitespace-nowrap" :class="row.original.is_overdue ? 'text-error' : 'text-muted'">
+                        <UIcon v-if="row.original.is_overdue" name="i-lucide-circle-alert" class="size-3.5" />{{ formatDate(row.original.due_date)
                         }}<span v-if="row.original.is_overdue" class="sr-only"> (overdue)</span>
-                    </span></template>
-                <template #completed_at-cell="{ row }"><span class="text-muted whitespace-nowrap">{{
-                    formatDate(completionDate(row.original.completed_at)) }}</span></template>
+                    </span></template
+                >
+                <template #completed_at-cell="{ row }"
+                    ><span class="whitespace-nowrap text-muted">{{ formatDate(completionDate(row.original.completed_at)) }}</span></template
+                >
                 <template #progress-cell="{ row }">
-                    <ProgressWithLabel :value="row.original.progress"
-                        :bar-aria-label="`Progress for ${row.original.title}`" />
+                    <ProgressWithLabel :value="row.original.progress" :bar-aria-label="`Progress for ${row.original.title}`" />
                 </template>
                 <template #actions-cell="{ row }">
                     <div class="flex justify-end gap-0.5">
-                        <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="xs"
-                            :aria-label="`Open ${row.original.title}`" @click="emit('open', row.original)" />
-                        <UButton v-if="canEdit" icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs"
-                            :disabled="busy" :aria-label="`Edit ${row.original.title}`"
-                            @click="emit('edit', row.original)" />
+                        <UButton
+                            icon="i-lucide-eye"
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            :aria-label="`Open ${row.original.title}`"
+                            @click="emit('open', row.original)"
+                        />
+                        <UButton
+                            v-if="canEdit"
+                            icon="i-lucide-pencil"
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            :disabled="busy"
+                            :aria-label="`Edit ${row.original.title}`"
+                            @click="emit('edit', row.original)"
+                        />
                         <UDropdownMenu :items="actions(row.original)">
-                            <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="xs"
-                                :aria-label="`Actions for ${row.original.title}`" />
+                            <UButton
+                                icon="i-lucide-ellipsis"
+                                color="neutral"
+                                variant="ghost"
+                                size="xs"
+                                :aria-label="`Actions for ${row.original.title}`"
+                            />
                         </UDropdownMenu>
                     </div>
                 </template>
                 <template #empty>
-                    <EmptyState icon="i-lucide-list-tree" :title="filtering ? 'No matching tasks.' : 'No tasks yet.'"
-                        :description="filtering ? 'Try another search or clear your filters.' : 'Add a task to start organizing this project.'" />
+                    <EmptyState
+                        icon="i-lucide-list-tree"
+                        :title="filtering ? 'No matching tasks.' : 'No tasks yet.'"
+                        :description="filtering ? 'Try another search or clear your filters.' : 'Add a task to start organizing this project.'"
+                    />
                 </template>
             </TreeTable>
-            <div v-if="dragging" data-root-drop
-                class="border-default m-3 rounded-lg border border-dashed p-4 text-center text-sm"
-                :class="mode === 'root' ? 'border-primary bg-primary/10 text-primary' : 'text-muted'">
+            <div
+                v-if="dragging"
+                data-root-drop
+                class="m-3 rounded-lg border border-dashed border-default p-4 text-center text-sm"
+                :class="mode === 'root' ? 'border-primary bg-primary/10 text-primary' : 'text-muted'"
+            >
                 Drop here to move to the top level
             </div>
-            <div class="border-default text-muted flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-xs"
-                aria-live="polite">
-                <span>{{ filtering ? `${filtered.matchedIds.size} of ${totals.total} tasks match` : plural(totals.total,
-                    'task') }}
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-default px-4 py-3 text-xs text-muted" aria-live="polite">
+                <span
+                    >{{ filtering ? `${filtered.matchedIds.size} of ${totals.total} tasks match` : plural(totals.total, 'task') }}
                     ·
-                    {{ plural(visibleCount, 'visible row') }}</span>
+                    {{ plural(visibleCount, 'visible row') }}</span
+                >
                 <div class="flex flex-wrap items-center gap-4">
-                    <span class="text-dimmed">Project totals</span><span class="flex items-center gap-1.5"><span
-                            class="size-1.5 rounded-full bg-success" />Completed {{ totals.completed }}</span><span
-                        class="flex items-center gap-1.5"><span class="size-1.5 rounded-full bg-primary" />In Progress
-                        {{
-                        totals.inProgress }}</span><span class="flex items-center gap-1.5"><span
-                            class="size-1.5 rounded-full bg-error" />Overdue {{ totals.overdue }}</span>
+                    <span class="text-dimmed">Project totals</span
+                    ><span class="flex items-center gap-1.5"><span class="size-1.5 rounded-full bg-success" />Completed {{ totals.completed }}</span
+                    ><span class="flex items-center gap-1.5"
+                        ><span class="size-1.5 rounded-full bg-primary" />In Progress {{ totals.inProgress }}</span
+                    ><span class="flex items-center gap-1.5"><span class="size-1.5 rounded-full bg-error" />Overdue {{ totals.overdue }}</span>
                 </div>
             </div>
         </div>

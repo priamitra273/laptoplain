@@ -107,17 +107,18 @@ for (const key in form.data()) {
                             <div class="flex w-64 flex-col gap-2 p-2">
                                 <UInput v-model="iconSearch" icon="i-lucide-search" placeholder="Search icon..." size="sm" autofocus class="w-full" />
                                 <div class="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto">
-                                    <button
+                                    <UButton
                                         v-for="item in filteredIconItems"
                                         :key="item.value"
                                         type="button"
                                         :title="item.label"
-                                        class="flex size-8 items-center justify-center rounded hover:bg-elevated"
-                                        :class="form.icon === item.value ? 'bg-elevated ring-1 ring-primary' : ''"
+                                        :variant="form.icon === item.value ? 'soft' : 'ghost'"
+                                        :color="form.icon === item.value ? 'primary' : 'neutral'"
+                                        square
+                                        :icon="item.value"
+                                        class="size-8"
                                         @click="selectIcon(item.value)"
-                                    >
-                                        <UIcon :name="item.value" class="size-4" />
-                                    </button>
+                                    />
                                 </div>
                             </div>
                         </template>

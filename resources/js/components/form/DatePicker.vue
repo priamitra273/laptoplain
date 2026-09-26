@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { cn } from '@/lib/utils';
 import { CalendarDate } from '@internationalized/date';
 import { ref } from 'vue';
 
@@ -20,9 +19,6 @@ const modelValue = defineModel<CalendarDate | undefined>();
 
 const open = ref(false);
 
-const inlineBaseClass =
-    'rounded px-1 enabled:cursor-pointer enabled:hover:bg-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
-
 const onSelect = (value: unknown) => {
     if (props.disabled) {
         return;
@@ -41,7 +37,6 @@ const onSelect = (value: unknown) => {
 };
 </script>
 
-
 <template>
     <UPopover v-model:open="open">
         <UButton
@@ -55,9 +50,9 @@ const onSelect = (value: unknown) => {
             variant="outline"
         />
 
-        <button v-else type="button" :aria-label="triggerAriaLabel" :disabled="disabled" :class="cn(inlineBaseClass, triggerClass)">
+        <UButton v-else type="button" color="neutral" variant="link" :aria-label="triggerAriaLabel" :disabled="disabled" :class="triggerClass">
             {{ label }}
-        </button>
+        </UButton>
 
         <template #content>
             <UCalendar

@@ -62,35 +62,36 @@ const pick = (reaction: string) => {
 
             <template #content>
                 <div class="flex gap-1 p-1.5">
-                    <button
+                    <UButton
                         v-for="choice in CHOICES"
                         :key="choice"
                         type="button"
-                        class="flex size-8 items-center justify-center rounded-lg text-base transition-colors hover:bg-elevated"
+                        color="neutral"
+                        variant="ghost"
+                        square
+                        class="size-8 text-base"
                         :class="choice === currentUserReaction ? 'bg-elevated' : ''"
                         :aria-label="choice"
                         @click="pick(choice)"
                     >
                         {{ toEmoji(choice) }}
-                    </button>
+                    </UButton>
                 </div>
             </template>
         </UPopover>
 
-        <button
+        <UButton
             v-for="reaction in reactions"
             :key="reaction.reaction"
             type="button"
-            class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors"
-            :class="
-                reaction.reaction === currentUserReaction
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default text-muted hover:bg-elevated'
-            "
+            size="xs"
+            :variant="reaction.reaction === currentUserReaction ? 'soft' : 'outline'"
+            :color="reaction.reaction === currentUserReaction ? 'primary' : 'neutral'"
+            class="rounded-full"
             @click="emit('react', reaction.reaction)"
         >
             <span class="text-sm leading-none">{{ toEmoji(reaction.reaction) }}</span>
             <span class="text-xs font-semibold tabular-nums">{{ reaction.count }}</span>
-        </button>
+        </UButton>
     </div>
 </template>

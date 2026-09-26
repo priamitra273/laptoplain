@@ -77,9 +77,9 @@ const submit = () => {
                     <UInput v-model="http.title" placeholder="Enter Project Title" size="lg" class="w-full">
                         <template #leading>
                             <UPopover>
-                                <button type="button" class="flex cursor-pointer items-center justify-center text-base" @click.stop>
+                                <UButton type="button" color="neutral" variant="ghost" square class="text-base" @click.stop>
                                     {{ http.emoji || '🙂' }}
-                                </button>
+                                </UButton>
 
                                 <template #content>
                                     <EmojiPicker :model-value="http.emoji" @update:model-value="(value) => (http.emoji = value)" />

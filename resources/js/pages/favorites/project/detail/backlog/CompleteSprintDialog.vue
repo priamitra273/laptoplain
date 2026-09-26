@@ -73,14 +73,14 @@ const submit = async () => {
 
                 <!-- Sprint tanpa task tidak menampilkan ringkasan: "0 dari 0" dan bar 0% tidak bermakna. -->
                 <template v-if="sprint.tasks.length">
-                    <div class="rounded-lg border border-default bg-elevated/40 px-4 py-3">
+                    <UCard :ui="{ body: 'bg-elevated/40 px-4 py-3' }">
                         <p class="text-sm text-muted">
                             <strong class="text-base font-semibold text-highlighted tabular-nums">{{ doneCount }}</strong>
                             of {{ plural(sprint.tasks.length, 'task') }} done
                         </p>
 
                         <ProgressWithLabel :value="donePercentage" :bar-aria-label="`Progress ${sprint.name}`" class="mt-2.5" />
-                    </div>
+                    </UCard>
 
                     <UFormField v-if="incompleteTasks.length" label="Move unfinished tasks to">
                         <template #hint>

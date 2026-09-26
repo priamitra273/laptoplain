@@ -141,10 +141,10 @@ const edit = async () => {
                     <UCard>
                         <UCollapsible default-open>
                             <template #default="{ open }">
-                                <button type="button" class="flex w-full items-center gap-2">
+                                <UButton type="button" color="neutral" variant="ghost" class="w-full justify-start">
                                     <UIcon :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4 shrink-0 text-muted" />
                                     <h2 class="text-base font-semibold text-highlighted">Description</h2>
-                                </button>
+                                </UButton>
                             </template>
 
                             <template #content>
@@ -162,13 +162,13 @@ const edit = async () => {
                         <UCollapsible default-open>
                             <template #default="{ open }">
                                 <div class="flex items-center gap-3">
-                                    <button type="button" class="flex min-w-0 items-center gap-2">
+                                    <UButton type="button" color="neutral" variant="ghost" class="min-w-0 justify-start">
                                         <UIcon :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4 shrink-0 text-muted" />
                                         <h2 class="text-base font-semibold text-highlighted">Subtasks</h2>
                                         <UBadge v-if="subtasks.length" color="neutral" variant="subtle" size="sm" class="rounded-full">
                                             {{ doneSubtaskCount }}/{{ subtasks.length }}
                                         </UBadge>
-                                    </button>
+                                    </UButton>
 
                                     <ProgressWithLabel
                                         v-if="subtasks.length"
@@ -210,18 +210,18 @@ const edit = async () => {
                     <UCard>
                         <UCollapsible default-open>
                             <template #default="{ open }">
-                                <button type="button" class="flex w-full items-center gap-2">
+                                <UButton type="button" color="neutral" variant="ghost" class="w-full justify-start">
                                     <UIcon :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4 shrink-0 text-muted" />
                                     <h2 class="text-base font-semibold text-highlighted">Attachments</h2>
                                     <UBadge v-if="task.media.length" color="neutral" variant="subtle" size="sm" class="rounded-full">
                                         {{ task.media.length }}
                                     </UBadge>
-                                </button>
+                                </UButton>
                             </template>
 
                             <template #content>
                                 <div v-if="task.media.length" class="mt-3 flex flex-col gap-2">
-                                    <a
+                                    <ULink
                                         v-for="file in task.media"
                                         :key="file.uuid"
                                         :href="file.url"
@@ -234,7 +234,7 @@ const edit = async () => {
                                             <p class="text-xs text-dimmed">{{ formatRelativeDay(file.created_at) }}</p>
                                         </div>
                                         <span class="shrink-0 font-mono text-xs text-muted">{{ formatFileSize(file.size) }}</span>
-                                    </a>
+                                    </ULink>
                                 </div>
                                 <p v-else class="mt-3 text-sm text-muted">No attachments.</p>
                             </template>

@@ -208,12 +208,9 @@ const columns: TableColumn<ProjectRow>[] = [
         <template #title-cell="{ row }">
             <div class="flex min-w-0 items-center gap-2.5">
                 <UPopover :content="{ side: 'right', align: 'start' }">
-                    <button
-                        type="button"
-                        class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-xl hover:bg-elevated"
-                    >
+                    <UButton type="button" color="neutral" variant="ghost" square class="size-8 shrink-0 text-xl">
                         {{ row.original.emoji }}
-                    </button>
+                    </UButton>
 
                     <template #content>
                         <EmojiPicker
@@ -226,13 +223,15 @@ const columns: TableColumn<ProjectRow>[] = [
                 <div class="flex min-w-0 flex-col">
                     <InlineTextEdit :value="row.original.title" @save="(value) => updateProject(row.original.id, { title: value })">
                         <template #default="{ startEditing }">
-                            <button
+                            <UButton
                                 type="button"
-                                class="-mx-1.5 -my-0.5 cursor-text truncate rounded-md px-1.5 py-0.5 text-start text-sm font-semibold text-highlighted hover:bg-elevated"
+                                color="neutral"
+                                variant="ghost"
+                                class="-mx-1.5 -my-0.5 truncate px-1.5 py-0.5 text-start text-sm font-semibold text-highlighted"
                                 @click="startEditing"
                             >
                                 {{ row.original.title }}
-                            </button>
+                            </UButton>
                         </template>
                     </InlineTextEdit>
                 </div>

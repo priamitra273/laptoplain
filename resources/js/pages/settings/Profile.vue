@@ -178,11 +178,11 @@ const openDeleteAccount = () => {
                     </form>
                 </div>
 
-                <div class="flex flex-col gap-4 rounded-lg border border-error/20 bg-error/5 p-4">
+                <UCard class="border-error/20 bg-error/5" :ui="{ body: 'flex flex-col gap-4 p-4' }">
                     <Heading size="sm" title="Delete account" description="Delete your account and all of its resources" />
                     <p class="text-sm text-error">Please proceed with caution, this cannot be undone.</p>
                     <UButton label="Delete account" color="error" class="self-start" @click="openDeleteAccount" />
-                </div>
+                </UCard>
             </div>
         </SettingsLayout>
     </AppLayout>

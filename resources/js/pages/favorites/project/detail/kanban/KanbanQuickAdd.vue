@@ -106,7 +106,7 @@ const submit = async () => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-2 rounded-lg border border-default bg-default p-2.5 shadow-sm transition-colors focus-within:border-primary">
+    <UCard class="border-default bg-default shadow-sm transition-colors focus-within:border-primary" :ui="{ body: 'flex flex-col gap-2 p-2.5' }">
         <div v-if="parentTask" class="flex min-w-0 items-center gap-1.5 text-xs">
             <UIcon name="i-lucide-corner-down-right" class="size-3.5 shrink-0 text-muted" />
             <span class="shrink-0 text-muted">Subtask of</span>
@@ -198,5 +198,5 @@ const submit = async () => {
                 "
             />
         </div>
-    </div>
+    </UCard>
 </template>

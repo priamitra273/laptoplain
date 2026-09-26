@@ -13,7 +13,7 @@ const modeOptions = [
     { value: 'light', icon: 'i-lucide-sun', label: 'Light' },
     { value: 'dark', icon: 'i-lucide-moon', label: 'Dark' },
     { value: 'system', icon: 'i-lucide-monitor', label: 'System' },
-] as const;
+];
 
 const { primary, neutral } = useTheme();
 
@@ -36,47 +36,42 @@ const swatch = (name: string) => (colors as Record<string, Record<number, string
                 <div class="flex flex-col gap-4">
                     <Heading size="sm" title="Appearance" description="Choose how the interface looks on this device" />
 
-                    <div class="inline-flex w-fit gap-1 rounded-lg bg-elevated p-1">
-                        <button
-                            v-for="option in modeOptions"
-                            :key="option.value"
-                            type="button"
-                            class="flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm transition-colors"
-                            :class="appearance === option.value ? 'bg-default text-highlighted shadow-sm' : 'text-muted hover:text-highlighted'"
-                            @click="updateAppearance(option.value)"
-                        >
-                            <UIcon :name="option.icon" class="size-4" />
-                            {{ option.label }}
-                        </button>
-                    </div>
+                    <UTabs
+                        :items="modeOptions"
+                        :model-value="appearance"
+                        class="w-fit"
+                        @update:model-value="(value) => updateAppearance(value as 'light' | 'dark' | 'system')"
+                    />
                 </div>
 
                 <div class="flex flex-col gap-4 border-t border-default pt-6">
                     <Heading size="sm" title="Accent colors" description="Pick the primary and base color used across the interface" />
 
-                    <div v-for="group in colorGroups" :key="group.label" class="flex flex-col gap-2">
-                        <p class="text-sm font-medium">{{ group.label }}</p>
-
+                    <UFormField v-for="group in colorGroups" :key="group.label" :label="group.label">
                         <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                            <button
+                            <UButton
                                 v-for="option in group.options"
                                 :key="option"
                                 type="button"
                                 :aria-pressed="group.model.value === option"
-                                class="flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs capitalize"
-                                :class="group.model.value === option ? 'border-primary' : 'border-default hover:bg-elevated'"
+                                color="neutral"
+                                :variant="group.model.value === option ? 'outline' : 'ghost'"
+                                size="xs"
+                                class="capitalize"
                                 @click="group.model.value = option"
                             >
-                                <span
-                                    class="flex size-3.5 shrink-0 items-center justify-center rounded-full"
-                                    :style="{ backgroundColor: swatch(option) }"
-                                >
-                                    <UIcon v-if="group.model.value === option" name="i-lucide-check" class="size-2.5 text-white" />
-                                </span>
+                                <template #leading>
+                                    <span
+                                        class="flex size-3.5 shrink-0 items-center justify-center rounded-full"
+                                        :style="{ backgroundColor: swatch(option) }"
+                                    >
+                                        <UIcon v-if="group.model.value === option" name="i-lucide-check" class="size-2.5 text-white" />
+                                    </span>
+                                </template>
                                 {{ option }}
-                            </button>
+                            </UButton>
                         </div>
-                    </div>
+                    </UFormField>
                 </div>
             </div>
         </SettingsLayout>

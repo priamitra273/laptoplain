@@ -208,14 +208,14 @@ watch(
                 <template v-if="!history">
                     <UCollapsible v-model:open="descriptionOpen">
                         <template #default="{ open }">
-                            <button type="button" class="flex items-center gap-2">
+                            <UButton type="button" color="neutral" variant="ghost" class="justify-start">
                                 <UIcon :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4 shrink-0 text-muted" />
                                 <h3 class="text-base font-semibold text-highlighted">Description</h3>
-                            </button>
+                            </UButton>
                         </template>
 
                         <template #content>
-                            <div class="mt-3 rounded-xl bg-elevated p-4 ring ring-default">
+                            <UCard class="mt-3" :ui="{ body: 'bg-elevated p-4' }">
                                 <template v-if="descriptionReady">
                                     <div
                                         v-if="descriptionText"
@@ -246,7 +246,7 @@ watch(
                                 </div>
 
                                 <div v-else-if="detail?.media.length" class="mt-4 flex flex-wrap gap-2">
-                                    <a
+                                    <ULink
                                         v-for="file in detail.media"
                                         :key="file.uuid"
                                         :href="file.original_url?.trim() || file.url?.trim()"
@@ -256,9 +256,9 @@ watch(
                                     >
                                         <UIcon name="i-lucide-paperclip" class="size-4 shrink-0 text-muted" />
                                         {{ file.file_name }}
-                                    </a>
+                                    </ULink>
                                 </div>
-                            </div>
+                            </UCard>
                         </template>
                     </UCollapsible>
 
@@ -267,22 +267,25 @@ watch(
 
                 <UCollapsible v-model:open="subtasksOpen">
                     <template #default="{ open }">
-                        <button type="button" class="flex items-center gap-2">
+                        <UButton type="button" color="neutral" variant="ghost" class="justify-start">
                             <UIcon :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4 shrink-0 text-muted" />
                             <h3 class="text-base font-semibold text-highlighted">Subtasks</h3>
                             <UBadge v-if="subtaskRows.length" color="neutral" variant="subtle" size="sm" class="rounded-full">
                                 {{ doneSubtaskCount }}/{{ subtaskRows.length }}
                             </UBadge>
-                        </button>
+                        </UButton>
                     </template>
 
                     <template #content>
                         <div class="mt-3 overflow-hidden rounded-xl ring ring-default">
-                            <button
+                            <UButton
                                 v-for="row in subtaskRows"
                                 :key="row.id"
                                 type="button"
-                                class="group flex w-full items-center gap-3 border-t border-default p-3 text-start transition-colors first:border-t-0 hover:bg-elevated"
+                                color="neutral"
+                                variant="ghost"
+                                block
+                                class="group flex w-full items-center gap-3 rounded-none border-t border-default p-3 text-start transition-colors first:border-t-0"
                                 @click="emit('close', { open: row })"
                             >
                                 <span
@@ -298,7 +301,7 @@ watch(
                                     {{ row.title }}
                                 </span>
                                 <StatusBadge v-if="row.status" :label="row.status.name" :severity="row.status.severity" class="shrink-0" />
-                            </button>
+                            </UButton>
 
                             <p v-if="!subtaskRows.length" class="p-3 text-sm text-muted">No subtasks.</p>
                         </div>

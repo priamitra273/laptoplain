@@ -16,8 +16,6 @@ const getFileName = (file: File | UploadedFile) => (isUploadedFile(file) ? file.
 const getFileSize = (file: File | UploadedFile) => file.size;
 const getMimeType = (file: File | UploadedFile) => (isUploadedFile(file) ? file.mime_type : file.type);
 
-
-
 const getFileIcon = (mimeType: string): string => {
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
@@ -56,11 +54,40 @@ onBeforeUnmount(() => {
 
 /** Disamakan dengan aturan `FileOrMedia` di `TaskStoreRequest`/`TaskUpdateRequest`. */
 const ALLOWED_EXTENSIONS = [
-    'jpg', 'jpeg', 'png', 'gif', 'svg',
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt',
-    'mp4', 'webm', 'ogg', 'm4v', 'mov', 'avi', 'wmv', 'flv', '3gp',
-    'm4a', 'wav', 'flac', 'aac', 'mp3',
-    'zip', 'rar', '7z', 'tar', 'gz', 'bz2',
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'svg',
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'csv',
+    'txt',
+    'mp4',
+    'webm',
+    'ogg',
+    'm4v',
+    'mov',
+    'avi',
+    'wmv',
+    'flv',
+    '3gp',
+    'm4a',
+    'wav',
+    'flac',
+    'aac',
+    'mp3',
+    'zip',
+    'rar',
+    '7z',
+    'tar',
+    'gz',
+    'bz2',
 ];
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -133,53 +160,56 @@ const onFileInputChange = (e: Event) => {
     <div class="flex flex-col gap-4">
         <p v-if="label" class="flex items-center gap-2 text-sm font-medium"><UIcon name="i-lucide-paperclip" class="size-4" />{{ label }}</p>
 
-        <input
-            ref="fileInputRef"
-            type="file"
-            multiple
-            class="hidden"
-            :accept="acceptAttribute"
-            @change="onFileInputChange"
-        />
+        <input ref="fileInputRef" type="file" multiple class="hidden" :accept="acceptAttribute" @change="onFileInputChange" />
 
-        <button
+        <UButton
             type="button"
-            class="focus-visible:ring-primary flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-8 text-center text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            color="neutral"
+            variant="ghost"
+            class="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-8 text-center text-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
             :class="isDragging ? 'border-primary bg-primary/5' : 'border-default hover:border-primary hover:bg-elevated'"
             @click="fileInputRef?.click()"
             @dragover="onDragOver"
             @dragleave="onDragLeave"
             @drop="onDrop"
         >
-            <UIcon name="i-lucide-upload" class="text-muted mb-1 size-5" />
-            <span class="text-highlighted font-semibold">Drop files here or click to browse</span>
-            <span class="text-dimmed text-xs">PDF, images, videos, and docs · up to 20 MB per file</span>
-        </button>
+            <UIcon name="i-lucide-upload" class="mb-1 size-5 text-muted" />
+            <span class="font-semibold text-highlighted">Drop files here or click to browse</span>
+            <span class="text-xs text-dimmed">PDF, images, videos, and docs Â· up to 20 MB per file</span>
+        </UButton>
 
-        <ul v-if="rejectedFiles.length" class="text-error flex flex-col gap-0.5 text-xs">
+        <ul v-if="rejectedFiles.length" class="flex flex-col gap-0.5 text-xs text-error">
             <li v-for="name in rejectedFiles" :key="name">Skipped {{ name }}</li>
         </ul>
 
         <div v-if="modelValue?.length" class="flex flex-col gap-2">
-            <div v-for="(file, index) in modelValue" :key="index" class="border-default bg-elevated/50 flex items-center gap-4 rounded-lg border px-3 py-2">
-                <UIcon :name="`i-lucide-${getFileIcon(getMimeType(file))}`" class="text-muted size-4 shrink-0" />
+            <UCard
+                v-for="(file, index) in modelValue"
+                :key="index"
+                class="border-default bg-elevated/50"
+                :ui="{ body: 'flex items-center gap-4 px-3 py-2' }"
+            >
+                <UIcon :name="`i-lucide-${getFileIcon(getMimeType(file))}`" class="size-4 shrink-0 text-muted" />
 
                 <div class="min-w-0 flex-1">
-                    <a :href="getFileUrl(file)" target="_blank" class="text-highlighted truncate text-sm font-medium hover:underline">
+                    <ULink :href="getFileUrl(file)" target="_blank" class="truncate text-sm font-medium text-highlighted hover:underline">
                         {{ getFileName(file) }}
-                    </a>
-                    <p class="text-dimmed text-xs">{{ formatFileSize(getFileSize(file)) }}</p>
+                    </ULink>
+                    <p class="text-xs text-dimmed">{{ formatFileSize(getFileSize(file)) }}</p>
                 </div>
 
-                <button
+                <UButton
                     type="button"
-                    class="text-dimmed hover:bg-elevated hover:text-error shrink-0 rounded p-1 transition-colors"
+                    icon="i-lucide-x"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    class="shrink-0"
                     :aria-label="`Hapus ${getFileName(file)}`"
                     @click.stop="removeFile(index)"
-                >
-                    <UIcon name="i-lucide-x" class="size-3.5" />
-                </button>
-            </div>
+                />
+            </UCard>
         </div>
     </div>
 </template>

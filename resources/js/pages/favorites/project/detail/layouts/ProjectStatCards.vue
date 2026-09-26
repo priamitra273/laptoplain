@@ -52,13 +52,11 @@ const onStatusChange = (id: string) => {
 const onPriorityChange = (id: string) => {
     emit('update', id, 'priority_id');
 };
-
-const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3.5 shadow-sm ring ring-default';
 </script>
 
 <template>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div :class="statCardClass">
+        <UCard :ui="{ body: 'flex flex-col items-start gap-2 p-3.5' }">
             <FieldLabel title="Status" />
             <BadgeSelect
                 :model-value="project.status?.id"
@@ -67,9 +65,9 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
                 :ui="inlineSelectUi"
                 @update:model-value="onStatusChange"
             />
-        </div>
+        </UCard>
 
-        <div :class="statCardClass">
+        <UCard :ui="{ body: 'flex flex-col items-start gap-2 p-3.5' }">
             <FieldLabel title="Priority" />
             <BadgeSelect
                 display="priority"
@@ -80,9 +78,9 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
                 pill
                 @update:model-value="onPriorityChange"
             />
-        </div>
+        </UCard>
 
-        <div :class="statCardClass">
+        <UCard :ui="{ body: 'flex flex-col items-start gap-2 p-3.5' }">
             <FieldLabel title="Timeline" />
             <div class="flex w-full min-w-0 flex-wrap items-center gap-1.5 text-[13px]">
                 <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-muted" />
@@ -115,11 +113,11 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
 
                 <span v-if="overdueDays" class="font-medium text-error">{{ overdueDays }}d overdue</span>
             </div>
-        </div>
+        </UCard>
 
-        <div :class="statCardClass">
+        <UCard :ui="{ body: 'flex flex-col items-start gap-2 p-3.5' }">
             <FieldLabel title="Project progress" />
             <ProgressWithLabel :value="project.progress" bar-aria-label="Project progress" class="w-full" />
-        </div>
+        </UCard>
     </div>
 </template>

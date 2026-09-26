@@ -38,6 +38,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## Frontend: reuse component & struktur
+
+- Elemen interaktif dan elemen UI (tombol, input, link, label field, badge, kartu, dialog, tab, pilihan) wajib memakai Nuxt UI (`U*`) atau komponen shadcn yang sudah ada. HTML biasa hanya untuk teks, tata letak, dan gambar logo/latar.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
@@ -95,7 +99,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+    - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
@@ -202,6 +206,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 # Inertia + Vue
 
 Vue components must have a single root element.
+
 - IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 === spatie/laravel-medialibrary rules ===

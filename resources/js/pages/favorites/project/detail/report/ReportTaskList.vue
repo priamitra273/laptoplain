@@ -34,7 +34,7 @@ const columns: TableColumn<ReportTask>[] = [
         <div class="overflow-hidden rounded-md ring ring-default">
             <UTable :data="tasks" :columns="columns" :loading="loading" size="sm">
                 <template #key-cell="{ row }">
-                    <a
+                    <ULink
                         :href="route('task.show', row.original.id)"
                         target="_blank"
                         rel="noopener"
@@ -42,7 +42,7 @@ const columns: TableColumn<ReportTask>[] = [
                     >
                         {{ row.original.key }}
                         <UIcon name="i-lucide-square-arrow-out-up-right" class="size-3.5" />
-                    </a>
+                    </ULink>
                 </template>
 
                 <template #category-cell="{ row }">

@@ -138,7 +138,7 @@ for (const key in form.data()) {
 
             <UCard title="Permissions" description="Define what actions this role can perform" :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-4 md:grid-cols-3">
-                    <div v-for="section in PERMISSION_SECTIONS" :key="section.key" class="flex flex-col gap-3 rounded-lg border border-default p-4">
+                    <UCard v-for="section in PERMISSION_SECTIONS" :key="section.key" :ui="{ body: 'flex flex-col gap-3 p-4' }">
                         <div class="flex items-center justify-between">
                             <p class="font-semibold">{{ section.label }}</p>
                             <UCheckbox
@@ -150,7 +150,7 @@ for (const key in form.data()) {
                         <UFormField :name="`config.${section.key}`" :error="form.errors[`config.${section.key}`]">
                             <UCheckboxGroup v-model="form.config[section.key]" :items="actionItems" class="capitalize" />
                         </UFormField>
-                    </div>
+                    </UCard>
                 </div>
             </UCard>
 

@@ -24,9 +24,11 @@ const emit = defineEmits<{ toggle: [] }>();
         :style="severityBoxStyle(status.severity)"
         :aria-label="status.name"
     >
-        <button
+        <UButton
             v-if="collapsed"
             type="button"
+            color="neutral"
+            variant="ghost"
             class="flex flex-col items-center gap-2 py-1"
             :aria-label="`Expand ${status.name}`"
             @click="emit('toggle')"
@@ -39,7 +41,7 @@ const emit = defineEmits<{ toggle: [] }>();
 
             <!-- `rotate-180` membalik arah baca teks vertikal jadi bawah-ke-atas, bukan atas-ke-bawah. -->
             <FieldLabel :title="status.name" class="rotate-180 [writing-mode:vertical-rl]" />
-        </button>
+        </UButton>
 
         <template v-else>
             <div class="flex items-center gap-2">

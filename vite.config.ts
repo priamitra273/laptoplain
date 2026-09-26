@@ -1,3 +1,4 @@
+import lucide from '@iconify-json/lucide/icons.json' with { type: 'json' };
 import ui from '@nuxt/ui/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
@@ -5,7 +6,6 @@ import { resolve } from 'node:path';
 import path from 'path';
 import { defineConfig } from 'vite';
 import uiThing from './resources/js/theme/ui-thing.ts';
-import lucide from '@iconify-json/lucide/icons.json' with { type: 'json' };
 
 export default defineConfig({
     define: { __LUCIDE_ICON_NAMES__: JSON.stringify(Object.keys(lucide.icons)) },

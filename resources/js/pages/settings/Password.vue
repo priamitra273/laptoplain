@@ -36,11 +36,27 @@ const updatePassword = () => {
                 <Heading size="sm" title="Update password" description="Ensure your account is using a long, random password to stay secure" />
 
                 <form class="flex flex-col gap-6" @submit.prevent="updatePassword">
-                    <UFormField label="Current password" name="current_password" required :error="form.errors.current_password"><UInput v-model="form.current_password" type="password" placeholder="Current password" autocomplete="current-password" class="w-full" /></UFormField>
+                    <UFormField label="Current password" name="current_password" required :error="form.errors.current_password"
+                        ><UInput
+                            v-model="form.current_password"
+                            type="password"
+                            placeholder="Current password"
+                            autocomplete="current-password"
+                            class="w-full"
+                    /></UFormField>
 
-                    <UFormField label="New password" name="password" required :error="form.errors.password"><UInput v-model="form.password" type="password" placeholder="New password" autocomplete="new-password" class="w-full" /></UFormField>
+                    <UFormField label="New password" name="password" required :error="form.errors.password"
+                        ><UInput v-model="form.password" type="password" placeholder="New password" autocomplete="new-password" class="w-full"
+                    /></UFormField>
 
-                    <UFormField label="Confirm password" name="password_confirmation" required :error="form.errors.password_confirmation"><UInput v-model="form.password_confirmation" type="password" placeholder="Confirm password" autocomplete="new-password" class="w-full" /></UFormField>
+                    <UFormField label="Confirm password" name="password_confirmation" required :error="form.errors.password_confirmation"
+                        ><UInput
+                            v-model="form.password_confirmation"
+                            type="password"
+                            placeholder="Confirm password"
+                            autocomplete="new-password"
+                            class="w-full"
+                    /></UFormField>
 
                     <div class="flex items-center gap-4">
                         <UButton type="submit" label="Save password" :loading="form.processing" :disabled="form.processing" />

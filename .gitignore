@@ -37,5 +37,6 @@ yarn-error.log
 .worktree/
 .impeccable/
 .superpowers/
+.playwright-mcp/
 
 aturan.md

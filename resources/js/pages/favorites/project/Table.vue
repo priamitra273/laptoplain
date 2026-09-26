@@ -250,7 +250,8 @@ const columns: TableColumn<ProjectRow>[] = [
         </template>
 
         <template #priority_id-cell="{ row }">
-            <BadgeSelect display="priority"
+            <BadgeSelect
+                display="priority"
                 :model-value="row.original.priority.id"
                 :items="priorities"
                 class="w-auto"

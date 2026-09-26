@@ -71,7 +71,8 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
 
         <div :class="statCardClass">
             <FieldLabel title="Priority" />
-            <BadgeSelect display="priority"
+            <BadgeSelect
+                display="priority"
                 :model-value="project.priority?.id"
                 :items="priorities"
                 :disabled="!canEdit"

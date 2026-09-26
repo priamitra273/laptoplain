@@ -257,17 +257,17 @@ watch(
     fill: var(--ui-text-muted);
 }
 
-.rich-text-editor .ql-snow\.ql-toolbar button:hover .ql-stroke,
-.rich-text-editor .ql-snow\.ql-toolbar button.ql-active .ql-stroke {
+.rich-text-editor .ql-snow.ql-toolbar button:hover .ql-stroke,
+.rich-text-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke {
     stroke: var(--ui-color-primary-500);
 }
 
-.rich-text-editor .ql-snow\.ql-toolbar button:hover .ql-fill,
-.rich-text-editor .ql-snow\.ql-toolbar button.ql-active .ql-fill {
+.rich-text-editor .ql-snow.ql-toolbar button:hover .ql-fill,
+.rich-text-editor .ql-snow.ql-toolbar button.ql-active .ql-fill {
     fill: var(--ui-color-primary-500);
 }
 
-.rich-text-editor .ql-snow\.ql-toolbar button.ql-active {
+.rich-text-editor .ql-snow.ql-toolbar button.ql-active {
     color: var(--ui-color-primary-500);
 }
 </style>

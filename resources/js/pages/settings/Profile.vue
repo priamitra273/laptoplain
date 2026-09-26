@@ -99,7 +99,6 @@ const openDeleteAccount = () => {
 
                     <form class="flex flex-col gap-6" @submit.prevent="submit">
                         <UFormField label="Profile picture" name="avatar" :error="form.errors.avatar">
-
                             <div class="flex items-center gap-4">
                                 <UAvatar :src="previewUrl ?? undefined" :text="avatarInitials" :alt="user.name" size="3xl" />
 
@@ -137,9 +136,13 @@ const openDeleteAccount = () => {
                             <p class="text-xs text-muted">JPG, PNG or GIF. Max size 2MB.</p>
                         </UFormField>
 
-                        <UFormField label="Name" name="name" required :error="form.errors.name"><UInput v-model="form.name" placeholder="Full name" class="w-full" /></UFormField>
+                        <UFormField label="Name" name="name" required :error="form.errors.name"
+                            ><UInput v-model="form.name" placeholder="Full name" class="w-full"
+                        /></UFormField>
 
-                        <UFormField label="Email address" name="email" required :error="form.errors.email"><UInput v-model="form.email" type="email" placeholder="Email address" class="w-full" /></UFormField>
+                        <UFormField label="Email address" name="email" required :error="form.errors.email"
+                            ><UInput v-model="form.email" type="email" placeholder="Email address" class="w-full"
+                        /></UFormField>
 
                         <UAlert
                             v-if="mustVerifyEmail && !user.email_verified_at"

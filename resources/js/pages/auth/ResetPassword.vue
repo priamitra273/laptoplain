@@ -39,7 +39,15 @@ const submit = () => {
 
             <div class="flex flex-col gap-5">
                 <UFormField label="Email address" name="email" required :error="form.errors.email">
-                    <UInput v-model="form.email" type="email" autocomplete="email" size="lg" readonly :highlight="!!form.errors.email" class="w-full" />
+                    <UInput
+                        v-model="form.email"
+                        type="email"
+                        autocomplete="email"
+                        size="lg"
+                        readonly
+                        :highlight="!!form.errors.email"
+                        class="w-full"
+                    />
                 </UFormField>
 
                 <UFormField label="New password" name="password" required :error="form.errors.password">
@@ -51,7 +59,8 @@ const submit = () => {
                         autofocus
                         size="lg"
                         :highlight="!!form.errors.password"
-                     class="w-full">
+                        class="w-full"
+                    >
                         <template #trailing>
                             <UButton
                                 :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -74,7 +83,8 @@ const submit = () => {
                         autocomplete="new-password"
                         size="lg"
                         :highlight="!!form.errors.password_confirmation"
-                    class="w-full" />
+                        class="w-full"
+                    />
                 </UFormField>
 
                 <UButton type="submit" label="Reset password" size="lg" block class="mt-1" :loading="form.processing" :disabled="form.processing" />

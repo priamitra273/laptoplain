@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import UserAvatarGroup from '@/components/UserAvatarGroup.vue';
-import InlineTextEdit from '@/components/InlineTextEdit.vue';
+import UserAvatarGroup from '@/components/common/UserAvatarGroup.vue';
+import InlineTextEdit from '@/components/form/InlineTextEdit.vue';
 import { router } from '@inertiajs/vue3';
 import type { ShellMember, ShellProject } from '../types';
 

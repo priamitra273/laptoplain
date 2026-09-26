@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import HeadingSmall from '@/components/HeadingSmall.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Heading from '@/components/ui/Heading.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import TaskCategoryBadge from '@/components/task/TaskCategoryBadge.vue';
-import UserAvatarGroup from '@/components/UserAvatarGroup.vue';
+import UserAvatarGroup from '@/components/common/UserAvatarGroup.vue';
 import type { TableColumn } from '@nuxt/ui';
 import type { ReportTask } from './types';
 
@@ -29,7 +29,7 @@ const columns: TableColumn<ReportTask>[] = [
 
 <template>
     <div class="flex flex-col gap-2">
-        <HeadingSmall :title="title" />
+        <Heading size="sm" :title="title" />
 
         <div class="overflow-hidden rounded-md ring ring-default">
             <UTable :data="tasks" :columns="columns" :loading="loading" size="sm">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
 import { formatDateRange } from '@/lib/date';
 import { isTaskStatusDone, plural } from '@/lib/utils';
 import type { DropdownMenuItem } from '@nuxt/ui';

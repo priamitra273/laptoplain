@@ -19,7 +19,7 @@ class MenuSeeder extends Seeder
         // Favorites Menu
         $this->service->store(new ValidatedInput([
             'label' => 'Favorites',
-            'icon' => 'Star',
+            'icon' => 'i-lucide-star',
             'sequence_number' => 1,
             'is_active' => true,
         ]));
@@ -27,7 +27,7 @@ class MenuSeeder extends Seeder
         // Master Data
         $this->service->store(new ValidatedInput([
             'label' => 'Master Data',
-            'icon' => 'FolderCog',
+            'icon' => 'i-lucide-folder-cog',
             'sequence_number' => 2,
             'is_active' => true,
         ]));
@@ -35,7 +35,7 @@ class MenuSeeder extends Seeder
         // Settings
         $this->service->store(new ValidatedInput([
             'label' => 'Settings',
-            'icon' => 'Settings',
+            'icon' => 'i-lucide-settings',
             'sequence_number' => 3,
             'is_active' => true,
         ]));
@@ -48,7 +48,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Dashboard',
             'parent_uuid' => $favorites->uuid,
-            'icon' => 'LayoutDashboard',
+            'icon' => 'i-lucide-layout-dashboard',
             'route_name' => 'dashboard',
             'sequence_number' => 1,
             'is_active' => true,
@@ -58,7 +58,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Project',
             'parent_uuid' => $favorites->uuid,
-            'icon' => 'Layers',
+            'icon' => 'i-lucide-layers',
             'route_name' => 'project.index',
             'sequence_number' => 2,
             'is_active' => true,
@@ -68,7 +68,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'My Task',
             'parent_uuid' => $favorites->uuid,
-            'icon' => 'ScrollText',
+            'icon' => 'i-lucide-scroll-text',
             'route_name' => 'task.index',
             'sequence_number' => 3,
             'is_active' => true,
@@ -78,7 +78,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Task Report',
             'parent_uuid' => $favorites->uuid,
-            'icon' => 'Inbox',
+            'icon' => 'i-lucide-inbox',
             'route_name' => 'reports.tasks.index',
             'sequence_number' => 4,
             'is_active' => true,
@@ -88,7 +88,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Workload',
             'parent_uuid' => $favorites->uuid,
-            'icon' => 'Activity',
+            'icon' => 'i-lucide-activity',
             'route_name' => 'workload-users.index',
             'sequence_number' => 5,
             'is_active' => true,
@@ -98,7 +98,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'User',
             'parent_uuid' => $settings->uuid,
-            'icon' => 'UserCog',
+            'icon' => 'i-lucide-user-cog',
             'route_name' => 'user.index',
             'sequence_number' => 1,
             'is_active' => true,
@@ -108,7 +108,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Menu',
             'parent_uuid' => $settings->uuid,
-            'icon' => 'Compass',
+            'icon' => 'i-lucide-compass',
             'route_name' => 'menu.index',
             'sequence_number' => 2,
             'is_active' => true,
@@ -118,7 +118,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Team',
             'parent_uuid' => $settings->uuid,
-            'icon' => 'Network',
+            'icon' => 'i-lucide-network',
             'route_name' => 'team.index',
             'sequence_number' => 3,
             'is_active' => true,
@@ -128,7 +128,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Role',
             'parent_uuid' => $settings->uuid,
-            'icon' => 'Shapes',
+            'icon' => 'i-lucide-shapes',
             'route_name' => 'role.index',
             'sequence_number' => 4,
             'is_active' => true,
@@ -138,7 +138,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Project Role',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'project-role.index',
             'sequence_number' => 1,
             'is_active' => true,
@@ -148,7 +148,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Project Status',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'project-status.index',
             'sequence_number' => 2,
             'is_active' => true,
@@ -158,7 +158,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Project Priority',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'project-priority.index',
             'sequence_number' => 3,
             'is_active' => true,
@@ -168,7 +168,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Task Status',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'task-status.index',
             'sequence_number' => 4,
             'is_active' => true,
@@ -178,7 +178,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Task Priority',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'task-priority.index',
             'sequence_number' => 5,
             'is_active' => true,
@@ -188,7 +188,7 @@ class MenuSeeder extends Seeder
         $this->service->store(new ValidatedInput([
             'label' => 'Task Type',
             'parent_uuid' => $master_data->uuid,
-            'icon' => 'BookCheck',
+            'icon' => 'i-lucide-book-check',
             'route_name' => 'task-type.index',
             'sequence_number' => 6,
             'is_active' => true,

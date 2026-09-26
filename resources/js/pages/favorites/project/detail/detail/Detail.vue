@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import PanelCard from '@/components/ui/PanelCard.vue';
 import { Head } from '@inertiajs/vue3';
 import ProjectShellLayout from '../layouts/ProjectShellLayout.vue';

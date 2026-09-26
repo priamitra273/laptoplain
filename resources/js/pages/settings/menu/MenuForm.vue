@@ -108,14 +108,11 @@ for (const key in form.data()) {
                 <div class="grid gap-4">
                     <p class="text-sm font-medium">Identity</p>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Label" required />
-                        <UInput v-model="form.label" placeholder="Menu label" />
-                        <InputError v-if="form.errors.label" :message="form.errors.label" />
-                    </div>
+                    <UFormField label="Label" name="label" required :error="form.errors.label">
+                        <UInput v-model="form.label" placeholder="Menu label" class="w-full" />
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Icon" required />
+                    <UFormField label="Icon" name="icon" required :error="form.errors.icon">
                         <USelectMenu
                             v-model="form.icon"
                             :items="lucideIconItems"
@@ -125,22 +122,20 @@ for (const key in form.data()) {
                             class="w-full"
                         >
                             <template #leading="{ modelValue }">
-                                <Icon v-if="modelValue" :name="modelValue" class="size-4" />
+                                <UIcon v-if="modelValue" :name="modelValue" class="size-4" />
                             </template>
 
                             <template #item-leading="{ item }">
-                                <Icon :name="item.value" class="size-4" />
+                                <UIcon :name="item.value" class="size-4" />
                             </template>
                         </USelectMenu>
-                        <InputError v-if="form.errors.icon" :message="form.errors.icon" />
-                    </div>
+                    </UFormField>
                 </div>
 
                 <div class="grid gap-4 border-t border-default pt-6">
                     <p class="text-sm font-medium">Placement</p>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Parent" />
+                    <UFormField label="Parent" name="parent_uuid" :error="form.errors.parent_uuid">
                         <USelectMenu
                             v-model="form.parent_uuid"
                             :items="parentMenu"
@@ -149,11 +144,9 @@ for (const key in form.data()) {
                             placeholder="Select a parent menu"
                             class="w-full"
                         />
-                        <InputError v-if="form.errors.parent_uuid" :message="form.errors.parent_uuid" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Route" :required="!!form.parent_uuid" />
+                    <UFormField label="Route" name="route_name" :required="!!form.parent_uuid" :error="form.errors.route_name">
                         <USelectMenu
                             v-model="form.route_name"
                             :items="routes"
@@ -166,19 +159,15 @@ for (const key in form.data()) {
                         <p v-if="!form.parent_uuid" class="text-xs text-muted">
                             A menu without a parent is a group. It only holds other menus, so it has no page of its own.
                         </p>
-                        <InputError v-if="form.errors.route_name" :message="form.errors.route_name" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Sequence" />
+                    <UFormField label="Sequence" name="sequence_number" :error="form.errors.sequence_number">
                         <UInputNumber v-model="form.sequence_number" :min="1" class="w-full" />
-                        <InputError v-if="form.errors.sequence_number" :message="form.errors.sequence_number" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex items-center justify-between gap-2 py-2">
-                        <Label value="Active" />
+                    <UFormField label="Active" orientation="horizontal" class="justify-between">
                         <USwitch v-model="form.is_active" />
-                    </div>
+                    </UFormField>
                 </div>
             </div>
         </template>

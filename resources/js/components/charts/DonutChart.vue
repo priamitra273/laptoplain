@@ -4,7 +4,7 @@ import A11yInit from 'highcharts/modules/accessibility';
 import { Chart } from 'highcharts-vue';
 import { computed } from 'vue';
 import { normalizeDonutSegments } from './donutChart';
-import type { DonutChartSegment } from './types';
+import type { DonutChartSegment } from './donutChart';
 
 A11yInit(Highcharts);
 

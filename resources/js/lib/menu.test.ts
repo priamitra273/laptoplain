@@ -8,8 +8,11 @@ describe('toLucideIcon', () => {
     it.each([
         ['Activity', 'i-lucide-activity'],
         ['BookCheck', 'i-lucide-book-check'],
+        ['Building2', 'i-lucide-building-2'],
+        ['Clock10', 'i-lucide-clock-10'],
         ['Compass', 'i-lucide-compass'],
         ['FolderCog', 'i-lucide-folder-cog'],
+        ['Grid2x2', 'i-lucide-grid-2x2'],
         ['Inbox', 'i-lucide-inbox'],
         ['Layers', 'i-lucide-layers'],
         ['LayoutDashboard', 'i-lucide-layout-dashboard'],
@@ -21,6 +24,10 @@ describe('toLucideIcon', () => {
         ['UserCog', 'i-lucide-user-cog'],
     ])('mengubah %s menjadi %s', (input, expected) => {
         expect(toLucideIcon(input)).toBe(expected);
+    });
+
+    it.each(['i-lucide-folder-cog', 'i-lucide-building-2'])('melewatkan %s apa adanya', (icon) => {
+        expect(toLucideIcon(icon)).toBe(icon);
     });
 
     it('memecah rentetan huruf kapital di batas kata', () => {

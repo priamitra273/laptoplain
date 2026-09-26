@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DonutChart from '@/components/charts/DonutChart.vue';
-import StatCard from '@/components/StatCard.vue';
+import StatCard from '@/components/common/StatCard.vue';
 import { computed } from 'vue';
 import type { WorkloadStatusOption, WorkloadSummary } from './types';
 import { buildSegments, workloadDonutSegments, workloadUtilization } from './workload';

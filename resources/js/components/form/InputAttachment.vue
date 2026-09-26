@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import Icon from '@/components/Icon.vue';
-import Label from '@/components/Label.vue';
 import { formatFileSize } from '@/lib/utils';
 import { UploadedFile } from '@/types';
 import { onBeforeUnmount, ref } from 'vue';
@@ -21,14 +19,14 @@ const getMimeType = (file: File | UploadedFile) => (isUploadedFile(file) ? file.
 
 
 const getFileIcon = (mimeType: string): string => {
-    if (mimeType.startsWith('image/')) return 'Image';
-    if (mimeType.startsWith('video/')) return 'Video';
-    if (mimeType.startsWith('audio/')) return 'Music';
-    if (mimeType === 'application/pdf') return 'FileText';
-    if (mimeType.includes('word') || mimeType.includes('document')) return 'FileText';
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Sheet';
-    if (mimeType.includes('zip') || mimeType.includes('archive') || mimeType.includes('compressed')) return 'Archive';
-    return 'File';
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'music';
+    if (mimeType === 'application/pdf') return 'file-text';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'file-text';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'file-spreadsheet';
+    if (mimeType.includes('zip') || mimeType.includes('archive') || mimeType.includes('compressed')) return 'archive';
+    return 'file';
 };
 
 /** Satu object URL per File, supaya render ulang tidak terus membuat URL baru yang tidak pernah dilepas. */
@@ -133,7 +131,7 @@ const onFileInputChange = (e: Event) => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <Label v-if="label" :value="label" icon="Paperclip" />
+        <p v-if="label" class="flex items-center gap-2 text-sm font-medium"><UIcon name="i-lucide-paperclip" class="size-4" />{{ label }}</p>
 
         <input
             ref="fileInputRef"
@@ -153,7 +151,7 @@ const onFileInputChange = (e: Event) => {
             @dragleave="onDragLeave"
             @drop="onDrop"
         >
-            <Icon name="Upload" class="text-muted mb-1 size-5" />
+            <UIcon name="i-lucide-upload" class="text-muted mb-1 size-5" />
             <span class="text-highlighted font-semibold">Drop files here or click to browse</span>
             <span class="text-dimmed text-xs">PDF, images, videos, and docs · up to 20 MB per file</span>
         </button>
@@ -164,7 +162,7 @@ const onFileInputChange = (e: Event) => {
 
         <div v-if="modelValue?.length" class="flex flex-col gap-2">
             <div v-for="(file, index) in modelValue" :key="index" class="border-default bg-elevated/50 flex items-center gap-4 rounded-lg border px-3 py-2">
-                <Icon :name="getFileIcon(getMimeType(file))" class="text-muted size-4 shrink-0" />
+                <UIcon :name="`i-lucide-${getFileIcon(getMimeType(file))}`" class="text-muted size-4 shrink-0" />
 
                 <div class="min-w-0 flex-1">
                     <a :href="getFileUrl(file)" target="_blank" class="text-highlighted truncate text-sm font-medium hover:underline">
@@ -179,7 +177,7 @@ const onFileInputChange = (e: Event) => {
                     :aria-label="`Hapus ${getFileName(file)}`"
                     @click.stop="removeFile(index)"
                 >
-                    <Icon name="X" class="size-3.5" />
+                    <UIcon name="i-lucide-x" class="size-3.5" />
                 </button>
             </div>
         </div>

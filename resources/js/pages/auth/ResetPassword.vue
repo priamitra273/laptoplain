@@ -38,14 +38,11 @@ const submit = () => {
             </div>
 
             <div class="flex flex-col gap-5">
-                <div class="flex flex-col gap-2">
-                    <Label value="Email address" required />
-                    <UInput v-model="form.email" type="email" autocomplete="email" size="lg" readonly :highlight="!!form.errors.email" />
-                    <InputError v-if="form.errors.email" :message="form.errors.email" />
-                </div>
+                <UFormField label="Email address" name="email" required :error="form.errors.email">
+                    <UInput v-model="form.email" type="email" autocomplete="email" size="lg" readonly :highlight="!!form.errors.email" class="w-full" />
+                </UFormField>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="New password" required />
+                <UFormField label="New password" name="password" required :error="form.errors.password">
                     <UInput
                         v-model="form.password"
                         :type="showPassword ? 'text' : 'password'"
@@ -54,7 +51,7 @@ const submit = () => {
                         autofocus
                         size="lg"
                         :highlight="!!form.errors.password"
-                    >
+                     class="w-full">
                         <template #trailing>
                             <UButton
                                 :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -67,11 +64,9 @@ const submit = () => {
                             />
                         </template>
                     </UInput>
-                    <InputError v-if="form.errors.password" :message="form.errors.password" />
-                </div>
+                </UFormField>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Confirm password" required />
+                <UFormField label="Confirm password" name="password_confirmation" required :error="form.errors.password_confirmation">
                     <UInput
                         v-model="form.password_confirmation"
                         :type="showPassword ? 'text' : 'password'"
@@ -79,9 +74,8 @@ const submit = () => {
                         autocomplete="new-password"
                         size="lg"
                         :highlight="!!form.errors.password_confirmation"
-                    />
-                    <InputError v-if="form.errors.password_confirmation" :message="form.errors.password_confirmation" />
-                </div>
+                    class="w-full" />
+                </UFormField>
 
                 <UButton type="submit" label="Reset password" size="lg" block class="mt-1" :loading="form.processing" :disabled="form.processing" />
 

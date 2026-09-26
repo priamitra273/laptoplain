@@ -2,14 +2,16 @@
 defineProps<{
     title?: string;
     description?: string;
+    size?: 'sm' | 'md';
 }>();
 </script>
 
 <template>
-    <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-        <div class="flex flex-col gap-1">
+    <div :class="size === 'sm' ? 'flex flex-col gap-0' : 'flex flex-col justify-between gap-3 md:flex-row md:items-center'">
+        <div :class="size === 'sm' ? 'flex flex-col' : 'flex flex-col gap-1'">
             <slot name="title">
-                <h1 v-if="title" class="text-xl font-semibold text-highlighted">{{ title }}</h1>
+                <h3 v-if="title && size === 'sm'" class="mb-0.5 text-base font-medium text-highlighted">{{ title }}</h3>
+                <h1 v-else-if="title" class="text-xl font-semibold text-highlighted">{{ title }}</h1>
             </slot>
 
             <slot name="description">

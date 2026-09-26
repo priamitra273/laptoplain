@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import FilterResetButton from '@/components/FilterResetButton.vue';
-import PriorityIcon from '@/components/PriorityIcon.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
 import TaskBoardCard from '@/components/task/TaskBoardCard.vue';
 import TaskBoardColumn from '@/components/task/TaskBoardColumn.vue';
 import type { BoardCardAction } from '@/components/task/types';

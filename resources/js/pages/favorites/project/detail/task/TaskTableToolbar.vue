@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import FilterResetButton from '@/components/FilterResetButton.vue';
-import StatusFilterPills, { type StatusPillOption } from '@/components/StatusFilterPills.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
+import StatusFilterPills, { type StatusPillOption } from '@/components/form/StatusFilterPills.vue';
 import type { TaskFilters } from './types';
 
 defineProps<{

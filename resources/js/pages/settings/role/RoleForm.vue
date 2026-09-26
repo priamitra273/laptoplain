@@ -64,32 +64,25 @@ for (const key in form.data()) {
         <form class="flex flex-col gap-6" @submit.prevent="save">
             <UCard title="Role Information" description="Please fill the required fields." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Team" required />
+                    <UFormField label="Team" name="team_uuid" required :error="form.errors.team_uuid">
                         <USelectMenu v-model="form.team_uuid" :items="teams" label-key="name" value-key="uuid"
                             placeholder="Select a team" class="w-full" />
-                        <InputError v-if="form.errors.team_uuid" :message="form.errors.team_uuid" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Role Name" required />
-                        <UInput v-model="form.label" placeholder="Role Name" />
-                        <InputError v-if="form.errors.label" :message="form.errors.label" />
-                    </div>
+                    <UFormField label="Role Name" name="label" required :error="form.errors.label">
+                        <UInput v-model="form.label" placeholder="Role Name" class="w-full" />
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Active" />
+                    <UFormField label="Active" orientation="horizontal" class="justify-between">
                         <USwitch v-model="form.is_active" :label="form.is_active ? 'Active' : 'Nonactive'"
                             class="py-2" />
-                    </div>
+                    </UFormField>
                 </div>
             </UCard>
 
-            <div class="flex flex-col gap-4">
+            <UFormField name="permissions" :error="form.errors.permissions" class="flex flex-col gap-4">
                 <PermissionMatrix v-model="form.permissions" :menu="menu" :menu-permissions="menu_permissions" />
-
-                <InputError v-if="form.errors.permissions" :message="form.errors.permissions" />
-            </div>
+            </UFormField>
 
             <div class="flex justify-end gap-3">
                 <Link :href="route('role.index')">

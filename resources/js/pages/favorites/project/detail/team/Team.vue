@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { getInitials } from '@/lib/utils';

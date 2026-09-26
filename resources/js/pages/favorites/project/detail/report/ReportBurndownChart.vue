@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import Highcharts from 'highcharts';
 import A11yInit from 'highcharts/modules/accessibility';
 import exportingInit from 'highcharts/modules/exporting';

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
-import EmojiPicker from '@/components/EmojiPicker.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
+import EmojiPicker from '@/components/form/EmojiPicker.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
 import type { PrimeSeverity } from '@/types';
 import { useForm } from '@inertiajs/vue3';
 import { formatDate } from '@/lib/date';
@@ -112,11 +111,11 @@ const submit = () => {
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <UFormField name="status_id" label="Status" required :error="http.errors.status_id">
-                        <SeverityBadgeSelect v-model="http.status_id" :items="statuses" placeholder="Select Status" class="w-full" />
+                        <BadgeSelect v-model="http.status_id" :items="statuses" placeholder="Select Status" class="w-full" />
                     </UFormField>
 
                     <UFormField name="priority_id" label="Priority" required :error="http.errors.priority_id">
-                        <PriorityBadgeSelect v-model="http.priority_id" :items="priorities" placeholder="Select Priority" class="w-full" />
+                        <BadgeSelect display="priority" v-model="http.priority_id" :items="priorities" placeholder="Select Priority" class="w-full" />
                     </UFormField>
                 </div>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import ServerDataTable from '@/components/ui/ServerDataTable.vue';
 import { getInitials, severityColor } from '@/lib/utils';
 import type { TableColumn } from '@nuxt/ui';

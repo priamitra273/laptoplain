@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FieldLabel from '@/components/FieldLabel.vue';
+import FieldLabel from '@/components/ui/FieldLabel.vue';
 import { severityBoxStyle, severityDotClass } from '@/lib/utils';
 import type { BoardBadge } from './types';
 

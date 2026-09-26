@@ -2,6 +2,7 @@
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import Heading from '@/components/ui/Heading.vue';
 import { getInitials } from '@/lib/utils';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -94,11 +95,10 @@ const openDeleteAccount = () => {
         <SettingsLayout>
             <div class="flex flex-col gap-8">
                 <div class="flex flex-col gap-6">
-                    <HeadingSmall title="Profile information" description="Update your name, email address, and profile picture" />
+                    <Heading size="sm" title="Profile information" description="Update your name, email address, and profile picture" />
 
                     <form class="flex flex-col gap-6" @submit.prevent="submit">
-                        <div class="flex flex-col gap-2">
-                            <Label value="Profile picture" />
+                        <UFormField label="Profile picture" name="avatar" :error="form.errors.avatar">
 
                             <div class="flex items-center gap-4">
                                 <UAvatar :src="previewUrl ?? undefined" :text="avatarInitials" :alt="user.name" size="3xl" />
@@ -135,20 +135,11 @@ const openDeleteAccount = () => {
                             </div>
 
                             <p class="text-xs text-muted">JPG, PNG or GIF. Max size 2MB.</p>
-                            <InputError v-if="form.errors.avatar" :message="form.errors.avatar" />
-                        </div>
+                        </UFormField>
 
-                        <div class="flex flex-col gap-2">
-                            <Label value="Name" required />
-                            <UInput v-model="form.name" placeholder="Full name" />
-                            <InputError v-if="form.errors.name" :message="form.errors.name" />
-                        </div>
+                        <UFormField label="Name" name="name" required :error="form.errors.name"><UInput v-model="form.name" placeholder="Full name" class="w-full" /></UFormField>
 
-                        <div class="flex flex-col gap-2">
-                            <Label value="Email address" required />
-                            <UInput v-model="form.email" type="email" placeholder="Email address" />
-                            <InputError v-if="form.errors.email" :message="form.errors.email" />
-                        </div>
+                        <UFormField label="Email address" name="email" required :error="form.errors.email"><UInput v-model="form.email" type="email" placeholder="Email address" class="w-full" /></UFormField>
 
                         <UAlert
                             v-if="mustVerifyEmail && !user.email_verified_at"
@@ -185,7 +176,7 @@ const openDeleteAccount = () => {
                 </div>
 
                 <div class="flex flex-col gap-4 rounded-lg border border-error/20 bg-error/5 p-4">
-                    <HeadingSmall title="Delete account" description="Delete your account and all of its resources" />
+                    <Heading size="sm" title="Delete account" description="Delete your account and all of its resources" />
                     <p class="text-sm text-error">Please proceed with caution, this cannot be undone.</p>
                     <UButton label="Delete account" color="error" class="self-start" @click="openDeleteAccount" />
                 </div>

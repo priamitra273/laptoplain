@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
 import { formatDate } from '@/lib/date';
 import { FetchJsonError, fetchJson } from '@/lib/utils';
 import { usePage } from '@inertiajs/vue3';
@@ -130,11 +129,11 @@ const submit = async () => {
         </UFormField>
 
         <UFormField name="type_id" :error="errors.type_id?.[0]">
-            <SeverityBadgeSelect v-model="form.type_id" :items="types" placeholder="Type" class="w-full" />
+            <BadgeSelect v-model="form.type_id" :items="types" placeholder="Type" class="w-full" />
         </UFormField>
 
         <UFormField name="priority_id" :error="errors.priority_id?.[0]">
-            <PriorityBadgeSelect v-model="form.priority_id" :items="priorities" placeholder="Priority" class="w-full" />
+            <BadgeSelect display="priority" v-model="form.priority_id" :items="priorities" placeholder="Priority" class="w-full" />
         </UFormField>
 
         <UFormField name="assign_users" :error="errors.assign_users?.[0]">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import UserAvatarGroup from '@/components/UserAvatarGroup.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import UserAvatarGroup from '@/components/common/UserAvatarGroup.vue';
 import { dueDateTone, formatDateShort, formatRelativeDay } from '@/lib/date';
 import TaskTypeBadge from './TaskTypeBadge.vue';
 import type { BoardCardAction, BoardCardTask } from './types';

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import TaskTypeBadge from '@/components/task/TaskTypeBadge.vue';
 import ServerDataTable from '@/components/ui/ServerDataTable.vue';
 import { dueDateTone, formatDate, formatRelativeDay } from '@/lib/date';

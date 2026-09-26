@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { can } from '@/lib/utils';
+import { toLucideIcon } from '@/lib/menu';
 import type { Menu } from '@/types';
 import { router } from '@inertiajs/vue3';
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
@@ -146,7 +147,7 @@ const handleDelete = async (row: Menu) => {
                     class="flex-1"
                 >
                     <template #icon-cell="{ row }">
-                        <Icon v-if="row.original.icon" :name="row.original.icon" class="size-4" />
+                        <UIcon v-if="row.original.icon" :name="toLucideIcon(row.original.icon)!" class="size-4" />
                     </template>
 
                     <template #is_active-cell="{ row }">

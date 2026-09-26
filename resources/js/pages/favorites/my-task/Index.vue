@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import Heading from '@/components/ui/Heading.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';

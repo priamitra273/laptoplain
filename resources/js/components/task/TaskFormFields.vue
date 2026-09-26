@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
-import FieldLabel from '@/components/FieldLabel.vue';
-import InputAttachment from '@/components/InputAttachment.vue';
-import InputError from '@/components/InputError.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import RichTextEditor from '@/components/RichTextEditor.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
+import FieldLabel from '@/components/ui/FieldLabel.vue';
+import InputAttachment from '@/components/form/InputAttachment.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
+import RichTextEditor from '@/components/form/RichTextEditor.vue';
 import { formatDate } from '@/lib/date';
 import { formErrorFor, getInitials, severityColor } from '@/lib/utils';
 import { statusRequiresDueDate } from '@/lib/statusRules';
@@ -156,11 +154,9 @@ const createTag = (name: string) => {
             <UInput v-model="title" autofocus maxlength="255" placeholder="What needs to be done?" :disabled="disabled" class="w-full" />
         </UFormField>
 
-        <div :inert="disabled" role="group" aria-label="Description">
-            <p class="text-sm font-medium">Description</p>
-            <RichTextEditor v-model="description" />
-            <InputError :message="errorFor('description')" />
-        </div>
+        <UFormField label="Description" name="description" :error="errorFor('description')" :inert="disabled"
+            ><RichTextEditor v-model="description"
+        /></UFormField>
 
         <div class="flex flex-col gap-3">
             <div class="flex items-center gap-3">
@@ -169,16 +165,23 @@ const createTag = (name: string) => {
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <UFormField label="Type" name="type_id" required :error="errorFor('type_id')">
-                    <SeverityBadgeSelect v-model="typeId" :items="types" placeholder="Select type" :disabled="disabled" class="w-full" />
+                    <BadgeSelect v-model="typeId" :items="types" placeholder="Select type" :disabled="disabled" class="w-full" />
                 </UFormField>
                 <UFormField label="Status" name="status_id" required :error="errorFor('status_id')">
-                    <SeverityBadgeSelect v-model="statusId" :items="statuses" placeholder="Select status" :disabled="disabled" class="w-full" />
+                    <BadgeSelect v-model="statusId" :items="statuses" placeholder="Select status" :disabled="disabled" class="w-full" />
                 </UFormField>
                 <UFormField label="Priority" name="priority_id" required :error="errorFor('priority_id')">
-                    <PriorityBadgeSelect v-model="priorityId" :items="priorities" placeholder="Select priority" :disabled="disabled" class="w-full" />
+                    <BadgeSelect
+                        display="priority"
+                        v-model="priorityId"
+                        :items="priorities"
+                        placeholder="Select priority"
+                        :disabled="disabled"
+                        class="w-full"
+                    />
                 </UFormField>
                 <UFormField label="Category" name="task_category_id" :error="errorFor('task_category_id')">
-                    <SeverityBadgeSelect
+                    <BadgeSelect
                         v-model="categoryId"
                         :items="availableCategories"
                         placeholder="Select category"
@@ -195,8 +198,7 @@ const createTag = (name: string) => {
                 <USeparator class="flex-1" />
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <p class="mb-1 text-sm font-medium">Start date<span v-if="requiresDates" class="text-error"> *</span></p>
+                <UFormField label="Start date" name="start_date" :required="requiresDates" :error="errorFor('start_date')">
                     <DatePicker
                         v-model="startDate"
                         :label="startDate ? formatDate(model.start_date) : 'Select start date'"
@@ -205,10 +207,8 @@ const createTag = (name: string) => {
                         clearable
                         :disabled="disabled"
                     />
-                    <InputError :message="errorFor('start_date')" />
-                </div>
-                <div>
-                    <p class="mb-1 text-sm font-medium">Due date<span v-if="requiresDates" class="text-error"> *</span></p>
+                </UFormField>
+                <UFormField label="Due date" name="due_date" :required="requiresDates" :error="errorFor('due_date')">
                     <DatePicker
                         v-model="dueDate"
                         :label="dueDate ? formatDate(model.due_date) : 'Select due date'"
@@ -218,8 +218,7 @@ const createTag = (name: string) => {
                         :min-value="startDate"
                         :disabled="disabled"
                     />
-                    <InputError :message="errorFor('due_date')" />
-                </div>
+                </UFormField>
             </div>
         </div>
 
@@ -410,12 +409,9 @@ const createTag = (name: string) => {
             </UFormField>
         </div>
 
-        <fieldset class="flex flex-col gap-3" :disabled="disabled" :class="disabled ? 'pointer-events-none opacity-60' : ''">
-            <legend class="sr-only">Attachments</legend>
-            <div class="flex items-center gap-3"><FieldLabel title="Attachments" class="shrink-0" /><USeparator class="flex-1" /></div>
+        <UFormField label="Attachments" name="attachments" :error="errorFor('attachments')" :inert="disabled">
             <InputAttachment v-model="attachments" :label="null" />
-            <InputError :message="errorFor('attachments')" />
-        </fieldset>
+        </UFormField>
 
         <slot name="extra" />
     </div>

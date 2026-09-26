@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import FieldLabel from '@/components/FieldLabel.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
-import DatePicker from '@/components/DatePicker.vue';
+import FieldLabel from '@/components/ui/FieldLabel.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
 import { formatDate, formatDateShort } from '@/lib/date';
 import { getLocalTimeZone, parseDate } from '@internationalized/date';
 import { computed } from 'vue';
@@ -61,7 +60,7 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div :class="statCardClass">
             <FieldLabel title="Status" />
-            <SeverityBadgeSelect
+            <BadgeSelect
                 :model-value="project.status?.id"
                 :items="statuses"
                 :disabled="!canEdit"
@@ -72,7 +71,7 @@ const statCardClass = 'flex flex-col items-start gap-2 rounded-xl bg-default p-3
 
         <div :class="statCardClass">
             <FieldLabel title="Priority" />
-            <PriorityBadgeSelect
+            <BadgeSelect display="priority"
                 :model-value="project.priority?.id"
                 :items="priorities"
                 :disabled="!canEdit"

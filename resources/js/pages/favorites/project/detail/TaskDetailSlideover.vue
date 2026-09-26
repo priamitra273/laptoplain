@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import FieldLabel from '@/components/FieldLabel.vue';
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
-import TaskDiscussion from '@/components/TaskDiscussion.vue';
+import FieldLabel from '@/components/ui/FieldLabel.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
+import TaskDiscussion from '@/components/task/TaskDiscussion.vue';
 import TaskTypeBadge from '@/components/task/TaskTypeBadge.vue';
-import UserAvatarGroup from '@/components/UserAvatarGroup.vue';
+import UserAvatarGroup from '@/components/common/UserAvatarGroup.vue';
 import { daysUntil, formatDateRange } from '@/lib/date';
 import { isTaskStatusDone } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import TaskTypeBadge from '@/components/task/TaskTypeBadge.vue';
 import ServerDataTable from '@/components/ui/ServerDataTable.vue';
 import { formatDate } from '@/lib/date';

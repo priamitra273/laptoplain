@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
-import EmojiPicker from '@/components/EmojiPicker.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
-import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
+import EmojiPicker from '@/components/form/EmojiPicker.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
+import TaskDueDateDialog from '@/components/task/TaskDueDateDialog.vue';
 import ServerDataTable from '@/components/ui/ServerDataTable.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
-import InlineTextEdit from '@/components/InlineTextEdit.vue';
+import InlineTextEdit from '@/components/form/InlineTextEdit.vue';
 import { daysUntil, dueDateTone, formatDate, formatRelativeDay, type DueDateTone } from '@/lib/date';
 import type { PrimeSeverity } from '@/types';
 import type { TableColumn } from '@nuxt/ui';
@@ -241,7 +240,7 @@ const columns: TableColumn<ProjectRow>[] = [
         </template>
 
         <template #status_id-cell="{ row }">
-            <SeverityBadgeSelect
+            <BadgeSelect
                 :model-value="row.original.status.id"
                 :items="statuses"
                 class="w-auto"
@@ -251,7 +250,7 @@ const columns: TableColumn<ProjectRow>[] = [
         </template>
 
         <template #priority_id-cell="{ row }">
-            <PriorityBadgeSelect
+            <BadgeSelect display="priority"
                 :model-value="row.original.priority.id"
                 :items="priorities"
                 class="w-auto"

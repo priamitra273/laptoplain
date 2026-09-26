@@ -3,6 +3,7 @@ import { useAppearance } from '@/composables/useAppearance';
 import { NEUTRAL_COLORS, PRIMARY_COLORS, useTheme } from '@/composables/useTheme';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import Heading from '@/components/ui/Heading.vue';
 import { Head } from '@inertiajs/vue3';
 import colors from 'tailwindcss/colors';
 
@@ -33,7 +34,7 @@ const swatch = (name: string) => (colors as Record<string, Record<number, string
         <SettingsLayout>
             <div class="flex flex-col gap-8">
                 <div class="flex flex-col gap-4">
-                    <HeadingSmall title="Appearance" description="Choose how the interface looks on this device" />
+                    <Heading size="sm" title="Appearance" description="Choose how the interface looks on this device" />
 
                     <div class="inline-flex w-fit gap-1 rounded-lg bg-elevated p-1">
                         <button
@@ -51,10 +52,10 @@ const swatch = (name: string) => (colors as Record<string, Record<number, string
                 </div>
 
                 <div class="flex flex-col gap-4 border-t border-default pt-6">
-                    <HeadingSmall title="Accent colors" description="Pick the primary and base color used across the interface" />
+                    <Heading size="sm" title="Accent colors" description="Pick the primary and base color used across the interface" />
 
                     <div v-for="group in colorGroups" :key="group.label" class="flex flex-col gap-2">
-                        <Label :value="group.label" />
+                        <p class="text-sm font-medium">{{ group.label }}</p>
 
                         <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                             <button

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import FilterResetButton from '@/components/FilterResetButton.vue';
-import PriorityBadgeSelect from '@/components/PriorityBadgeSelect.vue';
-import SeverityBadgeSelect from '@/components/SeverityBadgeSelect.vue';
-import StatusFilterPills, { type StatusPillOption } from '@/components/StatusFilterPills.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
+import BadgeSelect from '@/components/form/BadgeSelect.vue';
+import StatusFilterPills, { type StatusPillOption } from '@/components/form/StatusFilterPills.vue';
 import { computed, ref } from 'vue';
 import type { MyTaskBadge, MyTaskProject } from './types';
 
@@ -87,9 +86,9 @@ const hasAnyFilter = computed(() => !!(search.value.trim() || statusId.value) ||
                 class="w-44 rounded-full"
             />
 
-            <PriorityBadgeSelect v-model="priorityId" :items="priorities" placeholder="Priority" :disabled="disabled" class="w-44 rounded-full" />
+            <BadgeSelect display="priority" v-model="priorityId" :items="priorities" placeholder="Priority" :disabled="disabled" class="w-44 rounded-full" />
 
-            <SeverityBadgeSelect v-model="typeId" :items="types" placeholder="Type" :disabled="disabled" class="w-44 rounded-full" />
+            <BadgeSelect v-model="typeId" :items="types" placeholder="Type" :disabled="disabled" class="w-44 rounded-full" />
 
         </div>
     </div>

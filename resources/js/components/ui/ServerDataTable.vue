@@ -5,7 +5,6 @@
 import { computed, h, useSlots } from 'vue';
 import type { TableColumn, TableRow } from '@nuxt/ui';
 import UButton from '@nuxt/ui/components/Button.vue';
-import { getPaginationRange } from './serverDataTable';
 
 const props = withDefaults(
     defineProps<{
@@ -39,7 +38,10 @@ const emit = defineEmits<{
 const page = defineModel<number>('page', { required: true });
 const perPage = defineModel<number>('perPage', { required: true });
 
-const resultRange = computed(() => getPaginationRange(page.value, perPage.value, props.total));
+const resultRange = computed(() => ({
+    start: props.total === 0 ? 0 : (page.value - 1) * perPage.value + 1,
+    end: Math.min(page.value * perPage.value, props.total),
+}));
 
 const pageSizeItems = computed(() => props.pageSizes.map((size) => ({ label: `${size} / page`, value: size })));
 

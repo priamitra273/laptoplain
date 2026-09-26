@@ -25,11 +25,9 @@ const submit = () => {
                     confirm you would like to permanently delete your account.
                 </p>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Password" />
-                    <UInput v-model="form.password" type="password" placeholder="Password" autofocus />
-                    <InputError v-if="form.errors.password" :message="form.errors.password" />
-                </div>
+                <UFormField label="Password" name="password" :error="form.errors.password">
+                    <UInput v-model="form.password" type="password" placeholder="Password" autofocus class="w-full" />
+                </UFormField>
             </form>
         </template>
 

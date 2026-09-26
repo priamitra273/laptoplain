@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
-import UserAvatarGroup from '@/components/UserAvatarGroup.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
+import UserAvatarGroup from '@/components/common/UserAvatarGroup.vue';
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 import { computed, ref, watch } from 'vue';
 import { useDraggable, type DraggableEvent } from 'vue-draggable-plus';

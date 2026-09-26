@@ -57,11 +57,9 @@ for (const key in form.data()) {
     <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="open">
         <template #body>
             <div class="grid gap-8">
-                <div class="flex flex-col gap-2">
-                    <Label value="Team Name"></Label>
-                    <UInput v-model="form.name" placeholder="Team Name" />
-                    <InputError :message="form.errors.name" v-if="form.errors.name" />
-                </div>
+                <UFormField label="Team Name" name="name" :error="form.errors.name">
+                    <UInput v-model="form.name" placeholder="Team Name" class="w-full" />
+                </UFormField>
             </div>
         </template>
 

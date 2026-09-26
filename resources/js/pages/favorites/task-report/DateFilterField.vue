@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
 import type { CalendarDate } from '@internationalized/date';
 import { computed } from 'vue';
 import { formatCalendarDate, toCalendarDate } from './date';

@@ -64,21 +64,17 @@ for (const key in form.data()) {
     <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="open">
         <template #body>
             <div class="grid gap-6">
-                <div class="flex flex-col gap-2">
-                    <Label value="Name" required />
-                    <UInput v-model="form.name" placeholder="Enter type name" />
-                    <InputError v-if="form.errors.name" :message="form.errors.name" />
-                </div>
+                <UFormField label="Name" name="name" required :error="form.errors.name">
+                    <UInput v-model="form.name" placeholder="Enter type name" class="w-full" />
+                </UFormField>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Severity" required />
+                <UFormField label="Severity" name="severity" required :error="form.errors.severity">
                     <USelectMenu v-model="form.severity" :items="severityOptions" value-key="value" placeholder="Select a severity" class="w-full">
                         <template #item-label="{ item }">
                             <UBadge :color="severityColor(item.value)" variant="subtle" size="sm">{{ item.label }}</UBadge>
                         </template>
                     </USelectMenu>
-                    <InputError v-if="form.errors.severity" :message="form.errors.severity" />
-                </div>
+                </UFormField>
             </div>
         </template>
 

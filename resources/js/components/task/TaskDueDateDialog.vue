@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import DatePicker from '@/components/DatePicker.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
 import { DateFormatter, getLocalTimeZone, today, type CalendarDate } from '@internationalized/date';
 import { computed, ref } from 'vue';
 
@@ -29,9 +29,7 @@ const submit = () => {
 <template>
     <UModal title="Set Due Date" :description="description" :dismissible="false" :ui="{ footer: 'justify-end' }">
         <template #body>
-            <div class="flex flex-col gap-2">
-                <Label value="Due Date" required />
-
+            <UFormField label="Due Date" required>
                 <DatePicker
                     v-model="dueDate"
                     :label="dueDateLabel"
@@ -39,7 +37,7 @@ const submit = () => {
                     :min-value="minDate"
                     :trigger-class="`w-full justify-start font-normal ${dueDate ? '' : 'text-muted'}`"
                 />
-            </div>
+            </UFormField>
         </template>
 
         <template #footer>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import FilterResetButton from '@/components/FilterResetButton.vue';
-import PriorityIcon from '@/components/PriorityIcon.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
+import PriorityIcon from '@/components/common/PriorityIcon.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import TaskTypeBadge from '@/components/task/TaskTypeBadge.vue';
 import { getInitials } from '@/lib/utils';
 import { computed, ref } from 'vue';

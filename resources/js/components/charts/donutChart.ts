@@ -1,4 +1,8 @@
-import type { DonutChartSegment } from './types';
+export interface DonutChartSegment {
+    label: string;
+    value: number;
+    color: string;
+}
 
 export function normalizeDonutSegments(segments: DonutChartSegment[], emptyColor: string) {
     const hasData = segments.some((segment) => segment.value > 0);

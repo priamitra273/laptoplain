@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
 import PanelCard from '@/components/ui/PanelCard.vue';
 import { formatDate } from '@/lib/date';
 import { Deferred, router } from '@inertiajs/vue3';

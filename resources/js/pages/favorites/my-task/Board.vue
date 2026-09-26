@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
+import TaskDueDateDialog from '@/components/task/TaskDueDateDialog.vue';
 import TaskBoardCard from '@/components/task/TaskBoardCard.vue';
 import TaskBoardColumn from '@/components/task/TaskBoardColumn.vue';
 import type { BoardCardAction } from '@/components/task/types';

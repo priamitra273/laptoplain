@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
-import FilterResetButton from '@/components/FilterResetButton.vue';
-import StatusFilterPills, { type StatusPillOption } from '@/components/StatusFilterPills.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
+import StatusFilterPills, { type StatusPillOption } from '@/components/form/StatusFilterPills.vue';
 import { priorityIcon, severityColor } from '@/lib/utils';
 import type { PrimeSeverity } from '@/types';
 import { formatDate } from '@/lib/date';

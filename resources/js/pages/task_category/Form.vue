@@ -48,10 +48,9 @@ const selectIcon = (value: string) => {
 };
 
 /**
- * Data lama menyimpan ikon dalam format PrimeVue (`pi pi-bolt`) yang tidak bisa dirender
- * lucide-vue-next, jadi nilai seperti itu diperlakukan sebagai belum punya ikon.
+ * Only Iconify values can be rendered; unknown legacy values use the empty-state icon.
  */
-const isRenderableIcon = computed(() => !!form.icon && !form.icon.startsWith('pi '));
+const isRenderableIcon = computed(() => !!form.icon && form.icon.startsWith('i-'));
 
 const open = () => {
     form.name = props.value?.name ?? '';
@@ -91,24 +90,20 @@ for (const key in form.data()) {
     <USlideover :title="title" :close="{ onClick: () => emits('close', false) }" @enter="open">
         <template #body>
             <div class="grid gap-6">
-                <div class="flex flex-col gap-2">
-                    <Label value="Name" required />
-                    <UInput v-model="form.name" placeholder="Enter category name" />
-                    <InputError v-if="form.errors.name" :message="form.errors.name" />
-                </div>
+                <UFormField label="Name" name="name" required :error="form.errors.name">
+                    <UInput v-model="form.name" placeholder="Enter category name" class="w-full" />
+                </UFormField>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Icon" required />
+                <UFormField label="Icon" name="icon" required :error="form.errors.icon">
                     <UPopover v-model:open="iconPickerOpen">
                         <UButton color="neutral" variant="outline" class="w-full justify-start">
-                            <Icon v-if="isRenderableIcon" :name="form.icon" class="size-4" />
-                            <UIcon v-else name="i-lucide-smile-plus" class="size-4 text-muted" />
-                            <span :class="isRenderableIcon ? '' : 'text-muted'">{{ isRenderableIcon ? form.icon : 'Select an icon' }}</span>
+                            <UIcon :name="isRenderableIcon ? form.icon : 'i-lucide-smile-plus'" class="size-4" />
+                            <span :class="isRenderableIcon ? '' : 'text-muted'">{{ isRenderableIcon ? form.icon.replace(/^i-lucide-/, '') : 'Select an icon' }}</span>
                         </UButton>
 
                         <template #content>
                             <div class="flex w-64 flex-col gap-2 p-2">
-                                <UInput v-model="iconSearch" icon="i-lucide-search" placeholder="Search icon..." size="sm" autofocus />
+                                <UInput v-model="iconSearch" icon="i-lucide-search" placeholder="Search icon..." size="sm" autofocus class="w-full" />
                                 <div class="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto">
                                     <button
                                         v-for="item in filteredIconItems"
@@ -119,24 +114,21 @@ for (const key in form.data()) {
                                         :class="form.icon === item.value ? 'bg-elevated ring-1 ring-primary' : ''"
                                         @click="selectIcon(item.value)"
                                     >
-                                        <Icon :name="item.value" class="size-4" />
+                                        <UIcon :name="item.value" class="size-4" />
                                     </button>
                                 </div>
                             </div>
                         </template>
                     </UPopover>
-                    <InputError v-if="form.errors.icon" :message="form.errors.icon" />
-                </div>
+                </UFormField>
 
-                <div class="flex flex-col gap-2">
-                    <Label value="Severity" required />
+                <UFormField label="Severity" name="severity" required :error="form.errors.severity">
                     <USelectMenu v-model="form.severity" :items="severityOptions" value-key="value" placeholder="Select a severity" class="w-full">
                         <template #item-label="{ item }">
                             <UBadge :color="severityColor(item.value)" variant="subtle" size="sm">{{ item.label }}</UBadge>
                         </template>
                     </USelectMenu>
-                    <InputError v-if="form.errors.severity" :message="form.errors.severity" />
-                </div>
+                </UFormField>
             </div>
         </template>
 

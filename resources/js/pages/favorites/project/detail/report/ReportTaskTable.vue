@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import { startCase } from 'lodash';
 import { computed } from 'vue';
 import ReportTaskList from './ReportTaskList.vue';

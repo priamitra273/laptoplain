@@ -77,20 +77,11 @@ for (const key in form.data()) {
         <form class="flex flex-col gap-6" autocomplete="off" @submit.prevent="save">
             <UCard title="User Information" description="Please fill the required fields." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Name" required />
-                        <UInput v-model="form.name" placeholder="Enter Name" />
-                        <InputError v-if="form.errors.name" :message="form.errors.name" />
-                    </div>
+                    <UFormField label="Name" name="name" required :error="form.errors.name"><UInput v-model="form.name" placeholder="Enter Name" class="w-full" /></UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Email" required />
-                        <UInput v-model="form.email" type="email" placeholder="Enter Email" autocomplete="off" />
-                        <InputError v-if="form.errors.email" :message="form.errors.email" />
-                    </div>
+                    <UFormField label="Email" name="email" required :error="form.errors.email"><UInput v-model="form.email" type="email" placeholder="Enter Email" autocomplete="off" class="w-full" /></UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Team" required />
+                    <UFormField label="Team" name="team_uuid" required :error="form.errors.team_uuid">
                         <USelectMenu
                             v-model="form.team_uuid"
                             :items="teams"
@@ -99,11 +90,9 @@ for (const key in form.data()) {
                             placeholder="Select a team"
                             class="w-full"
                         />
-                        <InputError v-if="form.errors.team_uuid" :message="form.errors.team_uuid" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Role" required />
+                    <UFormField label="Role" name="role_id" required :error="form.errors.role_id">
                         <USelectMenu
                             v-model="form.role_id"
                             :items="teamRoles"
@@ -113,21 +102,18 @@ for (const key in form.data()) {
                             placeholder="Select a role"
                             class="w-full"
                         />
-                        <InputError v-if="form.errors.role_id" :message="form.errors.role_id" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex items-center justify-between gap-2 py-2">
-                        <Label value="Active" />
+                    <UFormField label="Active" orientation="horizontal" class="justify-between">
                         <USwitch v-model="form.is_active" />
-                    </div>
+                    </UFormField>
                 </div>
             </UCard>
 
             <UCard title="Password Information" description="Please provide at least 8 characters." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <Label value="Password" :required="!props.user?.uuid" />
-                        <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="new-password">
+                    <UFormField label="Password" name="password" :required="!props.user?.uuid" :error="form.errors.password">
+                        <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="new-password" class="w-full">
                             <template #trailing>
                                 <UButton
                                     color="neutral"
@@ -139,19 +125,16 @@ for (const key in form.data()) {
                                 />
                             </template>
                         </UInput>
-                        <InputError v-if="form.errors.password" :message="form.errors.password" />
-                    </div>
+                    </UFormField>
 
-                    <div class="flex flex-col gap-2">
-                        <Label value="Password Confirmation" />
+                    <UFormField label="Password Confirmation" name="password_confirmation" :error="form.errors.password_confirmation">
                         <UInput
                             v-model="form.password_confirmation"
                             type="password"
                             placeholder="Password Confirmation"
                             autocomplete="new-password"
-                        />
-                        <InputError v-if="form.errors.password_confirmation" :message="form.errors.password_confirmation" />
-                    </div>
+                        class="w-full" />
+                    </UFormField>
                 </div>
             </UCard>
 

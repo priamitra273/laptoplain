@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import TaskFormFields from '@/components/TaskFormFields.vue';
+import TaskFormFields from '@/components/task/TaskFormFields.vue';
 import type { TaskFormModel } from '@/types';
 import { useForm } from '@inertiajs/vue3';
 import { DialogTitle } from 'reka-ui';

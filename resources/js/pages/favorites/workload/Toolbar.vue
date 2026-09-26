@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FilterResetButton from '@/components/FilterResetButton.vue';
+import FilterResetButton from '@/components/form/FilterResetButton.vue';
 import { computed } from 'vue';
 import type { WorkloadSortColumn } from './types';
 import WorkloadStatusTabs from './WorkloadStatusTabs.vue';

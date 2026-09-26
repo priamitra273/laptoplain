@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
-import StatusBadge from '@/components/StatusBadge.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import PanelCard from '@/components/ui/PanelCard.vue';
 import { getInitials } from '@/lib/utils';
 import { Deferred, Link } from '@inertiajs/vue3';

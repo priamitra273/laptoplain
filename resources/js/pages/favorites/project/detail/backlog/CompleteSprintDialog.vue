@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProgressWithLabel from '@/components/ProgressWithLabel.vue';
+import ProgressWithLabel from '@/components/common/ProgressWithLabel.vue';
 import { FetchJsonError, fetchJson, isTaskStatusDone, plural } from '@/lib/utils';
 import { computed, ref } from 'vue';
 import type { BacklogSprint } from './types';

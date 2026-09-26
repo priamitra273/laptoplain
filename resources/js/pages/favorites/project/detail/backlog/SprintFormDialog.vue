@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
+import DatePicker from '@/components/form/DatePicker.vue';
 import { formatDate } from '@/lib/date';
 import { FetchJsonError, fetchJson } from '@/lib/utils';
 import { parseDate } from '@internationalized/date';

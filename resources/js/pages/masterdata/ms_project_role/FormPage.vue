@@ -48,6 +48,7 @@ const PERMISSION_SECTIONS: { key: PermissionSectionKey; label: string }[] = [
 
 const ACTIONS = ['create', 'update', 'delete'] as const;
 const actionItems: string[] = [...ACTIONS];
+const accessControlFieldUi = { root: 'grid gap-4 md:grid-cols-3', labelWrapper: 'md:col-span-1', container: 'md:col-span-2' };
 
 const TASK_FIELDS = [
     { value: 'title', label: 'Title' },
@@ -130,11 +131,9 @@ for (const key in form.data()) {
     <AppLayout :title="pageTitle">
         <form class="flex flex-col gap-6" @submit.prevent="save">
             <UCard title="Basic Information" description="Please fill the required fields." :ui="{ body: 'sm:py-0' }">
-                <div class="flex max-w-sm flex-col gap-2">
-                    <Label value="Name" required />
-                    <UInput v-model="form.name" placeholder="Enter project role name" />
-                    <InputError v-if="form.errors.name" :message="form.errors.name" />
-                </div>
+                <UFormField label="Name" name="name" required :error="form.errors.name" class="max-w-sm"
+                    ><UInput v-model="form.name" placeholder="Enter project role name" class="w-full"
+                /></UFormField>
             </UCard>
 
             <UCard title="Permissions" description="Define what actions this role can perform" :ui="{ body: 'sm:py-0' }">
@@ -148,59 +147,52 @@ for (const key in form.data()) {
                             />
                         </div>
 
-                        <UCheckboxGroup v-model="form.config[section.key]" :items="actionItems" class="capitalize" />
-
-                        <InputError v-if="form.errors[`config.${section.key}`]" :message="form.errors[`config.${section.key}`]" />
+                        <UFormField :name="`config.${section.key}`" :error="form.errors[`config.${section.key}`]">
+                            <UCheckboxGroup v-model="form.config[section.key]" :items="actionItems" class="capitalize" />
+                        </UFormField>
                     </div>
                 </div>
             </UCard>
 
             <UCard title="Access Control" description="Restrict which data and fields this role can access" :ui="{ body: 'sm:py-0' }">
                 <div class="flex flex-col gap-6">
-                    <div class="grid gap-4 md:grid-cols-3">
-                        <div class="md:col-span-1">
-                            <Label value="Allowed Task Statuses" />
-                            <p class="text-sm text-muted">Statuses this role is permitted to transition to (leave empty to allow all)</p>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <USelectMenu
-                                v-model="form.config.allow_task_status"
-                                :items="task_statuses"
-                                label-key="name"
-                                value-key="id"
-                                multiple
-                                placeholder="Select task statuses"
-                                class="w-full"
-                            >
-                                <template #item-label="{ item }">
-                                    <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
-                                </template>
-                            </USelectMenu>
-                            <InputError v-if="form.errors['config.allow_task_status']" :message="form.errors['config.allow_task_status']" />
-                        </div>
-                    </div>
+                    <UFormField
+                        label="Allowed Task Statuses"
+                        name="config.allow_task_status"
+                        :error="form.errors['config.allow_task_status']"
+                        :ui="accessControlFieldUi"
+                    >
+                        <p class="text-sm text-muted">Statuses this role is permitted to transition to (leave empty to allow all)</p>
+                        <USelectMenu
+                            v-model="form.config.allow_task_status"
+                            :items="task_statuses"
+                            label-key="name"
+                            value-key="id"
+                            multiple
+                            placeholder="Select task statuses"
+                            class="w-full"
+                        >
+                            <template #item-label="{ item }">
+                                <UBadge :color="severityColor(item.severity)" variant="subtle" size="sm">{{ item.name }}</UBadge>
+                            </template>
+                        </USelectMenu>
+                    </UFormField>
 
                     <USeparator />
 
-                    <div class="grid gap-4 md:grid-cols-3">
-                        <div class="md:col-span-1">
-                            <Label value="Allowed Update Task Fields" />
-                            <p class="text-sm text-muted">Task fields this role is allowed to modify (leave empty to allow all)</p>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <UCheckboxGroup
-                                v-model="form.config.allow_update_task_fields"
-                                :items="TASK_FIELDS"
-                                :ui="{ fieldset: 'grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4' }"
-                            />
-                            <InputError
-                                v-if="form.errors['config.allow_update_task_fields']"
-                                :message="form.errors['config.allow_update_task_fields']"
-                            />
-                        </div>
-                    </div>
+                    <UFormField
+                        label="Allowed Update Task Fields"
+                        name="config.allow_update_task_fields"
+                        :error="form.errors['config.allow_update_task_fields']"
+                        :ui="accessControlFieldUi"
+                    >
+                        <p class="text-sm text-muted">Task fields this role is allowed to modify (leave empty to allow all)</p>
+                        <UCheckboxGroup
+                            v-model="form.config.allow_update_task_fields"
+                            :items="TASK_FIELDS"
+                            :ui="{ fieldset: 'grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4' }"
+                        />
+                    </UFormField>
                 </div>
             </UCard>
 

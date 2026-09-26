@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
 import { Link } from '@inertiajs/vue3';
 import type { DashboardAttentionItem } from './types';
 

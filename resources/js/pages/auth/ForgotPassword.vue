@@ -31,8 +31,7 @@ const submit = () => {
             <UAlert v-if="status" color="success" variant="subtle" :description="status" class="mb-5" />
 
             <div class="flex flex-col gap-5">
-                <div class="flex flex-col gap-2">
-                    <Label value="Email address" required />
+                <UFormField label="Email address" name="email" required :error="form.errors.email">
                     <UInput
                         v-model="form.email"
                         type="email"
@@ -41,9 +40,8 @@ const submit = () => {
                         autofocus
                         size="lg"
                         :highlight="!!form.errors.email"
-                    />
-                    <InputError v-if="form.errors.email" :message="form.errors.email" />
-                </div>
+                    class="w-full" />
+                </UFormField>
 
                 <UButton
                     type="submit"

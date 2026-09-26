@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import StatusBadge from '@/components/StatusBadge.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 import { formatDateRange } from '@/lib/date';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';

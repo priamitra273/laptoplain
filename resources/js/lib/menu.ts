@@ -2,17 +2,21 @@ import type { SidebarMenuItem } from '@/types';
 import type { NavigationMenuItem } from '@nuxt/ui';
 
 /**
- * Nama ikon di DB (MenuSeeder) berupa PascalCase Lucide — `LayoutDashboard`.
- * Nuxt UI / Iconify butuh `i-lucide-layout-dashboard`.
+ * Return Iconify DB values unchanged and converts legacy PascalCase icon names.
  */
 export function toLucideIcon(name: string | null | undefined): string | undefined {
     if (!name) {
         return undefined;
     }
 
+    if (name.startsWith('i-')) {
+        return name;
+    }
+
     const kebab = name
         .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
         .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+        .replace(/(?<!\d)([a-zA-Z])(\d)/g, '$1-$2')
         .toLowerCase();
 
     return `i-lucide-${kebab}`;

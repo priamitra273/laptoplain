@@ -66,8 +66,7 @@ const baseColumns: TableColumn<TaskCategoryItem>[] = [
 
 const columns = baseColumns.map(withSortHeader);
 
-/** Ikon warisan masih berformat PrimeVue (`pi pi-bolt`) dan tidak bisa dirender lucide. */
-const isRenderableIcon = (icon: string | null) => !!icon && !icon.startsWith('pi ');
+const isRenderableIcon = (icon: string | null) => !!icon && icon.startsWith('i-');
 
 const globalFilter = ref('');
 const sorting = ref<SortingState>([]);
@@ -149,7 +148,7 @@ const handleDelete = async (row: TaskCategoryItem) => {
                             variant="subtle"
                             class="size-8 justify-center"
                         >
-                            <Icon :name="row.original.icon!" class="size-4" />
+                            <UIcon :name="row.original.icon!" class="size-4" />
                         </UBadge>
                         <span v-else class="text-xs text-dimmed">—</span>
                     </template>

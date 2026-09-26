@@ -5,8 +5,10 @@ import { resolve } from 'node:path';
 import path from 'path';
 import { defineConfig } from 'vite';
 import uiThing from './resources/js/theme/ui-thing.ts';
+import lucide from '@iconify-json/lucide/icons.json' with { type: 'json' };
 
 export default defineConfig({
+    define: { __LUCIDE_ICON_NAMES__: JSON.stringify(Object.keys(lucide.icons)) },
     plugins: [
         laravel({
             input: ['resources/js/app.ts', 'resources/css/app.css'],
@@ -29,6 +31,13 @@ export default defineConfig({
             colorMode: false,
             components: {
                 dirs: ['resources/js/components'],
+            },
+            // Ikon pilihan user dari DB tidak terdeteksi saat build; bundel koleksi agar tak mengambil dari api.iconify.design.
+            icon: {
+                clientBundle: {
+                    icons: [...Object.keys(lucide.icons), ...Object.keys(lucide.aliases ?? {})].map((name) => `i-lucide-${name}`),
+                    sizeLimitKb: 1024,
+                },
             },
             ui: {
                 colors: {

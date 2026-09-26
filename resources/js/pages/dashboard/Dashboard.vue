@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import StatCard from '@/components/StatCard.vue';
+import StatCard from '@/components/common/StatCard.vue';
 import ActivityGraphCard from './ActivityGraphCard.vue';
 import NeedsAttentionCard from './NeedsAttentionCard.vue';
 import TaskDonutChart from './TaskDonutChart.vue';

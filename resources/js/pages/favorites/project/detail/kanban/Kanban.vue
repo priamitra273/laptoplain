@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import TaskDueDateDialog from '@/components/TaskDueDateDialog.vue';
+import TaskDueDateDialog from '@/components/task/TaskDueDateDialog.vue';
 import { useProjectPermissions } from '@/composables/useProjectPermissions';
 import { FetchJsonError, fetchJson } from '@/lib/utils';
 import { Deferred, Head, router } from '@inertiajs/vue3';

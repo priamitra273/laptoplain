@@ -156,7 +156,7 @@ for (const key in form.data()) {
                             placeholder="Select a route"
                             class="w-full"
                         />
-                        <p v-if="!form.parent_uuid" class="text-xs text-muted">
+                        <p v-if="!form.parent_uuid" class="mt-2 text-xs text-muted">
                             A menu without a parent is a group. It only holds other menus, so it has no page of its own.
                         </p>
                     </UFormField>
@@ -165,7 +165,7 @@ for (const key in form.data()) {
                         <UInputNumber v-model="form.sequence_number" :min="1" class="w-full" />
                     </UFormField>
 
-                    <UFormField label="Active" orientation="horizontal" class="justify-between">
+                    <UFormField label="Active" orientation="horizontal" class="items-center py-2">
                         <USwitch v-model="form.is_active" />
                     </UFormField>
                 </div>

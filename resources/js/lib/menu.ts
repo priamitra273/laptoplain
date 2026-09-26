@@ -2,7 +2,7 @@ import type { SidebarMenuItem } from '@/types';
 import type { NavigationMenuItem } from '@nuxt/ui';
 
 /**
- * Return Iconify DB values unchanged and converts legacy PascalCase icon names.
+ * Mengembalikan nilai ikon Iconify dari basis data apa adanya dan mengonversi nama PascalCase lama.
  */
 export function toLucideIcon(name: string | null | undefined): string | undefined {
     if (!name) {

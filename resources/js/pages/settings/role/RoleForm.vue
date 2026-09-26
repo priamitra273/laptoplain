@@ -57,7 +57,6 @@ for (const key in form.data()) {
 </script>
 
 <template>
-
     <Head :title="pageTitle" />
 
     <AppLayout :title="pageTitle">
@@ -65,17 +64,22 @@ for (const key in form.data()) {
             <UCard title="Role Information" description="Please fill the required fields." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
                     <UFormField label="Team" name="team_uuid" required :error="form.errors.team_uuid">
-                        <USelectMenu v-model="form.team_uuid" :items="teams" label-key="name" value-key="uuid"
-                            placeholder="Select a team" class="w-full" />
+                        <USelectMenu
+                            v-model="form.team_uuid"
+                            :items="teams"
+                            label-key="name"
+                            value-key="uuid"
+                            placeholder="Select a team"
+                            class="w-full"
+                        />
                     </UFormField>
 
                     <UFormField label="Role Name" name="label" required :error="form.errors.label">
                         <UInput v-model="form.label" placeholder="Role Name" class="w-full" />
                     </UFormField>
 
-                    <UFormField label="Active" orientation="horizontal" class="justify-between">
-                        <USwitch v-model="form.is_active" :label="form.is_active ? 'Active' : 'Nonactive'"
-                            class="py-2" />
+                    <UFormField label="Active">
+                        <USwitch v-model="form.is_active" :label="form.is_active ? 'Active' : 'Nonactive'" class="py-2" />
                     </UFormField>
                 </div>
             </UCard>

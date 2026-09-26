@@ -77,9 +77,13 @@ for (const key in form.data()) {
         <form class="flex flex-col gap-6" autocomplete="off" @submit.prevent="save">
             <UCard title="User Information" description="Please fill the required fields." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
-                    <UFormField label="Name" name="name" required :error="form.errors.name"><UInput v-model="form.name" placeholder="Enter Name" class="w-full" /></UFormField>
+                    <UFormField label="Name" name="name" required :error="form.errors.name"
+                        ><UInput v-model="form.name" placeholder="Enter Name" class="w-full"
+                    /></UFormField>
 
-                    <UFormField label="Email" name="email" required :error="form.errors.email"><UInput v-model="form.email" type="email" placeholder="Enter Email" autocomplete="off" class="w-full" /></UFormField>
+                    <UFormField label="Email" name="email" required :error="form.errors.email"
+                        ><UInput v-model="form.email" type="email" placeholder="Enter Email" autocomplete="off" class="w-full"
+                    /></UFormField>
 
                     <UFormField label="Team" name="team_uuid" required :error="form.errors.team_uuid">
                         <USelectMenu
@@ -104,7 +108,7 @@ for (const key in form.data()) {
                         />
                     </UFormField>
 
-                    <UFormField label="Active" orientation="horizontal" class="justify-between">
+                    <UFormField label="Active" orientation="horizontal" class="items-center py-2">
                         <USwitch v-model="form.is_active" />
                     </UFormField>
                 </div>
@@ -113,7 +117,13 @@ for (const key in form.data()) {
             <UCard title="Password Information" description="Please provide at least 8 characters." :ui="{ body: 'sm:py-0' }">
                 <div class="grid gap-6 md:grid-cols-2">
                     <UFormField label="Password" name="password" :required="!props.user?.uuid" :error="form.errors.password">
-                        <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="new-password" class="w-full">
+                        <UInput
+                            v-model="form.password"
+                            :type="showPassword ? 'text' : 'password'"
+                            placeholder="Password"
+                            autocomplete="new-password"
+                            class="w-full"
+                        >
                             <template #trailing>
                                 <UButton
                                     color="neutral"
@@ -133,7 +143,8 @@ for (const key in form.data()) {
                             type="password"
                             placeholder="Password Confirmation"
                             autocomplete="new-password"
-                        class="w-full" />
+                            class="w-full"
+                        />
                     </UFormField>
                 </div>
             </UCard>

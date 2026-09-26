@@ -48,7 +48,7 @@ const selectIcon = (value: string) => {
 };
 
 /**
- * Only Iconify values can be rendered; unknown legacy values use the empty-state icon.
+ * Hanya nilai Iconify yang dapat dirender; nilai lama yang tidak dikenal memakai ikon kosong.
  */
 const isRenderableIcon = computed(() => !!form.icon && form.icon.startsWith('i-'));
 
@@ -98,7 +98,9 @@ for (const key in form.data()) {
                     <UPopover v-model:open="iconPickerOpen">
                         <UButton color="neutral" variant="outline" class="w-full justify-start">
                             <UIcon :name="isRenderableIcon ? form.icon : 'i-lucide-smile-plus'" class="size-4" />
-                            <span :class="isRenderableIcon ? '' : 'text-muted'">{{ isRenderableIcon ? form.icon.replace(/^i-lucide-/, '') : 'Select an icon' }}</span>
+                            <span :class="isRenderableIcon ? '' : 'text-muted'">{{
+                                isRenderableIcon ? form.icon.replace(/^i-lucide-/, '') : 'Select an icon'
+                            }}</span>
                         </UButton>
 
                         <template #content>

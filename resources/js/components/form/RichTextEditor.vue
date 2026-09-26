@@ -130,8 +130,8 @@ watch(
 </script>
 
 <template>
-    <div :class="[mention ? 'mention-editor' : 'rich-text-editor']" :style="{ '--rte-height': minHeight }">
-        <div ref="editorRef" />
+    <div :class="mention ? 'mention-editor' : 'rich-text-editor'">
+        <div ref="editorRef" :style="{ minHeight }" />
     </div>
 </template>
 
@@ -156,20 +156,8 @@ watch(
     font-family: inherit;
     font-size: 0.875rem;
 }
-.mention-editor .ql-container.ql-snow {
-    min-height: var(--rte-height);
-}
-.mention-editor .ql-editor.ql-blank::before {
-    color: var(--ui-text-dimmed);
-    font-style: normal;
-}
-.mention-editor .ql-snow .ql-stroke,
 .mention-editor .ql-snow .ql-picker {
     color: var(--ui-text-muted);
-    stroke: var(--ui-text-muted);
-}
-.mention-editor .ql-snow .ql-fill {
-    fill: var(--ui-text-muted);
 }
 .ql-mention-list-container {
     z-index: 60;
@@ -247,37 +235,39 @@ watch(
     border-color: var(--ui-border);
     border-bottom-right-radius: var(--ui-radius);
     border-bottom-left-radius: var(--ui-radius);
-    min-height: var(--rte-height);
     font-family: inherit;
     font-size: 0.875rem;
     background: var(--ui-bg);
     color: var(--ui-text);
 }
 
-.rich-text-editor .ql-editor.ql-blank::before {
+.rich-text-editor .ql-editor.ql-blank::before,
+.mention-editor .ql-editor.ql-blank::before {
     color: var(--ui-text-dimmed);
     font-style: normal;
 }
 
-.rich-text-editor .ql-snow .ql-stroke {
+.rich-text-editor .ql-snow .ql-stroke,
+.mention-editor .ql-snow .ql-stroke {
     stroke: var(--ui-text-muted);
 }
 
-.rich-text-editor .ql-snow .ql-fill {
+.rich-text-editor .ql-snow .ql-fill,
+.mention-editor .ql-snow .ql-fill {
     fill: var(--ui-text-muted);
 }
 
-.rich-text-editor .ql-snow.ql-toolbar button:hover .ql-stroke,
-.rich-text-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+.rich-text-editor .ql-snow\.ql-toolbar button:hover .ql-stroke,
+.rich-text-editor .ql-snow\.ql-toolbar button.ql-active .ql-stroke {
     stroke: var(--ui-color-primary-500);
 }
 
-.rich-text-editor .ql-snow.ql-toolbar button:hover .ql-fill,
-.rich-text-editor .ql-snow.ql-toolbar button.ql-active .ql-fill {
+.rich-text-editor .ql-snow\.ql-toolbar button:hover .ql-fill,
+.rich-text-editor .ql-snow\.ql-toolbar button.ql-active .ql-fill {
     fill: var(--ui-color-primary-500);
 }
 
-.rich-text-editor .ql-snow.ql-toolbar button.ql-active {
+.rich-text-editor .ql-snow\.ql-toolbar button.ql-active {
     color: var(--ui-color-primary-500);
 }
 </style>

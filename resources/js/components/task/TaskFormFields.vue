@@ -409,9 +409,13 @@ const createTag = (name: string) => {
             </UFormField>
         </div>
 
-        <UFormField label="Attachments" name="attachments" :error="errorFor('attachments')" :inert="disabled">
-            <InputAttachment v-model="attachments" :label="null" />
-        </UFormField>
+        <fieldset class="flex flex-col gap-3" :disabled="disabled" :class="disabled ? 'pointer-events-none opacity-60' : ''">
+            <legend class="sr-only">Attachments</legend>
+            <div class="flex items-center gap-3"><FieldLabel title="Attachments" class="shrink-0" /><USeparator class="flex-1" /></div>
+            <UFormField name="attachments" :error="errorFor('attachments')">
+                <InputAttachment v-model="attachments" :label="null" />
+            </UFormField>
+        </fieldset>
 
         <slot name="extra" />
     </div>

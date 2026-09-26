@@ -48,7 +48,7 @@ const PERMISSION_SECTIONS: { key: PermissionSectionKey; label: string }[] = [
 
 const ACTIONS = ['create', 'update', 'delete'] as const;
 const actionItems: string[] = [...ACTIONS];
-const accessControlFieldUi = { root: 'grid gap-4 md:grid-cols-3', labelWrapper: 'md:col-span-1', container: 'md:col-span-2' };
+const accessControlFieldUi = { root: 'grid gap-4 md:grid-cols-3', container: 'mt-0 md:col-span-2' };
 
 const TASK_FIELDS = [
     { value: 'title', label: 'Title' },
@@ -159,10 +159,10 @@ for (const key in form.data()) {
                     <UFormField
                         label="Allowed Task Statuses"
                         name="config.allow_task_status"
+                        description="Statuses this role is permitted to transition to (leave empty to allow all)"
                         :error="form.errors['config.allow_task_status']"
                         :ui="accessControlFieldUi"
                     >
-                        <p class="text-sm text-muted">Statuses this role is permitted to transition to (leave empty to allow all)</p>
                         <USelectMenu
                             v-model="form.config.allow_task_status"
                             :items="task_statuses"
@@ -183,10 +183,10 @@ for (const key in form.data()) {
                     <UFormField
                         label="Allowed Update Task Fields"
                         name="config.allow_update_task_fields"
+                        description="Task fields this role is allowed to modify (leave empty to allow all)"
                         :error="form.errors['config.allow_update_task_fields']"
                         :ui="accessControlFieldUi"
                     >
-                        <p class="text-sm text-muted">Task fields this role is allowed to modify (leave empty to allow all)</p>
                         <UCheckboxGroup
                             v-model="form.config.allow_update_task_fields"
                             :items="TASK_FIELDS"
